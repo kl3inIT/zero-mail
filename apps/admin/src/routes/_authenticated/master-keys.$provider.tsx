@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import {createFileRoute, useNavigate} from '@tanstack/react-router';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -7,15 +7,26 @@ import {
   PlusIcon,
   TrashIcon,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import {useMemo, useState} from 'react';
+import {toast} from 'sonner';
 
-import { AddCatalogModelDialog } from '@/components/AddCatalogModelDialog';
-import { AddProviderKeyDialog } from '@/components/AddProviderKeyDialog';
-import { EditProviderKeyDialog } from '@/components/EditProviderKeyDialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import {AddCatalogModelDialog} from '@/components/AddCatalogModelDialog';
+import {AddProviderKeyDialog} from '@/components/AddProviderKeyDialog';
+import {EditProviderKeyDialog} from '@/components/EditProviderKeyDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
+import {Badge} from '@/components/ui/badge';
+import {Button} from '@/components/ui/button';
 import {
   Card,
   CardAction,
@@ -24,19 +35,20 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useCatalog } from '@/features/catalog/use-catalog';
-import { useDisableModel } from '@/features/catalog/use-disable-model';
-import type { CatalogModel, CatalogProvider } from '@/features/catalog/catalog-api';
+import {Skeleton} from '@/components/ui/skeleton';
+import {useCatalog} from '@/features/catalog/use-catalog';
+import {useDisableModel} from '@/features/catalog/use-disable-model';
+import type {CatalogModel, CatalogProvider} from '@/features/catalog/catalog-api';
 import type {
   LlmProvider,
   ProviderKey,
   ProviderKeyStatus,
 } from '@/features/master-keys/master-keys-api';
-import { useMasterKey, useProviderKeys } from '@/features/master-keys/use-master-keys';
-import { useReorderProviderKeys } from '@/features/master-keys/use-reorder-provider-keys';
-import { useRevokeProviderKey } from '@/features/master-keys/use-revoke-provider-key';
-import { useTestProviderKey } from '@/features/master-keys/use-test-provider-key';
+import {useMasterKey, useProviderKeys} from '@/features/master-keys/use-master-keys';
+import {useDeleteProvider} from '@/features/master-keys/use-delete-provider';
+import {useReorderProviderKeys} from '@/features/master-keys/use-reorder-provider-keys';
+import {useRevokeProviderKey} from '@/features/master-keys/use-revoke-provider-key';
+import {useTestProviderKey} from '@/features/master-keys/use-test-provider-key';
 
 export const Route = createFileRoute('/_authenticated/master-keys/$provider')({
   component: MasterKeyProviderRoute,
@@ -47,80 +59,65 @@ type ProviderMeta = {
   displayName: string;
   kindLabel: string;
   defaultBaseUrl: string | null;
-  defaultKeyFormat: string;
   avatarSrc?: string;
 };
 
-const PROVIDER_META: Record<LlmProvider, ProviderMeta> = {
-  OPENROUTER: {
-    initials: 'OR',
-    displayName: 'OpenRouter',
-    kindLabel: 'OAuth bundle',
-    defaultBaseUrl: 'openrouter.ai/api/v1',
-    defaultKeyFormat: 'OPENAI_FORMAT',
-  },
-  ROUTER_9R: {
-    initials: '9R',
-    displayName: '9Router',
-    kindLabel: 'OAuth bundle',
-    defaultBaseUrl: null,
-    defaultKeyFormat: 'OPENAI_FORMAT',
-  },
+const PROVIDER_META: Partial<Record<LlmProvider, ProviderMeta>> = {
   OPENAI: {
     initials: 'OA',
     displayName: 'OpenAI',
-    kindLabel: 'API key',
+    kindLabel: 'Spring AI',
     defaultBaseUrl: 'api.openai.com/v1',
-    defaultKeyFormat: 'OPENAI_FORMAT',
   },
   ANTHROPIC: {
     initials: 'AN',
     displayName: 'Anthropic',
-    kindLabel: 'API key',
+    kindLabel: 'Spring AI',
     defaultBaseUrl: 'api.anthropic.com',
-    defaultKeyFormat: 'ANTHROPIC_FORMAT',
   },
   GOOGLE: {
     initials: 'GO',
     displayName: 'Google',
-    kindLabel: 'API key',
+    kindLabel: 'Spring AI',
     defaultBaseUrl: 'generativelanguage.googleapis.com',
-    defaultKeyFormat: 'GOOGLE_FORMAT',
   },
   DEEPSEEK: {
     initials: 'DS',
     displayName: 'DeepSeek',
-    kindLabel: 'API key',
+    kindLabel: 'Spring AI',
     defaultBaseUrl: 'api.deepseek.com',
-    defaultKeyFormat: 'OPENAI_FORMAT',
   },
 };
 
 function metaFor(provider: string): ProviderMeta {
   return (
     PROVIDER_META[provider as LlmProvider] ?? {
-      initials: provider.slice(0, 2),
+      initials: initialsFor(provider),
       displayName: provider,
-      kindLabel: 'Provider',
+      kindLabel: 'Provider tương thích',
       defaultBaseUrl: null,
-      defaultKeyFormat: 'OPENAI_FORMAT',
     }
   );
 }
 
 function MasterKeyProviderRoute() {
-  const { provider } = Route.useParams();
+  const {provider} = Route.useParams();
+  const navigate = useNavigate();
   const meta = metaFor(provider);
   const masterKey = useMasterKey(provider);
   const keysQuery = useProviderKeys(provider);
   const catalogQuery = useCatalog(provider as CatalogProvider);
   const reorderMutation = useReorderProviderKeys(provider);
   const revokeMutation = useRevokeProviderKey(provider);
+  const deleteProviderMutation = useDeleteProvider();
   const testKeyMutation = useTestProviderKey();
   const disableModelMutation = useDisableModel();
   const [addKeyOpen, setAddKeyOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<ProviderKey | null>(null);
+  const [keyToDelete, setKeyToDelete] = useState<ProviderKey | null>(null);
   const [addModelOpen, setAddModelOpen] = useState(false);
+  const [modelToDisable, setModelToDisable] = useState<CatalogModel | null>(null);
+  const [deleteProviderOpen, setDeleteProviderOpen] = useState(false);
 
   const keys = keysQuery.data?.keys ?? [];
   const activeKeyCount = keys.filter((entry) => entry.status === 'ACTIVE').length;
@@ -137,13 +134,12 @@ function MasterKeyProviderRoute() {
   }
 
   function revokeKey(entry: ProviderKey) {
-    if (!window.confirm(`Xoá key ${entry.label ?? entry.maskedKey ?? entry.keyId}?`)) return;
-    revokeMutation.mutate({ provider, keyId: entry.keyId });
+    setKeyToDelete(entry);
   }
 
   function testKey(entry: ProviderKey) {
     testKeyMutation.mutate(
-      { provider, keyId: entry.keyId },
+      {provider, keyId: entry.keyId},
       {
         onSuccess: (data) => {
           if (data.result === 'OK') {
@@ -167,13 +163,7 @@ function MasterKeyProviderRoute() {
   }
 
   function disableModel(model: CatalogModel) {
-    if (!window.confirm(`Vô hiệu model ${model.modelId}?`)) return;
-    disableModelMutation.mutate({
-      modelId: model.modelId,
-      reason: '',
-      confirmedPinned: model.pinnedTenantCount > 0,
-      pinnedCountAcknowledged: model.pinnedTenantCount,
-    });
+    setModelToDisable(model);
   }
 
   const models = useMemo<CatalogModel[]>(() => {
@@ -191,19 +181,47 @@ function MasterKeyProviderRoute() {
     return flat;
   }, [catalogQuery.data]);
 
-  const baseUrl = masterKey.data?.baseUrl ?? meta.defaultBaseUrl ?? 'chưa cấu hình';
+  const displayName = masterKey.data?.displayName ?? meta.displayName;
+  const kindLabel =
+    masterKey.data?.providerKind === 'SPRING_AI_BUILT_IN'
+      ? 'Spring AI'
+      : masterKey.data?.compatibleType === 'ANTHROPIC_FORMAT'
+        ? 'Anthropic-compatible'
+        : masterKey.data?.compatibleType === 'OPENAI_FORMAT'
+          ? 'OpenAI-compatible'
+          : meta.kindLabel;
+  const baseUrl =
+    masterKey.data?.baseUrl ??
+    masterKey.data?.defaultBaseUrl ??
+    meta.defaultBaseUrl ??
+    'chưa cấu hình';
+  const canDeleteProvider = masterKey.data?.providerKind === 'COMPATIBLE_GATEWAY';
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center gap-4">
-        <Avatar size="lg">
-          {meta.avatarSrc && <AvatarImage src={meta.avatarSrc} alt={meta.displayName} />}
-          <AvatarFallback>{meta.initials}</AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{meta.displayName}</h1>
-          <p className="text-muted-foreground text-sm">{baseUrl}</p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Avatar size="lg">
+            {meta.avatarSrc && <AvatarImage src={meta.avatarSrc} alt={displayName}/>}
+            <AvatarFallback>{initialsFor(displayName)}</AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">{displayName}</h1>
+            <p className="text-muted-foreground text-sm">
+              {kindLabel} · {baseUrl}
+            </p>
+          </div>
         </div>
+        {canDeleteProvider && (
+          <Button
+            variant="outline"
+            className="text-destructive hover:text-destructive sm:self-start"
+            onClick={() => setDeleteProviderOpen(true)}
+          >
+            <TrashIcon className="size-4"/>
+            Xoá provider
+          </Button>
+        )}
       </header>
 
       <KpiStrip
@@ -246,21 +264,74 @@ function MasterKeyProviderRoute() {
         onClose={() => setEditingKey(null)}
       />
 
+      <DeleteProviderKeyDialog
+        entry={keyToDelete}
+        pending={revokeMutation.isPending}
+        onClose={() => setKeyToDelete(null)}
+        onConfirm={(entry) =>
+          revokeMutation.mutate(
+            {provider, keyId: entry.keyId},
+            {onSuccess: () => setKeyToDelete(null)},
+          )
+        }
+      />
+
       <AddCatalogModelDialog
         provider={provider as CatalogProvider}
         open={addModelOpen}
         onOpenChange={setAddModelOpen}
       />
+
+      <DisableModelDialog
+        model={modelToDisable}
+        pending={disableModelMutation.isPending}
+        onClose={() => setModelToDisable(null)}
+        onConfirm={(model) =>
+          disableModelMutation.mutate(
+            {
+              modelId: model.modelId,
+              reason: '',
+              confirmedPinned: model.pinnedTenantCount > 0,
+              pinnedCountAcknowledged: model.pinnedTenantCount,
+            },
+            {onSuccess: () => setModelToDisable(null)},
+          )
+        }
+      />
+
+      <DeleteProviderDialog
+        providerName={displayName}
+        pending={deleteProviderMutation.isPending}
+        open={deleteProviderOpen}
+        onClose={() => setDeleteProviderOpen(false)}
+        onConfirm={() =>
+          deleteProviderMutation.mutate(provider, {
+            onSuccess: () => {
+              setDeleteProviderOpen(false);
+              void navigate({to: '/master-keys'});
+            },
+          })
+        }
+      />
     </div>
   );
 }
 
+function initialsFor(value: string) {
+  return value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 function KpiStrip({
-  activeKeys,
-  totalKeys,
-  modelCount,
-  pending,
-}: {
+                    activeKeys,
+                    totalKeys,
+                    modelCount,
+                    pending,
+                  }: {
   activeKeys: number;
   totalKeys: number;
   modelCount: number;
@@ -268,15 +339,15 @@ function KpiStrip({
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Kpi label="Keys hoạt động" value={pending ? '—' : `${activeKeys} / ${totalKeys}`} />
-      <Kpi label="Đang giới hạn" value="0" />
-      <Kpi label="Models đã lưu" value={pending ? '—' : String(modelCount)} />
-      <Kpi label="Last test" value="—" />
+      <Kpi label="Keys hoạt động" value={pending ? '—' : `${activeKeys} / ${totalKeys}`}/>
+      <Kpi label="Đang giới hạn" value="0"/>
+      <Kpi label="Models đã lưu" value={pending ? '—' : String(modelCount)}/>
+      <Kpi label="Last test" value="—"/>
     </div>
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({label, value}: { label: string; value: string }) {
   return (
     <Card>
       <CardHeader>
@@ -288,17 +359,17 @@ function Kpi({ label, value }: { label: string; value: string }) {
 }
 
 function ConnectionsCard({
-  keys,
-  pending,
-  onAddKey,
-  onMoveKey,
-  onRevokeKey,
-  onTestKey,
-  onTestAll,
-  onEditKey,
-  mutationPending,
-  testKeyPendingId,
-}: {
+                           keys,
+                           pending,
+                           onAddKey,
+                           onMoveKey,
+                           onRevokeKey,
+                           onTestKey,
+                           onTestAll,
+                           onEditKey,
+                           mutationPending,
+                           testKeyPendingId,
+                         }: {
   keys: ProviderKey[];
   pending: boolean;
   onAddKey: () => void;
@@ -327,16 +398,16 @@ function ConnectionsCard({
             Test all
           </Button>
           <Button size="sm" onClick={onAddKey} disabled={pending}>
-            <PlusIcon className="size-3.5" />
+            <PlusIcon className="size-3.5"/>
             Thêm key
           </Button>
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-2">
         {pending ? (
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full"/>
         ) : keys.length === 0 ? (
-          <EmptyState message='Chưa có key — bấm "Thêm key" để bắt đầu.' />
+          <EmptyState message='Chưa có key — bấm "Thêm key" để bắt đầu.'/>
         ) : (
           keys.map((entry, index) => (
             <ConnectionRow
@@ -360,17 +431,17 @@ function ConnectionsCard({
 }
 
 function ConnectionRow({
-  entry,
-  isFirst,
-  isLast,
-  onMoveUp,
-  onMoveDown,
-  onRevoke,
-  onTest,
-  onEdit,
-  testing,
-  disabled,
-}: {
+                         entry,
+                         isFirst,
+                         isLast,
+                         onMoveUp,
+                         onMoveDown,
+                         onRevoke,
+                         onTest,
+                         onEdit,
+                         testing,
+                         disabled,
+                       }: {
   entry: ProviderKey;
   isFirst: boolean;
   isLast: boolean;
@@ -398,7 +469,7 @@ function ConnectionRow({
           onClick={onMoveUp}
           className="text-muted-foreground hover:text-foreground disabled:opacity-30"
         >
-          <ChevronUpIcon className="size-4" />
+          <ChevronUpIcon className="size-4"/>
         </button>
         <button
           type="button"
@@ -407,13 +478,13 @@ function ConnectionRow({
           onClick={onMoveDown}
           className="text-muted-foreground hover:text-foreground disabled:opacity-30"
         >
-          <ChevronDownIcon className="size-4" />
+          <ChevronDownIcon className="size-4"/>
         </button>
       </div>
 
       <Avatar size="default">
         <AvatarFallback>
-          <KeyRoundIcon className="size-4" />
+          <KeyRoundIcon className="size-4"/>
         </AvatarFallback>
       </Avatar>
 
@@ -426,13 +497,13 @@ function ConnectionRow({
         </div>
       </div>
 
-      <ConnectionStatusBadge status={entry.status} />
+      <ConnectionStatusBadge status={entry.status}/>
 
       <Button variant="ghost" size="sm" onClick={onTest} disabled={testing}>
         {testing ? 'Đang test…' : 'Test'}
       </Button>
       <Button variant="ghost" size="icon" aria-label="Sửa key" onClick={onEdit}>
-        <PencilIcon className="size-4" />
+        <PencilIcon className="size-4"/>
       </Button>
       <Button
         variant="ghost"
@@ -441,25 +512,25 @@ function ConnectionRow({
         disabled={disabled}
         onClick={onRevoke}
       >
-        <TrashIcon className="size-4" />
+        <TrashIcon className="size-4"/>
       </Button>
     </div>
   );
 }
 
-function ConnectionStatusBadge({ status }: { status: ProviderKeyStatus }) {
+function ConnectionStatusBadge({status}: { status: ProviderKeyStatus }) {
   if (status === 'ACTIVE') return <Badge>ACTIVE</Badge>;
   if (status === 'PENDING') return <Badge variant="secondary">PENDING</Badge>;
   return <Badge variant="outline">REVOKED</Badge>;
 }
 
 function ModelsCard({
-  models,
-  pending,
-  onAddModel,
-  onDisableModel,
-  disabling,
-}: {
+                      models,
+                      pending,
+                      onAddModel,
+                      onDisableModel,
+                      disabling,
+                    }: {
   models: CatalogModel[];
   pending: boolean;
   onAddModel: () => void;
@@ -471,20 +542,20 @@ function ModelsCard({
       <CardHeader>
         <CardTitle>Models</CardTitle>
         <CardDescription>
-          Chỉ model VERIFIED mới hiện trong dropdown tier routing.
+          Chỉ model VERIFIED hoặc STALE mới hiện trong dropdown tier routing.
         </CardDescription>
         <CardAction>
           <Button size="sm" onClick={onAddModel} disabled={pending}>
-            <PlusIcon className="size-3.5" />
+            <PlusIcon className="size-3.5"/>
             Thêm model
           </Button>
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-2">
         {pending ? (
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full"/>
         ) : models.length === 0 ? (
-          <EmptyState message='Chưa có model — bấm "Thêm model" để bắt đầu.' />
+          <EmptyState message='Chưa có model — bấm "Thêm model" để bắt đầu.'/>
         ) : (
           models.map((model) => (
             <ModelRow
@@ -501,15 +572,16 @@ function ModelsCard({
 }
 
 function ModelRow({
-  model,
-  onDisable,
-  disabling,
-}: {
+                    model,
+                    onDisable,
+                    disabling,
+                  }: {
   model: CatalogModel;
   onDisable: () => void;
   disabling: boolean;
 }) {
   const isDeprecated = Boolean(model.deprecatedAt);
+  const status = model.verificationStatus ?? 'UNTESTED';
   return (
     <div
       className={
@@ -524,11 +596,7 @@ function ModelRow({
         </div>
       </div>
       {model.recommended && <Badge variant="secondary">Đề xuất</Badge>}
-      {isDeprecated ? (
-        <Badge variant="outline">DEPRECATED</Badge>
-      ) : (
-        <Badge>VERIFIED</Badge>
-      )}
+      <ModelStatusBadge deprecated={isDeprecated} status={status}/>
       {!isDeprecated && (
         <Button
           variant="ghost"
@@ -537,14 +605,150 @@ function ModelRow({
           onClick={onDisable}
           disabled={disabling}
         >
-          <TrashIcon className="size-4" />
+          <TrashIcon className="size-4"/>
         </Button>
       )}
     </div>
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function ModelStatusBadge({
+                            deprecated,
+                            status,
+                          }: {
+  deprecated: boolean;
+  status: CatalogModel['verificationStatus'];
+}) {
+  if (deprecated) return <Badge variant="outline">DEPRECATED</Badge>;
+  if (status === 'VERIFIED') return <Badge>VERIFIED</Badge>;
+  if (status === 'STALE') return <Badge variant="secondary">STALE</Badge>;
+  if (status === 'FAILED') return <Badge variant="outline">FAILED</Badge>;
+  return <Badge variant="outline">UNTESTED</Badge>;
+}
+
+function DeleteProviderKeyDialog({
+                                   entry,
+                                   pending,
+                                   onClose,
+                                   onConfirm,
+                                 }: {
+  entry: ProviderKey | null;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: (entry: ProviderKey) => void;
+}) {
+  const label = entry?.label ?? entry?.maskedKey ?? entry?.keyId;
+  return (
+    <AlertDialog open={entry !== null} onOpenChange={(open) => !open && onClose()}>
+      {entry && (
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <TrashIcon className="size-5"/>
+            </AlertDialogMedia>
+            <AlertDialogTitle>Xoá key?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Key {label} sẽ bị xoá khỏi failover chain của provider này.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={pending}
+              onClick={() => onConfirm(entry)}
+            >
+              {pending ? 'Đang xoá…' : 'Xoá'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      )}
+    </AlertDialog>
+  );
+}
+
+function DisableModelDialog({
+                              model,
+                              pending,
+                              onClose,
+                              onConfirm,
+                            }: {
+  model: CatalogModel | null;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: (model: CatalogModel) => void;
+}) {
+  return (
+    <AlertDialog open={model !== null} onOpenChange={(open) => !open && onClose()}>
+      {model && (
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <TrashIcon className="size-5"/>
+            </AlertDialogMedia>
+            <AlertDialogTitle>Vô hiệu model?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Model {model.modelId} sẽ không còn được chọn cho routing mới.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={pending}
+              onClick={() => onConfirm(model)}
+            >
+              {pending ? 'Đang lưu…' : 'Vô hiệu'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      )}
+    </AlertDialog>
+  );
+}
+
+function DeleteProviderDialog({
+  providerName,
+  open,
+  pending,
+  onClose,
+  onConfirm,
+}: {
+  providerName: string;
+  open: boolean;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogMedia>
+            <TrashIcon className="size-5"/>
+          </AlertDialogMedia>
+          <AlertDialogTitle>Xoá provider?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Provider {providerName} sẽ bị xoá cùng key và model đã lưu. Chỉ provider tương thích
+            không còn được dùng trong routing mới xoá được.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Hủy</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={pending}
+            onClick={onConfirm}
+          >
+            {pending ? 'Đang xoá…' : 'Xoá'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function EmptyState({message}: { message: string }) {
   return (
     <div className="text-muted-foreground flex items-center justify-center rounded-md py-10 text-sm">
       {message}

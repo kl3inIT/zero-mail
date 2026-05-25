@@ -1,8 +1,14 @@
 package com.zeromail.core.llm.gateway.springai;
 
+import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.routing.PlatformLlmRouteCredentials;
 import com.zeromail.core.llm.usecases.LlmChatRequest;
 import com.zeromail.core.llm.usecases.LlmChatResult;
+import com.zeromail.core.llm.usecases.LlmCredentialSource;
 import com.zeromail.core.llm.usecases.LlmModelClient;
+import com.zeromail.core.llm.usecases.LlmProviderChatExecutor;
+import com.zeromail.core.llm.usecases.LlmProviderCredential;
 import com.zeromail.core.llm.usecases.LlmTool;
 import com.zeromail.core.llm.usecases.LlmUsage;
 import com.zeromail.core.llm.usecases.RawToolCall;
@@ -16,6 +22,7 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
@@ -35,20 +42,64 @@ import tools.jackson.databind.ObjectMapper;
 public class SpringAiLlmModelClient implements LlmModelClient {
 
     private final ChatClient platformChatClient;
+    private final ZeroMailLlmProperties llmProperties;
+    private final LlmProviderChatExecutor providerChatExecutor;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public SpringAiLlmModelClient(@Qualifier("platformChatClient") ChatClient platformChatClient) {
+    @Autowired
+    public SpringAiLlmModelClient(
+            @Qualifier("platformChatClient") ChatClient platformChatClient,
+            ZeroMailCoreProperties zeroMailCoreProperties,
+            LlmProviderChatExecutor providerChatExecutor) {
+        this(platformChatClient, zeroMailCoreProperties.llm().platform(), providerChatExecutor);
+    }
+
+    SpringAiLlmModelClient(ChatClient platformChatClient) {
+        this(
+                platformChatClient,
+                new ZeroMailLlmProperties(
+                        null, null, "test-platform-key", null, null, null, null, null, null),
+                null);
+    }
+
+    private SpringAiLlmModelClient(
+            ChatClient platformChatClient,
+            ZeroMailLlmProperties llmProperties,
+            LlmProviderChatExecutor providerChatExecutor) {
         this.platformChatClient = platformChatClient;
+        this.llmProperties = llmProperties;
+        this.providerChatExecutor = providerChatExecutor;
     }
 
     @Override
     public LlmChatResult call(LlmChatRequest request) {
+        return callWithClient(platformChatClient, request);
+    }
+
+    @Override
+    public LlmChatResult call(
+            LlmChatRequest request, PlatformLlmRouteCredentials routeCredentials) {
+        if (providerChatExecutor == null) {
+            throw new IllegalStateException("Provider chat executor is unavailable");
+        }
+        return providerChatExecutor.call(
+                new LlmProviderCredential(
+                        routeCredentials.providerId(),
+                        routeCredentials.keyFormat(),
+                        routeCredentials.baseUrl(),
+                        routeCredentials.plaintextKey(),
+                        LlmCredentialSource.PLATFORM),
+                request);
+    }
+
+    private LlmChatResult callWithClient(ChatClient chatClient, LlmChatRequest request) {
         ChatResponse chatResponse =
-                platformChatClient
+                chatClient
                         .prompt()
                         .system(request.systemPrompt())
                         .user(request.userMessage())
-                        .toolCallbacks(translateTools(request.tools()))
+                        .tools(toolSpec -> toolSpec.callbacks(translateTools(request.tools())))
+                        .advisors(SpringAiRawToolCallSupport::preserveRawToolCalls)
                         .options(chatOptions(request))
                         .call()
                         .chatResponse();
@@ -63,6 +114,7 @@ public class SpringAiLlmModelClient implements LlmModelClient {
                 OpenAiChatOptions.builder()
                         .model(request.model())
                         .temperature(request.temperature())
+                        .timeout(llmProperties.readTimeout())
                         .internalToolExecutionEnabled(false);
         if (request.toolChoiceRequired()) {
             chatOptionsBuilder.toolChoice(OpenAiToolChoiceOptions.required());

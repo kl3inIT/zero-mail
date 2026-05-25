@@ -7,7 +7,12 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication(scanBasePackages = {"com.zeromail.worker", "com.zeromail.core"})
+@SpringBootApplication(
+        scanBasePackages = {"com.zeromail.worker", "com.zeromail.core"},
+        excludeName = {
+            "org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration",
+            "org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration"
+        })
 @ConfigurationPropertiesScan(basePackages = "com.zeromail")
 @EntityScan(basePackages = "com.zeromail.core")
 @EnableJpaRepositories(basePackages = "com.zeromail.core")

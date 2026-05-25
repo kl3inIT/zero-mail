@@ -14,9 +14,11 @@ import com.zeromail.core.chat.usecases.ChatLlmGateway;
 import com.zeromail.core.chat.usecases.ChatStreamRequest;
 import com.zeromail.core.chat.usecases.ChatStreamSink;
 import com.zeromail.core.chat.usecases.RawToolCall;
+import com.zeromail.core.llm.gateway.springai.SpringAiRawToolCallSupport;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -25,9 +27,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.chat.model.StreamingChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
 import reactor.core.scheduler.Scheduler;
@@ -68,18 +68,29 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
 
     @Override
     public Disposable streamChat(ChatStreamRequest streamRequest, ChatStreamSink streamSink) {
-        StreamingChatModel streamingChatModel =
-                chatModelFactory.forTenant(streamRequest.tenantId());
+        SpringAiChatModelFactory.ResolvedChatClient resolvedChatClient =
+                chatModelFactory.forTenant(streamRequest.tenantId(), streamRequest.modelId());
         ChatToolCallRegistry chatToolCallRegistry = new ChatToolCallRegistry();
         Scheduler scheduler = tenantAwareReactorScheduler.scheduler();
         TextEmissionState textEmissionState = new TextEmissionState();
         Prompt prompt = prompt(streamRequest);
         log.debug(
                 "event=chat_llm_stream_start tenantId={} modelId={}",
-                streamRequest.tenantId(),
-                streamRequest.modelId());
+                safeLogToken(streamRequest.tenantId()),
+                safeLogToken(resolvedChatClient.modelId()));
 
-        return streamingChatModel.stream(prompt)
+        return resolvedChatClient
+                .chatClient()
+                .prompt(prompt)
+                .tools(
+                        toolSpec ->
+                                toolSpec.callbacks(
+                                        toolCallbackTranslator.translate(
+                                                streamRequest.toolCatalog())))
+                .advisors(SpringAiRawToolCallSupport::preserveRawToolCalls)
+                .options(chatModelFactory.optionsFor(resolvedChatClient))
+                .stream()
+                .chatResponse()
                 .subscribeOn(scheduler)
                 .doFinally(ignoredSignal -> scheduler.dispose())
                 .subscribe(
@@ -107,13 +118,9 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                             Throwable rootCause = rootCause(chatStreamingFailure);
                             log.warn(
                                     "event=chat_llm_stream_failed tenantId={} errorClass={} {}",
-                                    streamRequest.tenantId(),
+                                    safeLogToken(streamRequest.tenantId()),
                                     rootCause.getClass().getSimpleName(),
                                     serviceExceptionSummary(rootCause));
-                            log.debug(
-                                    "event=chat_llm_stream_failed_stacktrace tenantId={}",
-                                    streamRequest.tenantId(),
-                                    chatStreamingFailure);
                             streamSink.emitError(
                                     "chat_stream_failed", "The assistant stream failed.");
                         },
@@ -134,26 +141,21 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                         });
     }
 
-    private Prompt prompt(ChatStreamRequest streamRequest) {
+    Prompt prompt(ChatStreamRequest streamRequest) {
         List<Message> messages = new ArrayList<>();
         messages.add(new SystemMessage(streamRequest.systemPrompt()));
         streamRequest.conversationHistory().stream()
-                .map(this::toSpringAiMessage)
+                .map(
+                        chatMessage ->
+                                toSpringAiMessage(
+                                        chatMessage,
+                                        streamRequest.transientToolResponseJsonByCallId()))
                 .forEach(messages::add);
-        return new Prompt(
-                messages,
-                OpenAiChatOptions.builder()
-                        .model(streamRequest.modelId())
-                        .temperature(0.2)
-                        .maxTokens(2048)
-                        .streamUsage(false)
-                        .internalToolExecutionEnabled(false)
-                        .toolCallbacks(
-                                toolCallbackTranslator.translate(streamRequest.toolCatalog()))
-                        .build());
+        return new Prompt(messages);
     }
 
-    private Message toSpringAiMessage(ChatMessage chatMessage) {
+    private Message toSpringAiMessage(
+            ChatMessage chatMessage, Map<String, String> transientToolResponseJsonByCallId) {
         if (chatMessage.role() == ChatRole.USER) {
             return new UserMessage(textContent(chatMessage));
         }
@@ -161,7 +163,7 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
             return new SystemMessage(textContent(chatMessage));
         }
         if (chatMessage.role() == ChatRole.TOOL) {
-            return toolResponseMessage(chatMessage);
+            return toolResponseMessage(chatMessage, transientToolResponseJsonByCallId);
         }
         return assistantMessage(chatMessage);
     }
@@ -185,7 +187,8 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                 .build();
     }
 
-    private ToolResponseMessage toolResponseMessage(ChatMessage chatMessage) {
+    private ToolResponseMessage toolResponseMessage(
+            ChatMessage chatMessage, Map<String, String> transientToolResponseJsonByCallId) {
         List<ToolResponseMessage.ToolResponse> responses =
                 chatMessage.parts().parts().stream()
                         .filter(ToolOutputPart.class::isInstance)
@@ -195,7 +198,9 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                                         new ToolResponseMessage.ToolResponse(
                                                 toolOutputPart.toolCallId(),
                                                 toolOutputPart.toolName(),
-                                                writeJson(toolOutputPart.outputJson())))
+                                                transientToolResponseJsonByCallId.getOrDefault(
+                                                        toolOutputPart.toolCallId(),
+                                                        writeJson(toolOutputPart.outputJson()))))
                         .toList();
         return ToolResponseMessage.builder().responses(responses).build();
     }
@@ -241,17 +246,23 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
         return "statusCode="
                 + openAIServiceException.statusCode()
                 + " code="
-                + openAIServiceException.code().orElse("-")
+                + safeLogToken(openAIServiceException.code().orElse("-"))
                 + " param="
-                + openAIServiceException.param().orElse("-")
+                + safeLogToken(openAIServiceException.param().orElse("-"))
                 + " type="
-                + openAIServiceException.type().orElse("-")
-                + " body="
-                + truncate(openAIServiceException.body().toString());
+                + safeLogToken(openAIServiceException.type().orElse("-"));
     }
 
-    private static String truncate(String text) {
-        return text.length() <= 600 ? text : text.substring(0, 600);
+    private static String safeLogToken(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        StringBuilder sanitizedValue = new StringBuilder(Math.min(value.length(), 120));
+        for (int index = 0; index < value.length() && sanitizedValue.length() < 120; index++) {
+            char character = value.charAt(index);
+            sanitizedValue.append(Character.isISOControl(character) ? '_' : character);
+        }
+        return sanitizedValue.toString();
     }
 
     private static final class TextEmissionState {

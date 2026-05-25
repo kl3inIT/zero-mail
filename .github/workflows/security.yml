@@ -1,6 +1,8 @@
 # Aggregated security scanning: SAST (CodeQL), secrets (Gitleaks), dependency CVE
 # (OSV-Scanner against generated SBOMs), filesystem scan (Trivy), and container
-# image scan (Trivy) — last one only on push to main where images get published.
+# image scan (Trivy). PRs build local images for scanning; push:main scans the
+# published GHCR images so the Security tab receives the same SARIF categories
+# before and after merge.
 #
 # Runs on:
 #   - every PR + push to main (fast jobs)
@@ -185,31 +187,78 @@ jobs:
   trivy-image:
     name: Trivy image scan
     needs: []
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        component: [api, worker, frontend, admin]
+        include:
+          - component: api
+            dockerfile: backend/api/Dockerfile
+            image: ghcr.io/kl3init/zero-mail-api
+            build-args: ''
+          - component: worker
+            dockerfile: backend/worker/Dockerfile
+            image: ghcr.io/kl3init/zero-mail-worker
+            build-args: ''
+          - component: frontend
+            dockerfile: apps/web/Dockerfile
+            image: ghcr.io/kl3init/zero-mail-frontend
+            build-args: |
+              NEXT_PUBLIC_API_BASE=https://zeromail.vn
+          - component: admin
+            dockerfile: apps/admin/Dockerfile
+            image: ghcr.io/kl3init/zero-mail-admin
+            build-args: |
+              VITE_ADMIN_API_BASE=https://admin.zeromail.vn
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
       - name: Log in to GHCR
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute short SHA
-        id: sha
-        run: echo "short=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+      - name: Resolve image reference
+        id: image
+        shell: bash
+        run: |
+          SHORT="${GITHUB_SHA:0:7}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "mode=local" >> "$GITHUB_OUTPUT"
+            echo "ref=zeromail-${{ matrix.component }}:trivy-${SHORT}" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=published" >> "$GITHUB_OUTPUT"
+            echo "ref=${{ matrix.image }}:sha-${SHORT}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build PR image for Trivy
+        if: ${{ steps.image.outputs.mode == 'local' }}
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          pull: true
+          tags: ${{ steps.image.outputs.ref }}
+          build-args: ${{ matrix.build-args }}
+          cache-from: type=gha,scope=trivy-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=trivy-${{ matrix.component }}
+          provenance: false
 
       - name: Wait for image to exist
+        if: ${{ steps.image.outputs.mode == 'published' }}
         run: |
-          IMG="ghcr.io/kl3init/zero-mail-${{ matrix.component }}:sha-${{ steps.sha.outputs.short }}"
+          IMG="${{ steps.image.outputs.ref }}"
           for attempt in {1..20}; do
             if docker manifest inspect "$IMG" >/dev/null 2>&1; then
               echo "image ready"; exit 0
@@ -222,7 +271,7 @@ jobs:
       - name: Run Trivy image scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ghcr.io/kl3init/zero-mail-${{ matrix.component }}:sha-${{ steps.sha.outputs.short }}
+          image-ref: ${{ steps.image.outputs.ref }}
           ignore-unfixed: true
           severity: CRITICAL
           format: sarif

@@ -2,6 +2,7 @@ package com.zeromail.core.chat.usecases;
 
 import com.zeromail.core.chat.domain.ChatMessage;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public record ChatStreamRequest(
@@ -10,7 +11,18 @@ public record ChatStreamRequest(
         String modelId,
         String systemPrompt,
         ChatToolCatalog toolCatalog,
-        List<ChatMessage> conversationHistory) {
+        List<ChatMessage> conversationHistory,
+        Map<String, String> transientToolResponseJsonByCallId) {
+
+    public ChatStreamRequest(
+            String tenantId,
+            UUID chatId,
+            String modelId,
+            String systemPrompt,
+            ChatToolCatalog toolCatalog,
+            List<ChatMessage> conversationHistory) {
+        this(tenantId, chatId, modelId, systemPrompt, toolCatalog, conversationHistory, Map.of());
+    }
 
     public ChatStreamRequest {
         if (tenantId == null || tenantId.isBlank()) {
@@ -25,5 +37,9 @@ public record ChatStreamRequest(
         }
         conversationHistory =
                 conversationHistory == null ? List.of() : List.copyOf(conversationHistory);
+        transientToolResponseJsonByCallId =
+                transientToolResponseJsonByCallId == null
+                        ? Map.of()
+                        : Map.copyOf(transientToolResponseJsonByCallId);
     }
 }

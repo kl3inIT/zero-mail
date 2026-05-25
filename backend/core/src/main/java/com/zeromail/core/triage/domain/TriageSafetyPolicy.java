@@ -21,7 +21,17 @@ public class TriageSafetyPolicy {
     private static final Logger log = LoggerFactory.getLogger(TriageSafetyPolicy.class);
 
     private static final EnumSet<RuleActionType> ALLOW_LIST =
-            EnumSet.of(RuleActionType.LABEL, RuleActionType.ARCHIVE, RuleActionType.SAVE_DRAFT);
+            EnumSet.of(
+                    RuleActionType.LABEL,
+                    RuleActionType.ARCHIVE,
+                    RuleActionType.SAVE_DRAFT,
+                    RuleActionType.MARK_READ,
+                    RuleActionType.STAR,
+                    RuleActionType.ADD_TO_DIGEST,
+                    RuleActionType.MARK_SPAM,
+                    RuleActionType.SEND_REPLY,
+                    RuleActionType.FORWARD_EMAIL,
+                    RuleActionType.SEND_EMAIL);
 
     public RuleActionType gate(ActionProposal actionProposal) {
         RuleActionType actionType = actionProposal == null ? null : actionProposal.type();

@@ -9,7 +9,11 @@ import java.util.stream.Stream;
 public enum Feature implements IdentifiedEnum {
     CHAT,
     TRIAGE,
-    DRAFT;
+    DRAFT,
+    RULE_AUTHORING,
+    RULE_PREVIEW_SEMANTIC,
+    TRIAGE_SEMANTIC,
+    DRIFT_CHECK;
 
     @JsonValue
     @Override

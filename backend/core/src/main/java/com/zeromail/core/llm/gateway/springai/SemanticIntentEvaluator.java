@@ -1,10 +1,15 @@
 package com.zeromail.core.llm.gateway.springai;
 
 import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.routing.PlatformLlmRouteCredentials;
 import com.zeromail.core.llm.usecases.LlmUsage;
 import com.zeromail.core.llm.usecases.SemanticIntentEvaluationResult;
 import com.zeromail.core.llm.usecases.SemanticIntentRequest;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -15,8 +20,10 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatModel.ResponseFormat;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -24,7 +31,7 @@ import org.springframework.stereotype.Component;
 public class SemanticIntentEvaluator
         implements com.zeromail.core.llm.usecases.SemanticIntentEvaluator {
 
-    private static final String MODEL = "openai/gpt-5.4-nano";
+    private static final String OPENAI_FORMAT = "OPENAI_FORMAT";
     private static final String SYSTEM_MESSAGE =
             """
             You are Zero Mail's semantic email-intent classifier.
@@ -47,19 +54,90 @@ public class SemanticIntentEvaluator
       """;
 
     private final ChatClient platformChatClient;
+    private final ZeroMailLlmProperties llmProperties;
     private final BeanOutputConverter<SemanticIntentResponse> outputConverter =
             new BeanOutputConverter<>(SemanticIntentResponse.class);
 
-    public SemanticIntentEvaluator(@Qualifier("platformChatClient") ChatClient platformChatClient) {
+    @Autowired
+    public SemanticIntentEvaluator(
+            @Qualifier("platformChatClient") ChatClient platformChatClient,
+            ZeroMailCoreProperties zeroMailCoreProperties) {
+        this(platformChatClient, zeroMailCoreProperties.llm().platform());
+    }
+
+    SemanticIntentEvaluator(ChatClient platformChatClient) {
+        this(
+                platformChatClient,
+                new ZeroMailLlmProperties(
+                        null, null, "test-platform-key", null, null, null, null, null, null));
+    }
+
+    private SemanticIntentEvaluator(
+            ChatClient platformChatClient, ZeroMailLlmProperties llmProperties) {
         this.platformChatClient = platformChatClient;
+        this.llmProperties = llmProperties;
     }
 
     @Override
     public SemanticIntentEvaluationResult evaluate(
             CallSite callSite,
+            String modelId,
+            String sanitizedMessageContent,
+            List<SemanticIntentRequest> intents) {
+        return evaluateWithClient(
+                platformChatClient, callSite, modelId, sanitizedMessageContent, intents);
+    }
+
+    @Override
+    public SemanticIntentEvaluationResult evaluate(
+            CallSite callSite,
+            String modelId,
+            PlatformLlmRouteCredentials routeCredentials,
+            String sanitizedMessageContent,
+            List<SemanticIntentRequest> intents) {
+        if (!OPENAI_FORMAT.equals(routeCredentials.keyFormat())) {
+            routeCredentials.wipe();
+            throw new IllegalStateException(
+                    "Platform semantic route uses unsupported key format: "
+                            + routeCredentials.keyFormat());
+        }
+        byte[] plaintextKey = routeCredentials.plaintextKey();
+        String plaintextApiKey = new String(plaintextKey, StandardCharsets.UTF_8);
+        try {
+            OpenAiChatModel routedModel =
+                    OpenAiChatModel.builder()
+                            .options(
+                                    OpenAiChatOptions.builder()
+                                            .apiKey(plaintextApiKey)
+                                            .baseUrl(routeCredentials.baseUrl())
+                                            .model(modelId)
+                                            .temperature(0.0)
+                                            .maxTokens(512)
+                                            .timeout(llmProperties.readTimeout())
+                                            .internalToolExecutionEnabled(false)
+                                            .build())
+                            .build();
+            return evaluateWithClient(
+                    ChatClient.create(routedModel),
+                    callSite,
+                    modelId,
+                    sanitizedMessageContent,
+                    intents);
+        } finally {
+            plaintextApiKey = null;
+            Arrays.fill(plaintextKey, (byte) 0);
+            routeCredentials.wipe();
+        }
+    }
+
+    private SemanticIntentEvaluationResult evaluateWithClient(
+            ChatClient chatClient,
+            CallSite callSite,
+            String modelId,
             String sanitizedMessageContent,
             List<SemanticIntentRequest> intents) {
         Objects.requireNonNull(callSite, "callSite");
+        Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(sanitizedMessageContent, "sanitizedMessageContent");
         Objects.requireNonNull(intents, "intents");
 
@@ -67,7 +145,7 @@ public class SemanticIntentEvaluator
         String jsonSchema = outputConverter.getJsonSchema();
         OpenAiChatOptions.Builder runtimeOptions =
                 OpenAiChatOptions.builder()
-                        .model(MODEL)
+                        .model(modelId)
                         .temperature(0.0)
                         .maxTokens(512)
                         .responseFormat(
@@ -77,7 +155,7 @@ public class SemanticIntentEvaluator
                                         .build());
 
         ChatResponse response =
-                platformChatClient
+                chatClient
                         .prompt()
                         .system(SYSTEM_MESSAGE)
                         .user(

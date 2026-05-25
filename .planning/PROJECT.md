@@ -13,17 +13,18 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Backend:** ~18 phases (v1.0 + Phase 7), Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
 - **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary. Brand palette shifted teal `#0E5E5A` → purple `#867AEB` in PR #40 (2026-05-19) — user-page visual refresh queued for v1.2.
 - **Infra:** Single VPS — Postgres 17 + Redis 7 + reverse proxy + api + worker + web on one host. No GCP / Kafka / vector DB.
-- **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced; v1.1 Phase 7 flipped Gmail send call sites 0 → exactly 1 via `AssistantSendExecutor`); no long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer (sanitizer + ArchUnit + Postgres trigger).
+- **Trust posture:** v1.0/v1.1 hard-blocked rule-triggered outbound sends; v1.2 Phase 08.1 replaces that hard ban with one default-ON global `Auto-send rules` setting, safety/rate/idempotency gates, draft fallback, audit, and a single outbound gateway boundary. No long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer (sanitizer + ArchUnit + Postgres trigger).
 - **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012). v1.1 chat surface ships **without** hostile-corpus eval gate (deferred to v1.2 hardening); v1.0 LAUNCH-GO-NOGO still applies; v1.1 GA tag annotated with deferred-eval caveat.
 
 ## Current Milestone: v1.2 — Admin Console Foundation + Settings UI (Slice 2 capability)
 
-**Goal:** Ship admin console as the foundation (Phase 8), then ship the user Settings UI on top of the admin-curated catalog (Phase 9). No GA tag this milestone — visual refresh, hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, and the formal GA tag are explicitly deferred to v1.3+.
+**Goal:** Ship admin console as the foundation (Phase 8), add Inbox Zero-style examples/actions with user-enabled outbound automation (Phase 08.1), then ship the user Settings UI on top of the admin-curated catalog (Phase 9). No GA tag this milestone — visual refresh, hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, and the formal GA tag are explicitly deferred to v1.3+.
 
 **Target features:**
 
 1. **Admin foundation (Phase 8)** — `/admin/*` routes + `ROLE_ADMIN` RBAC + admin action audit logs + per-provider/per-feature LLM catalog curation UI with Sync-from-`/models` flow + AES-GCM-encrypted master key management for OpenAI/Anthropic/Google/DeepSeek + test-connection + tenant read-only views + worker queue health (read-only) + promoted global LLM spend dashboard. Activates **SEED-011** (admin-support-and-compliance-console) and **OPS-02** (deferred from v1.1).
-2. **Settings UI on curated catalog (Phase 9)** — 4 tabs (Personalization, Behavior, Safety Net, AI Provider/Model) via shadcn `<Tabs>` query-param-driven; carries forward the 19 deferred v1.1 reqs (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04). AI Provider/Model tab depends on the admin-curated catalog from Phase 8.
+2. **Inbox Zero-style actions/examples (Phase 08.1)** — rule creation entry points (`Create rules`, `Choose from examples`, `Add manually`), copied Inbox Zero examples/personas as seed content, admin-managed example/action catalog, Available Actions panel, user settings for outbound automation, and gateway-bound architecture tests for `send_reply`, `forward_email`, and `send_email`.
+3. **Settings UI on curated catalog (Phase 9)** — 4 tabs (Personalization, Behavior, Safety Net, AI Provider/Model) via shadcn `<Tabs>` query-param-driven; carries forward the 19 deferred v1.1 reqs (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04). AI Provider/Model tab depends on the admin-curated catalog from Phase 8.
 
 **Seeds activating in v1.2:**
 
@@ -41,7 +42,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 ## Core Value
 
-**AI auto-triage that users trust with their real inbox.** Validated through v1.0: trust posture (no auto-send, no stored bodies, undoable actions) is the architectural backbone — every phase reinforced it, and the launch go/no-go signoff is bound to it.
+**AI auto-triage that users trust with their real inbox.** The current trust posture is explicit user control for risky automation, no stored email bodies/prompts/completions, undo/review where possible, and auditable gateway boundaries for any outbound send.
 
 ## Requirements
 
@@ -73,7 +74,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 **Billing (prepaid credits)** *(v1.0)*
 - ✓ SePay/VietQR top-up + signed webhook (BILL-01, v1.0)
 - ✓ Double-entry Postgres ledger with reserve/settle/release + concurrency safety (BILL-02..04, v1.0)
-- ✓ Real-time balance + per-action cost in UI; insufficient-credit blocks billable actions (BILL-05..06, v1.0)
+- ✓ Real-time balance + action-level cost in UI; insufficient-credit blocks billable actions (BILL-05..06, v1.0)
 - ✓ BYOK actions bypass platform credits (BILL-07, v1.0)
 
 **LLM gateway** *(v1.0)*
@@ -118,15 +119,15 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 <!-- Next milestone scope. Define via `/gsd:new-milestone`. -->
 
-**v1.2 in progress** (started 2026-05-19). Scope: Admin console foundation + Settings UI on curated catalog (see "Current Milestone" section above). Requirements: `.planning/REQUIREMENTS.md`. Roadmap: `.planning/ROADMAP.md`.
+**v1.2 in progress** (started 2026-05-19). Scope: Admin console foundation + Inbox Zero-style rule actions/examples + Settings UI on curated catalog (see "Current Milestone" section above). Requirements: `.planning/REQUIREMENTS.md`. Roadmap: `.planning/ROADMAP.md`.
 
-*Deferred from v1.1 candidate list:* CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, Auto-send opt-in for narrow rules with per-rule approval flow, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans, waitlist OAuth provisioning.
+*Deferred from v1.1 candidate list:* CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans, waitlist OAuth provisioning.
 
 ### Out of Scope
 
 <!-- Explicit boundaries. Reasoning included so we don't silently re-add them. -->
 
-- **Auto-send replies (no human review)** — single bad auto-send is trust-ending; opt-in narrow auto-send deferred to v2 per v1 trust story.
+- **Ungated outbound automation** — rule-triggered send/reply/forward is allowed only behind Phase 08.1 global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth, tenant, and audit gates; blocked sends fall back to Gmail draft.
 - **Outlook / Microsoft 365** — Gmail-only in v1 to ship focused; v2 candidate.
 - **Generic IMAP/SMTP** — different auth/push/label model; doubles provider surface area.
 - **Self-hosted / open-source distribution** — Cloud SaaS only in v1; OSS is a separate strategic decision.
@@ -146,7 +147,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 **Runtime posture.** Multi-tenant cloud SaaS. Every request is tenant-scoped (Scoped Values, never ThreadLocal). Gmail Pub/Sub push arrives asynchronously and is processed with strong idempotency (`ON CONFLICT DO NOTHING`).
 
-**Safety posture.** App has write access to people's primary email. Every triage action is reversible (label / archive / draft); auto-send is forbidden at the gateway and ArchUnit-enforced; every autonomous action leaves an audit trail with 30-day undo.
+**Safety posture.** App has write access to people's primary email. Every autonomous action leaves an audit trail; label/archive/draft remain reversible, and outbound sends require the global auto-send setting plus safety/rate/idempotency gates and one ArchUnit-enforced outbound gateway.
 
 **v1.0 scale.** ~17 phases / 123 plans / 221 tasks, locked Vietnamese-default i18n + English secondary, single-VPS deployment baseline, OAuth Testing mode at launch (production OAuth gated by SEED-012 CASA closure).
 
@@ -163,7 +164,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **LLM routing**: Default OpenRouter behind Spring AI; BYOK supported — locked.
 - **Billing model**: Prepaid credits, pay-as-you-go. Vietnam beta uses SePay/VietQR + Postgres ledger + configurable VND-per-credit; global Merchant-of-Record/card provider deferred.
 - **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings — locked. **Scope:** the email-content processing pipeline (triage, draft generation). User-typed rule-builder assistant chat (chat messages + structured tool outputs) persists normally — it is UI configuration input, not extracted email content. Still forbidden inside chat: inlining email bodies into long-term assistant prompts (use short-lived in-memory cache) and embeddings of user mail.
-- **Write actions allowed**: (1) **Rules engine** (auto-triggered by incoming mail): label, archive (skip inbox), save Gmail draft only — **auto-send forbidden** (= rule firing → send without per-message user click). (2) **Chat assistant** (user-initiated): same as rules engine + (v1.1+) user-confirmed send/reply/forward via chat preview card. AI drafts message → chat UI renders preview with edit + send + cancel → send executes only on explicit per-message user click. Auto-send (rule-triggered, no per-message click) remains forbidden in all pathways.
+- **Write actions allowed**: (1) **Rules engine** (auto-triggered by incoming mail): label, archive (skip inbox), save Gmail draft, mark read/unread, star/unstar, add to digest, mark spam, and user-enabled outbound actions `send_reply`, `forward_email`, and `send_email`. Outbound rule actions require the global `Auto-send rules` setting (default ON), safety-net checks, low-trust sender guards, rate/daily caps, idempotency, and append-only audit; if any gate fails or the global setting is OFF, downgrade to Gmail draft instead of sending. (2) **Chat assistant** (user-initiated): same action set plus user-confirmed send/reply/forward through a preview card. All Gmail send execution must go through the shared outbound gateway/send executor so architectural tests can enforce the boundary; direct Gmail send call sites outside that gateway are forbidden.
 - **Primary datastore**: PostgreSQL 17 self-hosted on the VPS. Redis 7 same VPS for cache/session/rate-limit only; no vector DB.
 - **Schema migrations**: Liquibase YAML — locked.
 - **Timeline**: Exploratory / learning-oriented; favor architectural quality over speed.
@@ -176,6 +177,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 | Pub/Sub push over polling | Near-real-time triage; preserves API quota | ✓ Good — MAIL-01 verified |
 | OpenRouter default + BYOK via Spring AI | Model flexibility + user cost control | ✓ Good — LLM-01..04 shipped |
 | No auto-send in v1 | One bad auto-send is trust-ending | ✓ Good — TRG-03 + ArchUnit + grep gate |
+| User-enabled outbound rule automation in Phase 08.1 | Users expect a rule engine to send replies/forward/send email when explicitly configured; safety moves from hard ban to opt-in gates + audited gateway boundary | — Active — RACT-01..12 |
 | Prepaid credits, pay-as-you-go | Aligns revenue with LLM cost; avoids freemium abuse | ✓ Good — BILL-01..07 shipped |
 | No long-term body/prompt/completion/embedding storage | Privacy is #1 install blocker | ✓ Good — repo-wide privacy sweeps green |
 | Next.js frontend separate module | Open frontend talent pool; clean API boundary | ✓ Good — WEB-01..04 shipped |

@@ -21,10 +21,10 @@ public final class MasterKeyMasker {
     }
 
     private static String prefixFor(String plaintextKey, LlmProvider provider) {
-        if (plaintextKey.startsWith("sk-ant-") || provider == LlmProvider.ANTHROPIC) {
+        if (plaintextKey.startsWith("sk-ant-") || LlmProvider.ANTHROPIC.equals(provider)) {
             return "sk-ant-";
         }
-        if (plaintextKey.startsWith("AIza") || provider == LlmProvider.GOOGLE) {
+        if (plaintextKey.startsWith("AIza") || LlmProvider.GOOGLE.equals(provider)) {
             return "AIza";
         }
         if (plaintextKey.startsWith("sk-or-")) {

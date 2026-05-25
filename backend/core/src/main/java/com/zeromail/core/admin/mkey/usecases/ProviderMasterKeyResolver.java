@@ -3,9 +3,12 @@ package com.zeromail.core.admin.mkey.usecases;
 import static com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository.pairKey;
 
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository;
+import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository.ProviderMetadata;
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
+import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyId;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
@@ -14,9 +17,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,6 +103,17 @@ public class ProviderMasterKeyResolver {
         }
     }
 
+    public ResolvedMasterKey resolve(LlmProvider provider, UUID keyId) {
+        Objects.requireNonNull(provider, "provider");
+        Objects.requireNonNull(keyId, "keyId");
+        CachedMasterKey loadedKey = load(provider, keyId);
+        try {
+            return loadedKey.toResolved();
+        } finally {
+            loadedKey.wipe();
+        }
+    }
+
     public long providerSecretVersionOrZero(LlmProvider provider) {
         return llmProviderMasterKeyRepository
                 .findPrimaryActive(provider)
@@ -120,8 +136,12 @@ public class ProviderMasterKeyResolver {
                 providerCatalogLookupRepository == null
                         ? Set.of()
                         : providerCatalogLookupRepository.findAllFeatureDefaultPairs();
+        Map<String, ProviderMetadata> providerMetadataById =
+                providerCatalogLookupRepository == null
+                        ? Map.of()
+                        : providerCatalogLookupRepository.findAllProviderMetadata();
         return llmProviderMasterKeyRepository.findAllOrderedByProviderAndPriority().stream()
-                .map(entity -> toMaskedRow(entity, featureDefaultPairs))
+                .map(entity -> toMaskedRow(entity, featureDefaultPairs, providerMetadataById))
                 .toList();
     }
 
@@ -137,6 +157,20 @@ public class ProviderMasterKeyResolver {
                 llmProviderMasterKeyRepository
                         .findPrimaryActive(provider)
                         .orElseThrow(() -> new MissingMasterKeyException(provider));
+        return toCachedMasterKey(provider, entity);
+    }
+
+    private CachedMasterKey load(LlmProvider provider, UUID keyId) {
+        LlmProviderMasterKeyEntity entity =
+                llmProviderMasterKeyRepository
+                        .findById(new LlmProviderMasterKeyId(provider, keyId))
+                        .filter(masterKey -> masterKey.getStatus() == MasterKeyStatus.ACTIVE)
+                        .orElseThrow(() -> new MissingMasterKeyException(provider));
+        return toCachedMasterKey(provider, entity);
+    }
+
+    private CachedMasterKey toCachedMasterKey(
+            LlmProvider provider, LlmProviderMasterKeyEntity entity) {
         if (!entity.hasEncryptedKey()
                 || entity.getKekVersion() == null
                 || entity.getKeyFormat() == null) {
@@ -148,7 +182,7 @@ public class ProviderMasterKeyResolver {
                 provider,
                 plaintextKey,
                 entity.getKeyFormat(),
-                resolvedBaseUrl(entity),
+                resolvedBaseUrl(entity, providerMetadata(provider)),
                 entity.getKekVersion(),
                 entity.getProviderSecretVersion(),
                 providerCatalogVersionOrOne(provider),
@@ -157,7 +191,9 @@ public class ProviderMasterKeyResolver {
     }
 
     private MasterKeyMaskedRow toMaskedRow(
-            LlmProviderMasterKeyEntity entity, Set<String> featureDefaultPairs) {
+            LlmProviderMasterKeyEntity entity,
+            Set<String> featureDefaultPairs,
+            Map<String, ProviderMetadata> providerMetadataById) {
         // WR-02: prefer the stored mask (populated at write time) to avoid decrypting the master
         // key just to render the list page. Legacy rows persisted before changelog 080 may still
         // have a null masked_key; in that case fall back to the decrypt path but only for that row.
@@ -177,16 +213,26 @@ public class ProviderMasterKeyResolver {
         } else {
             maskedKey = null;
         }
+        ProviderMetadata providerMetadata = providerMetadataById.get(entity.getProvider().id());
+        String displayName =
+                providerMetadata == null
+                        ? entity.getProvider().id()
+                        : providerMetadata.displayName();
         return new MasterKeyMaskedRow(
                 entity.getProvider(),
+                displayName,
+                providerMetadata == null ? null : providerMetadata.providerKind(),
+                providerMetadata == null ? null : providerMetadata.compatibleType(),
+                providerMetadata == null ? null : providerMetadata.defaultBaseUrl(),
                 maskedKey,
                 entity.getKeyFormat(),
                 entity.getKekVersion(),
                 entity.getProviderSecretVersion(),
                 entity.getLastRotatedAt(),
                 MasterKeyMaskedRow.NO_DEPENDENTS,
+                entity.getStatus() == MasterKeyStatus.ACTIVE ? 1L : 0L,
                 rotationRecommended(entity.getLastRotatedAt()),
-                resolvedBaseUrl(entity),
+                resolvedBaseUrl(entity, providerMetadata),
                 featureDefaultPairs.contains(pairKey(entity.getProvider(), "CHAT")),
                 featureDefaultPairs.contains(pairKey(entity.getProvider(), "TRIAGE")),
                 featureDefaultPairs.contains(pairKey(entity.getProvider(), "DRAFT")));
@@ -201,10 +247,22 @@ public class ProviderMasterKeyResolver {
         return "platform:master_key:" + provider.id();
     }
 
-    private static String resolvedBaseUrl(LlmProviderMasterKeyEntity entity) {
+    private ProviderMetadata providerMetadata(LlmProvider provider) {
+        return providerCatalogLookupRepository == null
+                ? null
+                : providerCatalogLookupRepository.findProviderMetadataOrNull(provider);
+    }
+
+    private static String resolvedBaseUrl(
+            LlmProviderMasterKeyEntity entity, ProviderMetadata providerMetadata) {
         String baseUrl = entity.getBaseUrl();
         if (baseUrl != null && !baseUrl.isBlank()) {
             return baseUrl;
+        }
+        if (providerMetadata != null
+                && providerMetadata.defaultBaseUrl() != null
+                && !providerMetadata.defaultBaseUrl().isBlank()) {
+            return providerMetadata.defaultBaseUrl();
         }
         return entity.getProvider().defaultBaseUrl();
     }

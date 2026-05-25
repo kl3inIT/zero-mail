@@ -18,7 +18,15 @@ import java.util.List;
 public record SetFeatureDefaultTierRequest(
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,
-                        allowableValues = {"CHAT", "TRIAGE", "DRAFT"})
+                        allowableValues = {
+                            "CHAT",
+                            "TRIAGE",
+                            "DRAFT",
+                            "RULE_AUTHORING",
+                            "RULE_PREVIEW_SEMANTIC",
+                            "TRIAGE_SEMANTIC",
+                            "DRIFT_CHECK"
+                        })
                 @NotNull Feature feature,
         @Schema(
                         requiredMode = Schema.RequiredMode.REQUIRED,

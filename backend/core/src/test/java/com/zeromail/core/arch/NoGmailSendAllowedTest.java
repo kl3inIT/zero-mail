@@ -1,7 +1,6 @@
 package com.zeromail.core.arch;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -11,8 +10,6 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
-import com.zeromail.core.rules.domain.RuleActionType;
-import org.junit.jupiter.api.Test;
 
 @AnalyzeClasses(packages = "com.zeromail", importOptions = ImportOption.DoNotIncludeTests.class)
 class NoGmailSendAllowedTest {
@@ -20,7 +17,8 @@ class NoGmailSendAllowedTest {
     private static final String GMAIL_MESSAGES_OWNER = "Gmail.Users.Messages";
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
     private static final String ALLOWED_SEND_CALL_SITE =
-            "com.zeromail.core.chat.confirm.send.AllowedSendCallSite";
+            "com.zeromail.core.outbound.usecases.AllowedSendCallSite";
+    private static final String OUTBOUND_GATEWAY_PACKAGE = "com.zeromail.core.outbound";
 
     @ArchTest
     static final ArchRule no_code_calls_gmail_send_apis =
@@ -31,9 +29,7 @@ class NoGmailSendAllowedTest {
                                 @Override
                                 public void check(
                                         JavaClass javaClass, ConditionEvents conditionEvents) {
-                                    // ARCH-01 carve-out: @AllowedSendCallSite is excluded; paired
-                                    // with OnlyOneGmailSendCallSiteTest which asserts count == 1.
-                                    if (javaClass.isAnnotatedWith(ALLOWED_SEND_CALL_SITE)) {
+                                    if (isAllowedOutboundGatewaySendOwner(javaClass)) {
                                         return;
                                     }
                                     javaClass
@@ -64,12 +60,12 @@ class NoGmailSendAllowedTest {
                                 }
                             })
                     .because(
-                            "TRG-03: Zero Mail v1 may label, archive, or save drafts, but must never send mail.")
+                            "Phase 08.1 allows outbound automation only behind the shared outbound gateway boundary.")
                     .allowEmptyShould(false);
 
-    @Test
-    void rule_action_type_send_does_not_exist() {
-        assertThatThrownBy(() -> RuleActionType.valueOf("SEND"))
-                .isInstanceOf(IllegalArgumentException.class);
+    private static boolean isAllowedOutboundGatewaySendOwner(JavaClass javaClass) {
+        String className = javaClass.getName();
+        return javaClass.isAnnotatedWith(ALLOWED_SEND_CALL_SITE)
+                && className.startsWith(OUTBOUND_GATEWAY_PACKAGE + ".");
     }
 }

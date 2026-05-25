@@ -18,6 +18,8 @@
             "draft",
             "thread",
             "thread :: usecases",
+            "outbound",
+            "outbound :: api",
             "billing",
             "billing :: domain",
             "billing :: usecases",
@@ -29,7 +31,8 @@
             "shared :: privacy",
             "shared :: persistence",
             "shared :: lang",
-            "shared :: pagination"
+            "shared :: pagination",
+            "shared :: validation"
         })
 package com.zeromail.core.triage;
 

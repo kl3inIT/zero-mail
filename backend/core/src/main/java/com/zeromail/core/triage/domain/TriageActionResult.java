@@ -1,5 +1,8 @@
 package com.zeromail.core.triage.domain;
 
+import com.zeromail.core.shared.validation.EmailRecipientValidator;
+import java.util.List;
+
 /**
  * Persisted result of a triage action after it has been resolved for Gmail execution.
  *
@@ -12,7 +15,16 @@ package com.zeromail.core.triage.domain;
  * Gmail must still match the existing PENDING row after Gmail later returns a draft id.
  */
 public sealed interface TriageActionResult
-        permits TriageActionResult.Label, TriageActionResult.Archive, TriageActionResult.SaveDraft {
+        permits TriageActionResult.Label,
+                TriageActionResult.Archive,
+                TriageActionResult.SaveDraft,
+                TriageActionResult.MarkRead,
+                TriageActionResult.Star,
+                TriageActionResult.AddToDigest,
+                TriageActionResult.MarkSpam,
+                TriageActionResult.SendReply,
+                TriageActionResult.ForwardEmail,
+                TriageActionResult.SendEmail {
 
     record Label(String labelId, String labelName) implements TriageActionResult {
         public Label {
@@ -34,9 +46,53 @@ public sealed interface TriageActionResult
         }
     }
 
+    record MarkRead() implements TriageActionResult {}
+
+    record Star() implements TriageActionResult {}
+
+    record AddToDigest() implements TriageActionResult {}
+
+    record MarkSpam() implements TriageActionResult {}
+
+    record SendReply(String draftBody, String gmailMessageId, String gmailThreadId)
+            implements TriageActionResult {
+        public SendReply {
+            requireText(draftBody, "draftBody");
+            requireText(gmailMessageId, "gmailMessageId");
+            requireText(gmailThreadId, "gmailThreadId");
+        }
+    }
+
+    record ForwardEmail(List<String> recipients, String draftBody) implements TriageActionResult {
+        public ForwardEmail {
+            recipients = requireRecipients(recipients, "recipients");
+            requireText(draftBody, "draftBody");
+        }
+    }
+
+    record SendEmail(
+            List<String> to, List<String> cc, List<String> bcc, String subject, String draftBody)
+            implements TriageActionResult {
+        public SendEmail {
+            to = requireRecipients(to, "to");
+            cc = optionalRecipients(cc, "cc");
+            bcc = optionalRecipients(bcc, "bcc");
+            requireText(subject, "subject");
+            requireText(draftBody, "draftBody");
+        }
+    }
+
     private static void requireText(String text, String fieldName) {
         if (text == null || text.isBlank()) {
             throw new IllegalArgumentException(fieldName + " must not be blank");
         }
+    }
+
+    private static List<String> requireRecipients(List<String> recipients, String fieldName) {
+        return EmailRecipientValidator.required(recipients, fieldName);
+    }
+
+    private static List<String> optionalRecipients(List<String> recipients, String fieldName) {
+        return EmailRecipientValidator.optional(recipients, fieldName);
     }
 }

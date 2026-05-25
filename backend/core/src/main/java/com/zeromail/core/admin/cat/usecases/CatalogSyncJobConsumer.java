@@ -1,5 +1,6 @@
 package com.zeromail.core.admin.cat.usecases;
 
+import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.persistence.lowlevel.CatalogSyncJobRepository;
 import com.zeromail.core.admin.cat.persistence.lowlevel.ModelCatalogWriteRepository;
 import com.zeromail.core.admin.cat.projection.CatalogDiff;
@@ -128,6 +129,7 @@ public class CatalogSyncJobConsumer {
                                                 false,
                                                 null,
                                                 null,
+                                                ModelVerificationStatus.UNTESTED,
                                                 null,
                                                 0L))
                         .sorted(Comparator.comparing(CatalogModelRow::modelId))
@@ -152,7 +154,16 @@ public class CatalogSyncJobConsumer {
                         ? rawModel.modelId()
                         : rawModel.displayName();
         return new CatalogModelRow(
-                provider.id(), rawModel.modelId(), displayName, false, false, null, null, null, 0L);
+                provider.id(),
+                rawModel.modelId(),
+                displayName,
+                false,
+                false,
+                null,
+                null,
+                ModelVerificationStatus.UNTESTED,
+                null,
+                0L);
     }
 
     private record ExistingModel(String modelId, String displayName) {}

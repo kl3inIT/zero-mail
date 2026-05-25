@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# ARCH-01 - Count Gmail send call sites partitioned by executor vs non-executor.
-# Output: two lines: "non_executor=<N>" and "executor=<N>". Always exits 0.
+# ARCH-01 - Count Gmail send call sites partitioned by shared gateway vs
+# non-gateway code. Output: two lines: "non_gateway=<N>" and "gateway=<N>".
+# Always exits 0.
 # The calling CI step parses and asserts the expected counts.
 set -u
+
+ALLOWED_GATEWAY_PATH='backend/core/src/main/java/com/zeromail/core/outbound/usecases/GmailOutboundSendGateway.java'
 
 MATCHES=$(
   grep -rE 'messages\(\)\.send\(|drafts\(\)\.send\(' backend/ \
@@ -12,16 +15,16 @@ MATCHES=$(
 )
 
 if [ -z "$MATCHES" ]; then
-  NON_EXECUTOR=0
-  EXECUTOR=0
+  NON_GATEWAY=0
+  GATEWAY=0
 else
-  NON_EXECUTOR=$(printf '%s\n' "$MATCHES" | grep -vc 'AssistantSendExecutor' || true)
-  EXECUTOR=$(printf '%s\n' "$MATCHES" | grep -c 'AssistantSendExecutor' || true)
+  NON_GATEWAY=$(printf '%s\n' "$MATCHES" | grep -Fvc "$ALLOWED_GATEWAY_PATH" || true)
+  GATEWAY=$(printf '%s\n' "$MATCHES" | grep -Fc "$ALLOWED_GATEWAY_PATH" || true)
 fi
 
-NON_EXECUTOR=${NON_EXECUTOR:-0}
-EXECUTOR=${EXECUTOR:-0}
+NON_GATEWAY=${NON_GATEWAY:-0}
+GATEWAY=${GATEWAY:-0}
 
-echo "non_executor=${NON_EXECUTOR}"
-echo "executor=${EXECUTOR}"
+echo "non_gateway=${NON_GATEWAY}"
+echo "gateway=${GATEWAY}"
 exit 0

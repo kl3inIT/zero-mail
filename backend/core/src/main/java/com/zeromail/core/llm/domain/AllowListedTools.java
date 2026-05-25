@@ -29,6 +29,18 @@ public class AllowListedTools {
                     "ANY",
                     "NOT",
                     "SEMANTIC_INTENT");
+    private static final List<String> RULE_ACTION_TYPE_IDS =
+            List.of(
+                    "label",
+                    "archive",
+                    "save_draft",
+                    "mark_read",
+                    "star",
+                    "add_to_digest",
+                    "mark_spam",
+                    "send_reply",
+                    "forward_email",
+                    "send_email");
 
     private static final List<LlmTool> ALLOW_LISTED =
             List.of(
@@ -172,38 +184,73 @@ public class AllowListedTools {
                                 Map.of(
                                         "type",
                                         "object",
+                                        "additionalProperties",
+                                        false,
                                         "properties",
-                                        Map.of(
-                                                "type",
-                                                Map.of(
-                                                        "type",
-                                                        "string",
-                                                        "enum",
-                                                        List.of("label", "archive", "save_draft")),
-                                                "value",
-                                                Map.of(
-                                                        "type",
-                                                        "string",
-                                                        "description",
-                                                        "Legacy action value; for label actions this is the label text."),
-                                                "labelName",
-                                                Map.of(
-                                                        "type",
-                                                        "string",
-                                                        "description",
-                                                        "Label text requested by the user."),
-                                                "body",
-                                                Map.of("type", "string"),
-                                                "instruction",
-                                                Map.of(
-                                                        "type",
-                                                        "string",
-                                                        "description",
-                                                        "Requested draft instruction for save_draft actions.")),
+                                        ruleActionIntentProperties(),
                                         "required",
                                         List.of("type"))),
                 "clarificationRequired", Map.of("type", "boolean"),
                 "clarificationQuestion",
                         Map.of("type", List.of("string", "null"), "maxLength", 240));
+    }
+
+    private static Map<String, Object> ruleActionIntentProperties() {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("type", Map.of("type", "string", "enum", RULE_ACTION_TYPE_IDS));
+        properties.put(
+                "value",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "Legacy compatibility only; prefer explicit action fields."));
+        properties.put(
+                "labelName",
+                Map.of("type", "string", "description", "Label text requested by the user."));
+        properties.put(
+                "body",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "User-owned draft/send body for save_draft, send_reply, or send_email. Never copy Gmail-read body content here."));
+        properties.put(
+                "instruction",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "Requested draft/reply/forward instruction."));
+        properties.put(
+                "recipients",
+                Map.of(
+                        "type",
+                        "array",
+                        "items",
+                        Map.of("type", "string"),
+                        "description",
+                        "Forward recipients for forward_email."));
+        properties.put(
+                "to",
+                Map.of(
+                        "type",
+                        "array",
+                        "items",
+                        Map.of("type", "string"),
+                        "description",
+                        "Primary recipients for send_email; also accepted as a forward_email recipient alias."));
+        properties.put("cc", Map.of("type", "array", "items", Map.of("type", "string")));
+        properties.put("bcc", Map.of("type", "array", "items", Map.of("type", "string")));
+        properties.put(
+                "subject", Map.of("type", "string", "description", "Subject for send_email."));
+        properties.put(
+                "note",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "Optional forward note; instruction is preferred."));
+        return Map.copyOf(properties);
     }
 }

@@ -121,6 +121,13 @@ public class TriageAuditWriter {
             case TriageActionResult.Label ignored -> RuleActionType.LABEL;
             case TriageActionResult.Archive ignored -> RuleActionType.ARCHIVE;
             case TriageActionResult.SaveDraft ignored -> RuleActionType.SAVE_DRAFT;
+            case TriageActionResult.MarkRead ignored -> RuleActionType.MARK_READ;
+            case TriageActionResult.Star ignored -> RuleActionType.STAR;
+            case TriageActionResult.AddToDigest ignored -> RuleActionType.ADD_TO_DIGEST;
+            case TriageActionResult.MarkSpam ignored -> RuleActionType.MARK_SPAM;
+            case TriageActionResult.SendReply ignored -> RuleActionType.SEND_REPLY;
+            case TriageActionResult.ForwardEmail ignored -> RuleActionType.FORWARD_EMAIL;
+            case TriageActionResult.SendEmail ignored -> RuleActionType.SEND_EMAIL;
         };
     }
 }

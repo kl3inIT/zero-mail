@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP** — Phases 1, 1.1-1.6, 2A-2C, 3, 4, 5A-5C, 6 (shipped 2026-05-15) — see [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - ✅ **v1.1 Email assistant chat** — Phase 7 only (shipped 2026-05-19; Phase 8 deferred to v1.2) — see [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
-- 🚧 **v1.2 Admin Console + User Settings UI** — in planning (2 phases, 61 requirements, started 2026-05-19; Phase 8 + former Phase 9 merged 2026-05-19 during spec-phase; Phase 8 admin auth pivoted to WebAuthn + separate frontend during discuss-phase 2026-05-19, +2 reqs ADMIN-09/10)
+- 🚧 **v1.2 Admin Console + User Settings UI** — in planning (3 phases, 73 requirements, started 2026-05-19; Phase 8 + former Phase 9 merged 2026-05-19 during spec-phase; Phase 8 admin auth pivoted to WebAuthn + separate frontend during discuss-phase 2026-05-19, +2 reqs ADMIN-09/10; Phase 08.1 inserted 2026-05-23 for Inbox Zero-style rule actions and examples)
 
 ## Phases
 
@@ -31,6 +31,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 **Phase numbering continues from v1.1.** v1.2 begins at Phase 8 (no reset to 1).
 
 - [x] **Phase 8: Admin Console & Operator Tooling** — Operators can log in to a hardened `/admin/*` console with RBAC + append-only audit, configure 6 LLM providers with master keys, curate the per-feature model catalog, inspect tenant health / worker queue / platform LLM spend, and deploy v1.2 infrastructure via the re-platformed reverse proxy (completed 2026-05-20)
+- [ ] **Phase 08.1: Inbox Zero-style Rule Actions & Admin-managed Examples Catalog** — Users can build rules from Inbox Zero-style examples/personas and enable expanded actions including send replies, forward, and send email behind one default-ON global auto-send setting, runtime safety gates, fallback-to-draft behavior, and auditable send boundaries
 - [ ] **Phase 9: User Settings UI on Curated Catalog** — Users can configure voice, behavior, safety net, and AI provider/model across four tabs backed by the admin-curated catalog
 
 ## Phase Details
@@ -98,6 +99,50 @@ Plans:
 
 ---
 
+### Phase 08.1: Inbox Zero-style rule actions and admin-managed examples catalog (INSERTED)
+
+**Goal:** Bring the Inbox Zero rule-authoring UX into Zero Mail: copy the example/persona catalog as a seed, show an Available Actions panel, let admins manage examples/actions, and allow real automated outbound rule actions (`send_reply`, `forward_email`, `send_email`) behind one default-ON global auto-send setting, backend safety gates, fallback-to-draft behavior, and a shared outbound gateway boundary.
+
+**Requirements (12)**: RACT-01, RACT-02, RACT-03, RACT-04, RACT-05, RACT-06, RACT-07, RACT-08, RACT-09, RACT-10, RACT-11, RACT-12
+**Depends on:** Phase 8
+**Plans:** 5/6 plans executed
+
+**Source artifacts:**
+
+- Inbox Zero example seed copied verbatim from `../inbox-zero/apps/web/app/(app)/[emailAccountId]/assistant/examples.ts` at commit `6044fde9f`: `.planning/phases/08.1-inbox-zero-style-rule-actions-and-admin-managed-examples-cat/inbox-zero-examples.ts`
+- Reference UX/actions researched from Inbox Zero `AvailableActionsPanel.tsx`, `action-availability.ts`, `actions.ts`, `static-from-risk.ts`, and `rule.ts`
+
+**Success Criteria** (what must be TRUE):
+
+1. Rule creation offers three entry paths matching the Inbox Zero mental model: `Create rules`, `Choose from examples`, and `Add manually`
+2. The examples UI includes the copied Inbox Zero persona set (`Founder`, `Influencer`, `Realtor`, `Investor`, `Assistant`, `Developer`, `Designer`, `Sales`, `Marketer`, `Support`, `Recruiter`, `Student`, `Outreach`, `Other`) and the example prompt grid seeded from the copied source artifact
+3. Admin can create, edit, disable, reorder, and localize examples/personas/action descriptors without code changes; disabled examples do not appear in the user rule builder
+4. User-facing Available Actions includes `Label`, `Archive`, `Save draft`, `Mark read/unread`, `Star/unstar`, `Add to digest`, `Mark spam`, `Send reply`, `Forward`, and `Send email`, with unavailable actions visibly disabled and explained
+5. Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON and there are no individual outbound action toggles
+6. Manual editor and AI compiler both persist the same structured `When/Then` schema; natural language remains only `sourceText`/audit metadata
+7. Rule-triggered outbound actions execute only when the global setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, tenant checks, and audit reservation all pass
+8. If an outbound gate fails or the global setting is OFF, the rule result falls back to Gmail `save_draft` with an audit reason; it must not silently drop or send the email
+9. All Gmail send execution goes through one shared outbound gateway/send executor; ArchUnit/grep tests are updated to allow that boundary and fail any direct Gmail send call site elsewhere
+10. Privacy constraints remain intact: no long-term storage of Gmail-read email bodies, LLM prompts/completions, or embeddings; persisted draft bodies are allowed only when they are user-authored/action arguments under the existing draft-body carve-out
+11. Low-trust/static sender protections equivalent to Inbox Zero's example-risk guard prevent users from saving demo examples that would send to real people by accident
+12. UAT covers examples import, admin catalog management, outbound setting gates, downgrade-to-draft behavior, and the no-bypass architecture tests
+
+Plans:
+**Wave 1**
+
+- [x] 08.1-01-PLAN.md — Contract and architecture boundary: reconcile stale docs/requirements, define shared outbound gateway contract, add Spring Modulith named interfaces, regenerate Modulith docs
+- [x] 08.1-02-PLAN.md — DB-backed examples/personas/action descriptors: Liquibase seed EN+VI from Inbox Zero, user read APIs, admin CRUD APIs, OpenAPI codegen
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 08.1-03-PLAN.md — Admin rule catalog UI: bilingual persona/example/action descriptor management in `apps/admin`
+- [x] 08.1-04-PLAN.md — User rules UI: persona examples inside existing `RuleComposer`, Available Actions panel, default-ON global auto-send setting UI
+- [x] 08.1-05-PLAN.md — Rule action schema/compiler/manual builder: expanded structured action intents for mark/read/star/digest/spam/reply/forward/send
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 08.1-06-PLAN.md — Runtime outbound execution: shared `OutboundSendGateway`, fallback-to-draft gates, ArchUnit/privacy tests, safe Gmail UAT
+
 ### Phase 9: User Settings UI on Curated Catalog
 
 **Goal**: A user can open `/settings` and configure their writing voice, assistant behavior, sender safety net, and per-feature AI provider/model across four tabs — with the AI tab pulling exclusively from the admin-curated catalog and BYOK only for the four user-allowed providers.
@@ -126,8 +171,9 @@ Plans:
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
 | 7. Chat Email Assistant | v1.1 | 6/6 | Complete | 2026-05-18 |
 | 8. Admin Console & Operator Tooling | v1.2 | 6/6 | Complete   | 2026-05-20 |
+| 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 5/6 | In Progress|  |
 | 9. User Settings UI on Curated Catalog | v1.2 | 0/0 | Not started | — |
 
 ---
 
-*v1.0 archived 2026-05-15. v1.1 archived 2026-05-19 (Phase 7 only). v1.2 roadmap drafted 2026-05-19 — initially 3 phases; Phase 8 + former Phase 9 merged into single Phase 8 (40 reqs) on 2026-05-19 during spec-phase; Phase 8 admin auth pivoted to WebAuthn passkey + separate `apps/admin` Vite frontend during discuss-phase 2026-05-19, adding ADMIN-09 (admin_users schema) + ADMIN-10 (WebAuthn ceremonies). Final shape: 2 phases, 61 requirements, 100% coverage.*
+*v1.0 archived 2026-05-15. v1.1 archived 2026-05-19 (Phase 7 only). v1.2 roadmap drafted 2026-05-19 — initially 3 phases; Phase 8 + former Phase 9 merged into single Phase 8 (40 reqs) on 2026-05-19 during spec-phase; Phase 8 admin auth pivoted to WebAuthn passkey + separate `apps/admin` Vite frontend during discuss-phase 2026-05-19, adding ADMIN-09 (admin_users schema) + ADMIN-10 (WebAuthn ceremonies). Phase 08.1 inserted 2026-05-23 to adopt Inbox Zero-style rule actions/examples and user-enabled outbound automation. Current shape: 3 phases, 73 requirements.*

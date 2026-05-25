@@ -4,7 +4,6 @@ import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Edit3, Loader2, Trash2 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -184,9 +183,9 @@ function RuleTableRow({
   return (
     <TableRow
       className={cn(
-        'cursor-pointer',
-        selected && 'bg-accent hover:bg-accent',
-        !rule.enabled && 'text-foreground/80',
+        'hover:bg-muted/30 cursor-pointer transition-colors',
+        selected && 'bg-muted/40 hover:bg-muted/40',
+        !rule.enabled && 'text-muted-foreground',
       )}
       onClick={() => onSelectRule(rule)}
     >
@@ -207,19 +206,9 @@ function RuleTableRow({
       </TableCell>
       <TableCell className="px-4 py-4 align-top whitespace-normal">
         <div className="min-w-0">
-          <p className="truncate font-semibold">{rule.displayName ?? t('rules.composer.title')}</p>
-          {rule.templateKey && (
-            <div className="mt-1 flex flex-wrap gap-1">
-              <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px]">
-                {rule.customized ? t('rules.list.customizedBadge') : t('rules.list.templateBadge')}
-              </Badge>
-              {rule.templateVersion && (
-                <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px]">
-                  {`${rule.templateKey} · v${rule.templateVersion}`}
-                </Badge>
-              )}
-            </div>
-          )}
+          <p className="text-foreground truncate text-sm font-semibold">
+            {rule.displayName ?? t('rules.composer.title')}
+          </p>
         </div>
       </TableCell>
       <TableCell className="px-4 py-4 align-top whitespace-normal">
@@ -258,7 +247,10 @@ function RuleMobileCard(props: RuleRowProps) {
 
   return (
     <article
-      className={cn('cursor-pointer p-4 transition-colors', selected && 'bg-accent')}
+      className={cn(
+        'hover:bg-muted/30 cursor-pointer p-4 transition-colors',
+        selected && 'bg-muted/40 hover:bg-muted/40',
+      )}
       onClick={() => onSelectRule(rule)}
     >
       <div className="flex items-start justify-between gap-3">
@@ -299,9 +291,12 @@ function SummaryChips({ items, action = false }: { items: string[]; action?: boo
       {items.slice(0, 3).map((item) => (
         <span
           key={`${action ? 'action' : 'matcher'}-${item}`}
+          title={item}
           className={cn(
-            'max-w-full truncate rounded-sm px-2 py-1 text-xs font-medium',
-            action ? 'bg-amber-soft text-amber' : 'bg-muted text-muted-foreground',
+            'max-w-full truncate rounded-md border px-2.5 py-1 text-xs leading-5 font-medium',
+            action
+              ? 'border-border bg-background text-foreground'
+              : 'bg-muted/50 text-muted-foreground border-transparent',
           )}
         >
           {item}

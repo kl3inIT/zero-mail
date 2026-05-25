@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import {
   ActivityIcon,
+  BookOpenIcon,
   Building2Icon,
   ClipboardListIcon,
   DollarSignIcon,
@@ -36,6 +37,7 @@ const navigationItems: ReadonlyArray<NavigationItem> = [
   { to: '/audit', label: 'Nhật ký audit', icon: ClipboardListIcon },
   { to: '/role-grants', label: 'Phân quyền admin', icon: UsersIcon },
   { to: '/master-keys', label: 'Quản lý LLM', icon: KeyRoundIcon },
+  { to: '/rule-catalog', label: 'Ví dụ tạo quy tắc', icon: BookOpenIcon },
   { to: '/tenants', label: 'Khách hàng', icon: Building2Icon },
   { to: '/waitlist', label: 'Đăng ký dùng thử', icon: MailIcon },
   { to: '/queue', label: 'Hàng đợi', icon: ActivityIcon },
@@ -120,7 +122,7 @@ export function AdminLayout({ admin: _admin }: AdminLayoutProps) {
             <AdminBreadcrumb />
             <ThemeToggle />
           </div>
-          <div className="max-w-[1280px] px-8 py-8">
+          <div className="w-full px-8 py-8">
             <Outlet />
           </div>
         </main>

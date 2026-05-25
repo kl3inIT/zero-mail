@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 090-01-mark-current-routing-models-stale
+      author: zeromail
+      comment: >
+        Existing launch routing rows were created before model verification was
+        enforced. Mark models already referenced by feature_tier_model as STALE
+        so the router/admin picker can keep operating without allowing arbitrary
+        UNTESTED models.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE model_catalog model
+              SET verification_status = 'STALE',
+                  updated_at = now()
+              WHERE model.verification_status = 'UNTESTED'
+                AND model.deprecated_at IS NULL
+                AND EXISTS (
+                  SELECT 1
+                  FROM feature_tier_model tier_model
+                  WHERE tier_model.model_id = model.model_id
+                );
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE model_catalog model
+              SET verification_status = 'UNTESTED',
+                  updated_at = now()
+              WHERE model.verification_status = 'STALE'
+                AND model.deprecated_at IS NULL
+                AND EXISTS (
+                  SELECT 1
+                  FROM feature_tier_model tier_model
+                  WHERE tier_model.model_id = model.model_id
+                );
