@@ -5,7 +5,7 @@
     "description": "Phase 1 skeleton + Phase 1.1 i18n/error contract",
     "version": "0.1.1"
   },
-  "servers": [{ "url": "http://localhost:59480", "description": "Generated server url" }],
+  "servers": [{ "url": "http://localhost:8080", "description": "Generated server url" }],
   "paths": {
     "/api/tenant/triage-pause": {
       "put": {
@@ -230,20 +230,463 @@
         }
       }
     },
+    "/api/rules/settings/automation": {
+      "get": {
+        "tags": ["rules"],
+        "operationId": "getSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RuleAutomationSettingsResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["rules"],
+        "operationId": "updateSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleAutomationSettingsUpdateRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RuleAutomationSettingsResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/personas/{personaId}": {
+      "put": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "updatePersona",
+        "parameters": [
+          {
+            "name": "personaId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogPersonaWriteRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/personas/reorder": {
+      "put": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "reorderPersonas",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogReorderRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/examples/{personaId}/reorder": {
+      "put": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "reorderExamples",
+        "parameters": [
+          {
+            "name": "personaId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogReorderRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/examples/{exampleId}": {
+      "put": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "updateExample",
+        "parameters": [
+          {
+            "name": "exampleId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogExampleWriteRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/actions/{actionKey}": {
+      "put": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "upsertActionDescriptor",
+        "parameters": [
+          { "name": "actionKey", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogActionDescriptorWriteRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/actions/reorder": {
+      "put": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "reorderActions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogActionReorderRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/master-keys/{provider}": {
       "get": {
         "tags": ["admin-master-keys"],
         "operationId": "get",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
@@ -294,15 +737,7 @@
         "tags": ["admin-master-keys"],
         "operationId": "set",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "requestBody": {
           "content": {
@@ -349,6 +784,52 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": ["admin-master-keys"],
+        "operationId": "deleteProvider",
+        "parameters": [
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
       }
     },
     "/api/admin/master-keys/{provider}/keys/reorder": {
@@ -356,15 +837,7 @@
         "tags": ["admin-master-keys"],
         "operationId": "reorderKeys",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "requestBody": {
           "content": {
@@ -473,20 +946,23 @@
         "tags": ["admin-catalog"],
         "operationId": "setDefault",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          },
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } },
           {
             "name": "feature",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "enum": ["CHAT", "TRIAGE", "DRAFT"] }
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CHAT",
+                "TRIAGE",
+                "DRAFT",
+                "RULE_AUTHORING",
+                "RULE_PREVIEW_SEMANTIC",
+                "TRIAGE_SEMANTIC",
+                "DRIFT_CHECK"
+              ]
+            }
           }
         ],
         "requestBody": {
@@ -600,6 +1076,64 @@
         },
         "responses": {
           "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/waitlist/subscribe": {
+      "post": {
+        "tags": ["waitlist-controller"],
+        "operationId": "subscribe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/WaitlistSubscribeRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/WaitlistSubscribeResponse" } }
+            }
+          },
           "400": {
             "description": "Bad Request",
             "content": {
@@ -1291,6 +1825,64 @@
         }
       }
     },
+    "/api/rules/test/apply-labels": {
+      "post": {
+        "tags": ["rules"],
+        "operationId": "applyLabelsFromRuleTest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleTestApplyLabelsRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RuleTestApplyLabelsResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/rules/templates/{templateKey}/materialize": {
       "post": {
         "tags": ["rules"],
@@ -1832,6 +2424,59 @@
         }
       }
     },
+    "/api/gmail/inbox/{gmailMessageId}/read": {
+      "post": {
+        "tags": ["gmail-inbox"],
+        "operationId": "markRead",
+        "parameters": [
+          {
+            "name": "gmailMessageId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/cleanup/suppression": {
       "get": {
         "tags": ["cleanup"],
@@ -2238,6 +2883,122 @@
         }
       }
     },
+    "/api/admin/waitlist/{waitlistId}/reject": {
+      "post": {
+        "tags": ["admin-waitlist"],
+        "operationId": "reject",
+        "parameters": [
+          {
+            "name": "waitlistId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/AdminWaitlistEntryResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/waitlist/{waitlistId}/approve": {
+      "post": {
+        "tags": ["admin-waitlist"],
+        "operationId": "approve",
+        "parameters": [
+          {
+            "name": "waitlistId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/AdminWaitlistEntryResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/tenants/{tenantId}/pause": {
       "post": {
         "tags": ["admin-tenants"],
@@ -2415,6 +3176,180 @@
         }
       }
     },
+    "/api/admin/rule-catalog/personas": {
+      "get": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "personas",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/RuleCatalogPersonasAdminResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "createPersona",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogPersonaWriteRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RuleCatalogMutationResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/personas/{personaId}/examples": {
+      "post": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "createExample",
+        "parameters": [
+          {
+            "name": "personaId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogExampleWriteRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RuleCatalogMutationResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/queue/dead-letters/{jobId}/requeue": {
       "post": {
         "tags": ["admin-queue"],
@@ -2479,15 +3414,7 @@
         "tags": ["admin-master-keys"],
         "operationId": "testConnection",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "requestBody": {
           "content": {
@@ -2548,15 +3475,7 @@
         "tags": ["admin-master-keys"],
         "operationId": "rotate",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "requestBody": {
           "content": {
@@ -2615,15 +3534,7 @@
         "tags": ["admin-master-keys"],
         "operationId": "listKeys",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
@@ -2672,15 +3583,7 @@
         "tags": ["admin-master-keys"],
         "operationId": "addKey",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "requestBody": {
           "content": {
@@ -2741,15 +3644,7 @@
         "tags": ["admin-master-keys"],
         "operationId": "testKey",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          },
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } },
           {
             "name": "keyId",
             "in": "path",
@@ -2808,21 +3703,71 @@
         "tags": ["admin-master-keys"],
         "operationId": "editSession",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "*/*": { "schema": { "$ref": "#/components/schemas/MasterKeyEditSessionResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/master-keys/providers": {
+      "post": {
+        "tags": ["admin-master-keys"],
+        "operationId": "createProvider",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateProviderRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/CreateProviderResponse" } }
             }
           },
           "400": {
@@ -2925,15 +3870,7 @@
         "tags": ["admin-catalog"],
         "operationId": "startFetch",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
@@ -2986,15 +3923,7 @@
         "tags": ["admin-catalog"],
         "operationId": "createManualModel",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "requestBody": {
           "content": {
@@ -3558,20 +4487,190 @@
         }
       }
     },
+    "/api/admin/rule-catalog/personas/{personaId}/enabled": {
+      "patch": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "updatePersonaEnabled",
+        "parameters": [
+          {
+            "name": "personaId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogEnabledRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/examples/{exampleId}/enabled": {
+      "patch": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "updateExampleEnabled",
+        "parameters": [
+          {
+            "name": "exampleId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogEnabledRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/actions/{actionKey}/enabled": {
+      "patch": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "updateActionDescriptorEnabled",
+        "parameters": [
+          { "name": "actionKey", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCatalogEnabledRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/master-keys/{provider}/keys/{keyId}": {
       "delete": {
         "tags": ["admin-master-keys"],
         "operationId": "revokeKey",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          },
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } },
           {
             "name": "keyId",
             "in": "path",
@@ -3623,15 +4722,7 @@
         "tags": ["admin-master-keys"],
         "operationId": "updateKey",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          },
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } },
           {
             "name": "keyId",
             "in": "path",
@@ -4259,6 +5350,122 @@
         }
       }
     },
+    "/api/rules/catalog/examples": {
+      "get": {
+        "tags": ["rules"],
+        "operationId": "examples",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RuleCatalogExamplesResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/rules/catalog/actions": {
+      "get": {
+        "tags": ["rules"],
+        "operationId": "actions",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "en" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RuleCatalogActionsResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/me": {
       "get": {
         "tags": ["me-controller"],
@@ -4267,6 +5474,125 @@
           "200": {
             "description": "OK",
             "content": { "*/*": { "schema": { "$ref": "#/components/schemas/MeResponse" } } }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/inbox": {
+      "get": {
+        "tags": ["gmail-inbox"],
+        "operationId": "list_3",
+        "parameters": [
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 20 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/GmailInboxPageResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/inbox/{gmailMessageId}": {
+      "get": {
+        "tags": ["gmail-inbox"],
+        "operationId": "detail",
+        "parameters": [
+          {
+            "name": "gmailMessageId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/GmailInboxMessageDetailResponse" }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -4469,7 +5795,7 @@
     "/api/chat/history": {
       "get": {
         "tags": ["Chat"],
-        "operationId": "list_3",
+        "operationId": "list_4",
         "parameters": [
           {
             "name": "pageSize",
@@ -4705,6 +6031,194 @@
             "description": "OK",
             "content": {
               "*/*": { "schema": { "$ref": "#/components/schemas/AnalyticsSummaryResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/waitlist/{waitlistId}": {
+      "get": {
+        "tags": ["admin-waitlist"],
+        "operationId": "get_3",
+        "parameters": [
+          {
+            "name": "waitlistId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/AdminWaitlistEntryResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/waitlist/": {
+      "get": {
+        "tags": ["admin-waitlist"],
+        "operationId": "list_5",
+        "parameters": [
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string" } },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 25 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/AdminWaitlistListResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/waitlist": {
+      "get": {
+        "tags": ["admin-waitlist"],
+        "operationId": "list_6",
+        "parameters": [
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string" } },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 25 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/AdminWaitlistListResponse" } }
             }
           },
           "400": {
@@ -5097,7 +6611,7 @@
     "/api/admin/tenants": {
       "get": {
         "tags": ["admin-tenants"],
-        "operationId": "list_4",
+        "operationId": "list_7",
         "parameters": [
           { "name": "status", "in": "query", "required": false, "schema": { "type": "string" } },
           {
@@ -5169,7 +6683,7 @@
     "/api/admin/tenants/": {
       "get": {
         "tags": ["admin-tenants"],
-        "operationId": "list_5",
+        "operationId": "list_8",
         "parameters": [
           { "name": "status", "in": "query", "required": false, "schema": { "type": "string" } },
           {
@@ -5259,14 +6773,7 @@
             "name": "providers",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-              },
-              "uniqueItems": true
-            }
+            "schema": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
           },
           {
             "name": "features",
@@ -5274,7 +6781,18 @@
             "required": false,
             "schema": {
               "type": "array",
-              "items": { "type": "string", "enum": ["CHAT", "TRIAGE", "DRAFT"] },
+              "items": {
+                "type": "string",
+                "enum": [
+                  "CHAT",
+                  "TRIAGE",
+                  "DRAFT",
+                  "RULE_AUTHORING",
+                  "RULE_PREVIEW_SEMANTIC",
+                  "TRIAGE_SEMANTIC",
+                  "DRIFT_CHECK"
+                ]
+              },
               "uniqueItems": true
             }
           }
@@ -5346,14 +6864,7 @@
             "name": "providers",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-              },
-              "uniqueItems": true
-            }
+            "schema": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
           },
           {
             "name": "features",
@@ -5361,7 +6872,18 @@
             "required": false,
             "schema": {
               "type": "array",
-              "items": { "type": "string", "enum": ["CHAT", "TRIAGE", "DRAFT"] },
+              "items": {
+                "type": "string",
+                "enum": [
+                  "CHAT",
+                  "TRIAGE",
+                  "DRAFT",
+                  "RULE_AUTHORING",
+                  "RULE_PREVIEW_SEMANTIC",
+                  "TRIAGE_SEMANTIC",
+                  "DRIFT_CHECK"
+                ]
+              },
               "uniqueItems": true
             }
           }
@@ -5371,6 +6893,58 @@
             "description": "OK",
             "content": {
               "text/csv": { "schema": { "$ref": "#/components/schemas/StreamingResponseBody" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rule-catalog/actions": {
+      "get": {
+        "tags": ["admin-rule-catalog"],
+        "operationId": "actions_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/RuleCatalogActionsAdminResponse" }
+              }
             }
           },
           "400": {
@@ -5572,7 +7146,7 @@
     "/api/admin/master-keys/": {
       "get": {
         "tags": ["admin-master-keys"],
-        "operationId": "list_6",
+        "operationId": "list_9",
         "responses": {
           "200": {
             "description": "OK",
@@ -5622,7 +7196,7 @@
     "/api/admin/master-keys": {
       "get": {
         "tags": ["admin-master-keys"],
-        "operationId": "list_7",
+        "operationId": "list_10",
         "responses": {
           "200": {
             "description": "OK",
@@ -5672,17 +7246,9 @@
     "/api/admin/catalog/{provider}": {
       "get": {
         "tags": ["admin-catalog"],
-        "operationId": "list_8",
+        "operationId": "list_11",
         "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-            }
-          }
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
@@ -6185,6 +7751,104 @@
           "templateVersion"
         ]
       },
+      "RuleAutomationSettingsUpdateRequest": {
+        "type": "object",
+        "properties": { "autoSendRulesEnabled": { "type": "boolean" } },
+        "required": ["autoSendRulesEnabled"]
+      },
+      "RuleAutomationSettingsResponse": {
+        "type": "object",
+        "properties": { "autoSendRulesEnabled": { "type": "boolean" } },
+        "required": ["autoSendRulesEnabled"]
+      },
+      "RuleCatalogPersonaWriteRequest": {
+        "type": "object",
+        "properties": {
+          "personaKey": { "type": "string", "minLength": 1 },
+          "displayNameEn": { "type": "string", "minLength": 1 },
+          "displayNameVi": { "type": "string", "minLength": 1 },
+          "icon": { "type": "string" },
+          "displayOrder": { "type": "integer", "format": "int32", "minimum": 0 },
+          "enabled": { "type": "boolean" },
+          "reason": { "type": "string" }
+        },
+        "required": ["displayNameEn", "displayNameVi", "displayOrder", "enabled", "personaKey"]
+      },
+      "RuleCatalogOrderEntryRequest": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string", "format": "uuid" },
+          "displayOrder": { "type": "integer", "format": "int32", "minimum": 0 }
+        },
+        "required": ["displayOrder", "itemId"]
+      },
+      "RuleCatalogReorderRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleCatalogOrderEntryRequest" },
+            "minItems": 1
+          },
+          "reason": { "type": "string", "minLength": 1 }
+        },
+        "required": ["items", "reason"]
+      },
+      "RuleCatalogExampleWriteRequest": {
+        "type": "object",
+        "properties": {
+          "exampleTextEn": { "type": "string", "minLength": 1 },
+          "exampleTextVi": { "type": "string", "minLength": 1 },
+          "displayOrder": { "type": "integer", "format": "int32", "minimum": 0 },
+          "enabled": { "type": "boolean" },
+          "reason": { "type": "string", "minLength": 1 }
+        },
+        "required": ["displayOrder", "enabled", "exampleTextEn", "exampleTextVi", "reason"]
+      },
+      "RuleCatalogActionDescriptorWriteRequest": {
+        "type": "object",
+        "properties": {
+          "labelEn": { "type": "string", "minLength": 1 },
+          "labelVi": { "type": "string", "minLength": 1 },
+          "descriptionEn": { "type": "string", "minLength": 1 },
+          "descriptionVi": { "type": "string", "minLength": 1 },
+          "riskLevel": { "type": "string", "minLength": 1 },
+          "availabilityStatus": { "type": "string", "minLength": 1 },
+          "displayOrder": { "type": "integer", "format": "int32", "minimum": 0 },
+          "enabled": { "type": "boolean" },
+          "reason": { "type": "string" }
+        },
+        "required": [
+          "availabilityStatus",
+          "descriptionEn",
+          "descriptionVi",
+          "displayOrder",
+          "enabled",
+          "labelEn",
+          "labelVi",
+          "riskLevel"
+        ]
+      },
+      "RuleCatalogActionOrderEntryRequest": {
+        "type": "object",
+        "properties": {
+          "actionKey": { "type": "string", "minLength": 1 },
+          "displayOrder": { "type": "integer", "format": "int32", "minimum": 0 }
+        },
+        "required": ["actionKey", "displayOrder"]
+      },
+      "RuleCatalogActionReorderRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleCatalogActionOrderEntryRequest" },
+            "minItems": 1
+          },
+          "reason": { "type": "string", "minLength": 1 }
+        },
+        "required": ["items", "reason"]
+      },
       "MasterKeySetRequest": {
         "type": "object",
         "properties": {
@@ -6214,10 +7878,7 @@
         "type": "object",
         "properties": {
           "feature": { "type": "string", "enum": ["CHAT", "TRIAGE", "DRAFT"] },
-          "provider": {
-            "type": "string",
-            "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
-          }
+          "provider": { "type": "string" }
         },
         "required": ["feature", "provider"]
       },
@@ -6232,12 +7893,20 @@
       "SetFeatureDefaultTierRequest": {
         "type": "object",
         "properties": {
-          "feature": { "type": "string", "enum": ["CHAT", "TRIAGE", "DRAFT"] },
-          "tier": { "type": "string", "enum": ["PRIMARY", "FALLBACK", "LAST_RESORT"] },
-          "provider": {
+          "feature": {
             "type": "string",
-            "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
+            "enum": [
+              "CHAT",
+              "TRIAGE",
+              "DRAFT",
+              "RULE_AUTHORING",
+              "RULE_PREVIEW_SEMANTIC",
+              "TRIAGE_SEMANTIC",
+              "DRIFT_CHECK"
+            ]
           },
+          "tier": { "type": "string", "enum": ["PRIMARY", "FALLBACK", "LAST_RESORT"] },
+          "provider": { "type": "string" },
           "modelIds": {
             "type": "array",
             "description": "Models in priority order. Position 0 is tried first, then 1, etc. Each id must reference a VERIFIED or STALE row for the chosen provider.",
@@ -6247,6 +7916,21 @@
           }
         },
         "required": ["feature", "modelIds", "provider", "tier"]
+      },
+      "WaitlistSubscribeRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email", "maxLength": 320, "minLength": 0 },
+          "source": { "type": "string", "maxLength": 64, "minLength": 0 }
+        },
+        "required": ["email"]
+      },
+      "WaitlistSubscribeResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["ADDED", "ALREADY_REGISTERED", "ALREADY_USER"] }
+        },
+        "required": ["status"]
       },
       "CampaignPreviewRequest": {
         "type": "object",
@@ -6451,6 +8135,36 @@
           "savedRuleMarkedPreviewed": { "type": "boolean" }
         },
         "required": ["impactSummary", "rows", "savedRuleMarkedPreviewed"]
+      },
+      "RuleTestApplyLabelsRequest": {
+        "type": "object",
+        "properties": {
+          "sampleSize": { "type": "integer", "format": "int32" },
+          "evaluateSemanticIntents": { "type": "boolean" }
+        }
+      },
+      "AppliedRuleLabelResponse": {
+        "type": "object",
+        "properties": {
+          "gmailMessageId": { "type": "string" },
+          "gmailThreadId": { "type": "string" },
+          "labelName": { "type": "string" },
+          "gmailLabelId": { "type": "string" }
+        },
+        "required": ["gmailLabelId", "gmailMessageId", "gmailThreadId", "labelName"]
+      },
+      "RuleTestApplyLabelsResponse": {
+        "type": "object",
+        "properties": {
+          "preview": { "$ref": "#/components/schemas/RulePreviewResponse" },
+          "appliedLabelCount": { "type": "integer", "format": "int32" },
+          "affectedMessageCount": { "type": "integer", "format": "int32" },
+          "appliedLabels": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AppliedRuleLabelResponse" }
+          }
+        },
+        "required": ["affectedMessageCount", "appliedLabelCount", "appliedLabels", "preview"]
       },
       "RuleTemplateMaterializationResponse": {
         "type": "object",
@@ -6767,6 +8481,25 @@
           "packageCode": { "type": "string" }
         }
       },
+      "AdminWaitlistEntryResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "APPROVED", "REJECTED", "INVITED", "INVITE_FAILED"]
+          },
+          "source": { "type": ["string", "null"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "approvedAt": { "type": ["string", "null"], "format": "date-time" },
+          "approvedByAdminId": { "type": ["string", "null"] },
+          "inviteSentAt": { "type": ["string", "null"], "format": "date-time" },
+          "inviteNextAttemptAt": { "type": ["string", "null"], "format": "date-time" },
+          "inviteFailureReason": { "type": ["string", "null"] }
+        },
+        "required": ["createdAt", "email", "id", "status"]
+      },
       "TenantActionRequest": {
         "type": "object",
         "properties": {
@@ -6774,6 +8507,15 @@
           "confirmEmail": { "type": "string", "format": "email" }
         },
         "required": ["reason"]
+      },
+      "RuleCatalogMutationResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "targetId": { "type": "string", "format": "uuid" },
+          "targetKey": { "type": "string" }
+        },
+        "required": ["status"]
       },
       "RequeueRequest": {
         "type": "object",
@@ -6858,6 +8600,47 @@
           "expiresAt": { "type": "string", "format": "date-time" }
         },
         "required": ["expiresAt", "token"]
+      },
+      "CreateProviderRequest": {
+        "type": "object",
+        "properties": {
+          "providerId": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 2,
+            "pattern": "[A-Za-z0-9][A-Za-z0-9_:-]{1,31}"
+          },
+          "displayName": { "type": "string", "maxLength": 120, "minLength": 0 },
+          "compatibleType": {
+            "type": "string",
+            "enum": ["OPENAI_FORMAT", "ANTHROPIC_FORMAT", "GOOGLE_FORMAT"]
+          },
+          "defaultBaseUrl": { "type": "string", "maxLength": 500, "minLength": 0 },
+          "plaintextKey": { "type": "string", "maxLength": 2048, "minLength": 10 },
+          "label": { "type": "string", "maxLength": 64, "minLength": 0 },
+          "editSessionToken": { "type": "string", "maxLength": 128, "minLength": 0 }
+        },
+        "required": [
+          "compatibleType",
+          "defaultBaseUrl",
+          "displayName",
+          "editSessionToken",
+          "plaintextKey",
+          "providerId"
+        ]
+      },
+      "CreateProviderResponse": {
+        "type": "object",
+        "properties": {
+          "provider": { "type": "string" },
+          "keyId": { "type": "string", "format": "uuid" },
+          "priority": { "type": "integer", "format": "int32" },
+          "testResult": {
+            "type": "string",
+            "enum": ["OK", "INVALID_KEY", "RATE_LIMITED", "NETWORK_ERROR", "TIMEOUT"]
+          }
+        },
+        "required": ["keyId", "priority", "provider", "testResult"]
       },
       "GrantAdminRequest": {
         "type": "object",
@@ -7001,6 +8784,14 @@
           "triagePaused",
           "userId"
         ]
+      },
+      "RuleCatalogEnabledRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "reason": { "type": "string", "minLength": 1 }
+        },
+        "required": ["enabled", "reason"]
       },
       "UpdateProviderKeyRequest": {
         "type": "object",
@@ -7230,6 +9021,69 @@
         },
         "required": ["materialization", "rules", "templates"]
       },
+      "RuleCatalogExampleResponse": {
+        "type": "object",
+        "properties": {
+          "exampleId": { "type": "string", "format": "uuid" },
+          "exampleText": { "type": "string" },
+          "displayOrder": { "type": "integer", "format": "int32" }
+        },
+        "required": ["displayOrder", "exampleId", "exampleText"]
+      },
+      "RuleCatalogExamplesResponse": {
+        "type": "object",
+        "properties": {
+          "personas": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleCatalogPersonaResponse" }
+          }
+        },
+        "required": ["personas"]
+      },
+      "RuleCatalogPersonaResponse": {
+        "type": "object",
+        "properties": {
+          "personaId": { "type": "string", "format": "uuid" },
+          "personaKey": { "type": "string" },
+          "displayName": { "type": "string" },
+          "icon": { "type": "string" },
+          "displayOrder": { "type": "integer", "format": "int32" },
+          "examples": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleCatalogExampleResponse" }
+          }
+        },
+        "required": ["displayName", "displayOrder", "examples", "personaId", "personaKey"]
+      },
+      "RuleCatalogActionDescriptorResponse": {
+        "type": "object",
+        "properties": {
+          "actionKey": { "type": "string" },
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "riskLevel": { "type": "string" },
+          "availabilityStatus": { "type": "string" },
+          "displayOrder": { "type": "integer", "format": "int32" }
+        },
+        "required": [
+          "actionKey",
+          "availabilityStatus",
+          "description",
+          "displayOrder",
+          "label",
+          "riskLevel"
+        ]
+      },
+      "RuleCatalogActionsResponse": {
+        "type": "object",
+        "properties": {
+          "actions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleCatalogActionDescriptorResponse" }
+          }
+        },
+        "required": ["actions"]
+      },
       "ByokCurrentResponse": {
         "type": "object",
         "properties": {
@@ -7242,6 +9096,75 @@
           "savedAt": { "type": ["string", "null"], "format": "date-time" }
         },
         "required": ["endpointHost", "model", "provider", "savedAt"]
+      },
+      "GmailInboxLabelResponse": {
+        "type": "object",
+        "properties": { "id": { "type": "string" }, "name": { "type": "string" } },
+        "required": ["id", "name"]
+      },
+      "GmailInboxMessageResponse": {
+        "type": "object",
+        "properties": {
+          "gmailMessageId": { "type": "string" },
+          "gmailThreadId": { "type": "string" },
+          "subject": { "type": "string" },
+          "snippet": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "array", "items": { "type": "string" } },
+          "cc": { "type": "array", "items": { "type": "string" } },
+          "receivedAt": { "type": "string", "format": "date-time" },
+          "labelIds": { "type": "array", "items": { "type": "string" } },
+          "labels": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/GmailInboxLabelResponse" }
+          },
+          "unread": { "type": "boolean" },
+          "hasAttachment": { "type": "boolean" },
+          "openInGmailUrl": { "type": "string" }
+        },
+        "required": [
+          "cc",
+          "from",
+          "gmailMessageId",
+          "gmailThreadId",
+          "hasAttachment",
+          "labelIds",
+          "labels",
+          "openInGmailUrl",
+          "receivedAt",
+          "snippet",
+          "subject",
+          "to",
+          "unread"
+        ]
+      },
+      "GmailInboxPageResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/GmailInboxMessageResponse" }
+          },
+          "nextCursor": { "type": ["string", "null"] },
+          "loadedCount": { "type": "integer", "format": "int32" },
+          "maxMessages": { "type": "integer", "format": "int32" }
+        },
+        "required": ["items", "loadedCount", "maxMessages", "nextCursor"]
+      },
+      "GmailInboxMessageDetailResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "$ref": "#/components/schemas/GmailInboxMessageResponse" },
+          "renderedText": {
+            "type": "string",
+            "description": "Transient Gmail text/plain render fallback. Not persisted by Zero Mail."
+          },
+          "renderedHtml": {
+            "type": "string",
+            "description": "Transient sanitized Gmail HTML render. Not persisted by Zero Mail."
+          }
+        },
+        "required": ["message", "renderedHtml", "renderedText"]
       },
       "GmailConnectionStatusResponse": {
         "type": "object",
@@ -7524,6 +9447,19 @@
         },
         "required": ["count", "senderEmail"]
       },
+      "AdminWaitlistListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AdminWaitlistEntryResponse" }
+          },
+          "totalElements": { "type": "integer", "format": "int64" },
+          "page": { "type": "integer", "format": "int32" },
+          "size": { "type": "integer", "format": "int32" }
+        },
+        "required": ["items", "page", "size", "totalElements"]
+      },
       "TenantSpendResponse": {
         "type": "object",
         "properties": {
@@ -7741,6 +9677,87 @@
         ]
       },
       "StreamingResponseBody": {},
+      "RuleCatalogExampleAdminResponse": {
+        "type": "object",
+        "properties": {
+          "exampleId": { "type": "string", "format": "uuid" },
+          "exampleTextEn": { "type": "string" },
+          "exampleTextVi": { "type": "string" },
+          "displayOrder": { "type": "integer", "format": "int32" },
+          "enabled": { "type": "boolean" }
+        },
+        "required": ["displayOrder", "enabled", "exampleId", "exampleTextEn", "exampleTextVi"]
+      },
+      "RuleCatalogPersonaAdminResponse": {
+        "type": "object",
+        "properties": {
+          "personaId": { "type": "string", "format": "uuid" },
+          "personaKey": { "type": "string" },
+          "displayNameEn": { "type": "string" },
+          "displayNameVi": { "type": "string" },
+          "icon": { "type": "string" },
+          "displayOrder": { "type": "integer", "format": "int32" },
+          "enabled": { "type": "boolean" },
+          "examples": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleCatalogExampleAdminResponse" }
+          }
+        },
+        "required": [
+          "displayNameEn",
+          "displayNameVi",
+          "displayOrder",
+          "enabled",
+          "examples",
+          "personaId",
+          "personaKey"
+        ]
+      },
+      "RuleCatalogPersonasAdminResponse": {
+        "type": "object",
+        "properties": {
+          "personas": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleCatalogPersonaAdminResponse" }
+          }
+        },
+        "required": ["personas"]
+      },
+      "RuleCatalogActionDescriptorAdminResponse": {
+        "type": "object",
+        "properties": {
+          "actionKey": { "type": "string" },
+          "labelEn": { "type": "string" },
+          "labelVi": { "type": "string" },
+          "descriptionEn": { "type": "string" },
+          "descriptionVi": { "type": "string" },
+          "riskLevel": { "type": "string" },
+          "availabilityStatus": { "type": "string" },
+          "displayOrder": { "type": "integer", "format": "int32" },
+          "enabled": { "type": "boolean" }
+        },
+        "required": [
+          "actionKey",
+          "availabilityStatus",
+          "descriptionEn",
+          "descriptionVi",
+          "displayOrder",
+          "enabled",
+          "labelEn",
+          "labelVi",
+          "riskLevel"
+        ]
+      },
+      "RuleCatalogActionsAdminResponse": {
+        "type": "object",
+        "properties": {
+          "actions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RuleCatalogActionDescriptorAdminResponse" }
+          }
+        },
+        "required": ["actions"]
+      },
       "QueueDepthByTypeResponse": {
         "type": "object",
         "properties": {
@@ -7831,12 +9848,16 @@
         "properties": {
           "provider": { "type": "string" },
           "displayName": { "type": "string" },
+          "providerKind": { "type": "string" },
+          "compatibleType": { "type": "string" },
+          "defaultBaseUrl": { "type": "string" },
           "maskedKey": { "type": "string" },
           "keyFormat": { "type": "string" },
           "kekVersion": { "type": "integer", "format": "int32" },
           "providerSecretVersion": { "type": "integer", "format": "int64" },
           "lastRotatedAt": { "type": "string", "format": "date-time" },
           "dependentsCount": { "type": "integer", "format": "int64" },
+          "activeKeyCount": { "type": "integer", "format": "int64" },
           "rotationRecommended": { "type": "boolean" },
           "baseUrl": { "type": "string" },
           "featureDefaultProviderChat": { "type": "boolean" },
@@ -7844,12 +9865,14 @@
           "featureDefaultProviderDraft": { "type": "boolean" }
         },
         "required": [
+          "activeKeyCount",
           "dependentsCount",
           "displayName",
           "featureDefaultProviderChat",
           "featureDefaultProviderDraft",
           "featureDefaultProviderTriage",
           "provider",
+          "providerKind",
           "providerSecretVersion",
           "rotationRecommended"
         ]
@@ -7928,6 +9951,10 @@
           "recommended": { "type": "boolean" },
           "costPer1kInput": { "type": "number" },
           "costPer1kOutput": { "type": "number" },
+          "verificationStatus": {
+            "type": "string",
+            "enum": ["UNTESTED", "VERIFIED", "STALE", "FAILED"]
+          },
           "deprecatedAt": { "type": "string", "format": "date-time" },
           "pinnedTenantCount": { "type": "integer", "format": "int64" }
         },
@@ -7937,7 +9964,8 @@
           "modelId",
           "pinnedTenantCount",
           "provider",
-          "recommended"
+          "recommended",
+          "verificationStatus"
         ]
       },
       "CatalogSyncDiffResponse": {
@@ -7963,12 +9991,20 @@
       "FeatureDefaultBinding": {
         "type": "object",
         "properties": {
-          "feature": { "type": "string", "enum": ["CHAT", "TRIAGE", "DRAFT"] },
-          "tier": { "type": "string", "enum": ["PRIMARY", "FALLBACK", "LAST_RESORT"] },
-          "provider": {
+          "feature": {
             "type": "string",
-            "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK", "OPENROUTER", "ROUTER_9R"]
+            "enum": [
+              "CHAT",
+              "TRIAGE",
+              "DRAFT",
+              "RULE_AUTHORING",
+              "RULE_PREVIEW_SEMANTIC",
+              "TRIAGE_SEMANTIC",
+              "DRIFT_CHECK"
+            ]
           },
+          "tier": { "type": "string", "enum": ["PRIMARY", "FALLBACK", "LAST_RESORT"] },
+          "provider": { "type": "string" },
           "modelIds": {
             "type": "array",
             "description": "Models in priority order; position 1 is tried first.",
@@ -8037,7 +10073,7 @@
           },
           "title": {
             "type": "string",
-            "description": "Generic English diagnostic. NOT the user-facing message â FE ignores it."
+            "description": "Generic English diagnostic. NOT the user-facing message — FE ignores it."
           },
           "status": {
             "type": "integer",
@@ -8046,7 +10082,7 @@
           },
           "detail": {
             "type": "string",
-            "description": "Generic English diagnostic. NOT the user-facing message â FE ignores it."
+            "description": "Generic English diagnostic. NOT the user-facing message — FE ignores it."
           },
           "instance": {
             "type": "string",
@@ -8085,7 +10121,7 @@
       },
       "FieldErrorDto": {
         "type": "object",
-        "description": "Per-field validation error. CONTEXT.md decision D-C2: { field, code, params }. The JHipster `message` and `objectName` fields are deliberately rejected â the frontend localizes the dotted `code` via the errors.field.* dictionary.",
+        "description": "Per-field validation error. CONTEXT.md decision D-C2: { field, code, params }. The JHipster `message` and `objectName` fields are deliberately rejected — the frontend localizes the dotted `code` via the errors.field.* dictionary.",
         "properties": {
           "field": {
             "type": "string",

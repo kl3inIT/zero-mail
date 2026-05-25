@@ -218,23 +218,6 @@ public class TriageGmailWriter {
                 });
     }
 
-    public void markRead(UUID tenantId, String gmailMessageId) throws IOException {
-        executeGmailWrite(
-                tenantId,
-                "markRead",
-                gmail -> {
-                    gmail.users()
-                            .messages()
-                            .modify(
-                                    USER_ID,
-                                    gmailMessageId,
-                                    new ModifyMessageRequest().setRemoveLabelIds(List.of("UNREAD")))
-                            .execute();
-                    logMessageWrite(tenantId, gmailMessageId, "markRead");
-                    return null;
-                });
-    }
-
     public void restoreToInbox(UUID tenantId, String gmailMessageId) throws IOException {
         executeGmailWrite(
                 tenantId,
