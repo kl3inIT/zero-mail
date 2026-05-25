@@ -65,14 +65,9 @@ class OnlyOneGmailSendCallSiteTest {
     }
 
     private static JavaClasses importProductionClasses() {
-        // Scope: this test enforces the chat module's single-send-call-site invariant. Other
-        // modules
-        // (Phase 8 cleanup `UnsubscribeMailtoSender`, future SEED-009 send paths) are gated by the
-        // broader allow-list test `GmailWriteBoundaryTest`. Scoping to the chat package keeps both
-        // tests deterministic without churning the chat-specific assertion shape.
         return new ClassFileImporter()
                 .withImportOption(new ImportOption.DoNotIncludeTests())
-                .importPackages("com.zeromail.core.chat");
+                .importPackages("com.zeromail");
     }
 
     private static boolean isGmailSendCall(JavaMethodCall methodCall) {

@@ -16,6 +16,8 @@
             "triage",
             "analytics",
             "tenant",
+            "outbound",
+            "queue",
             "shared :: privacy",
             "shared :: persistence",
             "shared :: lang"
