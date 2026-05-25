@@ -228,7 +228,7 @@ export function TemplateSelectClient() {
                 <span
                   className={
                     row.variant === 'action'
-                      ? 'bg-accent-soft text-accent inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium'
+                      ? 'bg-accent-soft text-accent-foreground inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium'
                       : 'bg-secondary text-muted-foreground inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium'
                   }
                 >

@@ -228,7 +228,7 @@ export function ConversationPane({
           {messages.length === 0 ? (
             <ConversationEmptyState
               icon={
-                <span className="bg-accent-soft text-accent inline-flex rounded-lg p-2">
+                <span className="bg-accent-soft text-accent-foreground inline-flex rounded-lg p-2">
                   <Sparkles className="size-8" />
                 </span>
               }
@@ -236,7 +236,7 @@ export function ConversationPane({
               description={t('empty.body')}
             >
               <div className="mx-auto grid max-w-[520px] gap-4 text-center">
-                <span className="bg-accent-soft text-accent mx-auto inline-flex rounded-lg p-2">
+                <span className="bg-accent-soft text-accent-foreground mx-auto inline-flex rounded-lg p-2">
                   <Sparkles className="size-8" />
                 </span>
                 <div className="space-y-1">
