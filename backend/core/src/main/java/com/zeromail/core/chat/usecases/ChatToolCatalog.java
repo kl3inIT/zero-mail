@@ -171,15 +171,23 @@ public class ChatToolCatalog {
                         UpdatePersonalInstructionsArgs.class),
                 tool(
                         ChatToolName.SEND_EMAIL,
-                        "Send a new email after user confirmation",
+                        "Compose a NEW email to a recipient (not a reply within an existing"
+                                + " thread). Call this whenever the user expresses intent to send"
+                                + " a fresh email, even if some fields contain placeholders --"
+                                + " the user will edit any field in the preview card before"
+                                + " confirming. Do NOT describe the email in plain assistant text"
+                                + " instead of calling this tool.",
                         SendEmailToolArgs.class),
                 tool(
                         ChatToolName.REPLY_EMAIL,
-                        "Reply to a message after user confirmation",
+                        "Reply within an existing email thread. Requires a messageId from"
+                                + " searchInbox/getMessage. Call this when the user wants to"
+                                + " respond to a specific message.",
                         ReplyEmailToolArgs.class),
                 tool(
                         ChatToolName.FORWARD_EMAIL,
-                        "Forward a message after user confirmation",
+                        "Forward an existing email message to new recipients. Requires the"
+                                + " messageId of the email to forward.",
                         ForwardEmailToolArgs.class));
     }
 
