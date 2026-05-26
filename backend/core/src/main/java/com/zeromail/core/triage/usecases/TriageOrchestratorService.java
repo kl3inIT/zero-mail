@@ -379,7 +379,7 @@ public class TriageOrchestratorService {
         return switch (actionIntent) {
             case ActionIntent.Label label ->
                     new TriageActionResult.Label(label.labelName(), label.labelName());
-            case ActionIntent.Archive ignored -> new TriageActionResult.Archive();
+            case ActionIntent.Archive _ -> new TriageActionResult.Archive();
             case ActionIntent.SaveDraft saveDraft -> {
                 TriageRuleEvaluationInput triageRuleEvaluationInput =
                         dispatchContext.triageRuleEvaluationInput();
@@ -396,10 +396,10 @@ public class TriageOrchestratorService {
                 yield new TriageActionResult.SaveDraft(
                         draftBody, null, dispatchContext.gmailThreadId());
             }
-            case ActionIntent.MarkRead ignored -> new TriageActionResult.MarkRead();
-            case ActionIntent.Star ignored -> new TriageActionResult.Star();
-            case ActionIntent.AddToDigest ignored -> new TriageActionResult.AddToDigest();
-            case ActionIntent.MarkSpam ignored -> new TriageActionResult.MarkSpam();
+            case ActionIntent.MarkRead _ -> new TriageActionResult.MarkRead();
+            case ActionIntent.Star _ -> new TriageActionResult.Star();
+            case ActionIntent.AddToDigest _ -> new TriageActionResult.AddToDigest();
+            case ActionIntent.MarkSpam _ -> new TriageActionResult.MarkSpam();
             case ActionIntent.SendReply sendReply -> {
                 TriageRuleEvaluationInput triageRuleEvaluationInput =
                         dispatchContext.triageRuleEvaluationInput();
@@ -1020,15 +1020,15 @@ public class TriageOrchestratorService {
 
     private static boolean matcherRequiresTrustedSender(MatcherNode matcherNode) {
         return switch (matcherNode) {
-            case MatcherNode.SenderEmailMatcher ignored -> true;
-            case MatcherNode.SenderDomainMatcher ignored -> true;
+            case MatcherNode.SenderEmailMatcher _ -> true;
+            case MatcherNode.SenderDomainMatcher _ -> true;
             case MatcherNode.AllMatcher allMatcher ->
                     allMatcher.children().stream()
                             .anyMatch(TriageOrchestratorService::matcherRequiresTrustedSender);
             case MatcherNode.AnyMatcher anyMatcher ->
                     anyMatcher.children().stream()
                             .allMatch(TriageOrchestratorService::matcherRequiresTrustedSender);
-            case MatcherNode.NotMatcher ignored -> false;
+            case MatcherNode.NotMatcher _ -> false;
             default -> false;
         };
     }

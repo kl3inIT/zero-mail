@@ -126,7 +126,7 @@ public class CampaignRetryService {
             throw new CampaignNotFoundException(jobId);
         }
 
-        String senderDomain = extractDomain(normalizedSenderEmail);
+        String senderDomain = stripCrlf(extractDomain(normalizedSenderEmail));
         log.info(
                 "event=cleanup_campaign_retry_enqueued tenantId={} jobId={} campaignId={} senderDomain={}",
                 tenantId,
@@ -150,6 +150,10 @@ public class CampaignRetryService {
             throw new IllegalArgumentException(fieldName + " must not be blank");
         }
         return text;
+    }
+
+    private static String stripCrlf(String value) {
+        return value == null ? null : value.replaceAll("[\\r\\n]", "_");
     }
 
     /** Returned to the controller; identifiers only — no per-sender PII. */

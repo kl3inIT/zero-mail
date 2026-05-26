@@ -329,16 +329,16 @@ public class RulePreviewService {
 
     private static String customActionTypeId(ActionIntent actionIntent) {
         return switch (actionIntent) {
-            case ActionIntent.Label ignored -> "label";
-            case ActionIntent.Archive ignored -> "archive";
-            case ActionIntent.SaveDraft ignored -> "save_draft";
-            case ActionIntent.MarkRead ignored -> "mark_read";
-            case ActionIntent.Star ignored -> "star";
-            case ActionIntent.AddToDigest ignored -> "add_to_digest";
-            case ActionIntent.MarkSpam ignored -> "mark_spam";
-            case ActionIntent.SendReply ignored -> "send_reply";
-            case ActionIntent.ForwardEmail ignored -> "forward_email";
-            case ActionIntent.SendEmail ignored -> "send_email";
+            case ActionIntent.Label _ -> "label";
+            case ActionIntent.Archive _ -> "archive";
+            case ActionIntent.SaveDraft _ -> "save_draft";
+            case ActionIntent.MarkRead _ -> "mark_read";
+            case ActionIntent.Star _ -> "star";
+            case ActionIntent.AddToDigest _ -> "add_to_digest";
+            case ActionIntent.MarkSpam _ -> "mark_spam";
+            case ActionIntent.SendReply _ -> "send_reply";
+            case ActionIntent.ForwardEmail _ -> "forward_email";
+            case ActionIntent.SendEmail _ -> "send_email";
         };
     }
 
@@ -639,13 +639,13 @@ public class RulePreviewService {
     private static String safeActionLabel(ActionIntent actionIntent) {
         return switch (actionIntent) {
             case ActionIntent.Label label -> "label:" + label.labelName();
-            case ActionIntent.Archive ignored -> "archive";
-            case ActionIntent.SaveDraft ignored -> "save_draft";
-            case ActionIntent.MarkRead ignored -> "mark_read";
-            case ActionIntent.Star ignored -> "star";
-            case ActionIntent.AddToDigest ignored -> "add_to_digest";
-            case ActionIntent.MarkSpam ignored -> "mark_spam";
-            case ActionIntent.SendReply ignored -> "send_reply";
+            case ActionIntent.Archive _ -> "archive";
+            case ActionIntent.SaveDraft _ -> "save_draft";
+            case ActionIntent.MarkRead _ -> "mark_read";
+            case ActionIntent.Star _ -> "star";
+            case ActionIntent.AddToDigest _ -> "add_to_digest";
+            case ActionIntent.MarkSpam _ -> "mark_spam";
+            case ActionIntent.SendReply _ -> "send_reply";
             case ActionIntent.ForwardEmail forwardEmail ->
                     "forward_email:" + String.join(",", forwardEmail.recipients());
             case ActionIntent.SendEmail sendEmail ->

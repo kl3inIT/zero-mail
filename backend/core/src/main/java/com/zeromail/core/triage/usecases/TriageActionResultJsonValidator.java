@@ -62,7 +62,7 @@ public class TriageActionResultJsonValidator {
                 jsonFields.put("labelId", label.labelId());
                 jsonFields.put("labelName", label.labelName());
             }
-            case TriageActionResult.Archive ignored ->
+            case TriageActionResult.Archive _ ->
                     jsonFields.put("type", RuleActionType.ARCHIVE.id());
             case TriageActionResult.SaveDraft saveDraft -> {
                 jsonFields.put("type", RuleActionType.SAVE_DRAFT.id());
@@ -70,13 +70,12 @@ public class TriageActionResultJsonValidator {
                 jsonFields.put("draftId", saveDraft.draftId());
                 jsonFields.put("threadId", saveDraft.threadId());
             }
-            case TriageActionResult.MarkRead ignored ->
+            case TriageActionResult.MarkRead _ ->
                     jsonFields.put("type", RuleActionType.MARK_READ.id());
-            case TriageActionResult.Star ignored ->
-                    jsonFields.put("type", RuleActionType.STAR.id());
-            case TriageActionResult.AddToDigest ignored ->
+            case TriageActionResult.Star _ -> jsonFields.put("type", RuleActionType.STAR.id());
+            case TriageActionResult.AddToDigest _ ->
                     jsonFields.put("type", RuleActionType.ADD_TO_DIGEST.id());
-            case TriageActionResult.MarkSpam ignored ->
+            case TriageActionResult.MarkSpam _ ->
                     jsonFields.put("type", RuleActionType.MARK_SPAM.id());
             case TriageActionResult.SendReply sendReply -> {
                 jsonFields.put("type", RuleActionType.SEND_REPLY.id());
