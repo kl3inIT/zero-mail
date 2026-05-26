@@ -3,6 +3,7 @@ package com.zeromail.core.gmail.usecases;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.domain.GmailIngestionHealth;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GoogleOAuthRevokeClient;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
@@ -29,16 +30,19 @@ public class GmailConnectionService {
     private final GmailConnectionRepository connectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
     private final RefreshTokenCipher refreshTokenCipher;
+    private final GoogleOAuthRevokeClient googleOAuthRevokeClient;
     private final TransactionTemplate disconnectTransaction;
 
     public GmailConnectionService(
             GmailConnectionRepository connectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
             RefreshTokenCipher refreshTokenCipher,
+            GoogleOAuthRevokeClient googleOAuthRevokeClient,
             PlatformTransactionManager transactionManager) {
         this.connectionRepository = connectionRepository;
         this.gmailApiClientFactory = gmailApiClientFactory;
         this.refreshTokenCipher = refreshTokenCipher;
+        this.googleOAuthRevokeClient = googleOAuthRevokeClient;
         this.disconnectTransaction = new TransactionTemplate(transactionManager);
     }
 
@@ -61,12 +65,19 @@ public class GmailConnectionService {
     }
 
     /**
-     * Marks the tenant's Gmail connection as disconnected. No-op when no connection exists — the
-     * user may never have connected, or may have already disconnected.
+     * Marks the tenant's Gmail connection as disconnected.
+     *
+     * <p>Ordering matters: {@link #tryStopWatch(UUID)} runs FIRST because it needs the still-
+     * persisted refresh-token ciphertext to refresh an access token for Google's {@code users.stop}
+     * call. Then {@link #revokeStoredRefreshToken(UUID)} POSTs to Google's revoke endpoint
+     * (best-effort), and finally {@link #markDisconnected(UUID)} flips status and NULLs the
+     * ciphertext on the row. CASA Tier 2 V3.3.1 / V13.1.5 require token revocation on
+     * user-initiated logout/disconnect, not just clearing the local session.
      */
     public void disconnect(UUID tenantId) {
-        markDisconnected(tenantId);
         tryStopWatch(tenantId);
+        revokeStoredRefreshToken(tenantId);
+        markDisconnected(tenantId);
     }
 
     public void markDisconnected(UUID tenantId) {
@@ -79,6 +90,7 @@ public class GmailConnectionService {
                                             connection.setStatus(
                                                     GmailConnectionStatus.DISCONNECTED);
                                             connection.setDisconnectedAt(Instant.now());
+                                            connection.setRefreshTokenEncrypted(null);
                                             connection.setWatchExpiresAt(null);
                                             connection.setWatchHistoryId(null);
                                             connection.setWatchRenewedAt(null);
@@ -87,6 +99,27 @@ public class GmailConnectionService {
                                                     GmailIngestionHealth.HEALTHY);
                                             connectionRepository.save(connection);
                                         }));
+    }
+
+    private void revokeStoredRefreshToken(UUID tenantId) {
+        try {
+            GmailConnectionEntity connection =
+                    connectionRepository.findByTenantId(tenantId).orElse(null);
+            if (connection == null || connection.getRefreshTokenEncrypted() == null) {
+                return;
+            }
+            String decryptedRefreshToken =
+                    new String(
+                            refreshTokenCipher.decrypt(
+                                    connection.getRefreshTokenEncrypted(), tenantId.toString()),
+                            StandardCharsets.UTF_8);
+            googleOAuthRevokeClient.revoke(decryptedRefreshToken);
+        } catch (Exception revokeCallException) {
+            // Defense-in-depth: the client itself is best-effort and never throws, but a
+            // ciphertext decrypt failure (key rotation, corrupted bytes) must NOT block the
+            // DB-side disconnect.
+            log.warn("event=gmail_revoke_call_failed tenantId={}", tenantId);
+        }
     }
 
     private void tryStopWatch(UUID tenantId) {
