@@ -26,6 +26,7 @@ export type AuditEntry = {
   gmailThreadId?: string;
   draftId?: string;
   decisionState?: string;
+  blockedBySafetyNetPattern?: string | null;
 };
 
 export type AuditLogPage = {
@@ -93,6 +94,7 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
     gmailThreadId: row.gmailThreadId,
     draftId: row.draftId ?? undefined,
     decisionState: row.decisionState,
+    blockedBySafetyNetPattern: row.blockedBySafetyNetPattern ?? null,
   };
 }
 

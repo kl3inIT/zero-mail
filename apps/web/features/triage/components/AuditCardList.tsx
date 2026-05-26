@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
+import { AuditSafetyNetBadge } from '@/features/triage/components/AuditSafetyNetBadge';
 import { UndoBoundary } from '@/features/triage/components/AuditLog';
 import {
   ActionBadge,
@@ -46,6 +47,7 @@ function AuditCard({ entry, now }: { entry: AuditEntry; now: Date }) {
       <CardHeader className="grid-cols-[1fr_auto]">
         <div className="min-w-0 space-y-1">
           <ActionBadge entry={entry} />
+          <AuditSafetyNetBadge pattern={entry.blockedBySafetyNetPattern} />
           <p className="text-muted-foreground font-mono text-xs">
             {formatAuditTimestamp(entry.timestamp)}
           </p>
