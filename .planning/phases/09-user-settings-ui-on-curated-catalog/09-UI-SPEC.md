@@ -81,7 +81,7 @@ Heading line-heights: 1.2 (page title) / 1.3 (section header). Body line-height:
 
 **Accent (10%) reserved for** (explicit list — never "all interactive"):
 1. Primary CTA inside each SettingCard Dialog: `Save` button.
-2. The active state of a single segmented control (e.g. the "Use platform default ↔ Use my key" toggle uses primary on the active half).
+2. The active "on" state of the BYOK `<Switch>` track in the AI Provider card (shadcn default `bg-primary`).
 3. The focus ring on inputs / switches (`ring-ring`).
 4. The "Test connection" success pill (`OK` → `bg-green-soft text-green`; not primary accent — it has its own semantic color).
 5. The currently selected option in a `<Select>` dropdown (shadcn default).
@@ -91,7 +91,7 @@ NOT accent: card borders (use `border-border`), table row hover (use `bg-muted`)
 
 Semantic colors (additive, not the 10% slice):
 - Status pill `OK` (test-connection): `bg-green-soft text-green`
-- Status pill `INVALID_KEY` / `RATE_LIMITED` / `NETWORK_ERROR` / `TIMEOUT`: `bg-red-soft text-red`
+- Status pill `INVALID_KEY` / `RATE_LIMITED` / `NETWORK_ERROR` / `UNSUPPORTED`: `bg-red-soft text-red`
 - Audit-row "Blocked by safety net" badge: `bg-amber-soft text-amber` (matches existing v1.0 audit warning treatment)
 - Last-7d cost helper text: `text-muted-foreground` (no chromatic emphasis — it is reference data, not status)
 
@@ -139,7 +139,7 @@ Bilingual (Vietnamese-first; English secondary). Strings live in `apps/web/featu
 |---------|--------------------|--------------------|
 | Knowledge (no snippets) | "Chưa có đoạn kiến thức nào" / "Thêm thông tin về bạn hoặc khách hàng để AI dùng khi soạn thư. Bấm + Thêm đoạn kiến thức để bắt đầu." | "No snippets yet" / "Add facts about you or customers for the AI to use when drafting. Click + Add snippet to start." |
 | Safety net (no entries) | "Chưa có người gửi nào" / "Thêm email (vd. ceo@acme.com) hoặc domain (vd. @acme.com) để AI luôn để bạn xử lý tay." | "No senders yet" / "Add an email (e.g. ceo@acme.com) or a domain (e.g. @acme.com) so the AI always leaves these to you." |
-| AI Provider — no BYOK key (per provider row) | "Chưa cài key cá nhân — đang dùng key nền tảng" / Subline: "Bạn vẫn dùng được {provider}; AI sẽ tính chi phí qua tài khoản Zero Mail." | "No personal key — using platform default" / Subline: "You can still use {provider}; cost runs through your Zero Mail account." |
+| AI Provider — no BYOK row saved | "Đang dùng key nền tảng" / Subline: "AI sẽ tính chi phí qua tài khoản Zero Mail. Điền form bên dưới để dùng key cá nhân." | "Using the platform key" / Subline: "Cost runs through your Zero Mail account. Fill in the form below to use your own key." |
 | Writing-style generate — 0 sent messages | "Không tìm thấy email đã gửi" / "Hộp thư Đã gửi trống nên không tạo được mẫu giọng văn. Hãy viết thử vài email rồi quay lại sau." | "No sent emails found" / "Your Sent folder is empty so no style sample could be generated. Send a few emails and come back." |
 
 ### Error states (toast surface — via QueryClient `meta.errorMessage`; field-level via `useLocalizedFieldError`)
@@ -153,7 +153,9 @@ Bilingual (Vietnamese-first; English secondary). Strings live in `apps/web/featu
 | `knowledge.title.duplicate` | "Đã có đoạn kiến thức với tiêu đề này." | "A snippet with this title already exists." |
 | `safety_net.observation_not_deletable` | "Không thể xóa người gửi do hệ thống tự thêm." | "Cannot delete a system-observed sender." |
 | `ai.byok.provider_not_allowed` | "Nhà cung cấp này không hỗ trợ BYOK." | "BYOK is not supported for this provider." |
-| `ai.model.not_in_catalog` | "Model không có trong danh mục đã duyệt." | "Model is not in the curated catalog." |
+| `ai.byok.no_model_picked` | "Hãy chọn model và kiểm tra kết nối thành công trước khi bật BYOK." | "Pick a model and pass the connection test before enabling BYOK." |
+| `ai.byok.base_url_not_https` | "Base URL phải bắt đầu bằng https://" | "Base URL must start with https://" |
+| `ai.byok.test_connection.rate_limited` | "Bạn đã kiểm tra quá nhiều lần. Thử lại sau 1 giờ." | "Too many test attempts. Try again in 1 hour." |
 | `ai.test_connection.rate_limited` | "Bạn đã kiểm tra quá nhiều lần. Thử lại sau 1 giờ." | "Too many test attempts. Try again in 1 hour." |
 | `voice.generate.rate_limited` | "Đã đạt giới hạn 3 lần/giờ. Thử lại sau." | "Reached the 3/hour limit. Try again later." |
 | Generic mutation failure | "Không lưu được. Thử lại nhé." | "Couldn't save. Please try again." |
@@ -248,28 +250,61 @@ Raw shadcn used directly (NOT wrapped):
 - Below the table: inline single-row helper showing "Mẹo: dùng `@acme.com` để bảo vệ toàn bộ domain."
 - The `Auto-send rules` toggle that already exists on `/ai` lives as the LAST card in this section: `<SettingCard title="Tự động gửi theo rule">` with inline `<Switch>` — moved into this section because it is a safety-net-adjacent global gate. (Phase 9 does not change the toggle's backend behavior — it only rehouses the UI.)
 
-#### AI Provider (`<AiProviderSection>`)
-Three feature rows (Chat / Triage / Draft), each rendered as a `<SettingCard>` with the following body layout (NO Dialog — these are persistent control surfaces, not edit-mode):
+#### AI Provider (`<AiProviderSection>`) — UPDATED 2026-05-26 round 2 (single BYOK card with Active switch)
+
+The section renders exactly ONE `<SettingCard>` with the BYOK form inline (no Dialog — this is a persistent control surface), plus ONE plain-text cost footer below. **No mode card. No per-feature rows.** Layout:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ Chat                                                            │
-│ Phục vụ chat với trợ lý                                         │
+┌─ Key cá nhân (BYOK) ────────────────────────────────────────────┐
+│ Bật để dùng key của bạn cho mọi tính năng AI                    │
+│ Khi tắt, hệ thống dùng key mặc định của Zero Mail               │
 │                                                                 │
-│ [○ Use platform default  ●  Use my key]   ← segmented switch    │
+│ Provider     [▼ OpenAI                                  ]       │
+│ Base URL     [https://api.openai.com/v1                 ]       │
+│ API key      [sk-****abc1                               ]       │
+│ Model        [▼ gpt-4o-mini                             ]       │
 │                                                                 │
-│ Provider [Select ▼]   Model [Select ▼]                          │
+│ Trạng thái:  ✓ OK · kiểm tra lúc 14:32                          │
 │                                                                 │
-│ Đang dùng: OpenAI / gpt-4o-mini · $0.42 trong 7 ngày qua        │
+│ Bật BYOK     [●  ──]  ← <Switch> (disabled khi chưa test OK)    │
+│                                                                 │
+│                          [Kiểm tra kết nối]   [Lưu]             │
 └─────────────────────────────────────────────────────────────────┘
+
+  💵 Chi phí AI 7 ngày qua: $2.43        ← footer, not a card
 ```
 
-Below the three feature rows: a single `<SettingCard title="Key cá nhân (BYOK)">` containing the migrated `<ByokForm>` with one row per allowed provider (OpenAI / Anthropic / Google / DeepSeek). Each row:
-- Provider label + logo
-- If no key saved: `<Input type="password">` + `Lưu` button
-- If key saved: masked `sk-****abc1` text + `<Button variant="outline">Kiểm tra kết nối</Button>` + pencil-icon trigger for `<ConfirmDialog>` (replace key)
-- Result pill after test-connection: `<Badge>` with semantic token (`bg-green-soft` for OK, `bg-red-soft` for INVALID_KEY/etc.)
-- OpenRouter and 9Router NEVER appear here (frontend filter + backend allow-list).
+Field-by-field contract:
+
+- **Provider** `<Select>`: lists exactly `OpenAI / Anthropic / Google / DeepSeek` (locked). Changing the provider auto-fills the Base URL field with the provider's canonical default URL (`https://api.openai.com/v1` for OpenAI, `https://api.anthropic.com/v1` for Anthropic, `https://generativelanguage.googleapis.com/v1beta` for Google, `https://api.deepseek.com/v1` for DeepSeek). User can edit the URL after autofill (OpenAI-compatible self-hosted, Azure OpenAI, Anthropic-compatible proxies are all valid use-cases).
+- **Base URL** `<Input type="url">`: required, max 255 chars, must start with `https://` (or `http://localhost` in dev). Inline validation error code `ai.byok.base_url_not_https` mapped to a localized message.
+- **API key** `<Input type="password">`: empty placeholder if no row. If a row exists, the input switches to a read-only masked display `sk-****{lastFour}` with a pencil-icon trigger that opens an editable input + `<ConfirmDialog>` ("Thay key sẽ tắt BYOK đến khi bạn kiểm tra lại"). Plaintext key never echoed by the server.
+- **Model** `<Select>`: items populated from the latest `POST /api/byok/test-connection` response's `models[]`. Disabled with placeholder `Hãy kiểm tra kết nối trước để chọn model` / `Test the connection first to pick a model` until a successful test has been done. Once populated, the list persists across page reloads (cached client-side per `tenantId`).
+- **Trạng thái / Status pill**: `<Badge>` rendering the enum value (`OK` → `bg-green-soft text-green`; `INVALID_KEY` / `RATE_LIMITED` / `NETWORK_ERROR` / `UNSUPPORTED` → `bg-red-soft text-red`; absent before first test). Helper text below the pill reads `kiểm tra lúc {HH:mm}` / `tested at {HH:mm}` showing the relative time of `last_tested_at`.
+- **Bật BYOK / Active** `<Switch>` (label: `Bật BYOK` / `Enable BYOK`):
+  - Disabled when `model_id IS NULL` OR `last_test_result <> 'OK'`. Tooltip on hover reads `Hãy chọn model và kiểm tra kết nối thành công trước` / `Pick a model and pass the connection test first`.
+  - When enabled and toggled ON: optimistic update → `PUT /api/byok/active {active: true}`; on success, success toast `Đã bật BYOK · mọi tính năng AI dùng key của bạn` / `BYOK enabled · all AI features use your key`.
+  - When toggled OFF: success toast `Đã tắt BYOK · quay về key nền tảng` / `BYOK disabled · using platform key`.
+- **Kiểm tra kết nối / Test connection** `<Button variant="outline">`: enabled whenever Provider + Base URL + (key in input OR row exists) are present. Spinner during call. On response: status pill updates; Model `<Select>` populates from `models[]` (cleared on non-OK).
+- **Lưu / Save** `<Button variant="primary">`: disabled until Provider + Base URL + API key are all filled. Saving POSTs to `/api/byok` and resets `active=false`, `last_test_result=null`, `last_tested_at=null` — user must Test + pick Model + flip the switch again. Success toast `Đã lưu key (không hiển thị lại). Nhớ kiểm tra kết nối và bật BYOK.` / `Key saved (will not be shown again). Remember to test the connection and enable BYOK.`
+
+State machine across the card:
+
+```
+[Empty]                  → Lưu button enabled when all three fields filled. Switch disabled. Model disabled.
+[Saved, never tested]    → Test enabled. Switch disabled (no OK yet). Model disabled.
+[Saved, test=OK,
+ no model picked]        → Switch disabled with tooltip. Model select populated, awaiting choice.
+[Saved, test=OK,
+ model picked, off]      → Switch enabled, off. Platform default still active.
+[Saved, test=OK,
+ model picked, on]       → Switch enabled, on. BYOK active for chat/triage/draft/voice-generate.
+[Saved, test=FAIL]       → Switch disabled. Status pill shows enum. Re-Test or change fields.
+```
+
+Cost footer:
+- Plain text block below the BYOK card (NOT a SettingCard).
+- Single line: `💵 Chi phí AI 7 ngày qua: $X.XX` / `💵 AI cost last 7 days: $X.XX`. Always shows `$0.00` for tenants with no calls.
 
 ### Loading + error states (per component family)
 
@@ -296,9 +331,11 @@ Below the three feature rows: a single `<SettingCard title="Key cá nhân (BYOK)
 | Delete knowledge row | Row Delete icon opens `<ConfirmDialog>`; Confirm closes both + removes row |
 | Add safety-net sender | Inline input above the Table (no Dialog — single field); Enter or click + Add submits; new row appears |
 | Remove safety-net sender | Row Delete icon opens `<ConfirmDialog>`; observation-created rows have the icon disabled with `<Tooltip>` |
-| Toggle "Use platform default ↔ Use my key" per feature | Segmented `<RadioGroup>` (visually styled as a 2-way pill); flipping to "Use my key" disables the Provider/Model selects when no BYOK exists for that provider AND shows an inline "Lưu key bên dưới để dùng tính năng này" / "Save your key below to use this option" |
-| Save BYOK key | Plaintext key sent in POST body once; response NEVER echoes plaintext; on success → input replaced with masked display + Test connection button appears |
-| Test BYOK connection | POST `/api/settings/ai/test-connection`; button shows spinner; on response → render pill with enum value (OK = green, others = red) and persist the result on the row for 10s before fading |
+| Toggle BYOK Active `<Switch>` | Disabled until `model_id IS NOT NULL` AND `last_test_result = 'OK'`. On → optimistic `PUT /api/byok/active {active:true}`; off → optimistic `PUT /api/byok/active {active:false}`. Error rolls back + toast. |
+| Change Provider `<Select>` | Auto-fills the Base URL with the provider's canonical default URL. The existing saved row is NOT mutated until Save is pressed. |
+| Save BYOK card | POST `/api/byok` with `{provider, baseUrl, apiKey, modelId?}`; response is `{provider, baseUrl, lastFourChars, modelId, active:false, lastTestResult:null, lastTestedAt:null}` — never plaintext, never the full ciphertext. UI swaps the key input to masked display, clears the status pill, resets the Active switch to off. Toast: `Đã lưu key (không hiển thị lại). Nhớ kiểm tra kết nối và bật BYOK.` |
+| Test BYOK connection | POST `/api/byok/test-connection` — `{}` to test the stored row, or `{provider, baseUrl, apiKey}` to test pre-save. On `OK`, the Model `<Select>` is populated from `models[]`. Pill persists until the next save/test (no fade). |
+| Pick Model `<Select>` | `PUT /api/byok/model {modelId}` on selection (saved-row required). On success, the Active switch enable-gate is satisfied. |
 | Generate-from-sent (SET-VOICE-07) | Button inside writing-style Dialog; on click → button enters loading; on success → textarea replaced with LLM output (user can still edit); user MUST click Save explicitly to persist |
 | Section anchor | Each `<SectionHeader>` has an `id` matching the section slug so deep-links from docs (`/ai#safety-net`) scroll-anchor cleanly |
 
@@ -355,7 +392,7 @@ These are explicitly excluded from the visual contract:
 
 Before declaring `/ai` done in executor phase, the following MUST be verified per project UX rule:
 
-1. Playwright spec under `apps/web/e2e/ai-settings.spec.ts` covers the golden path: edit writing style → Save → reload → value persists; toggle auto-draft → reload → value persists; add + edit + delete knowledge snippet; add + delete safety-net sender; pick BYOK provider+model + test connection (enum-only response).
+1. Playwright spec under `apps/web/e2e/ai-settings.spec.ts` covers the golden path: edit writing style → Save → reload → value persists; toggle auto-draft → reload → value persists; add + edit + delete knowledge snippet; add + delete safety-net sender; save BYOK key for a chosen provider + test connection (enum-only pill) + toggle tenant-wide `Platform default ↔ Use my key` mode + reload → persist.
 2. ESLint passes (no `bg-[#xxxxxx]` violations).
 3. `pnpm --filter web run generate:api` regenerates `schema.d.ts` after backend DTO additions; the regen is committed.
 4. Playwright MCP visual sweep through each section + a representative Dialog screenshot taken for the auditor.

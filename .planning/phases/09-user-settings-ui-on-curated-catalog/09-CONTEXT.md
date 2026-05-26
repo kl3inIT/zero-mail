@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Phase 9 delivers the user-facing `/ai` page: a single-route, flat-section layout (Inbox Zero pattern) where a tenant configures their writing voice, assistant behavior, sender safety net, and per-feature AI provider/model. Backend exposes typed REST endpoints over the existing `assistant_settings` table (extended with `email_signature`, `tone_preset`, `auto_draft_replies`, `draft_confidence` enum, `sensitive_data_protection`), the existing `assistant_knowledge_snippet` table (extended with `UNIQUE(tenant_id, title)` + `updated_at`), the existing `tenant_protected_sender_observation` table (extended with `pattern_kind` + `created_by_user`), and a new triage-audit column `blocked_by_safety_net_pattern`. SET-VOICE-07 pulls forward the "Generate writing style from recent sent emails" capability from `SET-VOICE-FUT-03` with a strict in-memory privacy invariant.
+Phase 9 delivers the user-facing `/ai` page: a single-route, flat-section layout (Inbox Zero pattern) where a tenant configures their writing voice, assistant behavior, sender safety net, and a single tenant-wide BYOK card (provider + base URL + API key + model + Active switch) per D-17. Backend exposes typed REST endpoints over the existing `assistant_settings` table (extended with `email_signature`, `tone_preset`, `auto_draft_replies`, `draft_confidence` enum, `sensitive_data_protection`), the existing `assistant_knowledge_snippet` table (extended with `UNIQUE(tenant_id, title)` + `updated_at`), the existing `tenant_protected_sender_observation` table (extended with `pattern_kind` + `created_by_user`), and a new triage-audit column `blocked_by_safety_net_pattern`. SET-VOICE-07 pulls forward the "Generate writing style from recent sent emails" capability from `SET-VOICE-FUT-03` with a strict in-memory privacy invariant.
 
 The phase consumes admin artifacts shipped by Phase 8 (`MKEY` master keys, `CAT` curated catalog, `GET /api/settings/catalog` endpoint) without modifying them. `ByokForm` moves canonically from the legacy `/settings` page to the `AI Provider` section on `/ai`. The legacy `/settings` page is otherwise untouched.
 
@@ -37,7 +37,7 @@ Downstream agents (`gsd-phase-researcher`, `gsd-planner`, `gsd-executor`) MUST r
 - **D-03:** Short toggles (`auto_draft_replies`, `daily_digest`, `sensitive_data_protection`, `shadow_mode`) render INLINE as shadcn `<Switch>` on the `SettingCard` body. No Dialog needed for boolean fields.
 - **D-04:** Knowledge snippets render as a shadcn `<Table>` (Title | Last Updated | Edit | Delete) with `+ Add` button opening a Dialog containing `KnowledgeForm`. Edit on a row opens the same Dialog prefilled. Delete uses `ConfirmDialog`. Mirrors Inbox Zero's `KnowledgeBase.tsx`.
 - **D-05:** Backend adds `UNIQUE(tenant_id, title)` constraint on `assistant_knowledge_snippet` + `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` column with auto-touch on update. List ordering is `updated_at DESC` (matches Inbox Zero's `formatDateSimple(updatedAt)` column). Mirrors Inbox Zero's `Knowledge` Prisma model `@@unique([emailAccountId, title])`.
-- **D-06:** **Deviation from Inbox Zero (LOCKED):** BYOK + per-feature model picker stay on `/ai` inside the `AI Provider` section — NOT split to `/settings` as Inbox Zero does. Reason: Zero Mail is single-tenant-per-user; Inbox Zero split because they have multi-email-account-per-user where BYOK is shared across accounts. We don't have that dilemma. Keep "config AI provider" as one flow.
+- **D-06:** **Deviation from Inbox Zero (LOCKED):** BYOK stays on `/ai` inside the `AI Provider` section — NOT split to `/settings` as Inbox Zero does. Reason: Zero Mail is single-tenant-per-user; Inbox Zero split because they have multi-email-account-per-user where BYOK is shared across accounts. We don't have that dilemma. Keep "config AI provider" as one flow. **Updated 2026-05-26 during plan-phase** — the original wording mentioned "per-feature model picker"; that picker has since been removed (see D-08 + D-17). The deviation now applies to BYOK only.
 
 ### Draft Confidence Encoding (D-07)
 
@@ -45,7 +45,7 @@ Downstream agents (`gsd-phase-researcher`, `gsd-planner`, `gsd-executor`) MUST r
 
 ### REST Endpoint Granularity (D-08)
 
-- **D-08:** Backend exposes three feature-scoped PUTs: `PUT /api/settings/voice`, `PUT /api/settings/behavior`, `PUT /api/settings/ai`. NOT one mega `PUT /api/settings`; NOT `PATCH` per-field with JSON Merge Patch. Sub-resources stay separate: `GET/POST/PUT/DELETE /api/knowledge-snippets`, the existing `/api/triage/sender-safety-net/*` family extended with DELETE, and the new `POST /api/settings/ai/test-connection` + `GET /api/settings/ai/cost?window=7d` + `POST /api/settings/voice/generate-from-sent`. Reason: matches tab boundary semantically (even though UI is flat sections); idiomatic for Spring controllers + Jakarta Bean Validation + openapi-typescript codegen; clean TanStack Query keys per section; consistent with Phase 8 `MasterKeyAdminService` shape.
+- **D-08 (revised 2026-05-26 round 2):** Backend exposes feature-scoped PUTs: `PUT /api/settings/voice`, `PUT /api/settings/behavior`. **`PUT /api/settings/ai` is REMOVED** — the AI Provider section has no `assistant_settings`-bound fields. BYOK is its own resource: `GET /api/byok` (load row), `POST /api/byok` (save provider + base_url + api_key + optional model_id), `PUT /api/byok/active` (`{active: bool}` toggle), `DELETE /api/byok` (remove row entirely), `POST /api/byok/test-connection` (test stored OR inline-payload key — see D-17). Sub-resources stay separate: `GET/POST/PUT/DELETE /api/knowledge-snippets`, the existing `/api/triage/sender-safety-net/*` family extended with DELETE, `GET /api/settings/ai/cost?window=7d` (returns `{usd: number}` single value), `POST /api/settings/voice/generate-from-sent`. Reason: matches resource boundary (BYOK ≠ assistant settings — different table, different lifecycle); idiomatic for Spring controllers + Jakarta Bean Validation + openapi-typescript codegen; clean TanStack Query keys per section; consistent with Phase 8 `MasterKeyAdminService` shape.
 
 ### Tone Preset CUSTOM Semantics (D-09)
 
@@ -63,7 +63,7 @@ Downstream agents (`gsd-phase-researcher`, `gsd-planner`, `gsd-executor`) MUST r
 
 ### Test-Connection Reuse (D-14)
 
-- **D-14:** Extract a shared `ProviderConnectionTester` service in `core.llm.gateway.springai` from Phase 8 admin MKEY-03 logic. Admin MKEY endpoint is refactored to delegate to the service (Phase 8 sentinel-leak test ARCH-11 remains green via the shared scrub). User-side `POST /api/settings/ai/test-connection` is a thin wrapper that enforces a per-tenant 10/hour rate-limit before delegating. Reason: avoid sentinel-leak drift between two paths; single source of truth for the enum response shape `{OK | INVALID_KEY | RATE_LIMITED | NETWORK_ERROR | TIMEOUT}`; per-tenant vs per-admin rate-limit isolation handled at the wrapper layer.
+- **D-14:** Extract a shared `ProviderConnectionTester` service in `core.llm.gateway.springai` from Phase 8 admin MKEY-03 logic. Admin MKEY endpoint is refactored to delegate to the service (Phase 8 sentinel-leak test ARCH-11 remains green via the shared scrub). User-side `POST /api/settings/ai/test-connection` is a thin wrapper that (1) loads the tenant's single stored BYOK from `user_byok_key`, (2) enforces a per-tenant 10/hour rate-limit, then (3) delegates. Reason: avoid sentinel-leak drift between two paths; single source of truth for the enum response shape `{OK | INVALID_KEY | RATE_LIMITED | NETWORK_ERROR | UNSUPPORTED}` (note: `UNSUPPORTED` replaces the earlier `TIMEOUT` — aligns with the actual admin MKEY-03 enum in code); per-tenant vs per-admin rate-limit isolation handled at the wrapper layer. ArchUnit test asserts both endpoints reach `ProviderConnectionTester.probeConnection`.
 
 ### Reused v1.0 Endpoints (D-15)
 
@@ -72,6 +72,22 @@ Downstream agents (`gsd-phase-researcher`, `gsd-planner`, `gsd-executor`) MUST r
 ### ByokForm Migration (D-16)
 
 - **D-16:** `ByokForm` is removed from `apps/web/app/(protected)/(app)/settings/SettingsClient.tsx` and rendered exactly once inside the `AI Provider` section on `/ai`. Existing `ByokController` + AES-GCM cipher are reused. The legacy `/settings` page keeps all other cards (Account / Language / Gmail / Notifications / Delete) untouched.
+
+### AI Provider Shape — single BYOK card with Active switch + base URL + model picker (D-17, revised 2026-05-26 during plan-phase round 2)
+
+- **D-17 (revised):** The `AI Provider` section is ONE BYOK card. There is NO separate `Platform default ↔ Use my key` mode card and NO per-feature picker for Chat/Triage/Draft. The card contains, top-to-bottom: Provider `<Select>` · Base URL `<Input>` (OpenAI-compatible mode — auto-filled per provider, user-editable) · API key `<Input type="password">` · Model `<Select>` (populated from the provider's `/v1/models` response after Test connection) · Active `<Switch>` (default OFF) · `Kiểm tra kết nối` button · `Lưu` button. Persistence: ONE new table `user_byok_key (tenant_id PK, provider VARCHAR(16), base_url VARCHAR(255), api_key_ciphertext BYTEA, api_key_iv BYTEA, model_id VARCHAR(64) NULL, active BOOLEAN NOT NULL DEFAULT FALSE, last_test_result VARCHAR(16) NULL, last_tested_at TIMESTAMPTZ NULL)`. NO `assistant_settings.ai_provider_mode` column — the `active` flag on the BYOK row IS the on/off switch. Exactly one row per tenant — saving a new provider replaces the previous row.
+
+  **Resolution rule (used by every feature: chat, triage, draft, voice-generate):**
+  1. If `user_byok_key` row exists AND `active = TRUE` AND `model_id IS NOT NULL` → use the BYOK row (decrypt key, call `{base_url}` with `model_id`).
+  2. Otherwise → use the admin-curated catalog's platform default for that feature.
+
+  **Provider allow-list (unchanged):** OpenAI / Anthropic / Google / DeepSeek only. Server-side reject for `openrouter` / `9router` with `code=ai.byok.provider_not_allowed`.
+
+  **Activating without a tested model:** `PUT /api/byok/active {active: true}` rejects with HTTP 400 `code=ai.byok.no_model_picked` if `model_id IS NULL` or `last_test_result <> 'OK'`. UI mirrors this — the Active `<Switch>` is disabled until both conditions are satisfied; tooltip reads `Hãy chọn model và kiểm tra kết nối trước` / `Pick a model and test the connection first`.
+
+  **Test connection contract:** `POST /api/byok/test-connection` (no body — uses the stored row OR an in-memory not-yet-saved row passed inline as `{provider, baseUrl, apiKey}` for first-test-before-save). Response: `{result: 'OK' | 'INVALID_KEY' | 'RATE_LIMITED' | 'NETWORK_ERROR' | 'UNSUPPORTED', models?: string[]}`. When `result='OK'`, `models[]` lists the provider's `/v1/models` IDs filtered to chat-completion-capable models. Other results omit `models`. Same enum and same `ProviderConnectionTester` as admin MKEY-03 (D-14). Rate-limited to 10 tests/hour per tenant.
+
+  **Reason for the revised shape:** user directive 2026-05-26 round 2 ("k cần cái card này chỉ cần bật tắt key … do người dùng chọn model từ key và cho người dùng test kiểu compatible openai anthropic theo url"). Mirrors admin's MKEY shape (provider + base URL + key + model + active flag) so the `ProviderConnectionTester` extraction in D-14 stays a clean shared dependency. Eliminates the `Chế độ` card, eliminates `assistant_settings.ai_provider_mode`, eliminates the resolved-provider helper list, and eliminates any per-feature surface. Helper text under the card simply reads `Khi bật, tất cả tính năng AI (Chat, Triage, Draft) sẽ chạy bằng key của bạn.` / `When enabled, all AI features (Chat, Triage, Draft) run on your key.`
 
 </decisions>
 
