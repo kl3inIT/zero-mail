@@ -91,7 +91,7 @@ NOT accent: card borders (use `border-border`), table row hover (use `bg-muted`)
 
 Semantic colors (additive, not the 10% slice):
 - Status pill `OK` (test-connection): `bg-green-soft text-green`
-- Status pill `INVALID_KEY` / `RATE_LIMITED` / `NETWORK_ERROR` / `UNSUPPORTED`: `bg-red-soft text-red`
+- Status pill `INVALID_KEY` / `RATE_LIMITED` / `NETWORK_ERROR` / `TIMEOUT`: `bg-red-soft text-red`
 - Audit-row "Blocked by safety net" badge: `bg-amber-soft text-amber` (matches existing v1.0 audit warning treatment)
 - Last-7d cost helper text: `text-muted-foreground` (no chromatic emphasis — it is reference data, not status)
 
@@ -280,7 +280,7 @@ Field-by-field contract:
 - **Base URL** `<Input type="url">`: required, max 255 chars, must start with `https://` (or `http://localhost` in dev). Inline validation error code `ai.byok.base_url_not_https` mapped to a localized message.
 - **API key** `<Input type="password">`: empty placeholder if no row. If a row exists, the input switches to a read-only masked display `sk-****{lastFour}` with a pencil-icon trigger that opens an editable input + `<ConfirmDialog>` ("Thay key sẽ tắt BYOK đến khi bạn kiểm tra lại"). Plaintext key never echoed by the server.
 - **Model** `<Select>`: items populated from the latest `POST /api/byok/test-connection` response's `models[]`. Disabled with placeholder `Hãy kiểm tra kết nối trước để chọn model` / `Test the connection first to pick a model` until a successful test has been done. Once populated, the list persists across page reloads (cached client-side per `tenantId`).
-- **Trạng thái / Status pill**: `<Badge>` rendering the enum value (`OK` → `bg-green-soft text-green`; `INVALID_KEY` / `RATE_LIMITED` / `NETWORK_ERROR` / `UNSUPPORTED` → `bg-red-soft text-red`; absent before first test). Helper text below the pill reads `kiểm tra lúc {HH:mm}` / `tested at {HH:mm}` showing the relative time of `last_tested_at`.
+- **Trạng thái / Status pill**: `<Badge>` rendering the enum value (`OK` → `bg-green-soft text-green`; `INVALID_KEY` / `RATE_LIMITED` / `NETWORK_ERROR` / `TIMEOUT` → `bg-red-soft text-red`; absent before first test). Helper text below the pill reads `kiểm tra lúc {HH:mm}` / `tested at {HH:mm}` showing the relative time of `last_tested_at`.
 - **Bật BYOK / Active** `<Switch>` (label: `Bật BYOK` / `Enable BYOK`):
   - Disabled when `model_id IS NULL` OR `last_test_result <> 'OK'`. Tooltip on hover reads `Hãy chọn model và kiểm tra kết nối thành công trước` / `Pick a model and pass the connection test first`.
   - When enabled and toggled ON: optimistic update → `PUT /api/byok/active {active: true}`; on success, success toast `Đã bật BYOK · mọi tính năng AI dùng key của bạn` / `BYOK enabled · all AI features use your key`.
