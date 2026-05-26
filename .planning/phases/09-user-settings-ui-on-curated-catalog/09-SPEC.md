@@ -3,7 +3,7 @@
 **Created:** 2026-05-26
 **Updated:** 2026-05-26 (Inbox Zero pattern alignment during discuss-phase)
 **Ambiguity score:** 0.169 (gate: ≤ 0.20)
-**Requirements:** 17 locked (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01, SET-SAFE-04, SET-AI-01..04). **SET-SAFE-02 and SET-SAFE-03 deferred to v1.3 per round-1 scope decision.**
+**Requirements:** 18 locked (SET-VOICE-01..07, SET-BEHV-01..05, SET-SAFE-01, SET-SAFE-04, SET-AI-01..04). **SET-SAFE-02 and SET-SAFE-03 deferred to v1.3 per round-1 scope decision. SET-VOICE-07 pulled into Phase 9 from `SET-VOICE-FUT-03` on 2026-05-26 during discuss-phase.**
 
 ## Goal
 
@@ -62,6 +62,12 @@ The phase delivers the two-page split confirmed during the spec interview: `/ai`
    - Current: `assistant_settings.ai_output_language` column exists; no UI surface
    - Target: `PUT /api/settings/voice` accepts `aiOutputLanguage` (`'vi'` default, `'en'`); `SettingCard` opens a Dialog with a radio group; allowed values enforced server-side
    - Acceptance: a save with value not in `('vi','en')` returns 400; chat completions issued after the change use the chosen language even when UI language differs (integration test)
+
+6a. **Generate writing style from recent sent emails (SET-VOICE-07)**: User can trigger "Generate from recent sent emails" inside the writing-style edit Dialog. The action fetches recent sent emails transiently, asks the LLM to extract a concise style guide, populates the writing-style textarea with the result, and lets the user review and edit before saving.
+   - Current: no Gmail-sent-mail import; no style-extraction LLM prompt; no endpoint
+   - Target: new endpoint `POST /api/settings/voice/generate-from-sent` (request: `{ sampleSize: number }` default 20, max 50) returns `{ generatedStyle: string }` (≤ 500 words); Gmail API call (`users.messages.list` filter `in:sent`) + `users.messages.get` for body extraction, all in-memory; LLM call via existing Spring AI gateway with style-extraction prompt; the writing-style Dialog renders a "Generate from recent sent emails" button next to Save/Cancel; clicking it shows a loading state, then populates the textarea with the LLM result (user can edit before clicking Save)
+   - Tone preset interaction: when `tone_preset = 'CUSTOM'`, the system prompt for downstream chat/triage/draft uses only `writing_style` (no preset descriptor). When user picks any other preset, writing_style and preset are both passed to the prompt assembler. SET-VOICE-07 populates writing_style regardless of the current preset value.
+   - Acceptance: the generate endpoint MUST NOT persist any raw email body, any LLM prompt, or any LLM completion to DB or log files (audit-row check: no `prompt`/`completion`/`body` field added by the generate path; integration test seeds sentinel content and asserts no leak); the persisted value (after user clicks Save) is the user-reviewed text in the writing-style column only; rate-limited to 3 generations per hour per tenant; if Gmail returns 0 sent messages the endpoint returns HTTP 200 with `{ generatedStyle: "" }` and an empty-state message in the Dialog; if the LLM call fails the Dialog shows the existing writing_style unchanged and an inline error toast
 
 ### Section `Behavior` (SET-BEHV-01..05)
 
@@ -130,7 +136,7 @@ The phase delivers the two-page split confirmed during the spec interview: `/ai`
 
 - Canonical `/ai` page restructured to flat `<SectionHeader>` groups (Inbox Zero pattern): `Your voice`, `Behavior`, `Updates`, `Safety net`, `AI Provider`. No shadcn `<Tabs>`, no query-param tab state.
 - Every setting uses the `SettingCard` (title + description + Edit/Set button) → shadcn `Dialog` edit pattern, except short toggles (`<Switch>`) which render inline on the card.
-- Backend: `GET/PUT /api/settings/voice`, `GET/PUT /api/settings/behavior`, `GET/PUT /api/settings/ai`, `GET /api/settings/ai/cost?window=7d`, `POST /api/settings/ai/test-connection`
+- Backend: `GET/PUT /api/settings/voice`, `GET/PUT /api/settings/behavior`, `GET/PUT /api/settings/ai`, `GET /api/settings/ai/cost?window=7d`, `POST /api/settings/ai/test-connection`, `POST /api/settings/voice/generate-from-sent` (SET-VOICE-07)
 - Backend: `GET/POST/PUT/DELETE /api/knowledge-snippets` (reusing `assistant_knowledge_snippet` table) with `UNIQUE(tenant_id, title)` + `updated_at` column
 - Backend: `DELETE /api/triage/sender-safety-net/{id}` + domain-pattern support on the existing POST opt-in
 - Liquibase changelog adding `email_signature`, `tone_preset`, `auto_draft_replies`, `draft_confidence` (enum), `sensitive_data_protection` to `assistant_settings`
@@ -163,7 +169,8 @@ The phase delivers the two-page split confirmed during the spec interview: `/ai`
 - `assistant_knowledge_snippet` writes from both `ADD_TO_KNOWLEDGE_BASE` chat tool and `POST /api/knowledge-snippets` REST MUST go through the same repository call site (verified by ArchUnit / unit test)
 - OpenRouter and 9Router MUST NEVER appear as BYOK-eligible providers in `GET /api/settings/catalog` response or `PUT /api/settings/ai` request (server-side rejection + frontend filter as defense in depth)
 - BYOK keys MUST be AES-GCM-encrypted at rest via the existing v1.0 `LLM-04` cipher; plaintext key MUST NOT appear in any log, exception message, or API response after the initial save
-- `POST /api/settings/ai/test-connection` MUST return only the enum `{OK, INVALID_KEY, RATE_LIMITED, NETWORK_ERROR, TIMEOUT}` (same contract as `MKEY-03`); rate-limited to 10/hour per user
+- `POST /api/settings/ai/test-connection` MUST return only the enum `{OK, INVALID_KEY, RATE_LIMITED, NETWORK_ERROR, TIMEOUT}` (same contract as `MKEY-03`); rate-limited to 10/hour per user. Backed by a shared `ProviderConnectionTester` service in `core.llm.gateway.springai` (extracted from Phase 8 admin MKEY-03 logic); the user-side controller is a thin wrapper that enforces per-tenant rate-limit before delegating. ARCH-11 sentinel-leak scrub applies to both admin and user paths via the shared service.
+- `POST /api/settings/voice/generate-from-sent` (SET-VOICE-07) MUST NOT persist any raw email body, any LLM prompt, or any LLM completion to DB, log files, or audit rows. Only the user-reviewed style summary (saved by a subsequent `PUT /api/settings/voice`) is persisted to `assistant_settings.writing_style`. Rate-limited to 3 generations per hour per tenant. ArchUnit / integration test asserts no `prompt`/`completion`/`body` field is written by the generate path (sentinel content seeded → grep capture → assert no leak).
 - `GET /api/settings/catalog` ETag caching (already implemented) MUST be respected by the Tab D client (TanStack Query default `staleTime` is acceptable; explicit invalidation on BYOK save)
 - Page layout MUST use flat `<SectionHeader>` groups on a single `/ai/page.tsx` — no shadcn `<Tabs>`, no query-param tab state, no nested file-based routes
 - Every multi-field setting MUST use the `SettingCard` + shadcn `Dialog` edit pattern; short toggles MAY render inline as `<Switch>` on the card (per Inbox Zero reference)
@@ -191,6 +198,7 @@ The phase delivers the two-page split confirmed during the spec interview: `/ai`
 - [ ] `ByokForm` no longer appears in `SettingsClient.tsx`; it renders once inside the `AI Provider` section on `/ai`
 - [ ] `GET /api/settings/ai/cost?window=7d` returns per-feature USD totals; helper text shows "Currently using: {provider}/{model}" + "$X.XX last 7d"
 - [ ] `POST /api/settings/ai/test-connection` returns exactly one of `{OK, INVALID_KEY, RATE_LIMITED, NETWORK_ERROR, TIMEOUT}`; provider error bodies never leak; 11th call/hour returns 429
+- [ ] `POST /api/settings/voice/generate-from-sent` returns `{ generatedStyle: string }` ≤ 500 words; sentinel-seed integration test asserts no email body / LLM prompt / LLM completion is written to DB or log; 4th call/hour returns 429; UI Dialog populates textarea on success and user must click Save to persist
 - [ ] `apps/web/lib/api/schema.d.ts` is regenerated from the running backend after Phase 9 DTO additions; no hand-edits
 - [ ] Playwright e2e covers the flat-section golden path: edit voice (Dialog) → save → reload → values persist; toggle behavior (`<Switch>`) → reload → persist; add+edit+delete knowledge snippet → reload → persist; add+delete safety-net entry → reload → persist; pick BYOK provider+model + test connection → state persists
 - [ ] No hardcoded color hex in any Tab A/B/C/D component (Prettier / ESLint / repo grep gate)

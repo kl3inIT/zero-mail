@@ -76,6 +76,7 @@
 - [ ] **SET-VOICE-04**: User can manage a list of titled knowledge-base snippets the AI consults when drafting
 - [ ] **SET-VOICE-05**: User can pick a tone preset (professional / friendly / casual / formal / custom) as a quick baseline
 - [ ] **SET-VOICE-06**: User can pick AI output language (VI / EN, default VI) — separate from UI language
+- [ ] **SET-VOICE-07**: User can trigger a "Generate from recent sent emails" action inside the writing-style edit dialog. The action fetches the most recent N sent emails (default N=20, max 50), feeds them transiently to the LLM along with a style-extraction prompt, and returns a concise style guide (≤500 words) that pre-populates the writing-style textarea for the user to review and edit before saving. Privacy invariant: raw email bodies and the LLM prompt/completion exchange MUST be in-memory-only (no DB, no log file, no audit row); only the user-reviewed-and-saved style guide is persisted (into the existing `assistant_settings.writing_style` column). Pulled into v1.2 Phase 9 scope from `SET-VOICE-FUT-03` on 2026-05-26 during discuss-phase.
 
 ### Settings Page — Behavior Toggles (carried from v1.1)
 
@@ -164,7 +165,7 @@
 
 - **SET-VOICE-FUT-01**: Knowledge snippet auto-tagging (suggested when to apply)
 - **SET-VOICE-FUT-02**: Per-recipient tone (formal for boss, casual for friends)
-- **SET-VOICE-FUT-03**: Voice import from past sent mail (in-memory only, immediate discard)
+- **SET-VOICE-FUT-03**: ~~Voice import from past sent mail (in-memory only, immediate discard)~~ — **Pulled into v1.2 Phase 9 as `SET-VOICE-07` on 2026-05-26.**
 
 ### Tool Extensions (carried from v1.1)
 
@@ -265,6 +266,7 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | SET-VOICE-04 | Phase 9 | Pending |
 | SET-VOICE-05 | Phase 9 | Pending |
 | SET-VOICE-06 | Phase 9 | Pending |
+| SET-VOICE-07 | Phase 9 | Pending |
 | SET-BEHV-01 | Phase 9 | Pending |
 | SET-BEHV-02 | Phase 9 | Pending |
 | SET-BEHV-03 | Phase 9 | Pending |
@@ -288,7 +290,7 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 - v1.2 requirements: **73 total** (mapping confirmed 100% coverage, zero orphans)
   - Phase 8 (Admin Console & Operator Tooling, merged 2026-05-19 + WebAuthn pivot 2026-05-19): 42 reqs — 3 OPS-INFRA + 10 ADMIN (01-10) + 5 ARCH (08/09/10/11/12) + 8 MKEY + 7 CAT + 5 OPS-TENANT + 2 OPS-QUEUE + 2 OPS-SPEND
   - Phase 08.1 (Inbox Zero-style Rule Actions & Admin-managed Examples Catalog, inserted 2026-05-23): 12 reqs — RACT-01..12
-  - Phase 9 (User Settings UI on Curated Catalog): 19 reqs — 6 SET-VOICE + 5 SET-BEHV + 4 SET-SAFE + 4 SET-AI
+  - Phase 9 (User Settings UI on Curated Catalog): 20 reqs — 7 SET-VOICE + 5 SET-BEHV + 4 SET-SAFE + 4 SET-AI (SET-VOICE-07 pulled from `SET-VOICE-FUT-03` on 2026-05-26 during discuss-phase)
 - Phase mapping: ✓ Complete
 - Merge note: original Phase 8 (foundation, 15 reqs) and original Phase 9 (operator surface, 25 reqs) merged into single Phase 8 mega (40 reqs) during spec-phase 2026-05-19; former Phase 10 renumbered → Phase 9. Phase 8 then gained ADMIN-09 (admin_users schema) + ADMIN-10 (WebAuthn ceremonies) during discuss-phase pivot 2026-05-19 — pre-pivot ADMIN-01/02/03/06 + ARCH-08 also rewritten to reflect the WebAuthn + separate-frontend shape.
 
