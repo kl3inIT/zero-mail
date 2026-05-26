@@ -1071,6 +1071,11 @@
       "description": "100 email gần nhất từ Gmail. Nội dung chỉ được đọc khi bạn mở từng email.",
       "title": "Hộp thư"
     },
+    "search": {
+      "clear": "Xóa tìm kiếm",
+      "empty": "Không có email đã tải nào khớp tìm kiếm.",
+      "placeholder": "Tìm người gửi, tiêu đề, nhãn"
+    },
     "state": {
       "empty": {
         "body": "Gmail chưa trả về email nào trong inbox cho tài khoản này.",

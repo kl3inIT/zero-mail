@@ -1071,6 +1071,11 @@
       "description": "Your 100 most recent Gmail inbox messages. Content is fetched only when opened.",
       "title": "Inbox"
     },
+    "search": {
+      "clear": "Clear search",
+      "empty": "No loaded messages match this search.",
+      "placeholder": "Search sender, subject, label"
+    },
     "state": {
       "empty": {
         "body": "Gmail did not return any inbox messages for this account.",

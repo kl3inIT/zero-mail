@@ -23,6 +23,18 @@ export const inboxMessages = {
     vi: 'Đang tải…',
     en: 'Loading…',
   },
+  'inbox.search.placeholder': {
+    vi: 'Tìm người gửi, tiêu đề, nhãn',
+    en: 'Search sender, subject, label',
+  },
+  'inbox.search.clear': {
+    vi: 'Xóa tìm kiếm',
+    en: 'Clear search',
+  },
+  'inbox.search.empty': {
+    vi: 'Không có email đã tải nào khớp tìm kiếm.',
+    en: 'No loaded messages match this search.',
+  },
   'inbox.action.openInGmail': {
     vi: 'Mở Gmail',
     en: 'Open Gmail',
