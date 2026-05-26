@@ -57,3 +57,9 @@
  GET /privacy 200 in 374ms (next.js: 5ms, proxy.ts: 8ms, application-code: 362ms)
  GET /terms 200 in 285ms (next.js: 4ms, proxy.ts: 5ms, application-code: 277ms)
 ✓ Compiled in 211ms
+ GET /privacy 200 in 1676ms (next.js: 371ms, proxy.ts: 101ms, application-code: 1205ms)
+ GET /privacy 200 in 1003ms (next.js: 7ms, proxy.ts: 148ms, application-code: 849ms)
+ GET /privacy 200 in 795ms (next.js: 24ms, proxy.ts: 98ms, application-code: 673ms)
+ GET /privacy 200 in 794ms (next.js: 79ms, proxy.ts: 100ms, application-code: 615ms)
+ GET /privacy 200 in 797ms (next.js: 54ms, proxy.ts: 98ms, application-code: 644ms)
+ GET /privacy 200 in 795ms (next.js: 122ms, proxy.ts: 101ms, application-code: 572ms)
