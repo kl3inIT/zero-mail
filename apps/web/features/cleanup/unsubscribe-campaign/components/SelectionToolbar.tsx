@@ -26,11 +26,11 @@ export function SelectionToolbar({
   const clearDisabled = selectedCount === 0;
 
   return (
-    <div className="bg-muted/30 ring-foreground/10 flex flex-col gap-2 rounded-lg px-3 py-2 ring-1 md:flex-row md:items-center md:justify-between">
+    <div className="border-border bg-card flex flex-col gap-3 rounded-lg border px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
       <div aria-live="polite" className="flex flex-col gap-0.5">
         <span
           className={cn(
-            'font-mono text-sm tabular-nums',
+            'text-sm font-medium tabular-nums',
             overCap ? 'text-destructive font-semibold' : 'text-foreground',
           )}
         >

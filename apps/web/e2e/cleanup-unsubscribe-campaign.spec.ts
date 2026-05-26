@@ -58,6 +58,16 @@ for (const viewport of [
     await expect(page.getByRole('option', { name: 'Gửi email hủy nhận' })).toBeVisible();
     await page.keyboard.press('Escape');
 
+    const firstCandidateRow = page.locator('tbody tr').first();
+    await firstCandidateRow.locator('button').first().click();
+    const expandedDetailCell = page.locator('tbody tr').nth(1).locator('td[colspan="4"]');
+    await expect(expandedDetailCell).toHaveCSS('white-space', 'normal');
+    await expect(expandedDetailCell.locator('p', { hasText: 'Zero Mail' }).first()).toHaveCSS(
+      'white-space',
+      'normal',
+    );
+    await firstCandidateRow.locator('button').first().click();
+
     // Step 3 — select all visible SAFE senders via the header checkbox → counter updates.
     await page.getByRole('checkbox', { name: 'Chọn tất cả người gửi đang hiển thị' }).check();
     await expect(page.getByText(/2 \/ 25 người gửi đã chọn/)).toBeVisible();

@@ -33,11 +33,18 @@ for (const viewport of [
     await expect(page.getByTestId('analytics-rule-hits-panel')).toBeVisible();
     await expect.poll(() => state.analyticsRequests).toContain('7d');
 
-    await page.getByRole('tab', { name: 'Last 30 days' }).click();
+    // PR #66 redesign swapped the window selector from <Tabs> (TabsTrigger named
+    // "Last 30 days") to shadcn <Select> (combobox "Date range" → option "Last
+    // month"). Open the combobox, then click the option.
+    await page.getByRole('combobox', { name: 'Date range' }).click();
+    await page.getByRole('option', { name: 'Last month' }).click();
 
     await expect(page).toHaveURL(/\/analytics\?window=30d/);
     await expect.poll(() => state.analyticsRequests).toContain('30d');
-    await expect(page.getByTestId('analytics-volume-panel')).toContainText('2494');
+    // Locale-aware formatting: en-US renders 2494 as "2,494" with a thousand
+    // separator. Match the formatted value (which Intl.NumberFormat emits) so
+    // the assertion survives both 'vi' and 'en' UI locales.
+    await expect(page.getByTestId('analytics-volume-panel')).toContainText('2,494');
     await expectNoHorizontalOverflow(page);
     await expectNoClaySkinClasses(page);
   });
@@ -69,5 +76,12 @@ test('analytics renders Vietnamese copy', async ({ page }) => {
   await openAuthenticatedRoute(page, '/analytics', state);
 
   await expect(page.getByRole('heading', { name: 'Phân tích' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: '7 ngày qua' })).toBeVisible();
+  // PR #66 swapped the window Tabs for a shadcn Select. The combobox is
+  // aria-labeled with analytics.range.label (vi: "Khoảng thời gian") and the
+  // displayed value is the current range — analytics.range.lastWeek (vi:
+  // "Tuần trước") since the route lands on the default 7d window.
+  await expect(page.getByRole('combobox', { name: 'Khoảng thời gian' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Khoảng thời gian' })).toContainText(
+    'Tuần trước',
+  );
 });

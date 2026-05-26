@@ -224,12 +224,12 @@ export const inboxMessages = {
     en: 'Preparing to send...',
   },
   'inbox.composer.confirmSendTitle': {
-    vi: 'Xác nhận gửi email',
+    vi: 'Xác nhận gửi',
     en: 'Confirm send',
   },
   'inbox.composer.confirmSendBody': {
-    vi: 'Bạn đã đọc kỹ nội dung email và chắc chắn muốn gửi? Khi gửi email không thể hoàn tác.',
-    en: 'Have you carefully reviewed this email and are sure you want to send it? Once sent, this action cannot be undone.',
+    vi: 'Bạn đã đọc kỹ nội dung email và chắc chắn muốn gửi?',
+    en: 'Have you carefully reviewed this email and are sure you want to send it?',
   },
   'inbox.composer.confirmSendConfirm': {
     vi: 'Gửi',
@@ -242,6 +242,14 @@ export const inboxMessages = {
   'inbox.composer.sendingNow': {
     vi: 'Đang gửi email...',
     en: 'Sending email...',
+  },
+  'inbox.composer.sentSuccess': {
+    vi: 'Đã gửi email.',
+    en: 'Email sent.',
+  },
+  'inbox.composer.sendFailed': {
+    vi: 'Không gửi được email. Hãy thử lại.',
+    en: "Couldn't send the email. Try again.",
   },
   'inbox.assistantPrompt.reply': {
     vi: 'Soạn nháp trả lời Gmail này. Gmail message id: {messageId}. Gmail thread id: {threadId}. Tiêu đề: {subject}. Người gửi: {from}. Người nhận: {to}. Dùng replyEmail và hiển thị preview xác nhận trước khi gửi.',

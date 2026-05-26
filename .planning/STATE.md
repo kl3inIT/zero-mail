@@ -4,8 +4,8 @@ milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: "Phase 08.1 shipped — PR #60"
 stopped_at: Completed 08.1-05-PLAN.md
-last_updated: "2026-05-24T20:07:02.180Z"
-last_activity: 2026-05-25
+last_updated: "2026-05-26T00:00:00+07:00"
+last_activity: 2026-05-26
 progress:
   total_phases: 3
   completed_phases: 1

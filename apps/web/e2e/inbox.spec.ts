@@ -100,6 +100,7 @@ test('inbox renders recent Gmail messages, fetches detail, and lazy-loads the ne
   const markReadRequests: string[] = [];
   const chatPreviewRequests: Array<{ headers: Record<string, string>; body: unknown }> = [];
   const chatGenerationRequests: Array<{ headers: Record<string, string>; body: unknown }> = [];
+  const chatConfirmRequests: Array<{ chatId: string; body: unknown }> = [];
   const nativeButtonWarnings: string[] = [];
   page.on('console', (message) => {
     if (message.text().includes('nativeButton')) {
@@ -112,6 +113,7 @@ test('inbox renders recent Gmail messages, fetches detail, and lazy-loads the ne
     markReadRequests,
     chatPreviewRequests,
     chatGenerationRequests,
+    chatConfirmRequests,
   );
   await page.context().addCookies([
     {
@@ -175,13 +177,14 @@ test('inbox renders recent Gmail messages, fetches detail, and lazy-loads the ne
   await page.getByTestId('inbox-composer-body').fill('Thanks, I will review the ARR slide today.');
   await page.getByTestId('inbox-reply-composer').getByRole('button', { name: 'Send' }).click();
   // Composer Send opens an AlertDialog confirm step — click its Send button to dispatch.
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByTestId('preview-card-replyEmail')).toBeVisible();
-  await expect(
-    page
-      .getByTestId('preview-card-replyEmail')
-      .getByText('Thanks, I will review the ARR slide today.'),
-  ).toBeVisible();
+  // PR #66 routes the confirmed send through AutoConfirmSendAction (auto-fires without
+  // showing a preview-card-replyEmail), so we assert the chat preview request below
+  // rather than a preview card.
+  const confirmDialog = page.getByRole('alertdialog');
+  await expect(confirmDialog).toContainText(
+    'Have you carefully reviewed this email and are sure you want to send it?',
+  );
+  await confirmDialog.getByRole('button', { name: 'Send' }).click();
   expect(chatPreviewRequests).toHaveLength(1);
   expect(chatPreviewRequests[0]?.headers['x-xsrf-token']).toBe('playwright-xsrf');
   expect(chatIdFromBody(chatPreviewRequests[0]?.body)).toMatch(UUID_PATTERN);
@@ -191,6 +194,11 @@ test('inbox renders recent Gmail messages, fetches detail, and lazy-loads the ne
   expect(JSON.stringify(chatPreviewRequests[0]?.body)).not.toContain(
     'Please confirm the ARR slide',
   );
+  await expect(page.getByTestId('preview-card-replyEmail')).toHaveCount(0);
+  await expect(page.getByText("I can't directly run")).toHaveCount(0);
+  await expect(page.getByTestId('inbox-auto-send-status')).toContainText('Email sent.');
+  expect(chatConfirmRequests).toHaveLength(1);
+  expect(chatConfirmRequests[0]?.chatId).toBe(chatIdFromBody(chatPreviewRequests[0]?.body));
   await page.getByLabel('Close composer').click();
 
   await page.getByRole('button', { name: 'Reply all', exact: true }).click();
@@ -246,6 +254,7 @@ async function installInboxApiMock(
   markReadRequests: string[],
   chatPreviewRequests: Array<{ headers: Record<string, string>; body: unknown }>,
   chatGenerationRequests: Array<{ headers: Record<string, string>; body: unknown }>,
+  chatConfirmRequests: Array<{ chatId: string; body: unknown }>,
 ) {
   const readMessageIds = new Set<string>();
   await page.route(API_ROUTE_PATTERN, async (route) => {
@@ -321,6 +330,10 @@ async function installInboxApiMock(
 
     const chatConfirmMatch = url.pathname.match(/^\/api\/chat\/([^/]+)\/confirm$/);
     if (chatConfirmMatch && request.method() === 'POST') {
+      chatConfirmRequests.push({
+        chatId: decodeURIComponent(chatConfirmMatch[1]!),
+        body: safeJson(route),
+      });
       await fulfillJson(route, { state: 'SENT' });
       return;
     }
@@ -386,6 +399,13 @@ async function fulfillUiTextStream(route: Route, chunks: string[]) {
 async function fulfillUiToolStream(route: Route, input: Record<string, unknown>) {
   const parts = [
     { type: 'start', messageId: 'assistant-inbox-preview' },
+    { type: 'text-start', id: 'text-1' },
+    {
+      type: 'text-delta',
+      id: 'text-1',
+      delta: "I can't directly run replyEmail yet because it requires a preview card.",
+    },
+    { type: 'text-end', id: 'text-1' },
     { type: 'tool-input-start', toolCallId: 'tool-call-replyEmail', toolName: 'replyEmail' },
     {
       type: 'tool-input-available',

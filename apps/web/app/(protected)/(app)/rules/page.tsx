@@ -8,14 +8,16 @@ export default async function RulesPage() {
   const t = await getTranslations();
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5 p-4 md:p-6">
-      <div className="space-y-1">
-        <h1 className="text-foreground text-xl font-semibold">{t('rules.page.title')}</h1>
-        <p className="text-muted-foreground max-w-3xl text-sm leading-6">{t('rules.page.intro')}</p>
+    <div className="flex h-full flex-col">
+      <div className="border-border border-b px-4 py-3">
+        <h1 className="text-foreground text-[17px] font-semibold">{t('rules.page.title')}</h1>
+        <p className="text-muted-foreground text-sm">{t('rules.page.intro')}</p>
       </div>
-      <Suspense fallback={<LoadingState variant="cards" count={2} />}>
-        <RulesWorkspace />
-      </Suspense>
+      <div className="flex-1 space-y-4 overflow-auto p-4">
+        <Suspense fallback={<LoadingState variant="cards" count={2} />}>
+          <RulesWorkspace />
+        </Suspense>
+      </div>
     </div>
   );
 }

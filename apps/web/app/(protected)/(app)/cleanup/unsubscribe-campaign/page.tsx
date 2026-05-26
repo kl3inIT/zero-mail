@@ -5,10 +5,12 @@ import { CandidateListSkeleton } from '@/features/cleanup/unsubscribe-campaign/c
 
 export default function UnsubscribeCampaignPage() {
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 md:p-6">
-      <Suspense fallback={<CandidateListSkeleton />}>
-        <CandidateListPage />
-      </Suspense>
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-auto p-3 sm:p-4">
+        <Suspense fallback={<CandidateListSkeleton />}>
+          <CandidateListPage />
+        </Suspense>
+      </div>
     </div>
   );
 }
