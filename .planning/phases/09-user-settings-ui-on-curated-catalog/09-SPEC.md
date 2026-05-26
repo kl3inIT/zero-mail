@@ -1,12 +1,13 @@
 # Phase 9: User Settings UI on Curated Catalog — Specification
 
 **Created:** 2026-05-26
+**Updated:** 2026-05-26 (Inbox Zero pattern alignment during discuss-phase)
 **Ambiguity score:** 0.169 (gate: ≤ 0.20)
 **Requirements:** 17 locked (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01, SET-SAFE-04, SET-AI-01..04). **SET-SAFE-02 and SET-SAFE-03 deferred to v1.3 per round-1 scope decision.**
 
 ## Goal
 
-A user can open `/ai` and configure writing voice, assistant behavior, sender safety net, and per-feature AI provider/model across four query-param-driven tabs — backed by the admin-curated catalog and BYOK only for the four user-allowed providers (OpenAI, Anthropic, Google, DeepSeek).
+A user can open `/ai` and configure writing voice, assistant behavior, sender safety net, and per-feature AI provider/model across **flat sections grouped by `<SectionHeader>`** (Inbox Zero pattern) — backed by the admin-curated catalog and BYOK only for the four user-allowed providers (OpenAI, Anthropic, Google, DeepSeek).
 
 ## Background
 
@@ -24,74 +25,76 @@ Backend reality scouted before this spec:
 - v1.0 daily-digest (`ANL-03`) and shadow-mode (`TRG-07`) toggles have their own endpoints. **Phase 9 reuses those endpoints unchanged** — no migration into `assistant_settings`.
 - `llm_call_audit` table already records per-call cost — `SET-AI-03` cost estimate is a SUM over the last 7 days grouped by feature.
 
-The phase delivers the two-page split confirmed during the spec interview: `/ai` becomes the canonical 4-tab AI-configuration page (this phase); `/settings` keeps the legacy Account / Language / Gmail / Notifications / Delete cards untouched, except that `ByokForm` is removed from `/settings` and now lives canonically at `/ai?tab=provider`.
+The phase delivers the two-page split confirmed during the spec interview: `/ai` becomes the canonical AI-configuration page (this phase); `/settings` keeps the legacy Account / Language / Gmail / Notifications / Delete cards untouched, except that `ByokForm` is removed from `/settings` and now lives canonically inside `/ai`.
+
+**Inbox Zero pattern lock (added during discuss-phase 2026-05-26).** After scouting `../inbox-zero/apps/web/app/(app)/[emailAccountId]/assistant/settings/SettingsTab.tsx` and related files, the page layout and edit pattern are pivoted onto the Inbox Zero shape: flat `<SectionHeader>` groups instead of shadcn `<Tabs>`; `SettingCard` (title + description + Edit/Set button) opening a shadcn `Dialog` for each setting instead of inline edit; Knowledge as a `<Table>` (Title | Last Updated | Edit/Delete) with `+ Add` opening a Dialog containing `KnowledgeForm` (mirrors `KnowledgeBase.tsx` / `KnowledgeForm.tsx`); `SET-BEHV-02` confidence exposed as an enum `LOW | MEDIUM | HIGH` `<Select>` instead of a 0.0–1.0 slider, with the backend mapping the enum to internal numeric thresholds (`LOW=0.50, MEDIUM=0.70, HIGH=0.85`). One deviation from Inbox Zero is locked: BYOK + per-feature model picker stays on `/ai` (not split to `/settings`) because Zero Mail is single-tenant-per-user and BYOK + model picker are configured in one flow.
 
 ## Requirements
 
-### Tab A — Personalization (SET-VOICE-01..06)
+### Section `Your voice` (SET-VOICE-01..06)
 
 1. **Writing style**: User can edit a free-text writing-style description (200–500 words) that the AI uses to shape draft tone.
    - Current: `assistant_settings.writing_style` column exists; no REST endpoint exposes it; no UI surface
-   - Target: `PUT /api/settings/voice` accepts `writingStyle` field; Tab A renders a textarea with live char/word counter, 200-word minimum + 500-word maximum enforced server-side
+   - Target: `PUT /api/settings/voice` accepts `writingStyle` field; section renders a `SettingCard` with an Edit button opening a Dialog with a textarea + live word counter; 200-word minimum + 500-word maximum enforced server-side
    - Acceptance: a save below 200 words returns HTTP 400 with `code=voice.writing_style.too_short`; a save above 500 words returns HTTP 400 with `code=voice.writing_style.too_long`; a save inside the range returns 200 and persists the text
 
 2. **Personal instructions ("About me")**: User can edit free-text personal instructions injected into the system prompt for chat/triage/draft.
    - Current: `assistant_settings.personal_instructions` column exists; `UPDATE_PERSONAL_INSTRUCTIONS` chat tool exists; no REST endpoint for direct UI edit; `PersonalizationSanitizer` already enforces XML-fence + prompt-injection sentinel removal + 2000-char cap
-   - Target: `PUT /api/settings/voice` accepts `personalInstructions` field; the same `PersonalizationSanitizer` is invoked before persistence (no duplicate sanitizer); UI shows a textarea with a 2000-char counter
+   - Target: `PUT /api/settings/voice` accepts `personalInstructions` field; the same `PersonalizationSanitizer` is invoked before persistence (no duplicate sanitizer); `SettingCard` opens a Dialog with a textarea + 2000-char counter
    - Acceptance: a save exceeding 2000 chars after sanitization returns HTTP 400 with `code=voice.personal_instructions.too_long`; a save containing a known injection sentinel is sanitized and the persisted value contains no sentinel; chat tool path and REST path both call the same sanitizer (verified by ArchUnit/test)
 
 3. **Email signature**: User can edit a free-text signature that the AI appends to drafts.
    - Current: no `email_signature` column on `assistant_settings`; no UI
-   - Target: Liquibase changelog adds `email_signature TEXT` to `assistant_settings`; `PUT /api/settings/voice` accepts `emailSignature`; UI textarea with 500-char cap
+   - Target: Liquibase changelog adds `email_signature TEXT` to `assistant_settings`; `PUT /api/settings/voice` accepts `emailSignature`; `SettingCard` opens a Dialog with a textarea + 500-char cap
    - Acceptance: after saving a signature, the next AI-generated draft contains the signature verbatim at the end (integration test against a stubbed `ChatModel`); a save exceeding 500 chars returns 400
 
 4. **Knowledge-base snippets**: User can manage titled knowledge snippets that the AI consults when drafting.
-   - Current: `assistant_knowledge_snippet` table exists (`title VARCHAR(120)`, `content TEXT`); only written via `ADD_TO_KNOWLEDGE_BASE` chat tool; no list/edit/delete API; no UI
-   - Target: `GET /api/knowledge-snippets`, `POST /api/knowledge-snippets`, `PUT /api/knowledge-snippets/{id}`, `DELETE /api/knowledge-snippets/{id}` REST endpoints using the existing entity + repo; Tab A renders a list with add/edit/delete affordances; `ADD_TO_KNOWLEDGE_BASE` chat tool and REST POST share the same persistence path
-   - Acceptance: a `POST` with title > 120 chars returns 400; a `DELETE {id}` for another tenant's snippet returns 404 (tenant isolation check); listing returns only the current tenant's snippets ordered by `createdAt DESC`
+   - Current: `assistant_knowledge_snippet` table exists (`title VARCHAR(120)`, `content TEXT`); only written via `ADD_TO_KNOWLEDGE_BASE` chat tool; no list/edit/delete API; no UI; no uniqueness constraint on title
+   - Target: Liquibase changelog adds `UNIQUE (tenant_id, title)` constraint and `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` column to `assistant_knowledge_snippet` (with auto-update trigger or service-layer touch); `GET /api/knowledge-snippets`, `POST /api/knowledge-snippets`, `PUT /api/knowledge-snippets/{id}`, `DELETE /api/knowledge-snippets/{id}` REST endpoints using the existing entity + repo; the `Knowledge` section renders a shadcn `<Table>` (Title | Last Updated | Edit | Delete) with a `+ Add` button opening a Dialog containing `KnowledgeForm`; click Edit on a row opens the same Dialog prefilled; delete uses `ConfirmDialog`; ordering is `updatedAt DESC`; `ADD_TO_KNOWLEDGE_BASE` chat tool and REST POST share the same persistence path
+   - Acceptance: a `POST` with title > 120 chars returns 400; a `POST` with a duplicate `(tenant_id, title)` returns HTTP 409 with `code=knowledge.title.duplicate`; a `DELETE {id}` for another tenant's snippet returns 404 (tenant isolation check); listing returns only the current tenant's snippets ordered by `updated_at DESC`
 
 5. **Tone preset**: User can pick a tone preset (professional / friendly / casual / formal / custom).
    - Current: no `tone_preset` column on `assistant_settings`; no UI
-   - Target: Liquibase changelog adds `tone_preset VARCHAR(16)` with CHECK constraint to `('PROFESSIONAL','FRIENDLY','CASUAL','FORMAL','CUSTOM')`; `PUT /api/settings/voice` accepts `tonePreset`; UI renders a shadcn `<Select>` with the five options
+   - Target: Liquibase changelog adds `tone_preset VARCHAR(16)` with CHECK constraint to `('PROFESSIONAL','FRIENDLY','CASUAL','FORMAL','CUSTOM')`; `PUT /api/settings/voice` accepts `tonePreset`; `SettingCard` opens a Dialog with a shadcn `<Select>` of the five options
    - Acceptance: a save with a value outside the enum returns 400 with `code=voice.tone_preset.invalid`; the preset is reflected in the drafts pipeline (system prompt contains the chosen tone descriptor)
 
 6. **AI output language**: User can pick AI output language independent of UI language.
    - Current: `assistant_settings.ai_output_language` column exists; no UI surface
-   - Target: `PUT /api/settings/voice` accepts `aiOutputLanguage` (`'vi'` default, `'en'`); UI radio group; allowed values enforced server-side
+   - Target: `PUT /api/settings/voice` accepts `aiOutputLanguage` (`'vi'` default, `'en'`); `SettingCard` opens a Dialog with a radio group; allowed values enforced server-side
    - Acceptance: a save with value not in `('vi','en')` returns 400; chat completions issued after the change use the chosen language even when UI language differs (integration test)
 
-### Tab B — Behavior (SET-BEHV-01..05)
+### Section `Behavior` (SET-BEHV-01..05)
 
 7. **Auto-draft replies toggle**: User can toggle the master switch for v1.0 background draft replies (`DRFT-01..04`).
    - Current: no `auto_draft_replies` column; `DRFT-*` workers always run when feature enabled at platform level
-   - Target: Liquibase changelog adds `auto_draft_replies BOOLEAN NOT NULL DEFAULT TRUE` to `assistant_settings`; `PUT /api/settings/behavior` accepts the toggle; v1.0 draft worker reads this flag and short-circuits when `FALSE`
+   - Target: Liquibase changelog adds `auto_draft_replies BOOLEAN NOT NULL DEFAULT TRUE` to `assistant_settings`; `PUT /api/settings/behavior` accepts the toggle; `SettingCard` renders an inline shadcn `<Switch>` (toggle is short enough to skip the Dialog pattern); v1.0 draft worker reads this flag and short-circuits when `FALSE`
    - Acceptance: when toggled OFF, no new `draft` rows are written for incoming messages during a triage run (integration test against the worker); when toggled ON, drafts resume
 
-8. **Draft confidence threshold**: User can set a 0.0–1.0 slider; AI only saves drafts at or above the threshold.
+8. **Draft confidence (enum)**: User can pick draft confidence as one of `LOW | MEDIUM | HIGH`; AI only saves drafts at or above the mapped internal threshold.
    - Current: no threshold column; draft worker has a hard-coded internal default
-   - Target: Liquibase changelog adds `draft_confidence_threshold NUMERIC(3,2) NOT NULL DEFAULT 0.75 CHECK (draft_confidence_threshold BETWEEN 0.00 AND 1.00)`; `PUT /api/settings/behavior` accepts `draftConfidenceThreshold`; UI renders a shadcn `<Slider>` with step 0.05
-   - Acceptance: a save outside [0.0, 1.0] returns 400; the worker reads the per-tenant threshold and skips draft persistence when `confidence < threshold` (integration test verifies skip)
+   - Target: Liquibase changelog adds `draft_confidence VARCHAR(8) NOT NULL DEFAULT 'MEDIUM' CHECK (draft_confidence IN ('LOW','MEDIUM','HIGH'))` to `assistant_settings`; `PUT /api/settings/behavior` accepts `draftConfidence` enum; `SettingCard` opens a Dialog with a shadcn `<Select>` of the three options + a one-line explanation per option; backend maps the enum to internal numeric thresholds (`LOW=0.50`, `MEDIUM=0.70`, `HIGH=0.85`) when calling the draft worker
+   - Acceptance: a save with a value outside the enum returns 400 with `code=behavior.draft_confidence.invalid`; the worker reads the per-tenant enum, resolves to the mapped threshold, and skips draft persistence when `confidence < threshold` (integration test asserts the threshold for each enum value)
 
-9. **Daily digest toggle**: User can toggle daily digest from Tab B (reusing v1.0 `ANL-03` config).
+9. **Daily digest toggle**: User can toggle daily digest from the `Updates` section (reusing v1.0 `ANL-03` config).
    - Current: `ANL-03` toggle exists with its own endpoint and table; no surface on `/ai`
-   - Target: Tab B renders a shadcn `<Switch>` bound to the existing `ANL-03` endpoint; NO new column on `assistant_settings`
-   - Acceptance: toggling the switch on Tab B persists through the existing `ANL-03` endpoint and reflects on the v1.0 analytics page (round-trip verification test)
+   - Target: `SettingCard` renders an inline shadcn `<Switch>` bound to the existing `ANL-03` endpoint; NO new column on `assistant_settings`
+   - Acceptance: toggling the switch persists through the existing `ANL-03` endpoint and reflects on the v1.0 analytics page (round-trip verification test)
 
 10. **Sensitive-data protection toggle**: User can toggle PII redaction (default ON).
     - Current: v1.0 `LLM-05` PII redaction runs unconditionally; no per-tenant override
-    - Target: Liquibase changelog adds `sensitive_data_protection BOOLEAN NOT NULL DEFAULT TRUE` to `assistant_settings`; `PUT /api/settings/behavior` accepts the toggle; `LLM-05` redactor reads the flag and skips redaction only when explicitly OFF
+    - Target: Liquibase changelog adds `sensitive_data_protection BOOLEAN NOT NULL DEFAULT TRUE` to `assistant_settings`; `PUT /api/settings/behavior` accepts the toggle; `SettingCard` renders an inline `<Switch>`; `LLM-05` redactor reads the flag and skips redaction only when explicitly OFF
     - Acceptance: a tenant with the toggle ON has PII tokens stripped in outbound LLM prompts (verified by snapshot test); a tenant with it OFF retains tokens; default for new tenants is TRUE
 
-11. **Shadow-mode toggle**: User can surface and toggle the v1.0 `TRG-07` shadow-mode flag from Tab B.
+11. **Shadow-mode toggle**: User can surface and toggle the v1.0 `TRG-07` shadow-mode flag.
     - Current: shadow-mode toggle exists in v1.0 `TRG-07` with its own endpoint and triage-pause-state path (`useToggleTriagePause` / `useTriagePauseState` hooks already exist)
-    - Target: Tab B renders a shadcn `<Switch>` bound to the existing v1.0 toggle endpoint; NO new column on `assistant_settings`
-    - Acceptance: toggling on Tab B persists through the existing v1.0 endpoint and the triage worker enters shadow mode on the next message (integration test against the worker)
+    - Target: `SettingCard` renders an inline shadcn `<Switch>` bound to the existing v1.0 toggle endpoint; NO new column on `assistant_settings`
+    - Acceptance: toggling persists through the existing v1.0 endpoint and the triage worker enters shadow mode on the next message (integration test against the worker)
 
-### Tab C — Safety Net (SET-SAFE-01, SET-SAFE-04 only; SAFE-02 and SAFE-03 deferred)
+### Section `Safety net` (SET-SAFE-01, SET-SAFE-04 only; SAFE-02 and SAFE-03 deferred)
 
 12. **Sender safety net CRUD with domain pattern**: User can view, add, and remove sender entries (single email OR domain pattern like `@acme.com`).
     - Current: `tenant_protected_sender_observation` table holds `sender_email` + observation counters; `GET /api/triage/sender-safety-net` and `POST .../{senderEmail}/opt-in` exist; no DELETE endpoint; no domain-pattern support
-    - Target: Liquibase changelog adds `pattern_kind VARCHAR(8) NOT NULL DEFAULT 'EMAIL' CHECK (pattern_kind IN ('EMAIL','DOMAIN'))` and `created_by_user BOOLEAN NOT NULL DEFAULT FALSE`; backfill `pattern_kind='EMAIL'` for existing rows; new `DELETE /api/triage/sender-safety-net/{id}` endpoint (only entries with `created_by_user=TRUE` are user-deletable); existing POST opt-in accepts both `ceo@acme.com` (EMAIL) and `@acme.com` (DOMAIN) and sets `created_by_user=TRUE`; Tab C renders list + add input + per-row delete button
+    - Target: Liquibase changelog adds `pattern_kind VARCHAR(8) NOT NULL DEFAULT 'EMAIL' CHECK (pattern_kind IN ('EMAIL','DOMAIN'))` and `created_by_user BOOLEAN NOT NULL DEFAULT FALSE`; backfill `pattern_kind='EMAIL'` for existing rows; new `DELETE /api/triage/sender-safety-net/{id}` endpoint (only entries with `created_by_user=TRUE` are user-deletable); existing POST opt-in accepts both `ceo@acme.com` (EMAIL) and `@acme.com` (DOMAIN) and sets `created_by_user=TRUE`; the section renders a shadcn `<Table>` (Pattern | Added | Delete) with an inline add input + `+ Add` button (no Dialog needed — single-field input)
     - Acceptance: a POST with `@acme.com` persists `pattern_kind='DOMAIN'`; a DELETE of an observation-created entry (`created_by_user=FALSE`) returns 403 with `code=safety_net.observation_not_deletable`; the triage matcher matches a DOMAIN entry against any sender whose email ends with that domain (integration test)
 
 13. **Audit-log indicator for safety-net block**: User sees a visual indicator in the triage audit log when a rule was blocked by the safety net.
@@ -99,17 +102,17 @@ The phase delivers the two-page split confirmed during the spec interview: `/ai`
     - Target: the existing audit row carries a `blocked_by_safety_net_pattern VARCHAR(320) NULL` column (Liquibase changelog); when set, `AuditRow.tsx` / `AuditCardList.tsx` renders a `<Badge variant="warning">` reading "Blocked by safety net for {pattern}" with the v1.0 `useTriageAuditLog` payload already exposing the field
     - Acceptance: an audit row whose execution was blocked by a `protect` entry has the field populated; the UI renders the badge with the pattern; rows without the field render unchanged; integration test against the triage worker confirms the field is set when a matching `protect` entry exists
 
-### Tab D — AI Provider/Model (SET-AI-01..04)
+### Section `AI Provider` (SET-AI-01..04)
 
 14. **Per-feature provider+model picker from curated catalog**: User can pick provider + model per feature (chat / triage / draft) from `GET /api/settings/catalog`.
     - Current: `GET /api/settings/catalog` exists; `assistant_settings.{chat,triage,draft}_model_id` columns exist; UI has no picker
-    - Target: Tab D renders three picker rows (Chat / Triage / Draft); each row shows provider `<Select>` + model `<Select>` populated from the catalog filtered by feature; the provider list shows the platform default + only the 4 BYOK-eligible providers (OpenAI, Anthropic, Google, DeepSeek) when the user has a valid BYOK; OpenRouter and 9Router appear only as platform-default labels and never as user-selectable BYOK; `PUT /api/settings/ai` accepts `{feature, providerId, modelId, useBYOK}` per feature
+    - Target: the section renders three rows (Chat / Triage / Draft); each row shows provider `<Select>` + model `<Select>` populated from the catalog filtered by feature; the provider list shows the platform default + only the 4 BYOK-eligible providers (OpenAI, Anthropic, Google, DeepSeek) when the user has a valid BYOK; OpenRouter and 9Router appear only as platform-default labels and never as user-selectable BYOK; `PUT /api/settings/ai` accepts `{feature, providerId, modelId, useBYOK}` per feature
     - Acceptance: catalog returns 4 providers and a chat picker shows exactly those 4 + platform default; selecting a model not in the catalog returns HTTP 400 with `code=ai.model.not_in_catalog`; OpenRouter and 9Router are never present in the `useBYOK=true` payload (response-shape test)
 
 15. **BYOK key entry for 4 providers**: User can save a BYOK key per allowed provider (OpenAI / Anthropic / Google / DeepSeek).
     - Current: `ByokController` + `ByokForm.tsx` exist on legacy `/settings`; AES-GCM at-rest encryption via v1.0 `LLM-04` works
-    - Target: `ByokForm` moves canonically to `/ai?tab=provider`; the form is removed from `SettingsClient.tsx`; provider list locked to the 4 allowed (OpenRouter and 9Router are NOT shown as BYOK options); the existing AES-GCM cipher is reused; no plaintext echo to frontend after save
-    - Acceptance: rendering `SettingsClient.tsx` after this phase contains no `ByokForm` reference; rendering Tab D contains exactly one `ByokForm`; a BYOK save for `openrouter` or `9router` is rejected server-side with HTTP 400 `code=ai.byok.provider_not_allowed`; the response payload never contains the plaintext key
+    - Target: `ByokForm` moves canonically to the `AI Provider` section on `/ai`; the form is removed from `SettingsClient.tsx`; provider list locked to the 4 allowed (OpenRouter and 9Router are NOT shown as BYOK options); the existing AES-GCM cipher is reused; no plaintext echo to frontend after save
+    - Acceptance: rendering `SettingsClient.tsx` after this phase contains no `ByokForm` reference; rendering the `AI Provider` section on `/ai` contains exactly one `ByokForm`; a BYOK save for `openrouter` or `9router` is rejected server-side with HTTP 400 `code=ai.byok.provider_not_allowed`; the response payload never contains the plaintext key
 
 16. **Per-feature "Use platform default" toggle + cost estimate helper**: User can toggle "Use platform default" vs "Use my key" independently per feature, with last-7d cost estimate visible next to each picker.
     - Current: no per-feature toggle; no cost helper
@@ -125,22 +128,27 @@ The phase delivers the two-page split confirmed during the spec interview: `/ai`
 
 **In scope:**
 
-- New canonical 4-tab page at `/ai` with query-param-driven active tab (`?tab=personalization|behavior|safety-net|provider`)
+- Canonical `/ai` page restructured to flat `<SectionHeader>` groups (Inbox Zero pattern): `Your voice`, `Behavior`, `Updates`, `Safety net`, `AI Provider`. No shadcn `<Tabs>`, no query-param tab state.
+- Every setting uses the `SettingCard` (title + description + Edit/Set button) → shadcn `Dialog` edit pattern, except short toggles (`<Switch>`) which render inline on the card.
 - Backend: `GET/PUT /api/settings/voice`, `GET/PUT /api/settings/behavior`, `GET/PUT /api/settings/ai`, `GET /api/settings/ai/cost?window=7d`, `POST /api/settings/ai/test-connection`
-- Backend: `GET/POST/PUT/DELETE /api/knowledge-snippets` (reusing `assistant_knowledge_snippet` table)
+- Backend: `GET/POST/PUT/DELETE /api/knowledge-snippets` (reusing `assistant_knowledge_snippet` table) with `UNIQUE(tenant_id, title)` + `updated_at` column
 - Backend: `DELETE /api/triage/sender-safety-net/{id}` + domain-pattern support on the existing POST opt-in
-- Liquibase changelog adding `email_signature`, `tone_preset`, `auto_draft_replies`, `draft_confidence_threshold`, `sensitive_data_protection` to `assistant_settings`
+- Liquibase changelog adding `email_signature`, `tone_preset`, `auto_draft_replies`, `draft_confidence` (enum), `sensitive_data_protection` to `assistant_settings`
+- Liquibase changelog adding `UNIQUE(tenant_id, title)` + `updated_at` to `assistant_knowledge_snippet`
 - Liquibase changelog adding `pattern_kind`, `created_by_user` to `tenant_protected_sender_observation` and `blocked_by_safety_net_pattern` to the triage audit row
-- Move `ByokForm` from `/settings` to `/ai?tab=provider`
+- Move `ByokForm` from `/settings` to the `AI Provider` section of `/ai`
 - ArchUnit / integration tests proving: shared sanitizer path between chat tool and REST, shared knowledge-snippet repo path between chat tool and REST, OpenRouter+9Router never shown as BYOK options
-- Reuse v1.0 `ANL-03` daily-digest endpoint and v1.0 `TRG-07` shadow-mode endpoint from Tab B (no migration)
+- Reuse v1.0 `ANL-03` daily-digest endpoint and v1.0 `TRG-07` shadow-mode endpoint (no migration); both render as inline `<Switch>` in their sections
 
 **Out of scope:**
 
 - `SET-SAFE-02` paste-import — deferred to v1.3 per round-1 scope decision (user does not need bulk import yet)
 - `SET-SAFE-03` per-entry mode toggle (`protect` vs `escalate`) — deferred to v1.3 per round-1 scope decision; every user-added entry behaves as `protect`
 - Refactoring or reshaping the legacy `/settings` page (Account / Language / Gmail / Notifications / Delete cards) — those stay as-is; only `ByokForm` is removed
-- File-based route shape (`/ai/personalization`, `/ai/behavior`, etc.) — confirmed query-param routing per `ROADMAP` success criterion 1
+- shadcn `<Tabs>` layout or query-param tab routing — superseded by IZ flat-section pattern during discuss-phase 2026-05-26. ROADMAP success criterion 1 ("query-param-driven active tab on a single flat-folder `/settings/page.tsx`") is replaced by "flat sections grouped with `<SectionHeader>` on `/ai`".
+- 0.0–1.0 confidence slider — replaced by enum `LOW | MEDIUM | HIGH` `<Select>` per IZ pattern; backend maps the enum to numeric thresholds internally so the worker logic does not change
+- File-based route shape (`/ai/personalization`, `/ai/behavior`, etc.) — single `/ai/page.tsx`, no nested routes, no query-param tab state
+- Splitting BYOK + model picker onto `/settings` (the IZ pattern) — Zero Mail is single-tenant-per-user; BYOK and model picker stay together on `/ai`
 - New table for knowledge snippets — `assistant_knowledge_snippet` is reused
 - New behavior_settings or voice_settings table — best-practice consolidation into existing `assistant_settings` per round-1 decision
 - Exposing `assistant_memory` (generic memory used by `SAVE_MEMORY` chat tool) in the UI — out of scope; remains chat-only
@@ -157,7 +165,9 @@ The phase delivers the two-page split confirmed during the spec interview: `/ai`
 - BYOK keys MUST be AES-GCM-encrypted at rest via the existing v1.0 `LLM-04` cipher; plaintext key MUST NOT appear in any log, exception message, or API response after the initial save
 - `POST /api/settings/ai/test-connection` MUST return only the enum `{OK, INVALID_KEY, RATE_LIMITED, NETWORK_ERROR, TIMEOUT}` (same contract as `MKEY-03`); rate-limited to 10/hour per user
 - `GET /api/settings/catalog` ETag caching (already implemented) MUST be respected by the Tab D client (TanStack Query default `staleTime` is acceptable; explicit invalidation on BYOK save)
-- Tab routing MUST be query-param driven (`/ai?tab=...`) with a single `page.tsx` and shadcn `<Tabs>` component; no file-based nested routes
+- Page layout MUST use flat `<SectionHeader>` groups on a single `/ai/page.tsx` — no shadcn `<Tabs>`, no query-param tab state, no nested file-based routes
+- Every multi-field setting MUST use the `SettingCard` + shadcn `Dialog` edit pattern; short toggles MAY render inline as `<Switch>` on the card (per Inbox Zero reference)
+- Knowledge snippets MUST persist `UNIQUE(tenant_id, title)`; the user is shown a duplicate error before save attempts on existing titles
 - No hardcoded color hex anywhere in Tab A/B/C/D — design tokens only (per `apps/web/AGENTS.md`)
 - Backend DTO records MUST use Jakarta Bean Validation + `@Schema(requiredProperties = {...})` so the regenerated `apps/web/lib/api/schema.d.ts` carries accurate required/nullable info (per project convention 10); FE MUST NOT hand-edit `schema.d.ts`
 - TanStack Query mutation toasts MUST flow through `meta.successMessage` / `meta.errorMessage` (per project convention 11); no local `toast.success/error` calls in feature hooks
@@ -165,22 +175,24 @@ The phase delivers the two-page split confirmed during the spec interview: `/ai`
 
 ## Acceptance Criteria
 
-- [ ] Opening `/ai` renders a shadcn `<Tabs>` with four tabs (Personalization / Behavior / Safety Net / Provider) and the active tab is driven by `?tab=` query param with default `personalization`
+- [ ] Opening `/ai` renders flat `<SectionHeader>` groups (`Your voice`, `Behavior`, `Updates`, `Safety net`, `AI Provider`) in a single scrollable page — no shadcn `<Tabs>`, no `?tab=` query param
+- [ ] Every multi-field setting opens an edit Dialog via its `SettingCard` Edit/Set button; short toggles render inline as `<Switch>` on the card
 - [ ] `PUT /api/settings/voice` round-trips writingStyle, personalInstructions (sanitized), emailSignature, tonePreset, aiOutputLanguage; values exceeding limits return HTTP 400 with the documented `code=voice.*` strings
-- [ ] `GET/POST/PUT/DELETE /api/knowledge-snippets` work end-to-end; tenant isolation verified by integration test (cross-tenant access returns 404 not 403)
+- [ ] `GET/POST/PUT/DELETE /api/knowledge-snippets` work end-to-end; tenant isolation verified by integration test (cross-tenant access returns 404 not 403); duplicate `(tenant_id, title)` returns 409 `code=knowledge.title.duplicate`; list orders by `updated_at DESC`
+- [ ] Knowledge section renders `<Table>` (Title | Last Updated | Edit | Delete) with `+ Add` button; clicking Edit opens the same Dialog prefilled; delete uses `ConfirmDialog`
 - [ ] `ADD_TO_KNOWLEDGE_BASE` chat tool and `POST /api/knowledge-snippets` go through the same persistence call site (ArchUnit / unit test green)
-- [ ] `PUT /api/settings/behavior` persists auto-draft toggle, threshold, sensitive-data toggle; daily-digest and shadow-mode toggles on Tab B persist via the existing v1.0 ANL-03 / TRG-07 endpoints (no new column)
-- [ ] Draft worker reads `draft_confidence_threshold` and skips persistence when confidence is below the user-set value (integration test)
+- [ ] `PUT /api/settings/behavior` persists auto-draft toggle, `draft_confidence` enum, sensitive-data toggle; daily-digest and shadow-mode toggles persist via the existing v1.0 ANL-03 / TRG-07 endpoints (no new column)
+- [ ] Draft worker reads `draft_confidence` enum, resolves to the internal threshold (LOW=0.50 / MEDIUM=0.70 / HIGH=0.85), and skips persistence when confidence < threshold (integration test asserts threshold per enum value)
 - [ ] Safety net `DELETE /api/triage/sender-safety-net/{id}` returns 403 for observation-created entries and 200 for user-created entries
 - [ ] Safety net `POST /api/triage/sender-safety-net/{pattern}/opt-in` accepts both `ceo@acme.com` and `@acme.com` and persists `pattern_kind` correctly
 - [ ] Triage audit row carries `blocked_by_safety_net_pattern` when applicable and Tab C renders the badge with the pattern; rows without the field render unchanged
-- [ ] Tab D renders only OpenAI / Anthropic / Google / DeepSeek as BYOK options; OpenRouter and 9Router appear only as platform-default labels
+- [ ] `AI Provider` section renders only OpenAI / Anthropic / Google / DeepSeek as BYOK options; OpenRouter and 9Router appear only as platform-default labels
 - [ ] BYOK save for `openrouter` or `9router` is rejected server-side with `code=ai.byok.provider_not_allowed`
-- [ ] `ByokForm` no longer appears in `SettingsClient.tsx`; it renders once on `/ai?tab=provider`
-- [ ] `GET /api/settings/ai/cost?window=7d` returns per-feature USD totals; helper text on Tab D shows "Currently using: {provider}/{model}" + "$X.XX last 7d"
+- [ ] `ByokForm` no longer appears in `SettingsClient.tsx`; it renders once inside the `AI Provider` section on `/ai`
+- [ ] `GET /api/settings/ai/cost?window=7d` returns per-feature USD totals; helper text shows "Currently using: {provider}/{model}" + "$X.XX last 7d"
 - [ ] `POST /api/settings/ai/test-connection` returns exactly one of `{OK, INVALID_KEY, RATE_LIMITED, NETWORK_ERROR, TIMEOUT}`; provider error bodies never leak; 11th call/hour returns 429
 - [ ] `apps/web/lib/api/schema.d.ts` is regenerated from the running backend after Phase 9 DTO additions; no hand-edits
-- [ ] Playwright e2e covers the four tabs golden path: edit voice → save → reload → values persist; toggle behavior → reload → persist; add+delete safety-net entry → reload → persist; pick BYOK provider+model + test connection → state persists
+- [ ] Playwright e2e covers the flat-section golden path: edit voice (Dialog) → save → reload → values persist; toggle behavior (`<Switch>`) → reload → persist; add+edit+delete knowledge snippet → reload → persist; add+delete safety-net entry → reload → persist; pick BYOK provider+model + test connection → state persists
 - [ ] No hardcoded color hex in any Tab A/B/C/D component (Prettier / ESLint / repo grep gate)
 
 ## Ambiguity Report
@@ -208,7 +220,8 @@ Status: ✓ = met minimum
 | 1     | Researcher        | Where does cost estimate (SET-AI-03) come from?             | Aggregate `llm_call_audit` SUM per feature, last 7d                              |
 | 2     | Boundary Keeper   | Tab routing on `/ai` — query param or file route?           | Query param `/ai?tab=...` (matches ROADMAP success criterion 1)                  |
 | 2     | Boundary Keeper   | Reuse v1.0 daily-digest + shadow-mode endpoints?            | YES reuse — no migration into `assistant_settings`                               |
-| 2     | Boundary Keeper   | ByokForm — keep on `/settings` or move fully to `/ai`?      | Move fully to `/ai?tab=provider`; remove import from `SettingsClient.tsx`        |
+| 2     | Boundary Keeper   | ByokForm — keep on `/settings` or move fully to `/ai`?      | Move fully to `/ai` `AI Provider` section; remove import from `SettingsClient.tsx` |
+| 3     | Researcher (discuss-phase) | Check Inbox Zero AI config pattern before locking gray areas | Pivot Phase 9 layout to IZ shape: flat `<SectionHeader>` groups (not Tabs), `SettingCard`+Dialog edit (not inline), Knowledge as Table+Dialog with `UNIQUE(tenant_id, title)` + `updated_at DESC`, `SET-BEHV-02` confidence enum LOW/MEDIUM/HIGH (not slider). Single deviation from IZ: BYOK + model picker stay on `/ai` because Zero Mail is single-tenant-per-user. |
 
 ---
 
