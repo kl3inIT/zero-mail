@@ -1,13 +1,15 @@
-package com.zeromail.core.admin.mkey.usecases;
+package com.zeromail.core.llm.gateway.springai;
 
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -55,16 +57,30 @@ public class ModelsProbeClient {
     public MasterKeyTestResult probeConnection(
             LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
         String resolvedBaseUrl = baseUrlFor(provider, baseUrl);
+        return probeConnection(
+                provider,
+                keyFormat,
+                resolvedBaseUrl,
+                plaintextKey,
+                builderFor(resolvedBaseUrl).build());
+    }
+
+    public MasterKeyTestResult probeConnection(
+            LlmProvider provider,
+            KeyFormat keyFormat,
+            String baseUrl,
+            byte[] plaintextKey,
+            RestClient restClient) {
+        String resolvedBaseUrl = baseUrlFor(provider, baseUrl);
         try {
             RestClient.RequestHeadersSpec<?> requestHeadersSpecification =
-                    builderFor(resolvedBaseUrl)
-                            .build()
-                            .get()
-                            .uri(joinPath(resolvedBaseUrl, "models"));
+                    restClient.get().uri(joinPath(resolvedBaseUrl, "models"));
             String apiKey = new String(plaintextKey, StandardCharsets.UTF_8);
             applyHeaders(requestHeadersSpecification, provider, keyFormat, apiKey);
-            requestHeadersSpecification.retrieve().toBodilessEntity();
-            return withConstantJitter(MasterKeyTestResult.OK);
+            ResponseEntity<Void> responseEntity =
+                    requestHeadersSpecification.retrieve().toBodilessEntity();
+            return withConstantJitter(
+                    mapSuccessfulOrErrorStatus(responseEntity.getStatusCode().value()));
         } catch (RestClientResponseException providerRejection) {
             return withConstantJitter(mapStatus(providerRejection.getStatusCode().value()));
         } catch (ResourceAccessException resourceAccessException) {
@@ -80,19 +96,36 @@ public class ModelsProbeClient {
     public List<RawModel> fetchModelCatalog(
             LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
         String resolvedBaseUrl = baseUrlFor(provider, baseUrl);
+        return fetchModelCatalog(
+                provider,
+                keyFormat,
+                resolvedBaseUrl,
+                plaintextKey,
+                builderFor(resolvedBaseUrl).build());
+    }
+
+    public List<RawModel> fetchModelCatalog(
+            LlmProvider provider,
+            KeyFormat keyFormat,
+            String baseUrl,
+            byte[] plaintextKey,
+            RestClient restClient) {
+        String resolvedBaseUrl = baseUrlFor(provider, baseUrl);
         try {
             RestClient.RequestHeadersSpec<?> requestHeadersSpecification =
-                    builderFor(resolvedBaseUrl)
-                            .build()
-                            .get()
-                            .uri(joinPath(resolvedBaseUrl, "models"));
+                    restClient.get().uri(joinPath(resolvedBaseUrl, "models"));
             String apiKey = new String(plaintextKey, StandardCharsets.UTF_8);
             applyHeaders(requestHeadersSpecification, provider, keyFormat, apiKey);
-            String responseBody = requestHeadersSpecification.retrieve().body(String.class);
+            ResponseEntity<String> responseEntity =
+                    requestHeadersSpecification.retrieve().toEntity(String.class);
+            if (!responseEntity.getStatusCode().is2xxSuccessful()) {
+                throw new ProbeFailedException(mapStatus(responseEntity.getStatusCode().value()));
+            }
+            String responseBody = responseEntity.getBody();
             if (responseBody == null || responseBody.isBlank()) {
                 return List.of();
             }
-            return parseModels(provider, responseBody);
+            return parseModelCatalog(provider, responseBody);
         } catch (RestClientResponseException providerRejection) {
             throw new ProbeFailedException(mapStatus(providerRejection.getStatusCode().value()));
         } catch (ResourceAccessException resourceAccessException) {
@@ -105,7 +138,7 @@ public class ModelsProbeClient {
         }
     }
 
-    private List<RawModel> parseModels(LlmProvider provider, String responseBody) {
+    public List<RawModel> parseModelCatalog(LlmProvider provider, String responseBody) {
         try {
             JsonNode rootNode = objectMapper.readTree(responseBody);
             JsonNode modelsNode =
@@ -181,6 +214,13 @@ public class ModelsProbeClient {
             return MasterKeyTestResult.TIMEOUT;
         }
         return MasterKeyTestResult.NETWORK_ERROR;
+    }
+
+    private static MasterKeyTestResult mapSuccessfulOrErrorStatus(int status) {
+        if (status >= 200 && status < 300) {
+            return MasterKeyTestResult.OK;
+        }
+        return mapStatus(status);
     }
 
     private static boolean isTimeout(Throwable throwable) {

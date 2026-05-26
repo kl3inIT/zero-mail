@@ -27,11 +27,14 @@ import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.exception.MasterKeyTestFailedException;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
+import com.zeromail.core.llm.gateway.springai.ConnectionTestResult;
+import com.zeromail.core.llm.gateway.springai.ProviderConnectionTester;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -64,19 +67,19 @@ class MasterKeyAdminServiceCreateProviderTest {
         PlatformSecretCipher platformSecretCipher = mock(PlatformSecretCipher.class);
         MasterKeyEditSessionService editSessionService = mock(MasterKeyEditSessionService.class);
         MasterKeyRateLimiter rateLimiter = mock(MasterKeyRateLimiter.class);
-        ModelsProbeClient modelsProbeClient = mock(ModelsProbeClient.class);
+        ProviderConnectionTester providerConnectionTester = mock(ProviderConnectionTester.class);
         AdminAuditWriter adminAuditWriter = mock(AdminAuditWriter.class);
         byte[] plaintextKey = "sk-provider-test-key".getBytes(StandardCharsets.UTF_8);
         byte[] encryptedEnvelope = {0, 0, 0, 7, 1, 2, 3, 4};
         when(providerCatalogWriteRepository.exists(provider)).thenReturn(false);
         when(editSessionService.consume(adminUserId, provider, "edit-token"))
                 .thenReturn(Optional.of("edit-token"));
-        when(modelsProbeClient.probe(
+        when(providerConnectionTester.probeConnection(
                         eq(provider),
                         eq(KeyFormat.OPENAI_FORMAT),
                         eq("https://gateway.example.com/v1"),
                         any(byte[].class)))
-                .thenReturn(MasterKeyTestResult.OK);
+                .thenReturn(new ConnectionTestResult(MasterKeyTestResult.OK, List.of()));
         when(platformSecretCipher.encrypt(
                         any(byte[].class), eq("platform:master_key:GATEWAY_TEST")))
                 .thenReturn(encryptedEnvelope);
@@ -89,7 +92,7 @@ class MasterKeyAdminServiceCreateProviderTest {
                         platformSecretCipher,
                         editSessionService,
                         rateLimiter,
-                        modelsProbeClient,
+                        providerConnectionTester,
                         adminAuditWriter);
 
         MasterKeyAdminService.ProviderKeyAddResult result =
@@ -108,8 +111,8 @@ class MasterKeyAdminServiceCreateProviderTest {
                                         UUID.fromString("00000000-0000-0000-0000-000000000456")));
 
         assertThat(result.priority()).isEqualTo(1);
-        verify(modelsProbeClient)
-                .probe(
+        verify(providerConnectionTester)
+                .probeConnection(
                         eq(provider),
                         eq(KeyFormat.OPENAI_FORMAT),
                         eq("https://gateway.example.com/v1"),
@@ -150,17 +153,17 @@ class MasterKeyAdminServiceCreateProviderTest {
         PlatformSecretCipher platformSecretCipher = mock(PlatformSecretCipher.class);
         MasterKeyEditSessionService editSessionService = mock(MasterKeyEditSessionService.class);
         MasterKeyRateLimiter rateLimiter = mock(MasterKeyRateLimiter.class);
-        ModelsProbeClient modelsProbeClient = mock(ModelsProbeClient.class);
+        ProviderConnectionTester providerConnectionTester = mock(ProviderConnectionTester.class);
         AdminAuditWriter adminAuditWriter = mock(AdminAuditWriter.class);
         when(providerCatalogWriteRepository.exists(provider)).thenReturn(false);
         when(editSessionService.consume(adminUserId, provider, "edit-token"))
                 .thenReturn(Optional.of("edit-token"));
-        when(modelsProbeClient.probe(
+        when(providerConnectionTester.probeConnection(
                         eq(provider),
                         eq(KeyFormat.ANTHROPIC_FORMAT),
                         eq("https://gateway.example.com/anthropic"),
                         any(byte[].class)))
-                .thenReturn(MasterKeyTestResult.INVALID_KEY);
+                .thenReturn(new ConnectionTestResult(MasterKeyTestResult.INVALID_KEY, List.of()));
 
         MasterKeyAdminService service =
                 serviceWith(
@@ -170,7 +173,7 @@ class MasterKeyAdminServiceCreateProviderTest {
                         platformSecretCipher,
                         editSessionService,
                         rateLimiter,
-                        modelsProbeClient,
+                        providerConnectionTester,
                         adminAuditWriter);
 
         assertThatThrownBy(
@@ -239,7 +242,7 @@ class MasterKeyAdminServiceCreateProviderTest {
                         mock(PlatformSecretCipher.class),
                         mock(MasterKeyEditSessionService.class),
                         mock(MasterKeyRateLimiter.class),
-                        mock(ModelsProbeClient.class),
+                        mock(ProviderConnectionTester.class),
                         adminAuditWriter);
 
         AdminContext.run(
@@ -290,7 +293,7 @@ class MasterKeyAdminServiceCreateProviderTest {
                         mock(PlatformSecretCipher.class),
                         mock(MasterKeyEditSessionService.class),
                         mock(MasterKeyRateLimiter.class),
-                        mock(ModelsProbeClient.class),
+                        mock(ProviderConnectionTester.class),
                         mock(AdminAuditWriter.class));
 
         assertThatThrownBy(
@@ -331,7 +334,7 @@ class MasterKeyAdminServiceCreateProviderTest {
                         mock(PlatformSecretCipher.class),
                         mock(MasterKeyEditSessionService.class),
                         mock(MasterKeyRateLimiter.class),
-                        mock(ModelsProbeClient.class),
+                        mock(ProviderConnectionTester.class),
                         mock(AdminAuditWriter.class));
 
         assertThatThrownBy(
@@ -356,7 +359,7 @@ class MasterKeyAdminServiceCreateProviderTest {
             PlatformSecretCipher platformSecretCipher,
             MasterKeyEditSessionService editSessionService,
             MasterKeyRateLimiter rateLimiter,
-            ModelsProbeClient modelsProbeClient,
+            ProviderConnectionTester providerConnectionTester,
             AdminAuditWriter adminAuditWriter) {
         return new MasterKeyAdminService(
                 mock(LlmProviderMasterKeyRepository.class),
@@ -366,7 +369,7 @@ class MasterKeyAdminServiceCreateProviderTest {
                 platformSecretCipher,
                 editSessionService,
                 rateLimiter,
-                modelsProbeClient,
+                providerConnectionTester,
                 adminAuditWriter,
                 mock(ApplicationEventPublisher.class),
                 Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC));

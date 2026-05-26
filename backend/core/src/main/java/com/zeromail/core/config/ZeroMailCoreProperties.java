@@ -179,16 +179,19 @@ public record ZeroMailCoreProperties(
     public record ZeroMailLlmByokProperties(
             boolean allowNonVendorEndpoints,
             List<String> allowedExtraHosts,
+            List<Integer> allowedExtraPorts,
             Duration connectTimeout,
             Duration readTimeout) {
 
         static ZeroMailLlmByokProperties defaults() {
-            return new ZeroMailLlmByokProperties(false, List.of(), null, null);
+            return new ZeroMailLlmByokProperties(false, List.of(), List.of(), null, null);
         }
 
         public ZeroMailLlmByokProperties {
             allowedExtraHosts =
                     allowedExtraHosts == null ? List.of() : List.copyOf(allowedExtraHosts);
+            allowedExtraPorts =
+                    allowedExtraPorts == null ? List.of() : List.copyOf(allowedExtraPorts);
             connectTimeout = connectTimeout == null ? Duration.ofSeconds(5) : connectTimeout;
             readTimeout = readTimeout == null ? Duration.ofSeconds(15) : readTimeout;
         }

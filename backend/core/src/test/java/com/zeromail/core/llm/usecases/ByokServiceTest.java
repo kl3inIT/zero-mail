@@ -630,6 +630,7 @@ class ByokServiceTest extends PostgresContainerTest {
                                 allowNonVendorEndpoints
                                         ? List.of("together.xyz", "example.com")
                                         : List.of(),
+                                List.of(),
                                 Duration.ofSeconds(5),
                                 Duration.ofSeconds(15))),
                 new ByokValidationGateway(restClientBuilder));

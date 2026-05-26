@@ -1,13 +1,15 @@
-package com.zeromail.core.admin.mkey.usecases;
+package com.zeromail.core.llm.gateway.springai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -38,6 +40,32 @@ class ModelsProbeClientTest {
                                 "https://api.openai.com/v1",
                                 "invalid".getBytes(StandardCharsets.UTF_8)))
                 .isEqualTo(MasterKeyTestResult.INVALID_KEY);
+
+        server.verify();
+    }
+
+    @Test
+    void sends_anthropic_key_and_version_headers_without_bearer_header() {
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        server.expect(requestTo("https://api.anthropic.com/v1/models"))
+                .andExpect(header("x-api-key", "anthropic-key"))
+                .andExpect(header("anthropic-version", "2023-06-01"))
+                .andExpect(headerDoesNotExist("Authorization"))
+                .andRespond(
+                        withSuccess(
+                                "{\"data\":[{\"id\":\"claude-haiku-4-1\"}]}",
+                                org.springframework.http.MediaType.APPLICATION_JSON));
+        ModelsProbeClient modelsProbeClient =
+                new ModelsProbeClient(restClientBuilder, restClientBuilder, new ObjectMapper());
+
+        assertThat(
+                        modelsProbeClient.probe(
+                                LlmProvider.ANTHROPIC,
+                                KeyFormat.ANTHROPIC_FORMAT,
+                                "https://api.anthropic.com/v1",
+                                "anthropic-key".getBytes(StandardCharsets.UTF_8)))
+                .isEqualTo(MasterKeyTestResult.OK);
 
         server.verify();
     }

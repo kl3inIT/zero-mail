@@ -34,6 +34,7 @@ class ZeroMailLlmByokPropertiesBindingTest {
                 .withPropertyValues(
                         "zero-mail.llm.byok.allow-non-vendor-endpoints=true",
                         "zero-mail.llm.byok.allowed-extra-hosts[0]=llm.example.test",
+                        "zero-mail.llm.byok.allowed-extra-ports[0]=8443",
                         "zero-mail.llm.byok.connect-timeout=7s",
                         "zero-mail.llm.byok.read-timeout=21s")
                 .run(
@@ -47,6 +48,7 @@ class ZeroMailLlmByokPropertiesBindingTest {
                             assertThat(byokProperties.allowNonVendorEndpoints()).isTrue();
                             assertThat(byokProperties.allowedExtraHosts())
                                     .containsExactly("llm.example.test");
+                            assertThat(byokProperties.allowedExtraPorts()).containsExactly(8443);
                             assertThat(byokProperties.connectTimeout())
                                     .isEqualTo(Duration.ofSeconds(7));
                             assertThat(byokProperties.readTimeout())
@@ -68,6 +70,7 @@ class ZeroMailLlmByokPropertiesBindingTest {
 
                             assertThat(byokProperties.allowNonVendorEndpoints()).isFalse();
                             assertThat(byokProperties.allowedExtraHosts()).isEmpty();
+                            assertThat(byokProperties.allowedExtraPorts()).isEmpty();
                             assertThat(byokProperties.connectTimeout())
                                     .isEqualTo(Duration.ofSeconds(5));
                             assertThat(byokProperties.readTimeout())
