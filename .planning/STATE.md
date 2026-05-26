@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
 Plan: 6 of 6
 Status: Phase 08.1 shipped — PR #60
-Last activity: 2026-05-25 - Completed quick task 260525-krs: per-tool UI components for 15 chat tools (port inbox-zero pattern, replace JSON dump)
+Last activity: 2026-05-26 - Completed quick task 260526-so3: tightened app shell gutter between sidebar and content
 
 ## Current Milestone Roadmap
 
@@ -395,6 +395,11 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260526-so3 | Tighten app shell content gutter near sidebar so protected content sits closer to the menu | 2026-05-26 | pending | Verified | [260526-so3-tighten-app-shell-content-gutter-near-si](./quick/260526-so3-tighten-app-shell-content-gutter-near-si/) |
+| 260526-s41 | Remove protected app page-level title/description headers while preserving local toolbars and content controls | 2026-05-26 | pending | Verified | [260526-s41-remove-protected-app-page-headers](./quick/260526-s41-remove-protected-app-page-headers/) |
+| 260526-rz0 | Tighten inbox row spacing and move unread/active dot beside sender name | 2026-05-26 | pending | Verified | [260526-rz0-tighten-inbox-row-spacing-and-move-activ](./quick/260526-rz0-tighten-inbox-row-spacing-and-move-activ/) |
+| 260526-r9x | Improve inbox list density and search: smaller sidebar, wider mail list, sender-only first row, subject/header second row, Gmail-style date display, and loaded-message search by sender/subject/label | 2026-05-26 | pending | Verified | [260526-r9x-improve-inbox-mail-list-density-header-d](./quick/260526-r9x-improve-inbox-mail-list-density-header-d/) |
+| 260526-qva | Fix responsive analytics chart clipping on mobile: shared Recharts container shrink behavior, analytics panel min-width, donut max-width, and mobile overflow regression checks | 2026-05-26 | pending | Verified | [260526-qva-fix-responsive-analytics-charts-clipping](./quick/260526-qva-fix-responsive-analytics-charts-clipping/) |
 | 260525-krs | Per-tool UI components for 15 chat tools (8 read + 7 writeReversible): port inbox-zero pattern with SubtleToolCollapsible + per-tool components + dispatcher, replace generic JSON dump in conversation-pane.tsx | 2026-05-25 | 422959af | — | [260525-krs-tool-results-ui](./quick/260525-krs-tool-results-ui/) |
 | 260525-kmm | Fix three chat conversation pane UI bugs: clear input immediately on submit, restore send button per-status icons + disabled contrast, remove dead Confirm button on writeReversible tools | 2026-05-25 | 9662f08e | — | [260525-kmm-fix-chat-input-ui-bugs](./quick/260525-kmm-fix-chat-input-ui-bugs/) |
 | 260525-kij | Fix chat sendEmail tool not callable for new emails: drop dead replyToMessageId from SendEmailToolArgs, rewrite SEND/REPLY/FORWARD_EMAIL tool descriptions, add Tool invocation policy to system prompt | 2026-05-25 | e642943d | — | [260525-kij-fix-sendemail-schema-prompt](./quick/260525-kij-fix-sendemail-schema-prompt/) |

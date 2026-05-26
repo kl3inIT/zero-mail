@@ -22,8 +22,6 @@ export function DashboardPageClient() {
   const billingBalance = useBillingBalance();
   const hydrated = useHydrated();
 
-  const email = currentUser.data?.email ?? '';
-  const displayName = email.split('@')[0] || null;
   const connectionStatus = currentUser.data?.gmailConnectionStatus?.status;
   const connected = connectionStatus === 'CONNECTED';
   const toReply = hydrated ? (toReplyCount.data ?? 0) : 0;
@@ -31,12 +29,6 @@ export function DashboardPageClient() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-border border-b px-4 py-3">
-        <h1 className="text-foreground text-[17px] font-semibold">
-          {displayName ? `${t('dashboard.welcome')}, ${displayName}` : t('dashboard.welcome')}
-        </h1>
-        <p className="text-muted-foreground text-sm">{t('dashboard.subtitle')}</p>
-      </div>
       <div className="flex-1 space-y-4 overflow-auto p-3 sm:p-4">
         <div className="grid gap-4 sm:grid-cols-3">
           <Card>

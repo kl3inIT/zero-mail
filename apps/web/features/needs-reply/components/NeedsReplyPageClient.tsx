@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 
 import { NeedsReplyTable } from '@/features/needs-reply/components/NeedsReplyTable';
 import type { NeedsReplyBucket } from '@/features/needs-reply/api/needs-reply-api';
@@ -22,7 +21,6 @@ function normalizeBucket(value: string | null): NeedsReplyBucket {
 }
 
 export function NeedsReplyPageClient() {
-  const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
   const hydrated = useHydrated();
@@ -35,13 +33,6 @@ export function NeedsReplyPageClient() {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-1">
-        <h1 className="text-foreground text-xl font-semibold">{t('needsReply.page.title')}</h1>
-        <p className="text-muted-foreground max-w-3xl text-sm leading-6">
-          {t('needsReply.page.description')}
-        </p>
-      </div>
-
       <NeedsReplyTable
         activeBucket={activeBucket}
         rows={rows}

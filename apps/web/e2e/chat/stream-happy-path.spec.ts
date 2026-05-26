@@ -10,7 +10,6 @@ test('streams assistant text from /api/chat with cookie auth and XSRF', async ({
     streamChunks: ['Xin chao ', 'tu Zero Mail.'],
   });
 
-  await expect(page.getByRole('heading', { name: 'Trợ lý email' })).toBeVisible();
   const prompt = page.getByPlaceholder('Nhắn cho Zero Mail...');
   await prompt.click();
   await prompt.pressSequentially('Tìm email từ Acme tuần này');

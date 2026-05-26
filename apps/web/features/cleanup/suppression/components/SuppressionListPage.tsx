@@ -14,15 +14,6 @@ export function SuppressionListPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="border-foreground/10 flex flex-col gap-2 border-b pb-5">
-        <h1 className="text-foreground text-2xl leading-tight font-semibold">
-          {t('cleanup.suppression.title')}
-        </h1>
-        <p className="text-muted-foreground max-w-3xl text-sm leading-6">
-          {t('cleanup.suppression.lead')}
-        </p>
-      </div>
-
       <SuppressionAddForm />
 
       {listQuery.isPending && (

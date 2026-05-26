@@ -221,7 +221,7 @@ export function AnalyticsPageClient() {
   const ruleEmpty = ruleChartData.length === 0;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <AnalyticsToolbar
           selectedWindow={selectedWindow}
@@ -267,7 +267,7 @@ export function AnalyticsPageClient() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-3">
         <PanelCard
           data-testid="analytics-metadata-load-panel"
           title={t('analytics.metadataLoad.dailyVolume')}
@@ -311,7 +311,7 @@ export function AnalyticsPageClient() {
           ) : (
             <ChartContainer
               config={triageChartConfig}
-              className="mx-auto aspect-square h-[200px] sm:h-[220px]"
+              className="mx-auto h-[200px] w-full max-w-[220px] sm:h-[220px]"
             >
               <PieChart>
                 <ChartTooltip content={<ChartTooltipContent nameKey="key" />} />
@@ -329,7 +329,7 @@ export function AnalyticsPageClient() {
               </PieChart>
             </ChartContainer>
           )}
-          <div className="mt-2 flex items-center justify-center gap-4 text-xs">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
             <span className="flex items-center gap-1.5">
               <span className="inline-block size-2 rounded-full bg-(--chart-1)" />
               <span className="text-muted-foreground">{t('analytics.volume.appliedLabel')}</span>
@@ -697,7 +697,7 @@ function PanelCard({
   return (
     <section
       data-testid={dataTestId}
-      className={cn('border-border bg-card rounded-lg border p-4 shadow-sm', className)}
+      className={cn('border-border bg-card min-w-0 rounded-lg border p-4 shadow-sm', className)}
     >
       <header className="mb-4">
         <h2 className="text-foreground text-lg leading-snug font-medium">{title}</h2>

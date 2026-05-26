@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   createChromeMockState,
@@ -23,7 +23,6 @@ for (const viewport of [
     await openAuthenticatedRoute(page, '/analytics', state);
 
     await expectAppShellChrome(page, { sidebarVisible: viewport.name === 'desktop' });
-    await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
     await expect(page.getByTestId('analytics-volume-panel')).toBeVisible();
     await expect(page.getByTestId('analytics-time-saved-panel')).toBeVisible();
     await expect(page.getByTestId('analytics-inbox-flow-panel')).toBeVisible();
@@ -46,6 +45,8 @@ for (const viewport of [
     // the assertion survives both 'vi' and 'en' UI locales.
     await expect(page.getByTestId('analytics-volume-panel')).toContainText('2,494');
     await expectNoHorizontalOverflow(page);
+    await expectAnalyticsPanelFits(page, 'analytics-metadata-load-panel');
+    await expectAnalyticsPanelFits(page, 'analytics-inbox-flow-panel');
     await expectNoClaySkinClasses(page);
   });
 }
@@ -59,23 +60,42 @@ test('analytics canonicalizes empty and invalid window params before fetching', 
 
   await page.goto('/analytics?window=', { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('load');
-  await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
+  await expect(page.getByTestId('analytics-volume-panel')).toBeVisible();
   await expect(page).toHaveURL(/\/analytics\?window=7d/, { timeout: 15_000 });
   await expect.poll(() => state.analyticsRequests).toEqual(['7d']);
 
   state.analyticsRequests = [];
   await page.goto('/analytics?window=bogus', { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('load');
-  await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
+  await expect(page.getByTestId('analytics-volume-panel')).toBeVisible();
   await expect(page).toHaveURL(/\/analytics\?window=7d/, { timeout: 15_000 });
   await expect.poll(() => state.analyticsRequests).toEqual(['7d']);
 });
 
+async function expectAnalyticsPanelFits(page: Page, testId: string) {
+  const panelMetrics = await page.getByTestId(testId).evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      clientWidth: element.clientWidth,
+      left: rect.left,
+      right: rect.right,
+      scrollWidth: element.scrollWidth,
+      viewportWidth: window.innerWidth,
+    };
+  });
+
+  expect(panelMetrics.left).toBeGreaterThanOrEqual(-1);
+  expect(panelMetrics.right).toBeLessThanOrEqual(panelMetrics.viewportWidth + 1);
+  expect(panelMetrics.scrollWidth).toBeLessThanOrEqual(panelMetrics.clientWidth + 1);
+}
+
 test('analytics renders Vietnamese copy', async ({ page }) => {
   const state = createChromeMockState({ preferredLanguage: 'vi' });
+  await page.setViewportSize({ width: 320, height: 740 });
   await openAuthenticatedRoute(page, '/analytics', state);
+  await expectAnalyticsPanelFits(page, 'analytics-metadata-load-panel');
+  await expectAnalyticsPanelFits(page, 'analytics-inbox-flow-panel');
 
-  await expect(page.getByRole('heading', { name: 'Phân tích' })).toBeVisible();
   // PR #66 swapped the window Tabs for a shadcn Select. The combobox is
   // aria-labeled with analytics.range.label (vi: "Khoảng thời gian") and the
   // displayed value is the current range — analytics.range.lastWeek (vi:

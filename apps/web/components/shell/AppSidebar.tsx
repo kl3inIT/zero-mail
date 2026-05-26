@@ -257,7 +257,7 @@ export function AppSidebar() {
       collapsible="icon"
       data-testid="app-sidebar"
       className="border-sidebar-border border-r"
-      style={{ '--sidebar-width': '260px', '--sidebar-width-icon': '64px' } as React.CSSProperties}
+      style={{ '--sidebar-width': '224px', '--sidebar-width-icon': '56px' } as React.CSSProperties}
     >
       <SidebarHeader
         className={cn(

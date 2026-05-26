@@ -23,7 +23,6 @@ for (const viewport of VIEWPORTS) {
     await openAuthenticatedPage(page, '/settings/privacy', 'en');
 
     await expectAppShellChrome(page, { sidebarVisible: viewport.name === 'desktop' });
-    await expect(page.getByRole('heading', { name: 'In-product privacy' })).toBeVisible();
     await expect(page.getByText('What we never store', { exact: true })).toBeVisible();
     await expect(page.getByText('email bodies')).toBeVisible();
     await expect(page.getByText('AI prompts')).toBeVisible();
@@ -46,7 +45,6 @@ test('authenticated privacy page renders Vietnamese copy', async ({ page }) => {
   await openAuthenticatedPage(page, '/settings/privacy', 'vi');
 
   await expectAppShellChrome(page, { sidebarVisible: true });
-  await expect(page.getByRole('heading', { name: 'Quyền riêng tư trong sản phẩm' })).toBeVisible();
   await expect(
     page.getByText('Những gì chúng tôi không bao giờ lưu', { exact: true }),
   ).toBeVisible();
@@ -63,7 +61,7 @@ test('privacy page is reachable from settings link', async ({ page }) => {
   await page.getByRole('link', { name: 'Privacy & data handling' }).click();
 
   await expect(page).toHaveURL(/\/settings\/privacy$/);
-  await expect(page.getByRole('heading', { name: 'In-product privacy' })).toBeVisible();
+  await expect(page.getByText('What we never store', { exact: true })).toBeVisible();
   await expectNoClaySkinClasses(page);
   await expectNoHorizontalOverflow(page);
 });
