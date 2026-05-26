@@ -74,8 +74,7 @@ class GoogleOAuthSuccessHandlerTest {
                                         "openid",
                                         "profile",
                                         "email",
-                                        OAuthScopes.GMAIL_MODIFY,
-                                        OAuthScopes.GMAIL_SETTINGS_BASIC))
+                                        OAuthScopes.GMAIL_MODIFY))
                         .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
                         .tokenUri("https://oauth2.googleapis.com/token")
                         .build();
@@ -89,8 +88,7 @@ class GoogleOAuthSuccessHandlerTest {
                                 "openid",
                                 "profile",
                                 "email",
-                                OAuthScopes.GMAIL_MODIFY,
-                                OAuthScopes.GMAIL_SETTINGS_BASIC));
+                                OAuthScopes.GMAIL_MODIFY));
         var refreshToken = new OAuth2RefreshToken("fake-rt", Instant.now());
         when(authorizedClients.loadAuthorizedClient(eq("google"), anyString()))
                 .thenReturn(

@@ -9,8 +9,6 @@ package com.zeromail.api.security;
 public final class OAuthScopes {
 
     public static final String GMAIL_MODIFY = "https://www.googleapis.com/auth/gmail.modify";
-    public static final String GMAIL_SETTINGS_BASIC =
-            "https://www.googleapis.com/auth/gmail.settings.basic";
 
     /** Prefix shared by all gmail.* scopes — used for scope-filtering in handlers. */
     public static final String GMAIL_PREFIX = "https://www.googleapis.com/auth/gmail.";

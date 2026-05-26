@@ -45,10 +45,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  *       OAuth2AuthenticationException}{@code ("consent_denied")} BEFORE any DB write. Failure
  *       handler redirects to {@code /login?error=consent_denied} (MED-3 fix). Pre-throw cleanup
  *       applied here too (CR-02 fix).
- *   <li>If only {@code gmail.settings.basic} is missing (but {@code gmail.modify} present) → emit
- *       opaque warning log {@code event=oauth_settings_basic_missing} and proceed (INFO-7:
- *       settings.basic is forward-looking for Phase 3, not v1-blocking).
- *   <li>On full / partial-OK grant → delegate to {@link
+ *   <li>On required Gmail grant → delegate to {@link
  *       OAuthProvisioningService#provisionBundledOAuth} which atomically writes user + tenant +
  *       GmailConnectionEntity in ONE transaction (HIGH-1 fix).
  * </ol>
@@ -166,38 +163,21 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             // Reconnect null: fall through to provisioning (service handles gracefully).
         }
 
-        // (c) settings.basic observational warning (non-blocking).
-        boolean settingsBasicMissing =
-                !authorizedClient
-                        .getAccessToken()
-                        .getScopes()
-                        .contains(OAuthScopes.GMAIL_SETTINGS_BASIC);
-        if (settingsBasicMissing) {
-            log.warn("event=oauth_settings_basic_missing");
-        }
-
-        // (d) Build gmail-scoped scope string for audit storage.
+        // (c) Build gmail-scoped scope string for audit storage.
         String gmailScopes =
                 authorizedClient.getAccessToken().getScopes().stream()
                         .filter(scope -> scope.startsWith(OAuthScopes.GMAIL_PREFIX))
                         .sorted()
                         .collect(Collectors.joining(" "));
 
-        // (e) Null-safe refresh-token extraction (reconnect path).
+        // (d) Null-safe refresh-token extraction (reconnect path).
         String refreshToken =
                 authorizedClient.getRefreshToken() == null
                         ? null
                         : authorizedClient.getRefreshToken().getTokenValue();
 
-        // (f) Single delegation to atomic provisioning service.
-        OAuthProvisioningService.BundledProvisioningResult result =
-                provisioningService.provisionBundledOAuth(
-                        googleSubject, email, refreshToken, gmailScopes);
-
-        // (g) Follow-up with tenant context (after provisioning resolves tenantId).
-        if (settingsBasicMissing) {
-            log.warn("event=oauth_settings_basic_missing tenantId={}", result.tenantId());
-        }
+        // (e) Single delegation to atomic provisioning service.
+        provisioningService.provisionBundledOAuth(googleSubject, email, refreshToken, gmailScopes);
 
         super.onAuthenticationSuccess(request, response, authentication);
     }

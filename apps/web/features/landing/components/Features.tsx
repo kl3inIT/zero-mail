@@ -384,12 +384,14 @@ export default async function Features() {
             src="/images/huydangky-light.png"
             alt={t('sec5.title')}
             fill
+            sizes="(min-width: 1024px) 56rem, 100vw"
             className="object-contain p-4 md:p-8 dark:hidden"
           />
           <Image
             src="/images/huydangky-dark.png"
             alt={t('sec5.title')}
             fill
+            sizes="(min-width: 1024px) 56rem, 100vw"
             className="hidden object-contain p-4 md:p-8 dark:block"
           />
         </div>

@@ -936,7 +936,7 @@
     "product": "Product",
     "security": "Security",
     "status": "All systems normal",
-    "tagline": "AI auto-triage you can trust with your real inbox. Built for Gmail, by a small team in Brooklyn & Berlin.",
+    "tagline": "AI auto-triage you can trust with your real inbox. Built for Gmail by a student team at FPT.",
     "terms": "Terms",
     "version": "v1.0 · Gmail"
   },
@@ -1081,23 +1081,12 @@
     }
   },
   "landing": {
-    "bullets": {
-      "noAutoSend": "Safety-gated sends",
-      "readOnlyPrompts": "Read-only AI prompts",
-      "reversibleActions": "Reversible actions"
-    },
     "continueSetupCta": "Continue setup",
     "eyebrow": "Gmail · Private beta · v1",
     "heading": {
-      "accent": "the controls.",
-      "line1": "Inbox zero,",
-      "line2": "without losing"
-    },
-    "metrics": {
-      "autoSendsEver": "safety-gated sends",
-      "emailsProcessed": "emails processed",
-      "triageAccuracy": "triage accuracy",
-      "triagePerEmail": "triage per email"
+      "accent": "what matters.",
+      "line1": "Let AI handle email,",
+      "line2": "so you can do"
     },
     "openAppCta": "Open app",
     "peek": {
@@ -1107,7 +1096,8 @@
     },
     "primaryCta": "Sign in",
     "secondaryCta": "See features",
-    "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
+    "tagline": "Zero Mail reads, sorts, and drafts replies for your Gmail — by rules you write in plain English. No more 30-minute morning triage.",
+    "videoPlaceholder": "Product demo coming soon",
     "waitlistCta": "Register to experience Zero Mail"
   },
   "landingFaq": {
@@ -1282,9 +1272,8 @@
   },
   "legal": {
     "contact": {
-      "TODO_real_email": "TODO: replace legal@zeromail.app with the real legal contact email before public launch.",
-      "body": "Reach the Zero Mail team at legal@zeromail.app.",
-      "email": "legal@zeromail.app"
+      "body": "Reach the Zero Mail team at zeromail.platform@gmail.com.",
+      "email": "zeromail.platform@gmail.com"
     },
     "googleApiPolicy": {
       "body": "Google API data is handled under the <link>Google API User Data Policy</link> and Limited Use requirements."
@@ -1334,7 +1323,7 @@
           "heading": "How we secure your data"
         },
         "userRights": {
-          "body": "You can review your stored rule configuration and chat history through the Settings page in the Zero Mail web application. You can export your rule configuration so that you have a copy of the rules you authored.\n\nYou can disconnect Gmail at any time through the Settings page; doing so revokes the OAuth grant on Google's side and stops Zero Mail from processing any further messages for your account.\n\nYou can delete your account through the Settings page. Deletion cascades through your Gmail connection, your OAuth tokens, your rule configurations, your chat assistant history, and any associated audit records.\n\nIf any right that applies to you is not exposed as a self-service action in the application, contact legal@zeromail.app and we will work with you to honor the request.",
+          "body": "You can review your stored rule configuration and chat history through the Settings page in the Zero Mail web application. You can export your rule configuration so that you have a copy of the rules you authored.\n\nYou can disconnect Gmail at any time through the Settings page; doing so revokes the OAuth grant on Google's side and stops Zero Mail from processing any further messages for your account.\n\nYou can delete your account through the Settings page. Deletion cascades through your Gmail connection, your OAuth tokens, your rule configurations, your chat assistant history, and any associated audit records.\n\nIf any right that applies to you is not exposed as a self-service action in the application, contact zeromail.platform@gmail.com and we will work with you to honor the request.",
           "heading": "Your rights over your data"
         }
       },
@@ -1374,7 +1363,7 @@
           "heading": "Changes to these terms"
         },
         "contact": {
-          "body": "For any question about these terms, contact the Zero Mail team at legal@zeromail.app. We will respond to written inquiries as promptly as our small team allows.",
+          "body": "For any question about these terms, contact the Zero Mail team at zeromail.platform@gmail.com. We will respond to written inquiries as promptly as our small team allows.",
           "heading": "Contact"
         },
         "creditsAndBilling": {
@@ -1406,7 +1395,7 @@
           "heading": "Limitation of liability"
         },
         "refunds": {
-          "body": "During the beta period, unused credits remain available indefinitely. Refunds for unused credits will be considered on a case-by-case basis at the Zero Mail team's discretion; to request a refund, contact legal@zeromail.app and describe the circumstances. We do not offer refunds for credits that have already been consumed by AI actions.",
+          "body": "During the beta period, unused credits remain available indefinitely. Refunds for unused credits will be considered on a case-by-case basis at the Zero Mail team's discretion; to request a refund, contact zeromail.platform@gmail.com and describe the circumstances. We do not offer refunds for credits that have already been consumed by AI actions.",
           "heading": "Refunds"
         },
         "termination": {

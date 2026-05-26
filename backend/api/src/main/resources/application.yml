@@ -41,7 +41,6 @@ spring:
               - profile
               - email
               - https://www.googleapis.com/auth/gmail.modify
-              - https://www.googleapis.com/auth/gmail.settings.basic
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           google:

@@ -9,13 +9,13 @@ lastUpdated: '2026-05-26'
 
 _Cập nhật lần cuối: 26/05/2026_
 
-Các Điều khoản dịch vụ này điều chỉnh việc bạn truy cập và sử dụng Zero Mail. Khi tạo tài khoản, kết nối Gmail, dùng ứng dụng web, dùng trợ lý chat, tạo rule hoặc cho phép Zero Mail hành động trên thư Gmail, bạn đồng ý với các điều khoản này và Chính sách bảo mật.
+Zero Mail là dự án sinh viên do nhóm thực hiện môn EXE202 tại Đại học FPT (FPT University) Việt Nam vận hành. Các Điều khoản dịch vụ này điều chỉnh việc bạn truy cập và sử dụng Zero Mail. Khi tạo tài khoản, kết nối Gmail, dùng ứng dụng web, dùng trợ lý chat, tạo quy tắc hoặc cho phép Zero Mail hành động trên thư Gmail, bạn đồng ý với các điều khoản này và Chính sách bảo mật.
 
 ## Chấp nhận các điều khoản này
 
 Bạn chỉ được dùng Zero Mail nếu có năng lực giao kết thỏa thuận ràng buộc và có thẩm quyền cấp các quyền Gmail mà bạn phê duyệt. Nếu dùng Zero Mail cho một tổ chức, bạn cam đoan mình có thẩm quyền chấp nhận các điều khoản này thay tổ chức đó.
 
-Nếu không đồng ý với các điều khoản này, bạn không được dùng Zero Mail và không được kết nối Gmail. Bạn có thể ngừng dùng Zero Mail bất kỳ lúc nào bằng cách ngắt Gmail và xóa tài khoản.
+Nếu không đồng ý với các điều khoản này, bạn không được dùng Zero Mail và không được kết nối Gmail. Cách ngừng dùng dịch vụ được mô tả ở mục Chấm dứt.
 
 ## Zero Mail cung cấp gì
 
@@ -23,12 +23,12 @@ Zero Mail là dịch vụ năng suất cho Gmail, giúp người dùng tiến t�
 
 Luồng cốt lõi là:
 
-- bạn kết nối Gmail;
-- bạn tạo rule bằng ngôn ngữ tự nhiên hoặc trình chỉnh sửa có cấu trúc;
+- Bạn kết nối Gmail;
+- Bạn tạo rule bằng ngôn ngữ tự nhiên hoặc trình chỉnh sửa có cấu trúc;
 - Zero Mail lưu rule có hiệu lực dưới dạng cấu hình When / Then có cấu trúc;
-- thư đến được xử lý theo cài đặt bạn bật;
-- hành động outbound cần bạn xác nhận hoặc phải vượt qua safety gate runtime trước khi gửi;
-- tự động hóa outbound bị chặn sẽ chuyển sang lưu Gmail draft.
+- Thư đến được xử lý theo cài đặt bạn bật;
+- Hành động outbound cần bạn xác nhận hoặc phải vượt qua safety gate runtime trước khi gửi;
+- Tự động hóa outbound bị chặn sẽ chuyển sang lưu Gmail draft.
 
 Zero Mail không xóa vĩnh viễn thư Gmail và không gọi webhook tùy ý đến dịch vụ bên ngoài thay bạn.
 
@@ -50,12 +50,12 @@ Zero Mail có thể chuẩn bị và thực hiện hành động bằng AI. Bạ
 
 Hành động outbound do rule kích hoạt chỉ được phép khi toàn bộ điều kiện áp dụng đều pass:
 
-- tùy chọn toàn cục Auto-send rules cho phép tự động hóa outbound;
-- rule cụ thể đang bật và có hành động outbound;
-- kiểm tra độ tin cậy người gửi pass;
-- rate limit theo tài khoản và daily cap pass;
-- kiểm tra idempotency xác nhận cùng quyết định chưa gửi cùng một thư trước đó;
-- audit logging ghi nhận hành động.
+- Tùy chọn toàn cục Auto-send rules cho phép tự động hóa outbound;
+- Rule cụ thể đang bật và có hành động outbound;
+- Kiểm tra độ tin cậy người gửi pass;
+- Rate limit theo tài khoản và daily cap pass;
+- Kiểm tra idempotency xác nhận cùng quyết định chưa gửi cùng một thư trước đó;
+- Audit logging ghi nhận hành động.
 
 Nếu bất kỳ gate nào fail, hoặc Auto-send rules đang tắt, Zero Mail lưu Gmail draft thay vì gửi. Hành động gửi, trả lời và forward từ trợ lý chat yêu cầu người dùng xác nhận qua preview card trước khi thực thi.
 
@@ -71,19 +71,19 @@ Giá, gói credit, nhà cung cấp hỗ trợ và mức sử dụng bao gồm c�
 
 Credit đã tiêu là không hoàn tiền vì công việc AI hoặc vận hành nền tảng đã được thực hiện. Với credit trả trước chưa dùng, khả năng hoàn tiền phụ thuộc vào phương thức thanh toán, rà soát gian lận, yêu cầu pháp luật, trạng thái tài khoản và hoàn cảnh của yêu cầu.
 
-Để yêu cầu xem xét hoàn tiền, hãy liên hệ legal@zeromail.app với email tài khoản, thông tin giao dịch và lý do yêu cầu. Khoản hoàn tiền được duyệt sẽ được trả về phương thức thanh toán ban đầu khi được hỗ trợ.
+Để yêu cầu xem xét hoàn tiền, hãy liên hệ zeromail.platform@gmail.com với email tài khoản, thông tin giao dịch và lý do yêu cầu. Khoản hoàn tiền được duyệt sẽ được trả về phương thức thanh toán ban đầu khi được hỗ trợ.
 
 ## Sử dụng được chấp nhận
 
 Bạn không được dùng Zero Mail để:
 
-- gửi spam, lừa đảo, phishing, malware, nội dung gây hiểu lầm hoặc email hàng loạt không được mời;
-- vi phạm chính sách Gmail, luật gửi email, luật chống spam, luật quyền riêng tư hoặc quyền của người khác;
-- quấy rối, đe dọa, mạo danh, bôi nhọ hoặc lừa dối cá nhân hay tổ chức;
-- vượt qua safety gate, rate limit, kiểm tra idempotency, kiểm soát billing hoặc audit log;
-- kết nối tài khoản bạn không sở hữu hoặc không được ủy quyền dùng;
-- dịch ngược, scrape, gây quá tải, dò quét hoặc tấn công hệ thống Zero Mail;
-- dùng output AI như tư vấn pháp lý, y tế, tài chính hoặc chuyên môn được quản lý mà không có chuyên gia đủ điều kiện xem xét độc lập.
+- Gửi spam, lừa đảo, phishing, malware, nội dung gây hiểu lầm hoặc email hàng loạt không được mời;
+- Vi phạm chính sách Gmail, luật gửi email, luật chống spam, luật quyền riêng tư hoặc quyền của người khác;
+- Quấy rối, đe dọa, mạo danh, bôi nhọ hoặc lừa dối cá nhân hay tổ chức;
+- Vượt qua safety gate, rate limit, kiểm tra idempotency, kiểm soát billing hoặc audit log;
+- Kết nối tài khoản bạn không sở hữu hoặc không được ủy quyền dùng;
+- Dịch ngược, scrape, gây quá tải, dò quét hoặc tấn công hệ thống Zero Mail;
+- Dùng output AI như tư vấn pháp lý, y tế, tài chính hoặc chuyên môn được quản lý mà không có chuyên gia đủ điều kiện xem xét độc lập.
 
 Chúng tôi có thể tạm dừng hoặc chấm dứt tài khoản vi phạm các điều khoản này, tạo rủi ro bảo mật, tạo rủi ro pháp lý hoặc gây hại cho Zero Mail, Gmail, Google, người dùng khác hoặc người nhận email.
 
@@ -139,8 +139,8 @@ Mục này không giới hạn quyền người tiêu dùng không thể từ b�
 
 Chúng tôi có thể cập nhật các điều khoản này khi Zero Mail thay đổi. Thay đổi quan trọng sẽ được thông báo trong sản phẩm, qua email hoặc cả hai. Tiếp tục dùng Zero Mail sau khi điều khoản cập nhật có hiệu lực nghĩa là bạn chấp nhận điều khoản cập nhật.
 
-Nếu không đồng ý với điều khoản cập nhật, bạn phải ngừng dùng Zero Mail, ngắt Gmail và xóa tài khoản.
+Nếu không đồng ý với điều khoản cập nhật, bạn phải ngừng dùng Zero Mail theo cách mô tả ở mục Chấm dứt.
 
 ## Liên hệ
 
-Đối với câu hỏi về các điều khoản này, billing, quyền riêng tư, bảo mật hoặc hỗ trợ tài khoản, hãy liên hệ Zero Mail tại legal@zeromail.app.
+Đối với câu hỏi về các điều khoản này, billing, quyền riêng tư, bảo mật hoặc hỗ trợ tài khoản, hãy liên hệ nhóm dự án Zero Mail (môn EXE202, Đại học FPT Việt Nam) qua email zeromail.platform@gmail.com.

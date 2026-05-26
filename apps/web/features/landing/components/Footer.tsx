@@ -26,23 +26,13 @@ export default async function Footer() {
             <div className="zm-footer-col">
               <h2>{t('footer.product')}</h2>
               <Link href="/#features">{t('nav.features')}</Link>
-              <Link href="/#pricing">{t('nav.pricing')}</Link>
               <Link href="/#testimonials">{t('nav.testimonials')}</Link>
               <Link href="/#faq">{t('nav.faq')}</Link>
-            </div>
-            <div className="zm-footer-col">
-              <h2>{t('footer.company' as never)}</h2>
-              <a href="#">{t('footer.about' as never)}</a>
-              <a href="#">{t('footer.changelog' as never)}</a>
-              <a href="#">{t('footer.careers' as never)}</a>
-              <a href="#">{t('footer.contact' as never)}</a>
             </div>
             <div className="zm-footer-col">
               <h2>{t('footer.legal')}</h2>
               <Link href="/privacy">{t('footer.privacy')}</Link>
               <Link href="/terms">{t('footer.terms')}</Link>
-              <Link href="/privacy">{t('footer.security')}</Link>
-              <a href="#">{t('footer.dpa' as never)}</a>
             </div>
           </div>
         </div>

@@ -56,7 +56,6 @@ export default async function TopBar() {
         </Link>
         <div className="zm-nav-links">
           <Link href="/#features">{t('nav.features')}</Link>
-          <Link href="/#pricing">{t('nav.pricing')}</Link>
           <Link href="/#testimonials">{t('nav.testimonials')}</Link>
           <Link href="/#faq">{t('nav.faq')}</Link>
         </div>

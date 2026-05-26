@@ -936,7 +936,7 @@
     "product": "Sản phẩm",
     "security": "Bảo mật",
     "status": "Hệ thống hoạt động bình thường",
-    "tagline": "Phân loại email tự động bằng AI mà bạn có thể tin tưởng giao cho hộp thư thật. Dành cho Gmail, do nhóm nhỏ ở Brooklyn & Berlin xây dựng.",
+    "tagline": "Phân loại email tự động bằng AI mà bạn có thể tin tưởng giao cho hộp thư thật. Dành cho Gmail, do nhóm sinh viên FPT xây dựng.",
     "terms": "Điều khoản",
     "version": "v1.0 · Gmail"
   },
@@ -1081,23 +1081,12 @@
     }
   },
   "landing": {
-    "bullets": {
-      "noAutoSend": "Gửi qua cổng an toàn",
-      "readOnlyPrompts": "Prompt AI chỉ đọc",
-      "reversibleActions": "Hành động hoàn tác được"
-    },
     "continueSetupCta": "Tiếp tục thiết lập",
     "eyebrow": "Gmail · Private beta · v1",
     "heading": {
-      "accent": "quyền kiểm soát.",
-      "line1": "Hộp thư gọn sạch,",
-      "line2": "không đánh mất"
-    },
-    "metrics": {
-      "autoSendsEver": "lượt gửi qua cổng an toàn",
-      "emailsProcessed": "email đã xử lý",
-      "triageAccuracy": "độ chính xác",
-      "triagePerEmail": "xử lý mỗi email"
+      "accent": "quan trọng.",
+      "line1": "Để AI lo email,",
+      "line2": "bạn làm việc"
     },
     "openAppCta": "Mở ứng dụng",
     "peek": {
@@ -1107,7 +1096,8 @@
     },
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem tính năng",
-    "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
+    "tagline": "Zero Mail tự động đọc, phân loại và soạn sẵn câu trả lời cho Gmail của bạn — theo quy tắc bạn viết bằng tiếng Việt. Không còn cảnh mỗi sáng mở hộp thư và ngồi lọc 30 phút.",
+    "videoPlaceholder": "Video demo sẽ sớm có mặt",
     "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
   },
   "landingFaq": {
@@ -1282,9 +1272,8 @@
   },
   "legal": {
     "contact": {
-      "TODO_real_email": "TODO: thay legal@zeromail.app bằng địa chỉ liên hệ pháp lý thật trước khi launch công khai.",
-      "body": "Liên hệ Zero Mail team qua legal@zeromail.app.",
-      "email": "legal@zeromail.app"
+      "body": "Liên hệ Zero Mail team qua zeromail.platform@gmail.com.",
+      "email": "zeromail.platform@gmail.com"
     },
     "googleApiPolicy": {
       "body": "Dữ liệu Google API được xử lý theo <link>Chính sách dữ liệu người dùng Google API</link> và yêu cầu Limited Use."
@@ -1334,7 +1323,7 @@
           "heading": "Chúng tôi bảo vệ dữ liệu của bạn ra sao"
         },
         "userRights": {
-          "body": "Bạn có thể xem lại cấu hình rule và lịch sử chat đã lưu qua trang Cài đặt trong ứng dụng web Zero Mail. Bạn có thể export cấu hình rule để giữ bản sao những rule mình đã tạo.\n\nBạn có thể ngắt Gmail bất kỳ lúc nào qua trang Cài đặt; thao tác này thu hồi cấp phép OAuth ở phía Google và dừng việc Zero Mail xử lý thêm bất kỳ thư nào cho tài khoản của bạn.\n\nBạn có thể xóa tài khoản qua trang Cài đặt. Việc xóa lan tỏa qua kết nối Gmail, OAuth token, cấu hình rule, lịch sử trợ lý chat, và mọi bản ghi audit liên quan.\n\nNếu một quyền nào đó áp dụng cho bạn nhưng chưa được expose dưới dạng thao tác self-service trong ứng dụng, hãy liên hệ legal@zeromail.app và chúng tôi sẽ phối hợp để thực hiện.",
+          "body": "Bạn có thể xem lại cấu hình rule và lịch sử chat đã lưu qua trang Cài đặt trong ứng dụng web Zero Mail. Bạn có thể export cấu hình rule để giữ bản sao những rule mình đã tạo.\n\nBạn có thể ngắt Gmail bất kỳ lúc nào qua trang Cài đặt; thao tác này thu hồi cấp phép OAuth ở phía Google và dừng việc Zero Mail xử lý thêm bất kỳ thư nào cho tài khoản của bạn.\n\nBạn có thể xóa tài khoản qua trang Cài đặt. Việc xóa lan tỏa qua kết nối Gmail, OAuth token, cấu hình rule, lịch sử trợ lý chat, và mọi bản ghi audit liên quan.\n\nNếu một quyền nào đó áp dụng cho bạn nhưng chưa được expose dưới dạng thao tác self-service trong ứng dụng, hãy liên hệ zeromail.platform@gmail.com và chúng tôi sẽ phối hợp để thực hiện.",
           "heading": "Quyền của bạn đối với dữ liệu của mình"
         }
       },
@@ -1374,7 +1363,7 @@
           "heading": "Thay đổi các điều khoản này"
         },
         "contact": {
-          "body": "Mọi câu hỏi về các điều khoản này, vui lòng liên hệ Zero Mail team qua legal@zeromail.app. Chúng tôi sẽ phản hồi các yêu cầu bằng văn bản sớm trong khả năng của một team nhỏ.",
+          "body": "Mọi câu hỏi về các điều khoản này, vui lòng liên hệ Zero Mail team qua zeromail.platform@gmail.com. Chúng tôi sẽ phản hồi các yêu cầu bằng văn bản sớm trong khả năng của một team nhỏ.",
           "heading": "Liên hệ"
         },
         "creditsAndBilling": {
@@ -1406,7 +1395,7 @@
           "heading": "Giới hạn trách nhiệm"
         },
         "refunds": {
-          "body": "Trong giai đoạn beta, credit chưa dùng được giữ lại vô thời hạn. Yêu cầu hoàn tiền credit chưa dùng sẽ được xem xét theo từng trường hợp tùy quyết định của Zero Mail team; để yêu cầu hoàn tiền, liên hệ legal@zeromail.app và mô tả hoàn cảnh. Chúng tôi không hoàn tiền cho credit đã được tiêu bởi hành động AI.",
+          "body": "Trong giai đoạn beta, credit chưa dùng được giữ lại vô thời hạn. Yêu cầu hoàn tiền credit chưa dùng sẽ được xem xét theo từng trường hợp tùy quyết định của Zero Mail team; để yêu cầu hoàn tiền, liên hệ zeromail.platform@gmail.com và mô tả hoàn cảnh. Chúng tôi không hoàn tiền cho credit đã được tiêu bởi hành động AI.",
           "heading": "Hoàn tiền"
         },
         "termination": {

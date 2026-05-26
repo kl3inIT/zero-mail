@@ -42,7 +42,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
  * {@link BundledGoogleOAuthIntegrationTest.MockAuthorizedClientServiceConfig} harness.
  *
  * <p>Tests fail (compile-RED or runtime-RED) until Task 2 lands the full bundled OAuth
- * implementation. Once Task 2 completes, ALL FIVE cases must turn GREEN.
+ * implementation. Once Task 2 completes, all cases must turn GREEN.
  *
  * <p><b>Case coverage:</b>
  *
@@ -52,7 +52,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
  *   <li>Scope-missing (no gmail.modify) — no DB rows, 302 to /login?error=gmail_scope_required.
  *   <li>HIGH-1: gmail upsert failure rolls back user + tenant (atomicity invariant).
  *   <li>MED-3: null refresh token on first login — no DB rows, 302 to /login?error=consent_denied.
- *   <li>INFO-7: gmail.settings.basic only missing — provisioning succeeds with warning log.
  * </ol>
  *
  * <p>Privacy: all fixture identifiers use obviously-fake prefixes per threat T-01.5-01-03.
@@ -155,14 +154,7 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
 
         var token = buildToken(subject, email);
         // No gmail.modify in the granted scopes
-        stubAuthorizedClient(
-                token,
-                FAKE_REFRESH_TOKEN,
-                Set.of(
-                        "openid",
-                        "profile",
-                        "email",
-                        "https://www.googleapis.com/auth/gmail.settings.basic"));
+        stubAuthorizedClient(token, FAKE_REFRESH_TOKEN, Set.of("openid", "profile", "email"));
 
         var req = new MockHttpServletRequest();
         var res = new MockHttpServletResponse();
@@ -260,42 +252,6 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
     }
 
     // -------------------------------------------------------------------------
-    // Case (e): INFO-7 — gmail.settings.basic missing, provisioning succeeds
-    // -------------------------------------------------------------------------
-
-    @Test
-    void gmail_settings_basic_only_missing_succeeds_with_warning() throws Exception {
-        String subject = "google-subject-bundled-no-settings-basic-" + UUID.randomUUID();
-        String email = "no-settings-basic-" + UUID.randomUUID() + "@example.test";
-
-        var token = buildToken(subject, email);
-        // gmail.modify granted, gmail.settings.basic NOT granted
-        stubAuthorizedClient(
-                token,
-                FAKE_REFRESH_TOKEN,
-                Set.of(
-                        "openid",
-                        "profile",
-                        "email",
-                        "https://www.googleapis.com/auth/gmail.modify"));
-
-        var req = new MockHttpServletRequest();
-        var res = new MockHttpServletResponse();
-
-        // INFO-7: provisioning should SUCCEED (settings.basic is forward-looking, not v1-blocking)
-        handler.onAuthenticationSuccess(req, res, token);
-
-        assertThat(countUsers()).as("INFO-7: UserEntity must be persisted").isEqualTo(1);
-        assertThat(countTenants()).as("INFO-7: TenantEntity must be persisted").isEqualTo(1);
-        assertThat(countConnections())
-                .as("INFO-7: GmailConnectionEntity must be persisted")
-                .isEqualTo(1);
-        // Warning log with event=oauth_settings_basic_missing is verified via manual log inspection
-        // (Logback test appender wiring would add test complexity; opaque-event-name contract is
-        // validated by code review + privacy threat model T-01.5-01-11).
-    }
-
-    // -------------------------------------------------------------------------
     // Helper methods
     // -------------------------------------------------------------------------
 
@@ -319,8 +275,7 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
                 "openid",
                 "profile",
                 "email",
-                "https://www.googleapis.com/auth/gmail.modify",
-                "https://www.googleapis.com/auth/gmail.settings.basic");
+                "https://www.googleapis.com/auth/gmail.modify");
     }
 
     private void stubAuthorizedClient(

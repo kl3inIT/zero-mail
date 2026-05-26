@@ -15,16 +15,16 @@ Zero Mail is a Gmail productivity service that helps users reach inbox zero by a
 
 ## Who we are and what this policy covers
 
-Zero Mail is operated by the Zero Mail service team. You can contact us at legal@zeromail.app for privacy, support, security, account, or data-rights requests.
+Zero Mail is a student project operated by a team enrolled in the EXE202 course at FPT University, Vietnam. You can contact the team at zeromail.platform@gmail.com for privacy, support, security, account, or data-rights requests.
 
 This policy applies to:
 
-- the Zero Mail public website;
-- the Zero Mail web application;
+- The Zero Mail public website;
+- The Zero Mail web application;
 - Gmail connection, triage, labeling, archiving, drafting, sending, forwarding, digest, and rule automation features;
-- the AI rule-builder and chat assistant;
-- account, billing, credit, and settings workflows;
-- background workers that process Gmail messages after you grant access.
+- The AI rule-builder and chat assistant;
+- Account, billing, credit, and settings workflows;
+- Background workers that process Gmail messages after you grant access.
 
 This policy does not apply to Google, your email correspondents, payment providers, AI providers you choose through bring-your-own-key settings, or other third-party services that operate under their own terms and privacy policies.
 
@@ -32,15 +32,15 @@ This policy does not apply to Google, your email correspondents, payment provide
 
 Zero Mail connects to Gmail with your permission and helps you manage incoming email. Depending on the features and settings you enable, Zero Mail can:
 
-- read incoming Gmail messages so the service can classify, summarize for rules, and decide what action should happen;
-- apply or remove Gmail labels;
-- archive messages by removing them from the inbox;
-- save Gmail drafts;
-- mark messages as read or unread;
-- star or unstar messages;
-- mark messages as spam;
-- add messages to a digest;
-- send replies, forward messages, or send new messages when you explicitly use the chat assistant confirmation flow or when enabled automation passes all outbound safety checks.
+- Read incoming Gmail messages so the service can classify, summarize for rules, and decide what action should happen;
+- Apply or remove Gmail labels;
+- Archive messages by removing them from the inbox;
+- Save Gmail drafts;
+- Mark messages as read or unread;
+- Star or unstar messages;
+- Mark messages as spam;
+- Add messages to a digest;
+- Send replies, forward messages, or send new messages when you explicitly use the chat assistant confirmation flow or when enabled automation passes all outbound safety checks.
 
 Zero Mail does not permanently delete Gmail messages and does not call arbitrary external webhooks on your behalf.
 
@@ -48,27 +48,36 @@ Zero Mail does not permanently delete Gmail messages and does not call arbitrary
 
 When you sign in or connect Gmail, Zero Mail may receive the following information from Google:
 
-- basic Google profile data, including your name, email address, profile image URL, and Google account identifier;
+- Basic Google profile data, including your name, email address, profile image URL, and Google account identifier;
 - OAuth tokens that allow Zero Mail to access Gmail only within the scopes you approved;
 - Gmail message metadata needed to identify messages, threads, labels, senders, timestamps, and state;
 - Gmail message content when a feature you enabled needs to triage, draft, reply, forward, send, or display a message-related action;
 - Gmail label, draft, send, archive, read/unread, star, spam, and digest-related state needed to perform actions you requested.
 
-We request permissions that are relevant to the features Zero Mail provides. If we add a feature that requires different Google data or broader Google scopes, we will update the in-product disclosure and this policy before asking you to authorize it.
+### Gmail scopes we request and why
+
+Zero Mail requests only the Google scopes needed for the features you enable. Each scope is tied to a clear purpose:
+
+- **Read, modify, compose, and send Gmail** (`https://www.googleapis.com/auth/gmail.modify`) — to triage incoming messages, apply or remove labels, archive by removing messages from the inbox, mark as read or unread, star, mark as spam, create or discard Gmail drafts, add messages to digest, and send replies, forwards, or new messages only through user-confirmed chat actions or safety-gated automation;
+- **Basic profile information** (`openid`, `profile`, and `email`) — to sign you in, display your name and email inside the product, and associate your session with your Google account.
+
+Zero Mail never requests Gmail scopes broader than the minimum required. Specifically, Zero Mail does not request a scope that allows permanent deletion of Gmail messages, does not request a scope to manage Gmail settings, and does not request access to Google Drive, Google Calendar, Google Contacts, or other Google services.
+
+If Zero Mail later adds a feature that requires different Google data or broader Gmail scopes, we will update the in-product disclosure and this policy before asking you to authorize the new permission.
 
 ## Account and product data we store
 
 Zero Mail stores the data needed to operate your account and the features you choose:
 
-- account profile fields returned by Google, such as name, email address, profile image URL, and Google account identifier;
-- encrypted Google OAuth refresh tokens and short-lived access-token metadata;
-- tenant, user, session, device, and security metadata;
-- structured When / Then rules, rule status, rule settings, source text, and audit metadata;
-- chat assistant messages and structured tool outputs used to configure rules and user-reviewed actions;
-- user-authored draft bodies shown in assistant preview cards for send, reply, and forward actions;
+- Account profile fields returned by Google, such as name, email address, profile image URL, and Google account identifier;
+- Encrypted Google OAuth refresh tokens and short-lived access-token metadata;
+- Tenant, user, session, device, and security metadata;
+- Structured When / Then rules, rule status, rule settings, source text, and audit metadata;
+- Chat assistant messages and structured tool outputs used to configure rules and user-reviewed actions;
+- User-authored draft bodies shown in assistant preview cards for send, reply, and forward actions;
 - Gmail labels, message identifiers, thread identifiers, and action state needed for idempotency, auditing, and reliable operation;
-- billing profile data, credit top-ups, reserves, settlements, releases, and ledger entries;
-- support, security, abuse, and operational metadata necessary to keep the service reliable and safe.
+- Billing profile data, credit top-ups, reserves, settlements, releases, and ledger entries;
+- Support, security, abuse, and operational metadata necessary to keep the service reliable and safe.
 
 We do not sell personal data.
 
@@ -87,35 +96,50 @@ When a Gmail message needs AI processing, Zero Mail fetches the required content
 
 For rule-triggered outbound actions, Zero Mail applies additional gates before sending:
 
-- the global Auto-send rules setting must allow outbound automation;
-- low-trust sender checks must pass;
-- rate limits and daily caps must pass;
-- idempotency checks must confirm the action has not already been executed;
-- the action must be written to an append-only audit trail.
+- The global Auto-send rules setting must allow outbound automation;
+- Low-trust sender checks must pass;
+- Rate limits and daily caps must pass;
+- Idempotency checks must confirm the action has not already been executed;
+- The action must be written to an append-only audit trail.
 
 If an outbound rule action fails a safety gate, Zero Mail saves a Gmail draft instead of sending. Chat assistant outbound actions require user confirmation through a preview card before sending.
 
 ## Google API Services User Data Policy and Limited Use
 
-Zero Mail's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.
+Zero Mail's use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.
 
 For Google user data, Zero Mail commits that:
 
-- we use Google user data only to provide or improve user-facing Zero Mail features that are visible in the product;
-- we do not use Google user data for advertising, retargeting, personalized advertising, or interest-based advertising;
-- we do not sell Google user data;
-- we do not transfer Google user data except as needed to provide or improve user-facing features, comply with applicable law, protect security, or complete a merger, acquisition, or sale of assets with appropriate user notice or consent where required;
-- we do not allow humans to read Google user data unless you give explicit consent for specific content, access is necessary for security or abuse investigation, access is required by law, or the data has been aggregated and anonymized for internal operations.
+- We use Google user data only to provide or improve user-facing Zero Mail features that are visible in the product;
+- We do not use Google user data for advertising, retargeting, personalized advertising, or interest-based advertising;
+- We do not sell Google user data;
+- We do not transfer Google user data except as needed to provide or improve user-facing features, comply with applicable law, protect security, or complete a merger, acquisition, or sale of assets with appropriate user notice or consent where required;
+- We do not allow humans to read Google user data unless you give explicit consent for specific content, access is necessary for security or abuse investigation, access is required by law, or the data has been aggregated and anonymized for internal operations.
 
 If another section of this policy conflicts with this Limited Use section, this section controls for Google user data.
 
-## AI providers and BYOK keys
+## Third-party subprocessors
 
-Zero Mail uses AI providers to classify messages, evaluate rules, and generate drafts. By default, platform-routed model traffic may be sent through OpenRouter to a downstream model provider. If you configure a supported bring-your-own-key provider, Zero Mail sends eligible requests directly to that provider using your encrypted key.
+Zero Mail uses the following third-party service providers to operate the service. Each provider receives only the minimum data needed for the listed purpose:
 
-Zero Mail does not log full email-processing prompts or completions. We retain operational metadata such as tenant identifier, provider, model, token counts, latency, truncation status, error status, and billing information.
+- **Google (Google LLC)** — provider of the Gmail API, Google OAuth, and Google Pub/Sub for incoming message notifications. Data processed: OAuth tokens, Gmail metadata, and message content when a feature needs it;
+- **OpenRouter** (default model routing) — receives sanitized, truncated prompts and routes them to downstream LLM providers (OpenAI, Anthropic, Google GenAI, DeepSeek, or other available models). Email addresses, OAuth tokens, full message lists, and raw message bodies are not sent;
+- **Downstream LLM providers** — OpenAI, Anthropic, Google GenAI, or DeepSeek depending on the model the platform selects for a given task. When you configure a bring-your-own-key (BYOK) provider, eligible requests are sent directly to your chosen provider using your key;
+- **Hostinger** — VPS infrastructure provider that hosts the web application, worker processes, PostgreSQL, Redis, and deployment runtime. Primary stored account, rule, billing, and operational data lives on this infrastructure;
+- **SePay** — payment notification and bank-transfer reconciliation provider for credit top-ups. Data processed: payment reference, amount, bank-transfer metadata, and transaction status needed to credit your account;
+- **Lemon Squeezy** — hosted checkout and payment provider for supported card or international payment flows. Data processed: checkout, billing, tax, fraud-prevention, payment, and receipt data needed to complete purchases. Zero Mail does not store card numbers.
 
-Provider terms and retention policies may apply to traffic sent to those providers. When you use a BYOK key, your relationship with the selected provider governs that provider's handling of the request. Zero Mail stores BYOK keys encrypted at rest and decrypts them only in memory when dispatching a request.
+Zero Mail does not log full email-processing prompts or completions. We retain only operational metadata such as tenant identifier, provider, model, token counts, latency, truncation status, error status, and billing information.
+
+Provider terms and retention policies apply to traffic sent to those providers. When you use a BYOK key, the direct relationship between you and the selected provider governs how the provider handles the request. Zero Mail stores BYOK keys encrypted at rest and decrypts them only in memory when dispatching a request.
+
+## International data transfers
+
+Zero Mail is operated from Vietnam, and its primary application infrastructure is hosted by Hostinger. Some third-party subprocessors listed above may process data in other jurisdictions, including the United States, the European Union, or the infrastructure region selected for hosting. When data is transferred outside Vietnam, we rely on each provider's contractual safeguards and data-protection programs (for example, Google's Data Processing Addendum and EU Standard Contractual Clauses where applicable) to maintain an appropriate level of protection.
+
+## Security incident notification
+
+If a security incident affects your personal data, Zero Mail will notify affected users and the competent supervisory authority within 72 hours of identifying the incident, to the extent and scope required by applicable law. The notification will describe the nature of the incident, the categories of data involved, the remediation steps taken, and a contact point for follow-up questions.
 
 ## Retention and deletion
 
@@ -149,14 +173,16 @@ No internet service can guarantee perfect security, but Zero Mail is designed to
 
 You can control your Zero Mail data through the product:
 
-- disconnect Gmail from Settings to stop future Gmail processing and revoke access;
-- disable or edit rules;
-- turn Auto-send rules on or off;
-- review, edit, send, or discard assistant-generated drafts before confirmed sends;
-- export rule configuration where export is available;
-- delete your account.
+- Disconnect Gmail from Settings to stop future Gmail processing and revoke access;
+- Disable or edit rules;
+- Turn Auto-send rules on or off;
+- Review, edit, send, or discard assistant-generated drafts before confirmed sends;
+- Export rule configuration where export is available;
+- Delete your account.
 
-You may also contact legal@zeromail.app to request access, correction, deletion, portability, restriction, objection, or other rights that apply under your local law. We may need to verify your identity before acting on a request.
+In addition to in-product controls, you can revoke Zero Mail's Gmail access at any time directly from your Google account permissions page at [https://myaccount.google.com/permissions](https://myaccount.google.com/permissions). Once you revoke access on Google's side, Zero Mail can no longer read your Gmail even if an old token remains.
+
+You may also contact zeromail.platform@gmail.com to request access, correction, deletion, portability, restriction, objection, or other rights that apply under your local law. We may need to verify your identity before acting on a request.
 
 ## Cookies
 
@@ -166,7 +192,7 @@ Zero Mail does not use advertising cookies or cross-site advertising pixels.
 
 ## Children
 
-Zero Mail is not directed to children under 13 or to anyone below the minimum age required in their country. We do not knowingly collect personal data from children. If you believe a child has connected a Gmail account to Zero Mail, contact legal@zeromail.app so we can remove the account and related data.
+Zero Mail is not directed to children under 13 or to anyone below the minimum age required in their country. We do not knowingly collect personal data from children. If you believe a child has connected a Gmail account to Zero Mail, contact zeromail.platform@gmail.com so we can remove the account and related data.
 
 ## Changes to this policy
 
@@ -174,4 +200,4 @@ We may update this Privacy Policy as Zero Mail changes. Material changes will be
 
 ## Contact
 
-For privacy, support, security, or data-rights requests, contact Zero Mail at legal@zeromail.app.
+For privacy, support, security, or data-rights requests, contact the Zero Mail project team (EXE202 course, FPT University, Vietnam) by email at zeromail.platform@gmail.com.

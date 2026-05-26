@@ -116,8 +116,7 @@ class GoogleAuthorizationRequestResolverTest {
                                         "openid",
                                         "profile",
                                         "email",
-                                        "https://www.googleapis.com/auth/gmail.modify",
-                                        "https://www.googleapis.com/auth/gmail.settings.basic"))
+                                        "https://www.googleapis.com/auth/gmail.modify"))
                         .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
                         .tokenUri("https://oauth2.googleapis.com/token")
                         .build();
