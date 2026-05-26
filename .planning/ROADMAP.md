@@ -163,8 +163,8 @@ Plans:
 - [x] 09-01-PLAN.md — Wave 0: Liquibase changesets 094..097 + JPA entity scaffolding + 33 Wave-0 test stubs
 - [x] 09-02-PLAN.md — Wave 1: Voice + Behavior + Knowledge backend (services/controllers/DTOs) + DraftReplyWorker + SensitiveDataRedactor wiring
 - [x] 09-03-PLAN.md — Wave 1: Safety Net DELETE + DOMAIN pattern + triage audit blocked_by_safety_net_pattern badge
-- [ ] 09-04-PLAN.md — Wave 1: ProviderConnectionTester extraction + UserByokService + ByokProviderResolver + UserByokController + AiCostQueryService (D-17)
-- [ ] 09-05-PLAN.md — Wave 1: SET-VOICE-07 generate-from-sent (in-memory privacy invariant + Spring AI observation hardening)
+- [x] 09-04-PLAN.md — Wave 1: ProviderConnectionTester extraction + UserByokService + ByokProviderResolver + UserByokController + AiCostQueryService (D-17)
+- [x] 09-05-PLAN.md — Wave 1: SET-VOICE-07 generate-from-sent (in-memory privacy invariant + Spring AI observation hardening)
 - [ ] 09-06-PLAN.md — Wave 2: OpenAPI regen + FE sections + Knowledge feature + AiProviderSection + ByokForm removal from /settings
 - [ ] 09-07-PLAN.md — Wave 3: Playwright e2e ai-settings.spec.ts + Phase9ArchitectureTest aggregate + manual UX checkpoint
 
