@@ -1,0 +1,134 @@
+databaseChangeLog:
+  - changeSet:
+      id: 097-user-byok-key-table
+      author: zeromail
+      comment: >
+        Create the Phase 9 tenant-wide user BYOK row. RefreshTokenCipher stores a single byte[]
+        envelope containing key version, nonce, and ciphertext, so this schema has one ciphertext
+        column and no separate IV column. Legacy table tenant_byok_credentials is intentionally left
+        intact in this changelog. Plans 09-02 / 09-03 / 09-05 may boot before 09-04 finishes
+        removing the legacy resolver/entity/service; renaming the table here would break JPA
+        mappings during that window. The archive-rename and final DROP are owned by a follow-up
+        v1.3 phase after 09-04 has merged, a verification window has elapsed, and a search for
+        tenant_byok_credentials across backend/ returns zero live code hits outside legacy
+        migration references.
+      preConditions:
+        - onFail: HALT
+        - tableExists:
+            tableName: tenants
+        - tableExists:
+            tableName: tenant_byok_credentials
+        - columnExists:
+            tableName: tenant_byok_credentials
+            columnName: tenant_id
+        - columnExists:
+            tableName: tenant_byok_credentials
+            columnName: provider
+        - columnExists:
+            tableName: tenant_byok_credentials
+            columnName: encrypted_key
+      changes:
+        - createTable:
+            tableName: user_byok_key
+            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    foreignKeyName: fk_user_byok_key_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: provider
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: base_url
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: api_key_ciphertext
+                  type: bytea
+                  constraints:
+                    nullable: false
+              - column:
+                  name: model_id
+                  type: varchar(64)
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_test_result
+                  type: varchar(16)
+              - column:
+                  name: last_tested_at
+                  type: timestamptz
+              - column:
+                  name: last_test_models_json
+                  type: jsonb
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Server-side BYOK provider allow-list for user-owned keys.
+            sql: ALTER TABLE user_byok_key ADD CONSTRAINT ck_user_byok_key_provider CHECK (provider IN ('OPENAI','ANTHROPIC','GOOGLE','DEEPSEEK'))
+        - sql:
+            comment: Shared enum response shape with admin master-key test connection.
+            sql: ALTER TABLE user_byok_key ADD CONSTRAINT ck_user_byok_key_last_test_result CHECK (last_test_result IS NULL OR last_test_result IN ('OK','INVALID_KEY','RATE_LIMITED','NETWORK_ERROR','TIMEOUT'))
+        - sql:
+            splitStatements: false
+            comment: Forward-migrate any legacy tenant_byok_credentials row while leaving the legacy table intact.
+            sql: |
+              INSERT INTO user_byok_key (
+                  tenant_id,
+                  provider,
+                  base_url,
+                  api_key_ciphertext,
+                  model_id,
+                  active,
+                  last_test_result,
+                  last_tested_at,
+                  last_test_models_json)
+              SELECT
+                  tenant_id,
+                  CASE lower(provider)
+                      WHEN 'anthropic' THEN 'ANTHROPIC'
+                      WHEN 'google' THEN 'GOOGLE'
+                      WHEN 'google_genai' THEN 'GOOGLE'
+                      WHEN 'deepseek' THEN 'DEEPSEEK'
+                      ELSE 'OPENAI'
+                  END,
+                  CASE lower(provider)
+                      WHEN 'anthropic' THEN COALESCE(NULLIF(endpoint, ''), 'https://api.anthropic.com/v1')
+                      WHEN 'google' THEN COALESCE(NULLIF(endpoint, ''), 'https://generativelanguage.googleapis.com/v1beta')
+                      WHEN 'google_genai' THEN COALESCE(NULLIF(endpoint, ''), 'https://generativelanguage.googleapis.com/v1beta')
+                      WHEN 'deepseek' THEN COALESCE(NULLIF(endpoint, ''), 'https://api.deepseek.com/v1')
+                      ELSE COALESCE(NULLIF(endpoint, ''), 'https://api.openai.com/v1')
+                  END,
+                  encrypted_key,
+                  left(model, 64),
+                  false,
+                  NULL,
+                  NULL,
+                  NULL
+              FROM tenant_byok_credentials
+              ON CONFLICT (tenant_id) DO NOTHING;
+      rollback:
+        - dropTable:
+            tableName: user_byok_key

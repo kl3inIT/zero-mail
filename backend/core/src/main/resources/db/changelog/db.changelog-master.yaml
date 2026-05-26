@@ -240,5 +240,17 @@ databaseChangeLog:
       file: changes/093-billing-package-presentation-fields.yaml
       relativeToChangelogFile: true
   - include:
+      file: changes/094-assistant-settings-phase9-columns.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/095-assistant-knowledge-snippet-unique-title.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/096-safety-net-pattern-kind-and-audit-badge.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/097-user-byok-key-table.yaml
+      relativeToChangelogFile: true
+  - include:
       file: changes/098-chat-message-composite-fk.yaml
       relativeToChangelogFile: true
