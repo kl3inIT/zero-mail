@@ -804,11 +804,11 @@ function InboxReplyComposer({
 
   return (
     <form
-      className="max-h-[min(72vh,560px)] overflow-y-auto rounded-lg bg-white shadow-xl"
+      className="bg-card max-h-[min(72vh,560px)] overflow-y-auto rounded-lg shadow-xl"
       onSubmit={handleSubmit}
       data-testid="inbox-reply-composer"
     >
-      <div className="overflow-hidden bg-white">
+      <div className="bg-card overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2">
           <span className="text-muted-foreground w-12 shrink-0 text-sm">
             {t('inbox.composer.to')}
@@ -916,10 +916,10 @@ function InboxReplyComposer({
           value={bodyText}
           onChange={(event) => setBodyText(event.currentTarget.value)}
           placeholder={t('inbox.composer.bodyPlaceholder')}
-          className="min-h-36 resize-y rounded-none border-0 bg-white px-3 py-3 shadow-none focus-visible:ring-0"
+          className="bg-card min-h-36 resize-y rounded-none border-0 px-3 py-3 shadow-none focus-visible:ring-0"
           data-testid="inbox-composer-body"
         />
-        <div className="flex flex-wrap items-center gap-2 bg-white px-3 py-2">
+        <div className="bg-card flex flex-wrap items-center gap-2 px-3 py-2">
           <Button
             type="submit"
             size="sm"

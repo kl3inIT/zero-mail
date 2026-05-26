@@ -107,6 +107,7 @@ export function AnalyticsPageClient() {
       new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
         day: '2-digit',
         month: '2-digit',
+        timeZone: 'UTC',
       }),
     [locale],
   );
@@ -798,7 +799,8 @@ function groupDailyActivity(
     const groupKey = groupDate.toISOString().slice(0, 10);
     const existingRow = groupedRows.get(groupKey) ?? { date: groupDate, archived: 0, deleted: 0 };
     existingRow.archived += safeCount(entry.applied);
-    existingRow.deleted += 0;
+    // deleted intentionally not incremented: DailyLoadResponse has no deleted field
+    // until the backend wires one. The chart renders 0 truthfully for now.
     groupedRows.set(groupKey, existingRow);
   }
 

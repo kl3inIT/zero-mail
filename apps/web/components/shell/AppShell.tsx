@@ -23,7 +23,7 @@ function MobileSidebarTrigger() {
     <button
       type="button"
       onClick={() => (isMobile ? setOpenMobile(true) : toggleSidebar())}
-      className="bg-card text-foreground hover:bg-accent border-border absolute top-3 left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors md:hidden"
+      className="bg-card text-foreground hover:bg-accent border-border absolute top-3 left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
       aria-label={t('shell.sidebar.toggle')}
       data-testid="mobile-sidebar-trigger"
     >

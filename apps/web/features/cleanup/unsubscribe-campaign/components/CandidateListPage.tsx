@@ -9,7 +9,7 @@ import {
   ShieldIcon,
   type LucideIcon,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -409,6 +409,7 @@ function MetricCard({
   label: string;
   value: number;
 }) {
+  const locale = useLocale();
   return (
     <div className="border-border bg-card rounded-lg border px-5 py-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -416,14 +417,16 @@ function MetricCard({
         <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
       </div>
       <p className="text-foreground mt-4 text-3xl leading-none font-semibold tracking-normal tabular-nums">
-        {formatMetricValue(value)}
+        {formatMetricValue(value, locale)}
       </p>
     </div>
   );
 }
 
-function formatMetricValue(value: number): string {
-  return new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 }).format(
-    value,
-  );
+function formatMetricValue(value: number, locale: string): string {
+  const intlLocale = locale === 'vi' ? 'vi-VN' : 'en-US';
+  return new Intl.NumberFormat(intlLocale, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
 }

@@ -384,7 +384,11 @@ export function SettingsClient({
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-3">
-              <Button variant="destructive" onClick={() => disconnect.mutate()}>
+              <Button
+                variant="destructive"
+                disabled={disconnect.isPending}
+                onClick={() => disconnect.mutate()}
+              >
                 {t('settings.gmailConnection.disconnectCta')}
               </Button>
               <DeleteAccountDialog
