@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
-status: "Phase 08.1 shipped — PR #60"
-stopped_at: Phase 9 plans created — ready to execute
-last_updated: "2026-05-26T12:17:52.555Z"
-last_activity: "2026-05-25 - Completed quick task 260525-krs: per-tool UI components for 15 chat tools (port inbox-zero pattern, replace JSON dump)"
+status: executing
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-05-26T17:41:55.514Z"
+last_activity: 2026-05-26
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 28
-  completed_plans: 20
+  completed_plans: 21
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** Phase 08.1 — inbox-zero-style-rule-actions-and-admin-managed-examples-cat
+**Current focus:** Phase 09 — user-settings-ui-on-curated-catalog
 
 ## Current Position
 
-Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
-Plan: 6 of 6
-Status: Phase 08.1 shipped — PR #60
-Last activity: 2026-05-26 - Completed quick task 260526-so3: tightened app shell gutter between sidebar and content
+Phase: 09 (user-settings-ui-on-curated-catalog) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-05-26
 
 ## Current Milestone Roadmap
 
@@ -168,6 +168,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 08.1 P03 | multi-session | 3 tasks | 12 files |
 | Phase 08.1 P04 | 19min | 4 tasks | 26 files |
 | Phase 08.1 P05 | 34min | 3 tasks | 27 files |
+| Phase 09 P01 | 34 | 3 tasks | 45 files |
 
 ## Accumulated Context
 
@@ -360,6 +361,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 8E uses three-layer privacy gate against payload exposure: DTO field-name regex (compile), explicit SELECT lists (review), JDBC Connection JDK-proxy SQL spy (runtime)
 - [Phase ?]: Phase 8F shipped /admin/spend dashboard with row-level credential_source classification
 - [Phase ?]: Phase 8F created llm_call_audit table from scratch (Liquibase 079); plan and research described it as pre-existing but no changeset existed — Rule 3 deviation
+- [Phase 09]: RefreshTokenCipher single-blob envelope for user BYOK — Verified cipher output includes key version, nonce, and ciphertext in one byte array, so Phase 9 stores only api_key_ciphertext.
+- [Phase 09]: Keep tenant_byok_credentials intact during Phase 9 — Wave 1 plans can run before 09-04 removes legacy mappings, so 097 forward-migrates rows without renaming or dropping the legacy table.
+- [Phase 09]: Assistant knowledge updated_at remains inherited — AssistantKnowledgeMemoryEntity already extends AbstractAuditableEntity, which maps created_at, updated_at, and version from changelog 046.
 
 ### Roadmap Evolution
 
@@ -523,9 +527,9 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-26T12:17:52.524Z
-Stopped at: Phase 9 plans created — ready to execute
-Resume file: .planning/phases/09-user-settings-ui-on-curated-catalog/09-01-PLAN.md
+Last session: 2026-05-26T17:41:55.496Z
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
