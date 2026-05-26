@@ -93,7 +93,7 @@ revised: 2026-05-26 (planner-checker iteration 1 — added AssistantKnowledgeApp
 
 The first plan wave MUST create stub test files for every ❌ Wave 0 row above. Suggested layout (planner refines):
 
-- **Backend stubs (32 files — was 31 before planner-checker BLOCKER #1 added `AssistantKnowledgeAppendCallSiteTest`; total Wave-0 file count below is now 32 backend + 1 Playwright = 33):**
+- **Backend stubs (33 files — adds `AssistantKnowledgeAppendCallSiteTest` per planner-checker BLOCKER #1 and `SpringAiObservationDisabledTest` per WARNING #6; total Wave-0 file count below is 33 backend + 1 Playwright = 34):**
   - `backend/core/src/test/java/com/zeromail/core/chat/settings/SettingsVoiceServiceWordBoundsTest.java`
   - `backend/core/src/test/java/com/zeromail/core/chat/settings/AssistantSettingsTonePresetCheckTest.java`
   - `backend/core/src/test/java/com/zeromail/core/chat/sanitize/PersonalizationSanitizerSingleCallSiteTest.java`
@@ -121,6 +121,7 @@ The first plan wave MUST create stub test files for every ❌ Wave 0 row above. 
   - `backend/api/src/test/java/com/zeromail/api/controllers/byok/ByokSaveBaseUrlValidationTest.java`
   - `backend/api/src/test/java/com/zeromail/api/controllers/byok/ByokResponseNeverEchoesPlaintextTest.java`
   - `backend/api/src/test/java/com/zeromail/api/controllers/byok/ByokTestConnectionEnumOnlyTest.java`
+  - `backend/api/src/test/java/com/zeromail/api/config/SpringAiObservationDisabledTest.java` (Spring AI observation properties disabled — NEW per planner-checker WARNING #6 follow-up)
   - `backend/worker/src/test/java/com/zeromail/worker/draft/DraftAutoToggleIntegrationTest.java`
   - `backend/worker/src/test/java/com/zeromail/worker/draft/DraftConfidenceThresholdTest.java`
   - `backend/worker/src/test/java/com/zeromail/worker/draft/DraftSignatureIntegrationTest.java`
@@ -129,7 +130,7 @@ The first plan wave MUST create stub test files for every ❌ Wave 0 row above. 
 - **Frontend e2e stubs:**
   - `apps/web/e2e/ai-settings.spec.ts` (flat-section golden path covering Voice + Behavior + Updates + Safety net + AI Provider Dialogs, plus Knowledge add/edit/delete and BYOK Save → Test → Activate flow, plus DOMAIN safety-net encoding round-trip per INFO #10)
 
-**Wave 0 stub file count: 32 backend tests + 1 Playwright spec = 33 files total. (BLOCKER #1 added one new backend test; the previous "33" Validation Sign-Off line was based on 32 backend + 1 Playwright but the count was miscalculated as 33 in error per INFO #8 — actually 31 backend + 1 = 32. The append-callers test brings it back to 32 backend + 1 = 33 total Wave-0 files.)**
+**Wave 0 stub file count: 33 backend tests + 1 Playwright spec = 34 files total.**
 
 ---
 
@@ -147,7 +148,7 @@ The first plan wave MUST create stub test files for every ❌ Wave 0 row above. 
 
 - [ ] All tasks have `<automated>` verify or Wave 0 dependencies
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all ❌ MISSING references (32 backend test stubs + 1 Playwright spec = 33 stub files listed — count corrected per planner-checker INFO #8; previous "33 stub files listed" line was actually 31 backend + 1 = 32 in error, then BLOCKER #1 added AssistantKnowledgeAppendCallSiteTest bringing total to 32 backend + 1 = 33)
+- [ ] Wave 0 covers all ❌ MISSING references (33 backend test stubs + 1 Playwright spec = 34 stub files listed)
 - [ ] No watch-mode flags (all commands `--run` / `--tests`, no `--watch`)
 - [ ] Feedback latency < 90 seconds for quick run
 - [ ] `nyquist_compliant: true` flipped after planner attaches every test command to a task or Wave-0 stub
