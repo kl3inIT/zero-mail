@@ -528,6 +528,7 @@
           "title": "No unsubscribe-ready senders found"
         },
         "error": "Could not load the sender list. Please try again shortly.",
+        "eyebrow": "Gmail cleanup",
         "filter": {
           "all": "All senders",
           "mailto": "Unsubscribe by email",
@@ -535,6 +536,9 @@
           "ready": "Ready to process"
         },
         "filterLabel": "Filter senders",
+        "helpBody": "Zero Mail only shows senders with a safe unsubscribe signal from Gmail. Select senders, preview the action, then confirm. Old mail is archived only after unsubscribe succeeds and is never deleted.",
+        "helpLabel": "Explain safe unsubscribe",
+        "helpTitle": "How unsubscribe works",
         "historyCount": "{count} mail",
         "lead": "Zero Mail finds senders that support unsubscribe from Gmail. When you confirm, it sends a safe unsubscribe request and archives old mail only after that succeeds. It never deletes mail.",
         "preview": "Preview",

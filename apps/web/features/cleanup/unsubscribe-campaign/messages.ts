@@ -4,9 +4,25 @@ export const unsubscribeCampaignMessages = {
     vi: 'Hủy đăng ký',
     en: 'Unsubscribe',
   },
+  'cleanup.unsubscribe.list.eyebrow': {
+    vi: 'Dọn dẹp Gmail',
+    en: 'Gmail cleanup',
+  },
   'cleanup.unsubscribe.list.lead': {
     vi: 'Zero Mail tìm các email có hỗ trợ hủy nhận từ Gmail. Khi bạn xác nhận, hệ thống gửi yêu cầu hủy nhận an toàn; nếu thành công mới lưu trữ email cũ. Không xóa email.',
     en: 'Zero Mail finds senders that support unsubscribe from Gmail. When you confirm, it sends a safe unsubscribe request and archives old mail only after that succeeds. It never deletes mail.',
+  },
+  'cleanup.unsubscribe.list.helpLabel': {
+    vi: 'Giải thích hủy đăng ký an toàn',
+    en: 'Explain safe unsubscribe',
+  },
+  'cleanup.unsubscribe.list.helpTitle': {
+    vi: 'Cách hủy đăng ký hoạt động',
+    en: 'How unsubscribe works',
+  },
+  'cleanup.unsubscribe.list.helpBody': {
+    vi: 'Zero Mail chỉ hiển thị người gửi có tín hiệu hủy nhận an toàn từ Gmail. Bạn chọn người gửi, xem trước, rồi xác nhận. Email cũ chỉ được lưu trữ sau khi hủy nhận thành công và không bị xóa.',
+    en: 'Zero Mail only shows senders with a safe unsubscribe signal from Gmail. Select senders, preview the action, then confirm. Old mail is archived only after unsubscribe succeeds and is never deleted.',
   },
   'cleanup.unsubscribe.list.suppressionLink': {
     vi: 'Danh sách an toàn',

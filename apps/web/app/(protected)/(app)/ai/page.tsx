@@ -5,10 +5,12 @@ import { AiConfigPage } from '@/features/ai/components/AiConfigPage';
 
 export default function AiPage() {
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5 p-4 md:p-6">
-      <Suspense fallback={<LoadingState variant="cards" count={2} />}>
-        <AiConfigPage />
-      </Suspense>
+    <div className="flex h-full flex-col">
+      <div className="flex-1 space-y-4 overflow-auto p-3 sm:p-4">
+        <Suspense fallback={<LoadingState variant="cards" count={2} />}>
+          <AiConfigPage />
+        </Suspense>
+      </div>
     </div>
   );
 }

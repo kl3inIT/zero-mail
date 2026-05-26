@@ -4,8 +4,8 @@ milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: "Phase 08.1 shipped — PR #60"
 stopped_at: Completed 08.1-05-PLAN.md
-last_updated: "2026-05-24T20:07:02.180Z"
-last_activity: 2026-05-25
+last_updated: "2026-05-26T00:00:00+07:00"
+last_activity: 2026-05-26
 progress:
   total_phases: 3
   completed_phases: 1
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
 Plan: 6 of 6
 Status: Phase 08.1 shipped — PR #60
-Last activity: 2026-05-25 - Completed quick task 260525-gf6: monorepo config consistency + Turborepo 2.9 best practices
+Last activity: 2026-05-26 - Completed quick task 260526-unsubscribe-campaign-ui-polish: polish unsubscribe campaign UI
 
 ## Current Milestone Roadmap
 
@@ -395,6 +395,9 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260526-unsubscribe-campaign-ui-polish | Polish unsubscribe campaign UI with Analytics-style header, metric cards, toolbar, table, and help popover | 2026-05-26 | pending | Verified | [260526-unsubscribe-campaign-ui-polish](./quick/260526-unsubscribe-campaign-ui-polish/) |
+| 260526-ch7 | Remove duplicate sidebar divider below user block | 2026-05-26 | pending | Verified | [260526-ch7-remove-duplicate-sidebar-divider-below-u](./quick/260526-ch7-remove-duplicate-sidebar-divider-below-u/) |
+| 260525-inbox-composer-remove-lines | Remove visible borders and separator lines from the Inbox reply composer | 2026-05-25 | pending | Verified | [260525-inbox-composer-remove-lines](./quick/260525-inbox-composer-remove-lines/) |
 | 260525-gf6 | Monorepo config consistency: rename admin generate-api → generate:api, add lint:fix to web, rewrite turbo.json with 2026 best practices, route root multi-target scripts through turbo run | 2026-05-25 | 366a1c45 | — | [260525-gf6-monorepo-config-consistency-rename-admin](./quick/260525-gf6-monorepo-config-consistency-rename-admin/) |
 | 260524-hbp | Implement boundary-safe LLM runtime routing from admin-managed model defaults | 2026-05-24 | pending | Verified | [260524-hbp-implement-boundary-safe-llm-runtime-rout](./quick/260524-hbp-implement-boundary-safe-llm-runtime-rout/) |
 | 260524-hbk | Upgrade Spring AI to 2.0.0-M7 and adapt ChatClient tool registration/autoconfig | 2026-05-24 | pending | Verified | [260524-hbk-upgrade-spring-ai-to-2-0-0-m7-and-adapt-](./quick/260524-hbk-upgrade-spring-ai-to-2-0-0-m7-and-adapt-/) |

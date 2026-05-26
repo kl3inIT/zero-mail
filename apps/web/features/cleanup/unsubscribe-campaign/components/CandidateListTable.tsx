@@ -78,10 +78,10 @@ export function CandidateListTable({
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
 
   return (
-    <div className="border-foreground/10 bg-background overflow-hidden rounded-lg border">
-      <Table>
+    <div className="border-border bg-card overflow-x-auto rounded-lg border shadow-sm">
+      <Table className="min-w-[760px]">
         <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40">
+          <TableRow className="border-border bg-muted/30 hover:bg-muted/30">
             <TableHead className="w-10">
               <Checkbox
                 aria-label={t('cleanup.unsubscribe.list.selectAll')}
@@ -93,9 +93,11 @@ export function CandidateListTable({
                 }
               />
             </TableHead>
-            <TableHead>{t('cleanup.unsubscribe.list.col.sender')}</TableHead>
-            <TableHead className="min-w-36">{t('cleanup.unsubscribe.list.col.history')}</TableHead>
-            <TableHead>{t('cleanup.unsubscribe.list.col.risk')}</TableHead>
+            <TableHead className="h-12">{t('cleanup.unsubscribe.list.col.sender')}</TableHead>
+            <TableHead className="h-12 min-w-36">
+              {t('cleanup.unsubscribe.list.col.history')}
+            </TableHead>
+            <TableHead className="h-12">{t('cleanup.unsubscribe.list.col.risk')}</TableHead>
             <TableHead className="text-right">
               {t('cleanup.unsubscribe.list.col.actions')}
             </TableHead>
@@ -118,7 +120,10 @@ export function CandidateListTable({
             const rowContent = (
               <TableRow
                 key={senderEmail}
-                className={cn('align-middle', isDisabled && 'opacity-60')}
+                className={cn(
+                  'border-border hover:bg-muted/25 align-middle',
+                  isDisabled && 'opacity-60',
+                )}
                 data-state={isChecked ? 'selected' : undefined}
               >
                 <TableCell>
@@ -165,11 +170,11 @@ export function CandidateListTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex min-w-32 flex-col gap-1.5">
-                    <span className="font-mono text-sm tabular-nums">
+                    <span className="text-sm font-medium tabular-nums">
                       {t('cleanup.unsubscribe.list.historyCount', { count: messageCount })}
                     </span>
-                    <div className="bg-muted h-1.5 overflow-hidden rounded-full">
-                      <div className="bg-foreground h-full" style={{ width: `${messageShare}%` }} />
+                    <div className="bg-muted/70 h-2 overflow-hidden rounded-full">
+                      <div className="bg-primary/70 h-full" style={{ width: `${messageShare}%` }} />
                     </div>
                   </div>
                 </TableCell>
@@ -209,57 +214,59 @@ export function CandidateListTable({
               <Fragment key={senderEmail}>
                 {renderedRow}
                 {isExpanded && (
-                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                  <TableRow className="border-border bg-muted/20 hover:bg-muted/20">
                     <TableCell />
-                    <TableCell colSpan={4}>
+                    <TableCell colSpan={4} className="whitespace-normal">
                       <div className="grid gap-3 py-3 text-sm md:grid-cols-4">
-                        <div className="flex items-start gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
                           <Clock3Icon
-                            className="text-muted-foreground mt-0.5 size-4"
+                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
                             aria-hidden="true"
                           />
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-muted-foreground text-xs">
                               {t('cleanup.unsubscribe.list.detail.lastSeen')}
                             </p>
-                            <p className="font-medium">{formatLastSeen(candidate.lastSeenAt)}</p>
+                            <p className="font-medium break-words">
+                              {formatLastSeen(candidate.lastSeenAt)}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
                           <ArchiveIcon
-                            className="text-muted-foreground mt-0.5 size-4"
+                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
                             aria-hidden="true"
                           />
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-muted-foreground text-xs">
                               {t('cleanup.unsubscribe.list.detail.archive')}
                             </p>
-                            <p className="font-medium">
+                            <p className="font-medium break-words">
                               {t('cleanup.unsubscribe.list.detail.archiveValue', {
                                 count: messageCount,
                               })}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
                           <ShieldIcon
-                            className="text-muted-foreground mt-0.5 size-4"
+                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
                             aria-hidden="true"
                           />
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-muted-foreground text-xs">
                               {t('cleanup.unsubscribe.list.detail.safety')}
                             </p>
-                            <p className="font-medium">
+                            <p className="font-medium break-words">
                               {isDisabled
                                 ? t('cleanup.unsubscribe.list.detail.disabled')
                                 : t('cleanup.unsubscribe.list.detail.safe')}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
                           <ShieldIcon
-                            className="text-muted-foreground mt-0.5 size-4"
+                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
                             aria-hidden="true"
                           />
                           <div className="flex min-w-0 flex-col gap-2">
@@ -267,7 +274,7 @@ export function CandidateListTable({
                               <p className="text-muted-foreground text-xs">
                                 {t('cleanup.unsubscribe.list.detail.skip')}
                               </p>
-                              <p className="text-muted-foreground text-xs leading-5">
+                              <p className="text-muted-foreground text-xs leading-5 break-words">
                                 {t('cleanup.unsubscribe.list.detail.skipDescription')}
                               </p>
                             </div>

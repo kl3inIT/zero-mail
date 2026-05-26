@@ -1,30 +1,75 @@
+import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
+import { cookies, headers } from 'next/headers';
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 
-import { AnalyticsSkeleton } from '@/features/analytics/components/AnalyticsSkeleton';
+import { fetchAnalyticsSummary } from '@/features/analytics/api/analytics-api';
 import { AnalyticsPageClient } from '@/features/analytics/components/AnalyticsPageClient';
+import { AnalyticsSkeleton } from '@/features/analytics/components/AnalyticsSkeleton';
+import { normalizeAnalyticsWindow } from '@/features/analytics/components/analytics-window';
+import { analyticsKeys } from '@/features/analytics/query-keys';
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ window?: string }>;
+}) {
   const t = await getTranslations();
+  const { window: rawWindow } = await searchParams;
+  const selectedWindow = normalizeAnalyticsWindow(rawWindow ?? null);
+
+  // Forward session cookie + Playwright stub headers so the server-side
+  // prefetch hits the backend authenticated. Without this the SSR pre-render
+  // of the client component gets 401 → "Switched to client rendering" warning.
+  const cookieStore = await cookies();
+  const incomingHeaders = await headers();
+  const requestHeaders = backendRequestHeaders(cookieStore.toString(), incomingHeaders);
+
+  const queryClient = new QueryClient();
+  await queryClient.prefetchQuery({
+    queryKey: analyticsKeys.summary(selectedWindow),
+    queryFn: () => fetchAnalyticsSummary(selectedWindow, { headers: requestHeaders }),
+  });
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 md:p-6">
-      <div className="border-foreground/10 flex flex-col gap-3 border-b pb-5 md:flex-row md:items-end md:justify-between">
-        <div className="flex flex-col gap-1">
-          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            {t('analytics.page.eyebrow')}
-          </p>
-          <h1 className="text-foreground text-3xl leading-tight font-semibold">
-            {t('analytics.page.title')}
-          </h1>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="flex h-full flex-col">
+        <div className="border-border border-b px-4 py-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                {t('analytics.page.eyebrow')}
+              </p>
+              <h1 className="text-foreground text-[17px] font-semibold">
+                {t('analytics.page.title')}
+              </h1>
+            </div>
+            <p className="text-muted-foreground max-w-2xl text-sm leading-6 sm:text-right">
+              {t('analytics.page.description')}
+            </p>
+          </div>
         </div>
-        <p className="text-muted-foreground max-w-2xl text-sm leading-6 md:text-right">
-          {t('analytics.page.description')}
-        </p>
+        <div className="flex-1 space-y-4 overflow-auto p-3 sm:p-4">
+          <Suspense fallback={<AnalyticsSkeleton />}>
+            <AnalyticsPageClient />
+          </Suspense>
+        </div>
       </div>
-      <Suspense fallback={<AnalyticsSkeleton />}>
-        <AnalyticsPageClient />
-      </Suspense>
-    </div>
+    </HydrationBoundary>
   );
+}
+
+function backendRequestHeaders(
+  cookieHeader: string,
+  incomingHeaders: { get(name: string): string | null },
+): HeadersInit | undefined {
+  const requestHeaders: Record<string, string> = {};
+  if (cookieHeader) requestHeaders.Cookie = cookieHeader;
+
+  const testSubject = incomingHeaders.get('x-test-subject');
+  const testEmail = incomingHeaders.get('x-test-email');
+  if (testSubject) requestHeaders['X-Test-Subject'] = testSubject;
+  if (testEmail) requestHeaders['X-Test-Email'] = testEmail;
+
+  return Object.keys(requestHeaders).length === 0 ? undefined : requestHeaders;
 }

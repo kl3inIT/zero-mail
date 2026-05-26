@@ -17,11 +17,13 @@ import { SettingsClient } from './SettingsClient';
  */
 export default async function SettingsPage() {
   const cookieStore = await cookies();
+  const initialTheme: 'light' | 'dark' =
+    cookieStore.get('zm-theme')?.value === 'dark' ? 'dark' : 'light';
   let initialUser: CurrentUser | undefined;
   try {
     initialUser = await getCurrentUserCached(cookieStore.toString());
   } catch {
     initialUser = undefined;
   }
-  return <SettingsClient initialUser={initialUser} />;
+  return <SettingsClient initialUser={initialUser} initialTheme={initialTheme} />;
 }

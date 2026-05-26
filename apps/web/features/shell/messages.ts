@@ -4,8 +4,8 @@ export const shellMessages = {
     en: 'Assistant',
   },
   'nav.ai': {
-    vi: 'AI',
-    en: 'AI',
+    vi: 'Cấu hình AI',
+    en: 'AI configuration',
   },
   'nav.analytics': {
     vi: 'Phân tích',

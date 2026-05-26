@@ -37,7 +37,7 @@ export function ChatWorkspace() {
   }
 
   return (
-    <div className="border-border bg-card flex min-h-[calc(100vh-145px)] overflow-hidden rounded-lg border">
+    <div className="flex h-full min-h-0 overflow-hidden">
       <HistorySidebar
         activeChatId={queryChatId}
         onSelectChat={handleSelectChat}
