@@ -4,17 +4,17 @@ import { useTranslations } from 'next-intl';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AnalyticsWindow } from '@/features/analytics/api/analytics-api';
+import {
+  ANALYTICS_WINDOWS as WINDOWS,
+  isAnalyticsWindow,
+  normalizeAnalyticsWindow,
+} from '@/features/analytics/components/analytics-window';
 
-const WINDOWS: AnalyticsWindow[] = ['7d', '30d', '90d'];
-
-export function isAnalyticsWindow(value: string): value is AnalyticsWindow {
-  return WINDOWS.includes(value as AnalyticsWindow);
-}
-
-export function normalizeAnalyticsWindow(raw: string | null): AnalyticsWindow {
-  const trimmed = raw?.trim();
-  return trimmed && isAnalyticsWindow(trimmed) ? trimmed : '7d';
-}
+// Re-exported for backwards compatibility with callers still importing
+// `normalizeAnalyticsWindow` / `isAnalyticsWindow` from this module.
+// New server-side callers should import directly from `analytics-window.ts`
+// (this file is client-only and would error in RSC contexts).
+export { isAnalyticsWindow, normalizeAnalyticsWindow };
 
 type WindowChipsProps = {
   value: AnalyticsWindow;

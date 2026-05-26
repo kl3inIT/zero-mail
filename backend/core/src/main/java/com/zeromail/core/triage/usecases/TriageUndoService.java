@@ -157,33 +157,33 @@ public class TriageUndoService {
             UUID tenantId, TriageAuditEntity auditRow, TriageActionResult actionResult)
             throws IOException {
         switch (actionResult) {
-            case TriageActionResult.Label ignored ->
+            case TriageActionResult.Label _ ->
                     triageGmailWriter.removeLabel(
                             tenantId,
                             auditRow.getGmailMessageId(),
                             requiredAddedLabelId(auditRow.getGmailChangeToken()));
-            case TriageActionResult.Archive ignored -> {
+            case TriageActionResult.Archive _ -> {
                 requireArchiveChangeToken(auditRow.getGmailChangeToken());
                 triageGmailWriter.restoreToInbox(tenantId, auditRow.getGmailMessageId());
             }
             case TriageActionResult.SaveDraft saveDraft ->
                     triageGmailWriter.deleteDraft(tenantId, draftId(auditRow, saveDraft));
-            case TriageActionResult.MarkRead ignored ->
+            case TriageActionResult.MarkRead _ ->
                     triageGmailWriter.markUnread(tenantId, auditRow.getGmailMessageId());
-            case TriageActionResult.Star ignored ->
+            case TriageActionResult.Star _ ->
                     triageGmailWriter.unstar(tenantId, auditRow.getGmailMessageId());
-            case TriageActionResult.AddToDigest ignored ->
+            case TriageActionResult.AddToDigest _ ->
                     triageGmailWriter.removeLabel(
                             tenantId,
                             auditRow.getGmailMessageId(),
                             requiredAddedLabelId(auditRow.getGmailChangeToken()));
-            case TriageActionResult.MarkSpam ignored ->
+            case TriageActionResult.MarkSpam _ ->
                     triageGmailWriter.unmarkSpam(tenantId, auditRow.getGmailMessageId());
-            case TriageActionResult.SendReply ignored ->
+            case TriageActionResult.SendReply _ ->
                     throw TriageAuditException.unsupportedActionType();
-            case TriageActionResult.ForwardEmail ignored ->
+            case TriageActionResult.ForwardEmail _ ->
                     throw TriageAuditException.unsupportedActionType();
-            case TriageActionResult.SendEmail ignored ->
+            case TriageActionResult.SendEmail _ ->
                     throw TriageAuditException.unsupportedActionType();
         }
     }
@@ -209,23 +209,18 @@ public class TriageUndoService {
             RuleActionType actionType, TriageActionResult actionResult) {
         boolean matches =
                 switch (actionResult) {
-                    case TriageActionResult.Label ignored -> actionType == RuleActionType.LABEL;
-                    case TriageActionResult.Archive ignored -> actionType == RuleActionType.ARCHIVE;
-                    case TriageActionResult.SaveDraft ignored ->
-                            actionType == RuleActionType.SAVE_DRAFT;
-                    case TriageActionResult.MarkRead ignored ->
-                            actionType == RuleActionType.MARK_READ;
-                    case TriageActionResult.Star ignored -> actionType == RuleActionType.STAR;
-                    case TriageActionResult.AddToDigest ignored ->
+                    case TriageActionResult.Label _ -> actionType == RuleActionType.LABEL;
+                    case TriageActionResult.Archive _ -> actionType == RuleActionType.ARCHIVE;
+                    case TriageActionResult.SaveDraft _ -> actionType == RuleActionType.SAVE_DRAFT;
+                    case TriageActionResult.MarkRead _ -> actionType == RuleActionType.MARK_READ;
+                    case TriageActionResult.Star _ -> actionType == RuleActionType.STAR;
+                    case TriageActionResult.AddToDigest _ ->
                             actionType == RuleActionType.ADD_TO_DIGEST;
-                    case TriageActionResult.MarkSpam ignored ->
-                            actionType == RuleActionType.MARK_SPAM;
-                    case TriageActionResult.SendReply ignored ->
-                            actionType == RuleActionType.SEND_REPLY;
-                    case TriageActionResult.ForwardEmail ignored ->
+                    case TriageActionResult.MarkSpam _ -> actionType == RuleActionType.MARK_SPAM;
+                    case TriageActionResult.SendReply _ -> actionType == RuleActionType.SEND_REPLY;
+                    case TriageActionResult.ForwardEmail _ ->
                             actionType == RuleActionType.FORWARD_EMAIL;
-                    case TriageActionResult.SendEmail ignored ->
-                            actionType == RuleActionType.SEND_EMAIL;
+                    case TriageActionResult.SendEmail _ -> actionType == RuleActionType.SEND_EMAIL;
                 };
         if (!matches) {
             throw TriageAuditException.unsupportedActionType();

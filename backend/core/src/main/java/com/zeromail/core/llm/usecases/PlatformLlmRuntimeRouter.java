@@ -85,7 +85,7 @@ public class PlatformLlmRuntimeRouter {
                 modelId,
                 new LlmProviderCredential(
                         providerId,
-                        fallbackKeyFormat(providerId, llmProperties.baseUrl()),
+                        fallbackKeyFormat(providerId),
                         llmProperties.baseUrl(),
                         llmProperties.apiKey().getBytes(StandardCharsets.UTF_8),
                         LlmCredentialSource.PLATFORM),
@@ -100,7 +100,7 @@ public class PlatformLlmRuntimeRouter {
         return llmProperties.compileModel();
     }
 
-    private static String fallbackKeyFormat(String providerId, String baseUrl) {
+    private static String fallbackKeyFormat(String providerId) {
         String normalizedProvider = providerId == null ? "" : providerId.toUpperCase(Locale.ROOT);
         if ("ANTHROPIC".equals(normalizedProvider)) {
             return ANTHROPIC_FORMAT;

@@ -64,11 +64,11 @@ import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useChat } from '@/features/chat/hooks/use-chat';
 import { PreviewCard } from '@/features/chat/components/preview-card/preview-card';
 import {
-  actionStatus,
   isBodySlotToolName,
   parseMaybeJsonObject,
   type PreviewCardAction,
 } from '@/features/chat/components/preview-card/preview-card-state';
+import { useConfirmAction } from '@/features/chat/hooks/use-confirm-action';
 import type { InboxLabel, InboxMessage } from '@/features/inbox/api/inbox-api';
 import {
   flattenInboxMessages,
@@ -158,16 +158,14 @@ export function InboxPageClient() {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-foreground text-xl font-semibold">{t('inbox.page.title')}</h1>
-          <p className="text-muted-foreground max-w-3xl text-sm leading-6">
-            {t('inbox.page.description')}
-          </p>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="border-border flex shrink-0 flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-foreground text-[17px] font-semibold">{t('inbox.page.title')}</h1>
+          <p className="text-muted-foreground text-sm">{t('inbox.page.description')}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
             {t('inbox.limit.caption', { loaded: loadedCount, max: maxMessages })}
           </span>
           <Button
@@ -187,19 +185,26 @@ export function InboxPageClient() {
       </div>
 
       {inboxQuery.error ? (
-        <Alert variant="destructive">
-          <AlertTitle>{t('inbox.error.title')}</AlertTitle>
-          <AlertDescription>{t('inbox.error.body')}</AlertDescription>
-          <AlertAction>
-            <Button type="button" variant="outline" size="sm" onClick={() => inboxQuery.refetch()}>
-              {t('needsReply.error.retry')}
-            </Button>
-          </AlertAction>
-        </Alert>
+        <div className="border-border border-b p-3 sm:p-4">
+          <Alert variant="destructive">
+            <AlertTitle>{t('inbox.error.title')}</AlertTitle>
+            <AlertDescription>{t('inbox.error.body')}</AlertDescription>
+            <AlertAction>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => inboxQuery.refetch()}
+              >
+                {t('needsReply.error.retry')}
+              </Button>
+            </AlertAction>
+          </Alert>
+        </div>
       ) : null}
 
-      <div className="border-border bg-background grid min-h-0 flex-1 overflow-hidden rounded-lg border lg:grid-cols-[390px_minmax(0,1fr)]">
-        <section className="border-border flex min-h-0 flex-col border-b lg:border-r lg:border-b-0">
+      <div className="bg-background grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[390px_minmax(0,1fr)]">
+        <section className="border-border lg:border-r-border flex min-h-0 flex-col border-b lg:border-r lg:border-b-0">
           <div className="border-border flex h-12 shrink-0 items-center justify-between border-b px-3">
             <div className="flex items-center gap-2">
               <Inbox className="text-muted-foreground size-4" aria-hidden="true" />
@@ -515,7 +520,7 @@ function InboxMessageDetailPanel({
         />
       </div>
       {activeComposerState ? (
-        <div className="bg-background/95 absolute inset-x-0 bottom-0 z-20 border-t p-4 shadow-[0_-12px_28px_rgba(15,23,42,0.14)] backdrop-blur">
+        <div className="absolute inset-x-4 bottom-4 z-20">
           <InboxReplyComposer
             key={`${selectedMessage.gmailMessageId}-${activeComposerState.mode}`}
             mode={activeComposerState.mode}
@@ -799,12 +804,12 @@ function InboxReplyComposer({
 
   return (
     <form
-      className="border-border bg-background max-h-[min(72vh,560px)] overflow-y-auto rounded-lg border shadow-xl"
+      className="bg-card max-h-[min(72vh,560px)] overflow-y-auto rounded-lg shadow-xl"
       onSubmit={handleSubmit}
       data-testid="inbox-reply-composer"
     >
-      <div className="overflow-hidden bg-[#fafafa]">
-        <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+      <div className="bg-card overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2">
           <span className="text-muted-foreground w-12 shrink-0 text-sm">
             {t('inbox.composer.to')}
           </span>
@@ -842,7 +847,7 @@ function InboxReplyComposer({
           </Button>
         </div>
         {showCc ? (
-          <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+          <div className="flex items-center gap-2 px-3 py-2">
             <span className="text-muted-foreground w-12 shrink-0 text-sm">
               {t('inbox.composer.cc')}
             </span>
@@ -856,7 +861,7 @@ function InboxReplyComposer({
           </div>
         ) : null}
         {showBcc ? (
-          <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+          <div className="flex items-center gap-2 px-3 py-2">
             <span className="text-muted-foreground w-12 shrink-0 text-sm">
               {t('inbox.composer.bcc')}
             </span>
@@ -868,7 +873,7 @@ function InboxReplyComposer({
             />
           </div>
         ) : null}
-        <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+        <div className="flex items-center gap-2 px-3 py-2">
           <span className="text-muted-foreground w-12 shrink-0 text-sm">
             {t('inbox.composer.subject')}
           </span>
@@ -880,7 +885,7 @@ function InboxReplyComposer({
             data-testid="inbox-composer-subject"
           />
         </div>
-        <div className="border-border flex items-center gap-1 border-b px-3 py-2">
+        <div className="flex items-center gap-1 px-3 py-2">
           <ComposerToolbarButton
             label={t('inbox.composer.bold')}
             onClick={() => wrapSelection('**')}
@@ -911,10 +916,10 @@ function InboxReplyComposer({
           value={bodyText}
           onChange={(event) => setBodyText(event.currentTarget.value)}
           placeholder={t('inbox.composer.bodyPlaceholder')}
-          className="min-h-36 resize-y rounded-none border-0 bg-white px-3 py-3 shadow-none focus-visible:ring-0"
+          className="bg-card min-h-36 resize-y rounded-none border-0 px-3 py-3 shadow-none focus-visible:ring-0"
           data-testid="inbox-composer-body"
         />
-        <div className="border-border flex flex-wrap items-center gap-2 border-t bg-white px-3 py-2">
+        <div className="bg-card flex flex-wrap items-center gap-2 px-3 py-2">
           <Button
             type="submit"
             size="sm"
@@ -930,7 +935,7 @@ function InboxReplyComposer({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => void handleGenerateBody()}
             disabled={assistantGenerating}
@@ -946,7 +951,7 @@ function InboxReplyComposer({
               : t('inbox.composer.generateBody')}
           </Button>
           <div
-            className="border-border bg-muted/30 inline-flex h-8 items-center overflow-hidden rounded-md border p-0.5"
+            className="bg-muted/30 inline-flex h-8 items-center overflow-hidden rounded-md p-0.5"
             aria-label={t('inbox.composer.generateLanguageLabel')}
           >
             {(['vi', 'en'] as const).map((language) => (
@@ -972,7 +977,7 @@ function InboxReplyComposer({
           </div>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             title={attachments.map((file) => file.name).join('\n') || undefined}
@@ -994,7 +999,7 @@ function InboxReplyComposer({
               {attachments.map((file, index) => (
                 <span
                   key={`${file.name}-${index}`}
-                  className="border-border bg-muted/50 inline-flex max-w-40 items-center gap-1 rounded-md border px-2 py-1 text-xs"
+                  className="bg-muted/50 inline-flex max-w-40 items-center gap-1 rounded-md px-2 py-1 text-xs"
                 >
                   <span className="truncate">{file.name}</span>
                   <button
@@ -1153,18 +1158,11 @@ function InlineAssistantPreview({
       .filter((action): action is PreviewCardAction => action !== null);
 
     const latestSendAction = sendActions[sendActions.length - 1];
-    const sendStatus = latestSendAction ? actionStatus(latestSendAction) : 'pending';
-    const isSending = busy || !latestSendAction || sendStatus === 'pending';
-
     return (
       <div className="mt-3" data-testid="inbox-assistant-preview">
         {latestSendAction ? (
-          <PreviewCard
-            key={`${latestSendAction.messageId}-${latestSendAction.toolCallId}`}
-            action={{ ...latestSendAction, autoConfirm: true }}
-          />
-        ) : null}
-        {isSending ? (
+          <AutoConfirmSendAction key={latestSendAction.toolCallId} action={latestSendAction} />
+        ) : busy ? (
           <div className="text-muted-foreground mt-2 flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             {t('inbox.composer.sendingNow')}
@@ -1210,6 +1208,56 @@ function InlineAssistantPreview({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function AutoConfirmSendAction({ action }: { action: PreviewCardAction }) {
+  const t = useTranslations();
+  const confirmAction = useConfirmAction();
+  const confirmStartedRef = useRef(false);
+  const [sendState, setSendState] = useState<'waiting' | 'sending' | 'sent' | 'failed'>('waiting');
+
+  useEffect(() => {
+    if (confirmStartedRef.current || !action.persistenceConfirmed) return;
+    confirmStartedRef.current = true;
+    setSendState('sending');
+    confirmAction
+      .mutateAsync({
+        chatId: action.chatId,
+        body: {
+          toolCallId: action.toolCallId,
+          contentOverride: {},
+          vipAcknowledged: false,
+        },
+      })
+      .then(() => setSendState('sent'))
+      .catch(() => setSendState('failed'));
+  }, [action.chatId, action.persistenceConfirmed, action.toolCallId, confirmAction]);
+
+  if (!action.persistenceConfirmed || sendState === 'waiting' || sendState === 'sending') {
+    return (
+      <div
+        className="text-muted-foreground flex items-center gap-2 text-sm"
+        data-testid="inbox-auto-send-status"
+      >
+        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        {t('inbox.composer.sendingNow')}
+      </div>
+    );
+  }
+
+  if (sendState === 'sent') {
+    return (
+      <p className="text-sm text-emerald-700" data-testid="inbox-auto-send-status">
+        {t('inbox.composer.sentSuccess')}
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-destructive text-sm" data-testid="inbox-auto-send-status">
+      {t('inbox.composer.sendFailed')}
+    </p>
   );
 }
 

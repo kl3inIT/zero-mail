@@ -15,6 +15,90 @@ export const analyticsMessages = {
     vi: 'Cập nhật {age} trước',
     en: 'Last refreshed {age} ago',
   },
+  'analytics.archiveChart.title': {
+    vi: 'Email đã lưu trữ và xóa bằng Zero Mail',
+    en: "How many emails you've archived and deleted with Zero Mail",
+  },
+  'analytics.archiveChart.archivedLegend': {
+    vi: 'Đã lưu trữ',
+    en: 'Archived',
+  },
+  'analytics.archiveChart.deletedLegend': {
+    vi: 'Đã xóa',
+    en: 'Deleted',
+  },
+  'analytics.range.label': {
+    vi: 'Khoảng thời gian',
+    en: 'Date range',
+  },
+  'analytics.range.lastWeek': {
+    vi: 'Tuần trước',
+    en: 'Last week',
+  },
+  'analytics.range.lastMonth': {
+    vi: 'Tháng trước',
+    en: 'Last month',
+  },
+  'analytics.range.lastThreeMonths': {
+    vi: '3 tháng qua',
+    en: 'Last 3 months',
+  },
+  'analytics.groupBy.label': {
+    vi: 'Nhóm dữ liệu',
+    en: 'Group by',
+  },
+  'analytics.groupBy.day': {
+    vi: 'Ngày',
+    en: 'Day',
+  },
+  'analytics.groupBy.week': {
+    vi: 'Tuần',
+    en: 'Week',
+  },
+  'analytics.groupBy.month': {
+    vi: 'Tháng',
+    en: 'Month',
+  },
+  'analytics.groupBy.year': {
+    vi: 'Năm',
+    en: 'Year',
+  },
+  'analytics.sources.modeLabel': {
+    vi: 'Kiểu thống kê nguồn email',
+    en: 'Inbox source mode',
+  },
+  'analytics.sources.emailAddress': {
+    vi: 'Địa chỉ email',
+    en: 'Email address',
+  },
+  'analytics.sources.domain': {
+    vi: 'Tên miền',
+    en: 'Domain',
+  },
+  'analytics.sources.received': {
+    vi: 'Đã nhận',
+    en: 'Received',
+  },
+  'analytics.sources.sent': {
+    vi: 'Đã gửi',
+    en: 'Sent',
+  },
+  'analytics.sources.emptyTitle': {
+    vi: 'Chưa có dữ liệu',
+    en: 'No data available',
+  },
+  'analytics.sources.emptyBody': {
+    vi: 'Chọn một khoảng thời gian khác để xem thống kê.',
+    en: 'Select a different time period to view statistics',
+  },
+  'analytics.sources.viewMore': {
+    vi: 'Xem thêm',
+    en: 'View more',
+  },
+  'analytics.sources.viewLess': {
+    vi: 'Thu gọn',
+    en: 'View less',
+  },
   'analytics.window.7d': {
     vi: '7 ngày qua',
     en: 'Last 7 days',

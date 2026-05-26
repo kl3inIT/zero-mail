@@ -1,14 +1,27 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import { ArchiveIcon, MailXIcon, SearchIcon, ShieldIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import {
+  ArchiveIcon,
+  CircleHelpIcon,
+  MailXIcon,
+  SearchIcon,
+  ShieldIcon,
+  type LucideIcon,
+} from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -154,53 +167,61 @@ export function CandidateListPage() {
   const sortModeLabel = t(sortModeMessageKey(sortMode));
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="border-foreground/10 flex flex-col gap-3 border-b pb-5 md:flex-row md:items-end md:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-foreground text-2xl leading-tight font-semibold">
-            {t('cleanup.unsubscribe.list.title')}
-          </h1>
-          <p className="text-muted-foreground max-w-3xl text-sm leading-6">
-            {t('cleanup.unsubscribe.list.lead')}
-          </p>
+    <div className="flex flex-col gap-4">
+      <div className="border-border bg-background -mx-3 -mt-3 border-b px-4 py-3 sm:-mx-4 sm:-mt-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+              {t('cleanup.unsubscribe.list.eyebrow')}
+            </p>
+            <h1 className="text-foreground text-[17px] font-semibold">
+              {t('cleanup.unsubscribe.list.title')}
+            </h1>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:justify-end">
+            <UnsubscribeHelpAction />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={() => setSuppressionDialogOpen(true)}
+            >
+              <ShieldIcon className="size-4" aria-hidden="true" />
+              {t('cleanup.unsubscribe.list.suppressionLink')}
+            </Button>
+          </div>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-fit"
-          onClick={() => setSuppressionDialogOpen(true)}
-        >
-          <ShieldIcon className="size-4" aria-hidden="true" />
-          {t('cleanup.unsubscribe.list.suppressionLink')}
-        </Button>
+        <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
+          {t('cleanup.unsubscribe.list.lead')}
+        </p>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-4">
-        <MetricPill
-          icon={<MailXIcon className="size-4" aria-hidden="true" />}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          icon={MailXIcon}
           label={t('cleanup.unsubscribe.list.stats.total')}
           value={stats.total}
         />
-        <MetricPill
-          icon={<ShieldIcon className="size-4" aria-hidden="true" />}
+        <MetricCard
+          icon={ShieldIcon}
           label={t('cleanup.unsubscribe.list.stats.ready')}
           value={stats.ready}
         />
-        <MetricPill
-          icon={<ArchiveIcon className="size-4" aria-hidden="true" />}
+        <MetricCard
+          icon={ArchiveIcon}
           label={t('cleanup.unsubscribe.list.stats.messages')}
           value={stats.totalMessages}
         />
-        <MetricPill
-          icon={<MailXIcon className="size-4" aria-hidden="true" />}
+        <MetricCard
+          icon={MailXIcon}
           label={t('cleanup.unsubscribe.list.stats.oneClick')}
           value={stats.oneClick}
         />
       </div>
 
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div className="relative md:w-[360px]">
+      <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full lg:w-[420px]">
           <SearchIcon
             className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
             aria-hidden="true"
@@ -209,17 +230,17 @@ export function CandidateListPage() {
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.currentTarget.value)}
             placeholder={t('cleanup.unsubscribe.list.searchPlaceholder')}
-            className="pl-9"
+            className="bg-background h-11 pl-9"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
           <Select
             value={methodFilter}
             onValueChange={(value) => setMethodFilter(value as MethodFilter)}
           >
             <SelectTrigger
-              className="w-[170px]"
+              className="bg-background h-11 w-full justify-between gap-3 px-4 sm:w-[190px]"
               aria-label={t('cleanup.unsubscribe.list.filterLabel')}
             >
               <SelectValue>{methodFilterLabel}</SelectValue>
@@ -236,7 +257,7 @@ export function CandidateListPage() {
 
           <Select value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)}>
             <SelectTrigger
-              className="w-[180px]"
+              className="bg-background h-11 w-full justify-between gap-3 px-4 sm:w-[210px]"
               aria-label={t('cleanup.unsubscribe.list.sortLabel')}
             >
               <SelectValue>{sortModeLabel}</SelectValue>
@@ -273,7 +294,7 @@ export function CandidateListPage() {
       )}
 
       {!candidatesQuery.isPending && !candidatesQuery.isError && rawCandidates.length === 0 && (
-        <div className="border-foreground/10 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-10 text-center">
+        <div className="border-border bg-card flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-10 text-center shadow-sm">
           <h2 className="text-foreground text-base font-medium">
             {t('cleanup.unsubscribe.list.empty.title')}
           </h2>
@@ -351,16 +372,61 @@ function sortModeMessageKey(
   }
 }
 
-function MetricPill({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
+function UnsubscribeHelpAction() {
+  const t = useTranslations();
+
   return (
-    <div className="border-foreground/10 bg-muted/20 flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-      <div className="text-muted-foreground flex min-w-0 items-center gap-2 text-xs">
-        {icon}
-        <span className="truncate">{label}</span>
+    <Popover>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-8 place-items-center rounded-md transition-colors outline-none focus-visible:ring-2"
+            aria-label={t('cleanup.unsubscribe.list.helpLabel')}
+          />
+        }
+      >
+        <CircleHelpIcon className="size-4" aria-hidden="true" />
+      </PopoverTrigger>
+      <PopoverContent align="end" side="bottom" className="w-80">
+        <PopoverHeader>
+          <PopoverTitle>{t('cleanup.unsubscribe.list.helpTitle')}</PopoverTitle>
+          <PopoverDescription className="text-sm leading-6">
+            {t('cleanup.unsubscribe.list.helpBody')}
+          </PopoverDescription>
+        </PopoverHeader>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number;
+}) {
+  const locale = useLocale();
+  return (
+    <div className="border-border bg-card rounded-lg border px-5 py-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-muted-foreground min-w-0 text-sm leading-5 font-medium">{label}</p>
+        <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
       </div>
-      <Badge variant="secondary" className="font-mono tabular-nums">
-        {value}
-      </Badge>
+      <p className="text-foreground mt-4 text-3xl leading-none font-semibold tracking-normal tabular-nums">
+        {formatMetricValue(value, locale)}
+      </p>
     </div>
   );
+}
+
+function formatMetricValue(value: number, locale: string): string {
+  const intlLocale = locale === 'vi' ? 'vi-VN' : 'en-US';
+  return new Intl.NumberFormat(intlLocale, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
 }

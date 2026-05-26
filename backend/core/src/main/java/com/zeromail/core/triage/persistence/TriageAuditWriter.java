@@ -289,16 +289,16 @@ public class TriageAuditWriter {
 
     private static RuleActionType actionTypeFor(TriageActionResult actionResult) {
         return switch (actionResult) {
-            case TriageActionResult.Label ignored -> RuleActionType.LABEL;
-            case TriageActionResult.Archive ignored -> RuleActionType.ARCHIVE;
-            case TriageActionResult.SaveDraft ignored -> RuleActionType.SAVE_DRAFT;
-            case TriageActionResult.MarkRead ignored -> RuleActionType.MARK_READ;
-            case TriageActionResult.Star ignored -> RuleActionType.STAR;
-            case TriageActionResult.AddToDigest ignored -> RuleActionType.ADD_TO_DIGEST;
-            case TriageActionResult.MarkSpam ignored -> RuleActionType.MARK_SPAM;
-            case TriageActionResult.SendReply ignored -> RuleActionType.SEND_REPLY;
-            case TriageActionResult.ForwardEmail ignored -> RuleActionType.FORWARD_EMAIL;
-            case TriageActionResult.SendEmail ignored -> RuleActionType.SEND_EMAIL;
+            case TriageActionResult.Label _ -> RuleActionType.LABEL;
+            case TriageActionResult.Archive _ -> RuleActionType.ARCHIVE;
+            case TriageActionResult.SaveDraft _ -> RuleActionType.SAVE_DRAFT;
+            case TriageActionResult.MarkRead _ -> RuleActionType.MARK_READ;
+            case TriageActionResult.Star _ -> RuleActionType.STAR;
+            case TriageActionResult.AddToDigest _ -> RuleActionType.ADD_TO_DIGEST;
+            case TriageActionResult.MarkSpam _ -> RuleActionType.MARK_SPAM;
+            case TriageActionResult.SendReply _ -> RuleActionType.SEND_REPLY;
+            case TriageActionResult.ForwardEmail _ -> RuleActionType.FORWARD_EMAIL;
+            case TriageActionResult.SendEmail _ -> RuleActionType.SEND_EMAIL;
         };
     }
 }

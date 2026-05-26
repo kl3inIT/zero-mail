@@ -123,7 +123,7 @@ public class TriageAuditSaga {
                         changeToken(Map.of("addedLabelId", resolvedLabelId)),
                         actionArgsJson(resolvedLabel));
             }
-            case TriageActionResult.Archive ignored -> {
+            case TriageActionResult.Archive _ -> {
                 triageGmailWriter.archiveSkipInbox(command.tenantId(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         ARCHIVE_EXTERNAL_REF,
@@ -151,21 +151,21 @@ public class TriageAuditSaga {
                     yield GmailWriteResult.failed("draft_threading_invalid");
                 }
             }
-            case TriageActionResult.MarkRead ignored -> {
+            case TriageActionResult.MarkRead _ -> {
                 triageGmailWriter.markRead(command.tenantId(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         command.gmailMessageId(),
                         changeToken(Map.of("removedLabelIds", List.of("UNREAD"))),
                         null);
             }
-            case TriageActionResult.Star ignored -> {
+            case TriageActionResult.Star _ -> {
                 triageGmailWriter.star(command.tenantId(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         command.gmailMessageId(),
                         changeToken(Map.of("addedLabelIds", List.of("STARRED"))),
                         null);
             }
-            case TriageActionResult.AddToDigest ignored -> {
+            case TriageActionResult.AddToDigest _ -> {
                 String digestLabelId =
                         triageGmailWriter.addToDigest(command.tenantId(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
@@ -173,7 +173,7 @@ public class TriageAuditSaga {
                         changeToken(Map.of("addedLabelId", digestLabelId)),
                         null);
             }
-            case TriageActionResult.MarkSpam ignored -> {
+            case TriageActionResult.MarkSpam _ -> {
                 triageGmailWriter.markSpam(command.tenantId(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         command.gmailMessageId(),
@@ -185,12 +185,12 @@ public class TriageAuditSaga {
                                         List.of("INBOX"))),
                         null);
             }
-            case TriageActionResult.SendReply ignored ->
+            case TriageActionResult.SendReply _ ->
                     throw new IllegalArgumentException("send_reply must use outbound send phase");
-            case TriageActionResult.ForwardEmail ignored ->
+            case TriageActionResult.ForwardEmail _ ->
                     throw new IllegalArgumentException(
                             "forward_email must use outbound send phase");
-            case TriageActionResult.SendEmail ignored ->
+            case TriageActionResult.SendEmail _ ->
                     throw new IllegalArgumentException("send_email must use outbound send phase");
         };
     }
@@ -232,7 +232,7 @@ public class TriageAuditSaga {
                                         command.replyHeaders(),
                                         sendReply.draftBody(),
                                         sendReply.gmailThreadId());
-                        case TriageActionResult.ForwardEmail ignored -> {
+                        case TriageActionResult.ForwardEmail _ -> {
                             com.google.api.services.gmail.model.Message draftMessage =
                                     outboundRuleMessageBuilder.build(
                                             command.preWriteIntent(),
@@ -243,7 +243,7 @@ public class TriageAuditSaga {
                             yield triageGmailWriter.saveDraftMessage(
                                     command.tenantId(), draftMessage, command.gmailThreadId());
                         }
-                        case TriageActionResult.SendEmail ignored -> {
+                        case TriageActionResult.SendEmail _ -> {
                             com.google.api.services.gmail.model.Message draftMessage =
                                     outboundRuleMessageBuilder.build(
                                             command.preWriteIntent(),

@@ -408,7 +408,7 @@ public class TriageGmailWriter {
         log.info(
                 "event=triage_gmail_write tenantId={} gmailMessageId={} op={}",
                 tenantId,
-                gmailMessageId,
+                stripCrlf(gmailMessageId),
                 operation);
     }
 
@@ -416,8 +416,12 @@ public class TriageGmailWriter {
         log.info(
                 "event=triage_gmail_write tenantId={} gmailThreadId={} op={}",
                 tenantId,
-                gmailThreadId,
+                stripCrlf(gmailThreadId),
                 "saveDraft");
+    }
+
+    private static String stripCrlf(String value) {
+        return value == null ? null : value.replaceAll("[\\r\\n]", "_");
     }
 
     private static String requireText(String text, String fieldName) throws IOException {

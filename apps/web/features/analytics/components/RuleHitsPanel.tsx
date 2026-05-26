@@ -30,7 +30,10 @@ export function RuleHitsPanel({ ruleHits = [], className }: RuleHitsPanelProps) 
   const totalReverted = ruleHits.reduce((sum, ruleHit) => sum + safeCount(ruleHit.reverted), 0);
 
   return (
-    <Card data-testid="analytics-rule-hits-panel" className={cn('bg-card/95 shadow-sm', className)}>
+    <Card
+      data-testid="analytics-rule-hits-panel"
+      className={cn('border-border rounded-xl shadow-none', className)}
+    >
       <CardHeader className="gap-1.5">
         <CardDescription className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           {t('analytics.ruleHits.eyebrow')}
@@ -48,7 +51,7 @@ export function RuleHitsPanel({ ruleHits = [], className }: RuleHitsPanelProps) 
           <p className="text-muted-foreground text-sm">{t('analytics.ruleHits.empty')}</p>
         ) : (
           <div className="flex flex-col gap-5">
-            <div className="bg-muted/30 ring-foreground/10 grid overflow-hidden rounded-xl ring-1 md:grid-cols-3">
+            <div className="border-border bg-muted/30 grid overflow-hidden rounded-lg border md:grid-cols-3">
               <RuleSummaryStat
                 label={t('analytics.ruleHits.column.decisions')}
                 value={totalDecisions}
@@ -117,7 +120,7 @@ function RuleTrustRow({ ruleHit }: { ruleHit: RuleHitResponse }) {
   return (
     <div
       data-testid="rule-hit-table-row"
-      className="bg-muted/30 ring-foreground/10 rounded-xl p-4 ring-1"
+      className="border-border bg-muted/30 rounded-lg border p-3"
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,28rem)_auto] lg:items-center">
         <div className="min-w-0">

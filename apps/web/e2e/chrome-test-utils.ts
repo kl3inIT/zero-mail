@@ -316,7 +316,7 @@ export async function expectNoHorizontalOverflow(page: Page) {
 
 export async function expectAppShellChrome(page: Page, options: { sidebarVisible?: boolean } = {}) {
   await expect(page.getByTestId('app-shell')).toBeVisible();
-  await expect(page.getByTestId('chrome-header')).toBeVisible();
+  await expect(page.getByTestId('app-shell-content')).toBeVisible();
 
   if (options.sidebarVisible) {
     await expect(page.getByTestId('app-sidebar')).toBeVisible();
@@ -326,7 +326,7 @@ export async function expectAppShellChrome(page: Page, options: { sidebarVisible
 export async function expectChromeSuppressed(page: Page) {
   await expect(page.getByTestId('app-shell')).toHaveCount(0);
   await expect(page.getByTestId('app-sidebar')).toHaveCount(0);
-  await expect(page.getByTestId('chrome-header')).toHaveCount(0);
+  await expect(page.getByTestId('app-shell-content')).toHaveCount(0);
 }
 
 export async function expectNoClaySkinClasses(page: Page) {
