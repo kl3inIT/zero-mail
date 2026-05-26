@@ -71,7 +71,7 @@ export function TopupInstructions({
             <CardTitle>{t('billing.topup.waiting.heading')}</CardTitle>
             <CardDescription>{t('billing.topup.waiting.body')}</CardDescription>
           </div>
-          <div className="bg-accent-soft text-accent flex size-10 items-center justify-center rounded-lg">
+          <div className="bg-accent-soft text-accent-foreground flex size-10 items-center justify-center rounded-lg">
             <Landmark className="size-5" aria-hidden="true" />
           </div>
         </div>

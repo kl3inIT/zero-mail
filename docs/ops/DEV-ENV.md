@@ -131,7 +131,7 @@ echo "$NEW_PW"   # share via the secret store; clear shell history after
 
 ```sh
 cd zero-mail
-cp .env.local.example .env.local.local
+cp .env.example .env.local
 ```
 
 Then fill in:

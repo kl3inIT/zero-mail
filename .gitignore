@@ -2,7 +2,7 @@
 build/
 .kotlin/
 **/.kotlin/
-.env.local
+.env
 .env.local
 .env.dev
 .env.prod
@@ -21,3 +21,5 @@ loadtest/run/
 .codex-runs/
 .ssh/
 .last-deploy.txt
+.env
+jmix-scratch/

@@ -35,11 +35,6 @@ type TopupPackageSelectorProps = {
   onIntentCreated: (intent: TopupIntentDetails, baselineCredits: number) => void;
 };
 
-const FEATURE_KEYS = [
-  'billing.topup.packages.feature.instant',
-  'billing.topup.packages.feature.webhook',
-  'billing.topup.packages.feature.expiry',
-] as const;
 const EMPTY_PACKAGES: BillingPackageResponse[] = [];
 
 export function TopupPackageSelector({
@@ -55,7 +50,8 @@ export function TopupPackageSelector({
 
   const packages = packagesQuery.data ?? EMPTY_PACKAGES;
   const defaultPackage =
-    packages.length > 0 ? packages[Math.floor(packages.length / 2)] : undefined;
+    packages.find((billingPackage) => billingPackage.featured) ??
+    (packages.length > 0 ? packages[Math.floor(packages.length / 2)] : undefined);
   const selectedPackage =
     packages.find((billingPackage) => billingPackage.code === selectedCode) ?? defaultPackage;
 
@@ -99,6 +95,7 @@ export function TopupPackageSelector({
       <div className="grid gap-8 md:grid-cols-3">
         {packages.map((billingPackage) => {
           const isSelected = billingPackage.code === selectedPackage?.code;
+          const isHighlighted = billingPackage.featured || isSelected;
           const isSubmitting = createIntent.isPending && selectedCode === billingPackage.code;
 
           return (
@@ -106,7 +103,7 @@ export function TopupPackageSelector({
               key={billingPackage.code}
               className={cn(
                 'group bg-card/40 relative flex min-h-[500px] flex-col overflow-hidden rounded-[2rem] border p-8 shadow-sm backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl',
-                isSelected
+                isHighlighted
                   ? 'border-primary/60 ring-primary/20 ring-1'
                   : 'border-border/50 hover:border-primary/30',
               )}
@@ -115,6 +112,11 @@ export function TopupPackageSelector({
               <div className="bg-primary/5 group-hover:bg-primary/15 absolute -top-24 -right-24 h-48 w-48 rounded-full blur-[80px] transition-all duration-500" />
 
               <div className="relative flex flex-1 flex-col">
+                {billingPackage.featured ? (
+                  <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-full px-3 py-1 text-[11px] font-bold tracking-wider uppercase">
+                    {t('billing.topup.packages.recommended')}
+                  </div>
+                ) : null}
                 <div className="mb-8 space-y-3">
                   <h2 className="text-foreground text-2xl font-bold tracking-tight">
                     {billingPackage.name}
@@ -147,13 +149,13 @@ export function TopupPackageSelector({
                     {t('billing.topup.packages.includes')}
                   </p>
                   <ul className="space-y-4">
-                    {FEATURE_KEYS.map((featureKey) => (
-                      <li key={featureKey} className="flex items-start gap-3 text-sm">
+                    {billingPackage.includedFeatures.map((includedFeature) => (
+                      <li key={includedFeature} className="flex items-start gap-3 text-sm">
                         <div className="bg-primary/10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
                           <Check className="text-primary h-3 w-3" aria-hidden="true" />
                         </div>
                         <span className="text-muted-foreground/90 leading-tight">
-                          {t(featureKey)}
+                          {includedFeature}
                         </span>
                       </li>
                     ))}

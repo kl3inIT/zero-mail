@@ -1,0 +1,49 @@
+databaseChangeLog:
+  - changeSet:
+      id: 093-billing-package-presentation-fields
+      author: zeromail
+      comment: Add admin-managed package presentation fields used by the top-up package cards.
+      changes:
+        - addColumn:
+            tableName: billing_package
+            columns:
+              - column:
+                  name: included_features
+                  type: text[]
+                  defaultValueComputed: "ARRAY[]::text[]"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: featured
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE billing_package
+              SET included_features = ARRAY[
+                'Tạo mã chuyển khoản ngay lập tức',
+                'Tự động cộng tín dụng khi SePay xác nhận',
+                'Giữ mã thanh toán trong thời hạn an toàn'
+              ]::text[]
+              WHERE cardinality(included_features) = 0;
+
+              UPDATE billing_package
+              SET featured = true
+              WHERE code = 'PKG_50K';
+
+              ALTER TABLE billing_package
+                ADD CONSTRAINT ck_billing_package_included_features_non_empty
+                CHECK (cardinality(included_features) > 0);
+      rollback:
+        - sql:
+            sql: ALTER TABLE billing_package DROP CONSTRAINT IF EXISTS ck_billing_package_included_features_non_empty
+        - dropColumn:
+            tableName: billing_package
+            columns:
+              - column:
+                  name: included_features
+              - column:
+                  name: featured

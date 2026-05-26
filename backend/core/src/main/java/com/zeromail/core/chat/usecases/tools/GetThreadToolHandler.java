@@ -7,6 +7,7 @@ import com.google.api.services.gmail.model.Thread;
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.usecases.ChatToolCatalog.GetThreadArgs;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.tenant.TenantContext;
 import java.io.IOException;
 import java.time.Instant;
@@ -79,13 +80,13 @@ public class GetThreadToolHandler implements ChatReadToolHandler {
             MessagePart payload = gmailMessage.getPayload();
             participants.addAll(
                     SearchInboxToolHandler.parseRecipients(
-                            SearchInboxToolHandler.headerValue(payload, "From")));
+                            GmailMessageHeaders.firstValue(payload, "From").orElse("")));
             participants.addAll(
                     SearchInboxToolHandler.parseRecipients(
-                            SearchInboxToolHandler.headerValue(payload, "To")));
+                            GmailMessageHeaders.firstValue(payload, "To").orElse("")));
             participants.addAll(
                     SearchInboxToolHandler.parseRecipients(
-                            SearchInboxToolHandler.headerValue(payload, "Cc")));
+                            GmailMessageHeaders.firstValue(payload, "Cc").orElse("")));
             Instant messageDate = SearchInboxToolHandler.internalDate(gmailMessage);
             if (messageDate.isAfter(lastActivityAt)) {
                 lastActivityAt = messageDate;

@@ -41,7 +41,6 @@ public class BillingTopupService {
     private static final Logger log = LoggerFactory.getLogger(BillingTopupService.class);
     private static final Pattern CROCKFORD_EIGHT_CHARACTER_CODE =
             Pattern.compile("[0-9A-HJKMNPQRSTVWXYZ]{8}");
-    private static final Pattern PACKAGE_CODE_TOKEN = Pattern.compile("PKG_[A-Z0-9_]{2,32}");
     private static final String PAYMENT_SEPAY_REF_TYPE = "PAYMENT_SEPAY";
     private static final int PAID_TOPUP_GRANT_PRIORITY = 100;
 
@@ -81,7 +80,7 @@ public class BillingTopupService {
         String normalizedPackageCode = normalizeRequiredPackageCode(packageCode);
         BillingPackageEntity billingPackage =
                 packageRepository
-                        .findByCodeAndActiveTrue(normalizedPackageCode)
+                        .findByCodeIgnoreCaseAndActiveTrue(normalizedPackageCode)
                         .orElseThrow(
                                 () ->
                                         new IllegalArgumentException(
@@ -185,8 +184,7 @@ public class BillingTopupService {
             log.warn("event=sepay_webhook_unknown_code tenantId=unresolved");
             return;
         }
-        LinkedHashSet<String> candidatePackageCodes =
-                extractCandidatePackageCodes(packageCode, referenceCode, code, content);
+        String candidatePackageCode = normalizeOptionalPackageCode(packageCode);
 
         BillingTopupIntentTenantLookup matchedLookup = null;
         BillingTopupIntentTenantLookup firstKnownLookup = null;
@@ -209,7 +207,7 @@ public class BillingTopupService {
             if (lookup.amountVnd() != transferAmountVnd) {
                 continue;
             }
-            if (!packageCodeMatches(candidatePackageCodes, lookup.packageCodeSnapshot())) {
+            if (!packageCodeMatches(candidatePackageCode, lookup.packageCodeSnapshot())) {
                 continue;
             }
             matchedLookup = lookup;
@@ -416,49 +414,26 @@ public class BillingTopupService {
         }
     }
 
-    private LinkedHashSet<String> extractCandidatePackageCodes(
-            String packageCode, String referenceCode, String code, String content) {
-        LinkedHashSet<String> candidates = new LinkedHashSet<>();
-        addPackageCodeIfPresent(candidates, packageCode);
-        scanPackageCodes(candidates, referenceCode);
-        scanPackageCodes(candidates, code);
-        scanPackageCodes(candidates, content);
-        return candidates;
-    }
-
-    private static void addPackageCodeIfPresent(LinkedHashSet<String> candidates, String rawValue) {
-        if (rawValue == null || rawValue.isBlank()) {
-            return;
-        }
-        String normalized = rawValue.trim().toUpperCase(Locale.ROOT);
-        if (PACKAGE_CODE_TOKEN.matcher(normalized).matches()) {
-            candidates.add(normalized);
-        }
-    }
-
-    private static void scanPackageCodes(LinkedHashSet<String> candidates, String rawValue) {
-        if (rawValue == null) {
-            return;
-        }
-        Matcher matcher = PACKAGE_CODE_TOKEN.matcher(rawValue.toUpperCase(Locale.ROOT));
-        while (matcher.find()) {
-            candidates.add(matcher.group());
-        }
-    }
-
     private static boolean packageCodeMatches(
-            LinkedHashSet<String> candidatePackageCodes, String packageCodeSnapshot) {
-        if (candidatePackageCodes.isEmpty() || packageCodeSnapshot == null) {
+            String candidatePackageCode, String packageCodeSnapshot) {
+        if (candidatePackageCode == null || packageCodeSnapshot == null) {
             return true;
         }
-        return candidatePackageCodes.contains(packageCodeSnapshot.toUpperCase(Locale.ROOT));
+        return candidatePackageCode.equalsIgnoreCase(packageCodeSnapshot);
     }
 
     private static String normalizeRequiredPackageCode(String packageCode) {
         if (packageCode == null || packageCode.isBlank()) {
             throw new IllegalArgumentException("Billing package code is required");
         }
-        return packageCode.trim().toUpperCase(Locale.ROOT);
+        return packageCode.trim();
+    }
+
+    private static String normalizeOptionalPackageCode(String packageCode) {
+        if (packageCode == null || packageCode.isBlank()) {
+            return null;
+        }
+        return packageCode.trim();
     }
 
     private static String buildTransferContent(String orderCode, String packageCode) {

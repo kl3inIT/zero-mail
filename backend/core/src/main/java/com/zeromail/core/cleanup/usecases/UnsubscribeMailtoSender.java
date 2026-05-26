@@ -1,10 +1,12 @@
 package com.zeromail.core.cleanup.usecases;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.cleanup.domain.UnsubscribeResult;
-import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.outbound.usecases.OutboundSendCommand;
+import com.zeromail.core.outbound.usecases.OutboundSendException;
+import com.zeromail.core.outbound.usecases.OutboundSendGateway;
+import com.zeromail.core.outbound.usecases.OutboundSendResult;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
@@ -23,9 +25,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * RFC 6068 mailto unsubscribe — Gmail send-as-self gateway. Sibling boundary class of {@code
- * TriageGmailWriter} (D-05 SRP: does NOT extend it). Listed in the {@code GmailWriteBoundaryTest}
- * allow-list together with {@code TriageGmailWriter} — only these two classes in {@code ..core..}
- * may invoke {@code Gmail.users().messages().send()}.
+ * TriageGmailWriter} (D-05 SRP: does NOT extend it). Delegates the Gmail message-send call through
+ * the shared {@link OutboundSendGateway} (Phase 08.1 invariant: exactly ONE direct Gmail
+ * message-send call site, owned by {@code GmailOutboundSendGateway}).
  *
  * <p>Per D-06: only recipient + subject extracted from the persisted {@code
  * list_unsubscribe_mailto} header value; body is the fixed RFC convention string {@code
@@ -48,25 +50,24 @@ import org.springframework.stereotype.Component;
 public class UnsubscribeMailtoSender {
 
     private static final Logger log = LoggerFactory.getLogger(UnsubscribeMailtoSender.class);
-    private static final String USER_ID = "me";
     private static final String UNKNOWN_DOMAIN = "unknown";
 
-    private final GmailApiClientFactory gmailApiClientFactory;
+    private final OutboundSendGateway outboundSendGateway;
 
     /**
      * No-arg constructor used by Wave 0 reflection-based test stubs ({@code
-     * getDeclaredConstructor().newInstance()}). In tests the Gmail send call will fail cleanly
+     * getDeclaredConstructor().newInstance()}). In tests the gateway send call will fail cleanly
      * (caught + returned as {@code Failed}) rather than propagate an NPE. Spring will never wire
-     * this constructor because the {@link #UnsubscribeMailtoSender(GmailApiClientFactory)} variant
-     * is annotated {@code @Autowired}.
+     * this constructor because the {@link #UnsubscribeMailtoSender(OutboundSendGateway)} variant is
+     * annotated {@code @Autowired}.
      */
     public UnsubscribeMailtoSender() {
-        this.gmailApiClientFactory = null;
+        this.outboundSendGateway = null;
     }
 
     @Autowired
-    public UnsubscribeMailtoSender(GmailApiClientFactory gmailApiClientFactory) {
-        this.gmailApiClientFactory = gmailApiClientFactory;
+    public UnsubscribeMailtoSender(OutboundSendGateway outboundSendGateway) {
+        this.outboundSendGateway = outboundSendGateway;
     }
 
     /**
@@ -114,14 +115,13 @@ public class UnsubscribeMailtoSender {
 
         try {
             Message gmailMessage = buildAndEncodeMessage(parsed);
-            Gmail gmailApiClient = gmailApiClientFactory.buildClientForTenant(tenantId);
-            Message sentMessage =
-                    gmailApiClient.users().messages().send(USER_ID, gmailMessage).execute();
+            OutboundSendResult sendResult =
+                    outboundSendGateway.send(new OutboundSendCommand(tenantId, gmailMessage));
             log.info(
                     "event=cleanup_unsubscribe_mailto_sent tenantId={} senderDomain={}",
                     tenantId,
                     senderDomain);
-            return UnsubscribeResult.ok(sentMessage.getId());
+            return UnsubscribeResult.ok(sendResult.gmailMessageId());
         } catch (GoogleJsonResponseException googleResponseException) {
             log.warn(
                     "event=cleanup_unsubscribe_mailto_gmail_failed tenantId={} senderDomain={} statusCode={}",
@@ -142,11 +142,17 @@ public class UnsubscribeMailtoSender {
                     tenantId,
                     senderDomain);
             return UnsubscribeResult.failed("NETWORK_ERROR");
+        } catch (OutboundSendException gatewayFailure) {
+            log.warn(
+                    "event=cleanup_unsubscribe_mailto_gateway_failed tenantId={} senderDomain={}",
+                    tenantId,
+                    senderDomain);
+            return UnsubscribeResult.failed("GATEWAY_ERROR");
         } catch (RuntimeException unexpectedFailure) {
-            // Defensive catch for null-factory test fixture (no-arg constructor reflection path)
+            // Defensive catch for null-gateway test fixture (no-arg constructor reflection path)
             // and for any unforeseen runtime failure during Gmail send. Wave 0
             // UnsubscribeMailtoSenderRecipientGuardTest.parsesMailtoUriRecipient_correctly relies
-            // on the happy path not propagating exceptions when the factory is unwired.
+            // on the happy path not propagating exceptions when the gateway is unwired.
             log.warn(
                     "event=cleanup_unsubscribe_mailto_unexpected_failed tenantId={} senderDomain={}",
                     tenantId,

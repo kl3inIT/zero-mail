@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.zeromail.worker.PostgresContainerTest;
 import java.util.UUID;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -48,14 +49,17 @@ class UnsubscribeCampaignE2ETest extends PostgresContainerTest {
     }
 
     @Test
+    @Disabled(
+            "Stub assertion (UUID non-null) gives false-positive coverage. Disabled until the"
+                    + " real worker-pickup-per-sender-atomic flow is wired against a Postgres test"
+                    + " container (Plan 08-01 Task 2.3). Re-enable when the assertion exercises"
+                    + " CampaignExecuteService + UnsubscribeCampaignHandler end-to-end.")
     void executeCampaign_workerPicksJob_perSenderAtomic() {
         assertFutureTypePresent(CAMPAIGN_EXECUTE_SERVICE);
         assertFutureTypePresent(UNSUBSCRIBE_CAMPAIGN_HANDLER);
 
         UUID tenantId = UUID.randomUUID();
         assertThat(tenantId).as("placeholder for fixture tenant").isNotNull();
-        // The assertion shape is locked in <action> Task 2.3 of 08-01-PLAN; the body remains a
-        // stub until production classes ship.
     }
 
     private static void assertFutureTypePresent(String futureTypeName) {

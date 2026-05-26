@@ -1,7 +1,5 @@
 package com.zeromail.core.chat.domain.sendaction;
 
-import com.zeromail.core.shared.privacy.Sensitive;
-
 @SuppressWarnings("unused")
 public record ForwardEmailToolArgs(
         String sourceMessageId,
@@ -9,7 +7,7 @@ public record ForwardEmailToolArgs(
         String cc,
         String subject,
         String gmailThreadId,
-        Sensitive<String> additionalBody) {
+        String additionalBody) {
 
     public ForwardEmailToolArgs {
         sourceMessageId = requireText(sourceMessageId, "sourceMessageId");
@@ -17,23 +15,7 @@ public record ForwardEmailToolArgs(
         cc = optionalText(cc);
         subject = requireText(subject, "subject");
         gmailThreadId = optionalText(gmailThreadId);
-        additionalBody = requireAdditionalBody(additionalBody);
-    }
-
-    public ForwardEmailToolArgs(
-            String sourceMessageId,
-            String to,
-            String cc,
-            String subject,
-            String gmailThreadId,
-            String additionalBody) {
-        this(
-                sourceMessageId,
-                to,
-                cc,
-                subject,
-                gmailThreadId,
-                Sensitive.of(requireText(additionalBody, "additionalBody")));
+        additionalBody = requireText(additionalBody, "additionalBody");
     }
 
     private static String requireText(String text, String fieldName) {
@@ -49,12 +31,5 @@ public record ForwardEmailToolArgs(
         }
         String trimmedText = text.trim();
         return trimmedText.isBlank() ? null : trimmedText;
-    }
-
-    private static Sensitive<String> requireAdditionalBody(Sensitive<String> additionalBody) {
-        if (additionalBody == null || additionalBody.value().isBlank()) {
-            throw new IllegalArgumentException("additionalBody must not be blank");
-        }
-        return additionalBody;
     }
 }

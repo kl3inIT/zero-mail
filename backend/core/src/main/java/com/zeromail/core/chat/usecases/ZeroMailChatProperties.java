@@ -15,6 +15,7 @@ public record ZeroMailChatProperties(
         @Min(1) @DefaultValue("24576") int maxHistoryTokens,
         @Min(1) @DefaultValue("4000") int maxToolOutputTokens,
         @Min(1) @DefaultValue("4") int maxReadToolIterations,
+        @Min(0) @DefaultValue("1") int transientStreamRetryMaxAttempts,
         @Valid HistoryProperties history,
         @Valid TokenizerProperties tokenizer) {
 

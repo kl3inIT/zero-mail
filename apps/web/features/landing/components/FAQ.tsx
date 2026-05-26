@@ -1,7 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 
 export default async function FAQ() {
-
   const t = await getTranslations('landingFaq');
 
   const faqs = [
@@ -33,8 +32,8 @@ export default async function FAQ() {
               </div>
             ))}
           </div>
-      </div>
-    </section>
-  </>
-  )
+        </div>
+      </section>
+    </>
+  );
 }

@@ -34,6 +34,8 @@ regexes = [
     '''AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=''',
     # Loadtest hardcoded "loadtest" credentials and dummy API keys.
     '''test-(openai|anthropic|google|deepseek|sepay|resend|platform|webhook)-key''',
+    # E2E stub placeholders in application-e2e-stub.yml (fake provider keys).
+    '''e2e-stub-(openai|anthropic|google|deepseek|sepay|resend|platform|webhook|client-id|client-secret)(-key)?''',
     '''(client_id|client_secret|api_key)\s*[:=]\s*loadtest''',
     # Documented sample SHA / OAuth client ID shapes in runbooks.
     '''<vps-ip>''',

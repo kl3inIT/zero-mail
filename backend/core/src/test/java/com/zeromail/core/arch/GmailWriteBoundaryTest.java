@@ -15,15 +15,15 @@ import java.util.List;
 /**
  * Boundary: only an explicit allow-list of classes may invoke Gmail write APIs (label modify, draft
  * create/delete, message send). Phase 4 originally guarded {@code core.triage} only; Phase 8
- * (bulk-unsubscribe-campaign) extends the scope to all of {@code core} and adds {@link
- * com.zeromail.core.cleanup.usecases.UnsubscribeMailtoSender} to the writer allow-list so the RFC
- * 6068 mailto unsubscribe flow can call {@code Gmail.users().messages().send()} without breaking
- * the rule.
+ * (bulk-unsubscribe-campaign) extends the scope to all of {@code core}. Phase 08.1 introduced
+ * {@link com.zeromail.core.outbound.usecases.GmailOutboundSendGateway} as the single shared owner
+ * of {@code Gmail.users().messages().send()} — the {@code UnsubscribeMailtoSender} and chat {@code
+ * AssistantSendExecutor} delegate through it rather than calling Gmail directly.
  *
  * <p>Auto-send of arbitrary user-composed mail is still forbidden — only the unsubscribe-mailto
- * code path is granted send privilege, and it is locked down by {@code
- * UnsubscribeMailtoSenderRecipientGuardTest} (recipient must come from the persisted {@code
- * list_unsubscribe_mailto} header, body is the fixed RFC 8058 string).
+ * code path and chat user-confirmed send path are routed through the gateway, and each call site
+ * has its own input-validation invariants (see {@code UnsubscribeMailtoSenderRecipientGuardTest}
+ * for the mailto path).
  */
 @AnalyzeClasses(packages = "com.zeromail", importOptions = ImportOption.DoNotIncludeTests.class)
 class GmailWriteBoundaryTest {
@@ -31,8 +31,7 @@ class GmailWriteBoundaryTest {
     static final List<String> ALLOWED_GMAIL_WRITERS =
             List.of(
                     "com.zeromail.core.triage.usecases.TriageGmailWriter",
-                    "com.zeromail.core.cleanup.usecases.UnsubscribeMailtoSender",
-                    "com.zeromail.core.chat.confirm.send.AssistantSendExecutor");
+                    "com.zeromail.core.outbound.usecases.GmailOutboundSendGateway");
     private static final String GMAIL_MESSAGES_OWNER = "Gmail.Users.Messages";
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
 

@@ -12,16 +12,17 @@ import java.util.stream.Stream;
  *
  * <p>H-3 Path A: the cleanup module reuses the existing {@code triage_audit} surface rather than
  * introducing a parallel table. The {@code source} column plus the partial index {@code
- * idx_triage_audit_cleanup} (changelog 046) keep undo queries scoped to cleanup-sourced rows so the
- * per-message Gmail unarchive (Plan 07) never touches a row written by triage.
+ * idx_triage_audit_cleanup} (changelog 086-triage-audit-source.yaml) keep undo queries scoped to
+ * cleanup-sourced rows so the per-message Gmail unarchive (Plan 07) never touches a row written by
+ * triage.
  *
  * <p><b>Module placement (D-17):</b> this enum lives in {@code core.triage.domain}, not {@code
  * core.cleanup}, because it sits on the triage-owned {@code TriageAuditEntity}. Placing it in
  * {@code core.cleanup} would invert the {@code cleanup → triage} Spring Modulith dependency
  * direction.
  *
- * <p>Values match the DB CHECK constraint on {@code triage_audit.source} (changelog 046): {@code
- * 'TRIAGE'}, {@code 'CLEANUP_CAMPAIGN'}.
+ * <p>Values match the DB CHECK constraint on {@code triage_audit.source} (changelog
+ * 086-triage-audit-source.yaml): {@code 'TRIAGE'}, {@code 'CLEANUP_CAMPAIGN'}.
  */
 public enum CleanupAuditSource implements IdentifiedEnum {
     TRIAGE,

@@ -9,5 +9,9 @@ public interface BillingPackageRepository extends JpaRepository<BillingPackageEn
 
     List<BillingPackageEntity> findByActiveTrueOrderByDisplayOrderAscCodeAsc();
 
-    Optional<BillingPackageEntity> findByCodeAndActiveTrue(String code);
+    Optional<BillingPackageEntity> findByCodeIgnoreCaseAndActiveTrue(String code);
+
+    boolean existsByCodeIgnoreCase(String code);
+
+    List<BillingPackageEntity> findAllByOrderByDisplayOrderAscCodeAsc();
 }

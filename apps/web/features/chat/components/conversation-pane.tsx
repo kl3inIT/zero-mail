@@ -1,7 +1,7 @@
 'use client';
 
 import type { UIMessage } from 'ai';
-import { ArrowUp, Sparkles } from 'lucide-react';
+import { ArrowUp, Loader2, Sparkles, Square } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -22,7 +22,6 @@ import {
 import { Response } from '@/components/ai/response';
 import { Suggestion, Suggestions } from '@/components/ai/suggestion';
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from '@/components/ai/tool';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   historyDetailToUIMessages,
@@ -33,10 +32,10 @@ import { useChatDetail } from '@/features/chat/hooks/use-chat-history';
 import { PreviewCard } from './preview-card/preview-card';
 import {
   isBodySlotToolName,
-  isWriteReversibleToolName,
   parseMaybeJsonObject,
   type PreviewCardAction,
 } from './preview-card/preview-card-state';
+import { hasToolResultRenderer, renderToolResult } from './tool-results';
 
 type ToolLikePart = {
   type: string;
@@ -123,6 +122,18 @@ function ChatMessageParts({
             );
           }
 
+          if (hasToolResultRenderer(toolName)) {
+            return (
+              <div key={`${message.id}-${toolPart.toolCallId ?? index}`} className="my-1">
+                {renderToolResult({
+                  toolName,
+                  input: parseMaybeJsonObject(toolPart.input),
+                  output: parseMaybeJsonObject(toolPart.output),
+                })}
+              </div>
+            );
+          }
+
           return (
             <Tool key={`${message.id}-${toolPart.toolCallId ?? index}`} defaultOpen>
               <ToolHeader
@@ -136,13 +147,6 @@ function ChatMessageParts({
                   output={parseMaybeJsonObject(toolPart.output)}
                   errorText={toolPart.errorText}
                 />
-                {isWriteReversibleToolName(toolName) && (
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" size="sm" variant="outline">
-                      Confirm
-                    </Button>
-                  </div>
-                )}
               </ToolContent>
             </Tool>
           );
@@ -195,8 +199,13 @@ export function ConversationPane({
     const text = message.text.trim();
     if (!text) return;
     setStopped(false);
-    await chat.sendMessage({ text });
     setInput('');
+    try {
+      await chat.sendMessage({ text });
+    } catch (sendFailure) {
+      setInput(text);
+      throw sendFailure;
+    }
   }
 
   function handleStop() {
@@ -224,7 +233,7 @@ export function ConversationPane({
           {messages.length === 0 ? (
             <ConversationEmptyState
               icon={
-                <span className="bg-accent-soft text-accent inline-flex rounded-lg p-2">
+                <span className="bg-accent-soft text-accent-foreground inline-flex rounded-lg p-2">
                   <Sparkles className="size-8" />
                 </span>
               }
@@ -232,7 +241,7 @@ export function ConversationPane({
               description={t('empty.body')}
             >
               <div className="mx-auto grid max-w-[520px] gap-4 text-center">
-                <span className="bg-accent-soft text-accent mx-auto inline-flex rounded-lg p-2">
+                <span className="bg-accent-soft text-accent-foreground mx-auto inline-flex rounded-lg p-2">
                   <Sparkles className="size-8" />
                 </span>
                 <div className="space-y-1">
@@ -251,17 +260,20 @@ export function ConversationPane({
               </div>
             </ConversationEmptyState>
           ) : (
-            messages.map((message) => (
-              <Message from={message.role} key={message.id}>
-                <MessageContent>
-                  <ChatMessageParts
-                    chatId={chatId}
-                    message={message}
-                    persistenceAckCount={chat.persistenceAckCount}
-                  />
-                </MessageContent>
-              </Message>
-            ))
+            messages.map((message) => {
+              const hasToolPart = message.parts.some((part) => part.type.startsWith('tool-'));
+              return (
+                <Message from={message.role} key={message.id}>
+                  <MessageContent className={hasToolPart ? 'w-full max-w-full' : undefined}>
+                    <ChatMessageParts
+                      chatId={chatId}
+                      message={message}
+                      persistenceAckCount={chat.persistenceAckCount}
+                    />
+                  </MessageContent>
+                </Message>
+              );
+            })
           )}
           {chat.status === 'submitted' && <Loader className="px-1 py-2" />}
           {stopped && (
@@ -285,10 +297,22 @@ export function ConversationPane({
             aria-label={isBusy ? t('prompt.stop') : t('prompt.send')}
             status={chat.status}
             onStop={handleStop}
-            disabled={!input.trim() && !isBusy}
-            className="bg-primary text-primary-foreground size-10 rounded-md"
+            disabled={isBusy ? false : !input.trim()}
+            onClick={(event) => {
+              if (isBusy) {
+                event.preventDefault();
+                handleStop();
+              }
+            }}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground size-10 rounded-md disabled:cursor-not-allowed"
           >
-            {!isBusy && <ArrowUp className="size-4" />}
+            {chat.status === 'submitted' ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : chat.status === 'streaming' ? (
+              <Square className="size-4 fill-current" />
+            ) : (
+              <ArrowUp className="size-4" />
+            )}
           </PromptInputSubmit>
         </PromptInput>
       </div>

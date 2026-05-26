@@ -105,7 +105,15 @@ public class ChatToolCatalog {
         return List.of(
                 tool(
                         ChatToolName.SEARCH_INBOX,
-                        "Search Gmail messages for this tenant",
+                        "Search Gmail messages for this tenant using Gmail search query"
+                                + " syntax. To match a sender by brand/keyword use parentheses:"
+                                + " from:(github), from:(vercel), from:(jmix). To match a full"
+                                + " domain use from:domain.com (e.g. from:vercel.com). Combine"
+                                + " with space (AND) or OR. Date filter: newer_than:30d."
+                                + " Examples: from:(github) newer_than:30d, subject:(invoice),"
+                                + " is:unread. If the first query returns 0 results, immediately"
+                                + " retry with a broader form -- replace from:keyword with"
+                                + " from:(keyword), drop date filters, or widen the brand match.",
                         SearchInboxArgs.class),
                 tool(
                         ChatToolName.GET_MESSAGE,
@@ -171,15 +179,23 @@ public class ChatToolCatalog {
                         UpdatePersonalInstructionsArgs.class),
                 tool(
                         ChatToolName.SEND_EMAIL,
-                        "Send a new email after user confirmation",
+                        "Compose a NEW email to a recipient (not a reply within an existing"
+                                + " thread). Call this whenever the user expresses intent to send"
+                                + " a fresh email, even if some fields contain placeholders --"
+                                + " the user will edit any field in the preview card before"
+                                + " confirming. Do NOT describe the email in plain assistant text"
+                                + " instead of calling this tool.",
                         SendEmailToolArgs.class),
                 tool(
                         ChatToolName.REPLY_EMAIL,
-                        "Reply to a message after user confirmation",
+                        "Reply within an existing email thread. Requires a messageId from"
+                                + " searchInbox/getMessage. Call this when the user wants to"
+                                + " respond to a specific message.",
                         ReplyEmailToolArgs.class),
                 tool(
                         ChatToolName.FORWARD_EMAIL,
-                        "Forward a message after user confirmation",
+                        "Forward an existing email message to new recipients. Requires the"
+                                + " messageId of the email to forward.",
                         ForwardEmailToolArgs.class));
     }
 
