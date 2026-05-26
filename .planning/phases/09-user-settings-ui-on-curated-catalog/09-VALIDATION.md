@@ -2,8 +2,8 @@
 phase: 09
 slug: user-settings-ui-on-curated-catalog
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-26
 revised: 2026-05-26 (planner-checker iteration 1 — added AssistantKnowledgeAppendCallSiteTest per BLOCKER #1; corrected stub count per INFO #8)
 ---
