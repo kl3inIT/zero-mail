@@ -52,6 +52,39 @@ const unauthorizedRedirectMiddleware: Middleware = {
   },
 };
 
+// Playwright e2e short-circuit (server-side only). The default
+// playwright.config.ts spins up `next dev` with NO Spring Boot backend, so
+// EVERY server-side fetch loses to ECONNREFUSED:
+//   - proxy.ts middleware /me on every navigation
+//   - app/layout.tsx /me (locale reassert)
+//   - (protected)/(app)/layout.tsx prefetchQuery triplet (me, balance, status)
+//   - analytics/page.tsx prefetchQuery (summary)
+//   - settings/page.tsx /me
+//   - landing Hero/TopBar /me
+// Next's error reporter logs "fetch failed / Switched to client rendering"
+// stack BEFORE caller try/catch (or queryClient.prefetchQuery's rejected-
+// promise handling) can absorb it, drowning Playwright output in noise AND
+// slowing hydration enough to flake real assertions (e.g. the analytics
+// "Last 30 days" tab click in analytics.spec.ts:36).
+//
+// Throwing at the openapi-fetch request boundary catches every api.GET/POST/
+// PUT/PATCH/DELETE through ONE chokepoint. Browser side keeps working —
+// Playwright's page.route() mocks own the per-test response surface for
+// client React Query hooks, which is the existing test contract.
+//
+// playwright.golden.config.ts runs against a real Spring Boot e2e-stub backend
+// and leaves ZM_E2E unset, so the launch-golden-path spec still exercises
+// real /me, /balance, /status, /analytics end-to-end.
+const zmE2eShortCircuitMiddleware: Middleware = {
+  async onRequest({ request }) {
+    if (typeof window === 'undefined' && process.env.ZM_E2E === '1') {
+      throw new Error('ZM_E2E: skipping backend fetch in test mode');
+    }
+    return request;
+  },
+};
+
+api.use(zmE2eShortCircuitMiddleware);
 api.use(xsrfMiddleware);
 api.use(unauthorizedRedirectMiddleware);
 
