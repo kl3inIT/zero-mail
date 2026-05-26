@@ -41,6 +41,7 @@
             "shared :: error",
             "shared :: exception",
             "shared :: html",
+            "shared :: net",
             "shared :: persistence",
             "shared :: lang",
             "gmail :: persistence.crypto"
