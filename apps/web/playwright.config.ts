@@ -47,6 +47,17 @@ export default defineConfig({
     url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
+    env: {
+      // Short-circuits RSC /me fetches in account-api.getCurrentUserCached.
+      // The default config runs `next dev` with NO Spring Boot backend, so
+      // every layout/page RSC fetch loses to ECONNREFUSED and Next logs the
+      // error loudly before user try/catch recovers. ZM_E2E=1 makes those
+      // fetches throw synchronously inside the cache wrapper, so callers
+      // catch cleanly with no network noise. launch-golden-path runs from
+      // playwright.golden.config.ts which leaves ZM_E2E unset so /me still
+      // hits the real Spring Boot e2e-stub backend.
+      ZM_E2E: '1',
+    },
     // MSW node interception is intentionally OFF. It used to be wired through
     // Next instrumentation so RSC fetches like `getCurrentUserCached` in
     // app/layout.tsx would not escape to the real backend. Two problems made

@@ -57,6 +57,16 @@ export async function fetchCurrentUser(opts: GetCurrentUserOptions = {}): Promis
  */
 export const getCurrentUserCached = cache(
   async (cookieHeader: string | undefined): Promise<CurrentUser> => {
+    // Playwright e2e short-circuit. The default playwright config runs against
+    // `next dev` with no Spring Boot backend, so every RSC /me fetch loses to
+    // ECONNREFUSED and Next's error reporter logs it loudly before our try/catch
+    // recovers. Skip the fetch entirely in that mode — callers all wrap this in
+    // try/catch and fall back to cookie state (locale, theme) cleanly.
+    // launch-golden-path uses playwright.golden.config.ts which runs a real
+    // backend and does NOT set ZM_E2E, so that flow still hits /me normally.
+    if (process.env.ZM_E2E === '1') {
+      throw new Error('ZM_E2E: skipping /me fetch in test mode');
+    }
     if (cookieHeader === undefined) {
       // No cookie context (unauthenticated path) — fall through to default fetch.
       return fetchCurrentUser();
