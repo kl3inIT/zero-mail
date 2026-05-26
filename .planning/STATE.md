@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
 Plan: 6 of 6
 Status: Phase 08.1 shipped — PR #60
-Last activity: 2026-05-25 - Completed quick task 260525-krs: per-tool UI components for 15 chat tools (port inbox-zero pattern, replace JSON dump)
+Last activity: 2026-05-26 - Completed quick task 260526-qal: Replace privacy + terms placeholders with launch-ready content
 
 ## Current Milestone Roadmap
 
@@ -395,6 +395,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260526-qal | Replace privacy + terms placeholders with launch-ready content (CASA-focused: Google Limited Use + AI/LLM disclosure + outbound write-action disclosure + draft-body carve-out); structured legal.* i18n in EN + VI, public pages render TOC + 11/15 sections with design tokens | 2026-05-26 | 03c9f8b5 | — | [260526-qal-replace-privacy-terms-placeholders-with-](./quick/260526-qal-replace-privacy-terms-placeholders-with-/) |
 | 260525-krs | Per-tool UI components for 15 chat tools (8 read + 7 writeReversible): port inbox-zero pattern with SubtleToolCollapsible + per-tool components + dispatcher, replace generic JSON dump in conversation-pane.tsx | 2026-05-25 | 422959af | — | [260525-krs-tool-results-ui](./quick/260525-krs-tool-results-ui/) |
 | 260525-kmm | Fix three chat conversation pane UI bugs: clear input immediately on submit, restore send button per-status icons + disabled contrast, remove dead Confirm button on writeReversible tools | 2026-05-25 | 9662f08e | — | [260525-kmm-fix-chat-input-ui-bugs](./quick/260525-kmm-fix-chat-input-ui-bugs/) |
 | 260525-kij | Fix chat sendEmail tool not callable for new emails: drop dead replyToMessageId from SendEmailToolArgs, rewrite SEND/REPLY/FORWARD_EMAIL tool descriptions, add Tool invocation policy to system prompt | 2026-05-25 | e642943d | — | [260525-kij-fix-sendemail-schema-prompt](./quick/260525-kij-fix-sendemail-schema-prompt/) |
