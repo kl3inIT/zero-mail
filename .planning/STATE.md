@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
 Plan: 6 of 6
 Status: Phase 08.1 shipped — PR #60
-Last activity: 2026-05-25 - Completed quick task 260525-gf6: monorepo config consistency + Turborepo 2.9 best practices
+Last activity: 2026-05-25 - Completed quick task 260525-krs: per-tool UI components for 15 chat tools (port inbox-zero pattern, replace JSON dump)
 
 ## Current Milestone Roadmap
 
@@ -395,6 +395,9 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260525-krs | Per-tool UI components for 15 chat tools (8 read + 7 writeReversible): port inbox-zero pattern with SubtleToolCollapsible + per-tool components + dispatcher, replace generic JSON dump in conversation-pane.tsx | 2026-05-25 | 422959af | — | [260525-krs-tool-results-ui](./quick/260525-krs-tool-results-ui/) |
+| 260525-kmm | Fix three chat conversation pane UI bugs: clear input immediately on submit, restore send button per-status icons + disabled contrast, remove dead Confirm button on writeReversible tools | 2026-05-25 | 9662f08e | — | [260525-kmm-fix-chat-input-ui-bugs](./quick/260525-kmm-fix-chat-input-ui-bugs/) |
+| 260525-kij | Fix chat sendEmail tool not callable for new emails: drop dead replyToMessageId from SendEmailToolArgs, rewrite SEND/REPLY/FORWARD_EMAIL tool descriptions, add Tool invocation policy to system prompt | 2026-05-25 | e642943d | — | [260525-kij-fix-sendemail-schema-prompt](./quick/260525-kij-fix-sendemail-schema-prompt/) |
 | 260525-gf6 | Monorepo config consistency: rename admin generate-api → generate:api, add lint:fix to web, rewrite turbo.json with 2026 best practices, route root multi-target scripts through turbo run | 2026-05-25 | 366a1c45 | — | [260525-gf6-monorepo-config-consistency-rename-admin](./quick/260525-gf6-monorepo-config-consistency-rename-admin/) |
 | 260524-hbp | Implement boundary-safe LLM runtime routing from admin-managed model defaults | 2026-05-24 | pending | Verified | [260524-hbp-implement-boundary-safe-llm-runtime-rout](./quick/260524-hbp-implement-boundary-safe-llm-runtime-rout/) |
 | 260524-hbk | Upgrade Spring AI to 2.0.0-M7 and adapt ChatClient tool registration/autoconfig | 2026-05-24 | pending | Verified | [260524-hbk-upgrade-spring-ai-to-2-0-0-m7-and-adapt-](./quick/260524-hbk-upgrade-spring-ai-to-2-0-0-m7-and-adapt-/) |

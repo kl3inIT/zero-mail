@@ -93,7 +93,7 @@ class DigestIdempotencyTest extends PostgresContainerTest {
         invokeScheduledDispatch();
         invokeScheduledDispatch();
 
-        verify(notificationChannel, times(1)).dispatch(any(DigestPayload.class), anyString());
+        verify(notificationChannel).dispatch(any(DigestPayload.class), anyString());
         assertThat(DigestDispatchTestData.deliveryCount(jdbcTemplate, tenantId)).isEqualTo(1);
         assertThat(DigestDispatchTestData.deliveryStatus(jdbcTemplate, tenantId)).isEqualTo("SENT");
     }
@@ -107,7 +107,7 @@ class DigestIdempotencyTest extends PostgresContainerTest {
         invokeScheduledDispatch();
         invokeScheduledDispatch();
 
-        verify(notificationChannel, times(1)).dispatch(any(DigestPayload.class), anyString());
+        verify(notificationChannel).dispatch(any(DigestPayload.class), anyString());
         assertThat(DigestDispatchTestData.deliveryStatus(jdbcTemplate, tenantId))
                 .isEqualTo("PENDING");
         assertThat(DigestDispatchTestData.deliveryFailureReason(jdbcTemplate, tenantId))

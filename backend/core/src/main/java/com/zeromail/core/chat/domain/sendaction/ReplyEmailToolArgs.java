@@ -1,7 +1,5 @@
 package com.zeromail.core.chat.domain.sendaction;
 
-import com.zeromail.core.shared.privacy.Sensitive;
-
 @SuppressWarnings("unused")
 public record ReplyEmailToolArgs(
         String sourceMessageId,
@@ -9,7 +7,7 @@ public record ReplyEmailToolArgs(
         String cc,
         String subject,
         String gmailThreadId,
-        Sensitive<String> body) {
+        String body) {
 
     public ReplyEmailToolArgs {
         sourceMessageId = requireText(sourceMessageId, "sourceMessageId");
@@ -17,23 +15,7 @@ public record ReplyEmailToolArgs(
         cc = optionalText(cc);
         subject = requireText(subject, "subject");
         gmailThreadId = optionalText(gmailThreadId);
-        body = requireBody(body);
-    }
-
-    public ReplyEmailToolArgs(
-            String sourceMessageId,
-            String to,
-            String cc,
-            String subject,
-            String gmailThreadId,
-            String body) {
-        this(
-                sourceMessageId,
-                to,
-                cc,
-                subject,
-                gmailThreadId,
-                Sensitive.of(requireText(body, "body")));
+        body = requireText(body, "body");
     }
 
     private static String requireText(String text, String fieldName) {
@@ -49,12 +31,5 @@ public record ReplyEmailToolArgs(
         }
         String trimmedText = text.trim();
         return trimmedText.isBlank() ? null : trimmedText;
-    }
-
-    private static Sensitive<String> requireBody(Sensitive<String> body) {
-        if (body == null || body.value().isBlank()) {
-            throw new IllegalArgumentException("body must not be blank");
-        }
-        return body;
     }
 }

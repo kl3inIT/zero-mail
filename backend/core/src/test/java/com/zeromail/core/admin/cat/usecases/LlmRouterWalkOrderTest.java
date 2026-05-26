@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -193,14 +193,14 @@ class LlmRouterWalkOrderTest {
 
         // 3. Memoization invariant — the highest-priority-active-key lookup must fire ONCE per
         // distinct provider per resolve, not once per tier. Three tiers, one provider -> 1 call.
-        verify(llmProviderMasterKeyRepository, times(1))
+        verify(llmProviderMasterKeyRepository)
                 .findActiveByProviderOrderByPriority(
                         eq(LlmProvider.OPENROUTER), eq(MasterKeyStatus.ACTIVE));
 
         // 4. Batched catalog lookup invariant — model eligibility is checked via a single
         // findAllById call, not per-model findById. (findById should never be called.)
-        verify(modelCatalogRepository, times(1)).findAllById(any());
-        verify(modelCatalogRepository, times(0)).findById(any());
+        verify(modelCatalogRepository).findAllById(any());
+        verify(modelCatalogRepository, never()).findById(any());
     }
 
     private static FeatureDefaultProviderEntity tierBinding(

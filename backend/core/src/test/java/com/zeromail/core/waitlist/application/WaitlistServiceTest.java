@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -84,7 +83,7 @@ class WaitlistServiceTest {
         WaitlistSubscribeResult result = service.subscribe("dave@example.com", null, null, null);
 
         assertThat(result).isEqualTo(WaitlistSubscribeResult.ALREADY_REGISTERED);
-        verify(waitlistRepository, times(1)).saveAndFlush(any());
+        verify(waitlistRepository).saveAndFlush(any());
     }
 
     @Test
