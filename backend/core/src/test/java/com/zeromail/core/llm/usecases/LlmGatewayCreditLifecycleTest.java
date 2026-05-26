@@ -17,13 +17,12 @@ import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.llm.byok.UserByokKeyEntity;
+import com.zeromail.core.llm.byok.UserByokKeyRepository;
 import com.zeromail.core.llm.domain.Action;
-import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.SanitizationException;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
-import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
-import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import io.micrometer.core.instrument.Counter;
@@ -63,7 +62,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
 
     @Autowired CreditLedgerEntryRepository creditLedgerEntryRepository;
 
-    @Autowired TenantByokCredentialsRepository tenantByokCredentialsRepository;
+    @Autowired UserByokKeyRepository userByokKeyRepository;
 
     @Autowired RefreshTokenCipher refreshTokenCipher;
 
@@ -267,16 +266,20 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
         byte[] encryptedEnvelope =
                 refreshTokenCipher.encrypt(
                         "byok-key".getBytes(StandardCharsets.UTF_8), tenantId.toString());
-        TenantByokCredentialsEntity credentials =
-                new TenantByokCredentialsEntity(
-                        UUID.randomUUID(),
+        UserByokKeyEntity userByokKey =
+                new UserByokKeyEntity(
                         tenantId,
-                        BYOKProvider.OPENAI,
+                        UserByokKeyEntity.Provider.OPENAI,
                         "https://openrouter.ai/api/v1",
-                        "openai/gpt-5.4-nano",
                         encryptedEnvelope,
-                        (short) 1);
-        underTenant(tenantId, () -> tenantByokCredentialsRepository.saveAndFlush(credentials));
+                        null);
+        userByokKey.recordConnectionTest(
+                UserByokKeyEntity.LastTestResult.OK,
+                java.time.Instant.parse("2026-05-20T00:00:00Z"),
+                "[\"openai/gpt-5.4-nano\"]");
+        userByokKey.selectModel("openai/gpt-5.4-nano");
+        userByokKey.activate();
+        underTenant(tenantId, () -> userByokKeyRepository.saveAndFlush(userByokKey));
         clearInvocations(creditLedger);
     }
 

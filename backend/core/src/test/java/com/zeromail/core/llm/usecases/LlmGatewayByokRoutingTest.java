@@ -13,10 +13,9 @@ import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.llm.byok.UserByokKeyEntity;
+import com.zeromail.core.llm.byok.UserByokKeyRepository;
 import com.zeromail.core.llm.domain.Action;
-import com.zeromail.core.llm.domain.BYOKProvider;
-import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
-import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.nio.charset.StandardCharsets;
@@ -48,7 +47,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
     @Autowired CreditLedgerEntryRepository creditLedgerEntryRepository;
 
-    @Autowired TenantByokCredentialsRepository tenantByokCredentialsRepository;
+    @Autowired UserByokKeyRepository userByokKeyRepository;
 
     @MockitoSpyBean RefreshTokenCipher refreshTokenCipher;
 
@@ -65,15 +64,19 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
         ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
                 .run(
                         () ->
-                                tenantByokCredentialsRepository
+                                userByokKeyRepository
                                         .findByTenantId(TENANT_ID)
-                                        .ifPresent(tenantByokCredentialsRepository::delete));
+                                        .ifPresent(userByokKeyRepository::delete));
         jdbcTemplate.update("delete from tenants where id = ?", TENANT_ID);
     }
 
     @Test
     void byok_row_routes_through_byok_client_not_platform() {
-        seedByokTenant(TENANT_ID, BYOKProvider.ANTHROPIC, null, PLAINTEXT_KEY);
+        seedByokTenant(
+                TENANT_ID,
+                UserByokKeyEntity.Provider.ANTHROPIC,
+                "https://api.anthropic.com/v1",
+                PLAINTEXT_KEY);
         when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
@@ -107,7 +110,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     @Test
     void openai_byok_routes_to_openai_client() {
         String endpoint = "https://openrouter.ai/api/v1";
-        seedByokTenant(TENANT_ID, BYOKProvider.OPENAI, endpoint, PLAINTEXT_KEY);
+        seedByokTenant(TENANT_ID, UserByokKeyEntity.Provider.OPENAI, endpoint, PLAINTEXT_KEY);
         when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
@@ -135,7 +138,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     @Test
     void google_genai_byok_routes_to_google_client() {
         String endpoint = "https://generativelanguage.googleapis.com/v1beta";
-        seedByokTenant(TENANT_ID, BYOKProvider.GOOGLE_GENAI, endpoint, PLAINTEXT_KEY);
+        seedByokTenant(TENANT_ID, UserByokKeyEntity.Provider.GOOGLE, endpoint, PLAINTEXT_KEY);
         when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
@@ -156,7 +159,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     @Test
     void deepseek_byok_routes_to_deepseek_client() {
         String endpoint = "https://api.deepseek.com";
-        seedByokTenant(TENANT_ID, BYOKProvider.DEEPSEEK, endpoint, PLAINTEXT_KEY);
+        seedByokTenant(TENANT_ID, UserByokKeyEntity.Provider.DEEPSEEK, endpoint, PLAINTEXT_KEY);
         when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
@@ -177,7 +180,11 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     @Test
     void cipher_decrypt_called_with_tenantId_aad() {
         byte[] encryptedEnvelope =
-                seedByokTenant(TENANT_ID, BYOKProvider.ANTHROPIC, null, PLAINTEXT_KEY);
+                seedByokTenant(
+                        TENANT_ID,
+                        UserByokKeyEntity.Provider.ANTHROPIC,
+                        "https://api.anthropic.com/v1",
+                        PLAINTEXT_KEY);
         AtomicReference<byte[]> copiedDecryptedKey = new AtomicReference<>();
         when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenAnswer(
@@ -202,7 +209,11 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
     @Test
     void byok_path_does_not_log_key_bytes() {
-        seedByokTenant(TENANT_ID, BYOKProvider.ANTHROPIC, null, PLAINTEXT_KEY);
+        seedByokTenant(
+                TENANT_ID,
+                UserByokKeyEntity.Provider.ANTHROPIC,
+                "https://api.anthropic.com/v1",
+                PLAINTEXT_KEY);
         when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{\"value\":\"Receipts\"}"));
         ch.qos.logback.classic.Logger gatewayLogger =
@@ -245,8 +256,8 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
             if (tenantIndex % 2 == 0) {
                 seedByokTenant(
                         tenantId,
-                        BYOKProvider.ANTHROPIC,
-                        null,
+                        UserByokKeyEntity.Provider.ANTHROPIC,
+                        "https://api.anthropic.com/v1",
                         ("sk-byok-" + tenantId).getBytes(StandardCharsets.UTF_8));
             } else {
                 seedTenantWithCredits(tenantId, 5);
@@ -303,20 +314,22 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     }
 
     private byte[] seedByokTenant(
-            UUID tenantId, BYOKProvider provider, String endpoint, byte[] plaintextKey) {
+            UUID tenantId,
+            UserByokKeyEntity.Provider provider,
+            String baseUrl,
+            byte[] plaintextKey) {
         seedTenant(tenantId);
         byte[] encryptedEnvelope = refreshTokenCipher.encrypt(plaintextKey, tenantId.toString());
-        TenantByokCredentialsEntity credentials =
-                new TenantByokCredentialsEntity(
-                        UUID.randomUUID(),
-                        tenantId,
-                        provider,
-                        endpoint,
-                        providerModel(provider),
-                        encryptedEnvelope,
-                        (short) 1);
+        UserByokKeyEntity userByokKey =
+                new UserByokKeyEntity(tenantId, provider, baseUrl, encryptedEnvelope, null);
+        userByokKey.recordConnectionTest(
+                UserByokKeyEntity.LastTestResult.OK,
+                java.time.Instant.parse("2026-05-20T00:00:00Z"),
+                "[\"" + providerModel(provider) + "\"]");
+        userByokKey.selectModel(providerModel(provider));
+        userByokKey.activate();
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .run(() -> tenantByokCredentialsRepository.saveAndFlush(credentials));
+                .run(() -> userByokKeyRepository.saveAndFlush(userByokKey));
         return encryptedEnvelope;
     }
 
@@ -340,11 +353,11 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                                                 "SEPAY-BYOK-TEST-" + tenantId)));
     }
 
-    private static String providerModel(BYOKProvider provider) {
+    private static String providerModel(UserByokKeyEntity.Provider provider) {
         return switch (provider) {
             case ANTHROPIC -> "claude-3-haiku-20240307";
             case DEEPSEEK -> "deepseek-chat";
-            case GOOGLE_GENAI -> "gemini-2.0-flash";
+            case GOOGLE -> "gemini-2.0-flash";
             case OPENAI -> "openai/gpt-5.4-nano";
         };
     }

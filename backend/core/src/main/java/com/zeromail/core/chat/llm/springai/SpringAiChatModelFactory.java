@@ -4,13 +4,13 @@ import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
 import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
+import com.zeromail.core.llm.byok.ByokProviderResolver;
 import com.zeromail.core.llm.gateway.springai.SpringAiProviderChatClientFactory;
 import com.zeromail.core.llm.routing.LlmRuntimeTask;
 import com.zeromail.core.llm.usecases.LlmCredentialSource;
 import com.zeromail.core.llm.usecases.LlmProviderCredential;
 import com.zeromail.core.llm.usecases.PlatformLlmRuntimeRouter;
 import com.zeromail.core.llm.usecases.ResolvedLlmProviderCredential;
-import com.zeromail.core.llm.usecases.TenantByokProviderCredentialResolver;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,7 +28,7 @@ public class SpringAiChatModelFactory {
     private final ZeroMailChatProperties chatProperties;
     private final AssistantSettingsJpaRepository assistantSettingsRepository;
     private final PlatformLlmRuntimeRouter platformRuntimeRouter;
-    private final TenantByokProviderCredentialResolver tenantByokProviderCredentialResolver;
+    private final ByokProviderResolver byokProviderResolver;
     private final SpringAiProviderChatClientFactory chatClientFactory;
     private final ConcurrentMap<ChatClientCacheKey, ResolvedChatClient> chatClientsByKey =
             new ConcurrentHashMap<>();
@@ -37,12 +37,12 @@ public class SpringAiChatModelFactory {
             ZeroMailChatProperties chatProperties,
             AssistantSettingsJpaRepository assistantSettingsRepository,
             PlatformLlmRuntimeRouter platformRuntimeRouter,
-            TenantByokProviderCredentialResolver tenantByokProviderCredentialResolver,
+            ByokProviderResolver byokProviderResolver,
             SpringAiProviderChatClientFactory chatClientFactory) {
         this.chatProperties = chatProperties;
         this.assistantSettingsRepository = assistantSettingsRepository;
         this.platformRuntimeRouter = platformRuntimeRouter;
-        this.tenantByokProviderCredentialResolver = tenantByokProviderCredentialResolver;
+        this.byokProviderResolver = byokProviderResolver;
         this.chatClientFactory = chatClientFactory;
     }
 
@@ -110,8 +110,7 @@ public class SpringAiChatModelFactory {
 
     private ResolvedLlmProviderCredential byokCredential(UUID tenantId, String requestedModelId) {
         Optional<ResolvedLlmProviderCredential> resolvedCredential =
-                tenantByokProviderCredentialResolver.resolveForChat(
-                        tenantId, modelIdOrDefault(requestedModelId));
+                byokProviderResolver.resolveForChat(tenantId, modelIdOrDefault(requestedModelId));
         return resolvedCredential.orElseThrow(
                 () -> new IllegalStateException("No BYOK credentials configured for tenant"));
     }

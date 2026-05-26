@@ -6,6 +6,7 @@ import com.zeromail.core.billing.exception.InsufficientCreditsException;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.byok.ByokProviderResolver;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.domain.ActionValidator;
 import com.zeromail.core.llm.domain.AllowListedTools;
@@ -65,7 +66,7 @@ class LlmGatewayImpl implements LlmGateway {
     private final ActionValidator actionValidator;
     private final RuleCompileToolValidator ruleCompileToolValidator;
     private final ObservationRegistry observationRegistry;
-    private final TenantByokProviderCredentialResolver tenantByokProviderCredentialResolver;
+    private final ByokProviderResolver byokProviderResolver;
     private final LlmProviderChatExecutor providerChatExecutor;
     private final CreditLedger creditLedger;
     private final MeterRegistry meterRegistry;
@@ -109,8 +110,7 @@ class LlmGatewayImpl implements LlmGateway {
             ObjectProvider<LlmUsageRecorder> usageRecorderProvider,
             ObjectProvider<LlmRouteResolver> routeResolverProvider,
             ObjectProvider<PlatformLlmRouteCredentialResolver> routeCredentialResolverProvider,
-            ObjectProvider<TenantByokProviderCredentialResolver>
-                    tenantByokProviderCredentialResolverProvider,
+            ObjectProvider<ByokProviderResolver> byokProviderResolverProvider,
             ObjectProvider<LlmProviderChatExecutor> providerChatExecutorProvider) {
         this(
                 platformLlmModelClient,
@@ -127,7 +127,7 @@ class LlmGatewayImpl implements LlmGateway {
                 usageRecorderProvider.getIfAvailable(() -> NOOP_USAGE_RECORDER),
                 routeResolverProvider.getIfAvailable(),
                 routeCredentialResolverProvider.getIfAvailable(),
-                tenantByokProviderCredentialResolverProvider.getIfAvailable(),
+                byokProviderResolverProvider.getIfAvailable(),
                 providerChatExecutorProvider.getIfAvailable());
     }
 
@@ -251,7 +251,7 @@ class LlmGatewayImpl implements LlmGateway {
             LlmUsageRecorder usageRecorder,
             LlmRouteResolver routeResolver,
             PlatformLlmRouteCredentialResolver routeCredentialResolver,
-            TenantByokProviderCredentialResolver tenantByokProviderCredentialResolver,
+            ByokProviderResolver byokProviderResolver,
             LlmProviderChatExecutor providerChatExecutor) {
         this.platformLlmModelClient = platformLlmModelClient;
         this.semanticIntentEvaluator = semanticIntentEvaluator;
@@ -266,7 +266,7 @@ class LlmGatewayImpl implements LlmGateway {
         this.usageRecorder = usageRecorder;
         this.routeResolver = routeResolver;
         this.routeCredentialResolver = routeCredentialResolver;
-        this.tenantByokProviderCredentialResolver = tenantByokProviderCredentialResolver;
+        this.byokProviderResolver = byokProviderResolver;
         this.providerChatExecutor = providerChatExecutor;
     }
 
@@ -982,10 +982,10 @@ class LlmGatewayImpl implements LlmGateway {
 
     private Optional<ResolvedLlmProviderCredential> resolveByokProviderCredential(
             UUID tenantId, String fallbackModel) {
-        if (tenantByokProviderCredentialResolver == null || providerChatExecutor == null) {
+        if (byokProviderResolver == null || providerChatExecutor == null) {
             return Optional.empty();
         }
-        return tenantByokProviderCredentialResolver.resolve(tenantId, fallbackModel);
+        return byokProviderResolver.resolve(tenantId, fallbackModel);
     }
 
     private <T> T callViaResolvedProviderCredential(

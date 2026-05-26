@@ -9,12 +9,12 @@ import static org.mockito.Mockito.when;
 
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
 import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
+import com.zeromail.core.llm.byok.ByokProviderResolver;
 import com.zeromail.core.llm.gateway.springai.SpringAiProviderChatClientFactory;
 import com.zeromail.core.llm.usecases.LlmCredentialSource;
 import com.zeromail.core.llm.usecases.LlmProviderCredential;
 import com.zeromail.core.llm.usecases.PlatformLlmRuntimeRouter;
 import com.zeromail.core.llm.usecases.ResolvedLlmProviderCredential;
-import com.zeromail.core.llm.usecases.TenantByokProviderCredentialResolver;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
@@ -102,7 +102,7 @@ class SpringAiChatModelFactoryTest {
                                 new ZeroMailChatProperties.TokenizerProperties(4)),
                         settingsRepository,
                         platformRuntimeRouter,
-                        mock(TenantByokProviderCredentialResolver.class),
+                        mock(ByokProviderResolver.class),
                         chatClientFactory);
 
         ArgumentCaptor<LlmProviderCredential> credentialCaptor =

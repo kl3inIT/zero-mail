@@ -10,7 +10,6 @@
  * <ul>
  *   <li>{@code tenant} - TenantContext ScopedValue resolution
  *   <li>{@code billing} - CreditLedger reserve/settle/release wiring (LLM-06)
- *   <li>{@code shared.persistence} - AbstractTenantOwnedEntity for TenantByokCredentialsEntity
  *   <li>{@code shared.lang} - IdentifiedEnum for Action and BYOKProvider
  *   <li>{@code gmail :: persistence.crypto} - RefreshTokenCipher reuse for BYOK key encryption
  *       (D-A5)
@@ -22,9 +21,9 @@
  *   <li>{@code domain} - framework-free domain vocabulary, enums, validators (Action, BYOKProvider,
  *       ToolCallResult, SanitizationContext, ActionValidator, AllowListedTools,
  *       RuleCompileToolValidator, *Exception)
- *   <li>{@code usecases} - public service contract (LlmGateway interface) + impl + ByokService +
- *       use-case commands and results
- *   <li>{@code persistence} - TenantByokCredentialsEntity + Repository
+ *   <li>{@code usecases} - public service contract (LlmGateway interface) + impl + use-case
+ *       commands and results
+ *   <li>{@code byok} - user BYOK key lifecycle, resolver, and SSRF-hardened endpoint validation
  *   <li>{@code gateway} - external-service adapters (Spring AI vendor adapters under {@code
  *       gateway.springai}; sanitization pipeline under {@code gateway.sanitization}, both
  *       ArchUnit-isolated for vendor SDKs)

@@ -12,9 +12,9 @@ import org.springframework.web.client.RestClientResponseException;
 
 /**
  * Provider-aware HTTP gateway that probes an upstream LLM provider's {@code /models} endpoint to
- * validate a BYOK API key + model id. Keeps provider-specific URL/header/JSON knowledge out of
- * {@code core.llm.usecases.ByokService} so the use-case service does not know HTTP shapes (project
- * rule: raw HTTP LLM calls / vendor SDK usage stays inside {@code core.llm.gateway.springai}).
+ * validate a BYOK API key + model id. Keeps provider-specific URL/header/JSON knowledge out of the
+ * legacy BYOK API so the old use-case service did not know HTTP shapes (project rule: raw HTTP LLM
+ * calls / vendor SDK usage stays inside {@code core.llm.gateway.springai}).
  */
 @Component
 public class ByokValidationGateway {

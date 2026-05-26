@@ -1,70 +1,38 @@
 package com.zeromail.api.controllers.llm;
 
-import com.zeromail.api.dto.llm.ByokCurrentResponse;
-import com.zeromail.api.dto.llm.ByokSaveRequest;
-import com.zeromail.api.dto.llm.ByokSaveResponse;
-import com.zeromail.api.dto.llm.ByokValidateRequest;
-import com.zeromail.api.dto.llm.ByokValidateResponse;
-import com.zeromail.core.llm.usecases.ByokSaveCommand;
-import com.zeromail.core.llm.usecases.ByokSaveResult;
-import com.zeromail.core.llm.usecases.ByokService;
-import com.zeromail.core.llm.usecases.ByokValidateCommand;
-import com.zeromail.core.llm.usecases.ByokValidateResult;
-import com.zeromail.core.tenant.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import java.util.UUID;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import java.net.URI;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+@Deprecated(forRemoval = true)
 @RestController
 @Tag(name = "llm-byok")
 @RequestMapping("/api/llm/byok")
 public class ByokController {
 
-    private final ByokService byokService;
+    private static final URI NEW_BYOK_LOCATION = URI.create("/api/byok");
+    private static final ByokMovedResponse MOVED_RESPONSE =
+            new ByokMovedResponse("ai.byok.moved", "Use /api/byok instead");
 
-    public ByokController(ByokService byokService) {
-        this.byokService = byokService;
+    @RequestMapping(
+            path = {"", "/", "/validate", "/**"},
+            method = {
+                RequestMethod.GET,
+                RequestMethod.POST,
+                RequestMethod.PUT,
+                RequestMethod.PATCH,
+                RequestMethod.DELETE
+            })
+    public ResponseEntity<ByokMovedResponse> moved() {
+        return ResponseEntity.status(HttpStatus.GONE)
+                .header(HttpHeaders.LOCATION, NEW_BYOK_LOCATION.toString())
+                .body(MOVED_RESPONSE);
     }
 
-    @PostMapping("/validate")
-    public ByokValidateResponse validate(@Valid @RequestBody ByokValidateRequest request) {
-        UUID tenantId = TenantContext.currentTenantUuid();
-        ByokValidateResult result =
-                byokService.validate(
-                        tenantId,
-                        new ByokValidateCommand(
-                                request.preset(),
-                                request.endpoint(),
-                                request.model(),
-                                request.apiKey()));
-        return ByokValidateResponse.from(result);
-    }
-
-    @PostMapping
-    public ByokSaveResponse save(@Valid @RequestBody ByokSaveRequest request) {
-        UUID tenantId = TenantContext.currentTenantUuid();
-        ByokSaveResult result =
-                byokService.save(
-                        tenantId,
-                        new ByokSaveCommand(
-                                request.preset(),
-                                request.endpoint(),
-                                request.model(),
-                                request.apiKey()));
-        return ByokSaveResponse.from(result);
-    }
-
-    @GetMapping
-    public ByokCurrentResponse current() {
-        UUID tenantId = TenantContext.currentTenantUuid();
-        return byokService
-                .current(tenantId)
-                .map(ByokCurrentResponse::from)
-                .orElse(ByokCurrentResponse.empty());
-    }
+    public record ByokMovedResponse(String code, String message) {}
 }
