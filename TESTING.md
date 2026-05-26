@@ -10,6 +10,26 @@ This project favors **architectural quality and defensibility over speed** (see 
 
 ---
 
+## 0. Skill routing — invoke before writing or reviewing tests
+
+This repo ships [`spring-ai-community/spring-testing-skills`](https://github.com/spring-ai-community/spring-testing-skills) under `.claude/skills/` and `.codex/skills/`. **Load the relevant skill before writing or reviewing test code** — skills contain critical-rule lists, anti-patterns, and Boot 4 / Spring 7 / Hibernate 7 migration notes that this file does NOT duplicate.
+
+| When the test involves… | Load skill | Notes |
+|---|---|---|
+| Persistence, `EntityManager`, `JdbcTemplate`, Liquibase, JSONB, repository round-trips | `spring-jpa-testing` | Project uses `PostgresContainerTest` base (NOT `@DataJpaTest`) per Liquibase context preservation. Skill rules on `flush()/clear()`, lazy loading, N+1, Hibernate 6→7 still apply via Hibernate proxy state. |
+| REST controllers, `MockMvc`, JSON contract, `ProblemDetail`, validation | `spring-mvc-testing` | Project uses `MockMvc` via `ApiPostgresTestBase` + real session cookie minting (`TestSessionSupport`). Skill's `RestTestClient` notes apply when migrating to Boot 4 `RestTestClient`. |
+| Authentication, authorization, CSRF, OAuth2, JWT, session, `@PreAuthorize` | `spring-security-testing` | Project intentionally avoids `@WithMockUser` — uses real session cookies via `TestSessionSupport.TestSessionMinter` so tests exercise the production filter chain. WR-06 todo (`backend/api/.../SecurityConfig` test slice) is the explicit gap. |
+| `ChatClient`, `ChatModel`, `Advisor`, Spring AI prompt/streaming, tool callbacks | `spring-testing-fundamentals` + §4 below | No dedicated Spring AI skill — fundamentals + the §4 three-layer rule below apply. NEVER call a real LLM in `./gradlew test`. |
+| ArchUnit rules, AssertJ chains, BDDMockito, `ArgumentCaptor`, context caching, anti-patterns | `spring-testing-fundamentals` | Load when no slice annotation applies, when cleaning up Mockito patterns, or when adding new ArchUnit invariants. |
+| **WebFlux / reactive** | — | **N/A**. Project ban (`CLAUDE.md` hard "do not use" list). `spring-webflux-testing` skill is installed but should not be invoked. |
+| **WebSocket / STOMP** | — | **N/A**. Not used in v1.x. `spring-websocket-testing` skill is installed but should not be invoked. |
+
+**Trigger discipline:** if the failure mode you're testing maps to multiple skills (e.g. a controller method that hits the database under CSRF protection), load the most specific skill for the invariant being asserted, not all three. Most controller HTTP tests = `spring-mvc-testing`; the persistence path lives in its own slice test loaded with `spring-jpa-testing`.
+
+**Skill source-of-truth:** copies under `.claude/skills/` and `.codex/skills/` are pulled from `main@7e7b331` of the upstream repo. To refresh, `gh repo clone spring-ai-community/spring-testing-skills .tmp-sts -- --depth 1`, then overwrite `.claude/skills/<name>/` + `.codex/skills/<name>/` and delete `.tmp-sts`.
+
+---
+
 ## 1. Must-test (always)
 
 - **Safety / privacy invariants** — no auto-send, no PII in logs, no prompts/completions in DB or logs. Prefer **ArchUnit** over runtime tests where possible (cheaper, faster, stable).
