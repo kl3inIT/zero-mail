@@ -75,3 +75,18 @@ hoặc tạo quick task riêng.
 
 **Trigger phase:** Bất kỳ phase nào touch aiEval source set, hoặc dedicated quick fix.
 Không khẩn cấp.
+
+---
+
+## Resolution — 2026-05-26
+
+`DraftSafetyEvalTest.java:124-134` now has the full 10-arg `verify(...).insertPending(...)` matching the widened signature:
+
+```java
+.insertPending(
+    any(), anyString(), anyString(),
+    any(), any(),                    // sanitizedSubject + sanitizedSenderEmail
+    any(), any(), any(), any(), anyString());
+```
+
+Bundled with the broader test sync (`e32956f1 fix(tests): sync tests with subject + sender feature and base-ui tabs`).

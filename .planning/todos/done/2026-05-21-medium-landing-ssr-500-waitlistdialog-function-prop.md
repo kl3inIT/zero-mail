@@ -86,3 +86,15 @@ template string + next-intl interpolation). 1 commit. ~30 phút.
 
 **Trigger phase:** Phase 8.1 (hot-fix nhanh trước hoặc cùng release với Phase 8).
 **Phải fix trước khi user-facing.**
+
+---
+
+## Resolution — 2026-05-26
+
+`WaitlistDialog.tsx` now uses inline Vietnamese string literals + a `successHeading(status)` switch helper for success state copy — no more function props passed Server→Client. Bundled into the landing polish work:
+
+- `1740419e feat(landing): i18n remaining WaitlistDialog strings`
+- `cc82cc5a fix: address CodeRabbit PR feedback`
+- `3f989de8 finish email approve to use beta version`
+
+The seed's Approach A recommendation (next-intl `t('successBody', { email })` interpolation) was the conceptual direction; final implementation uses direct switch + literals rather than next-intl placeholders for the success state copy, because the success heading is a closed enum (`ADDED` / `ALREADY_REGISTERED` / `ALREADY_USER`).

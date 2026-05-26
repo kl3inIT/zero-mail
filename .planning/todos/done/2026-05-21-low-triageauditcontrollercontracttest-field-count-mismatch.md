@@ -81,3 +81,11 @@ Trivial — 1 file, 2-line addition. ~5 phút. **Bundle vào fix của Issue HIG
 để 1 plan giải quyết cả 2 — tránh churn DTO field name 2 lần.
 
 **Trigger phase:** Cùng plan với HIGH issue, hoặc dedicated quick task nếu HIGH chưa schedule.
+
+---
+
+## Resolution — 2026-05-26
+
+Fixed by `f8acbe32 fix(tests): sync audit contract test with subject + senderEmail fields`. The DTO field order is now `[auditId, gmailThreadId, gmailMessageId, subject, senderEmail, ruleName, action, reason, decisionState, createdAt, undoableUntil, draftId]` (12 fields, matches actual `AuditEntryResponse`).
+
+The seed's prediction to bundle with the HIGH privacy issue held — both landed in the same test-sync sweep (`e32956f1` / `f8acbe32`). Field name kept as `subject` (not renamed to `subjectExcerpt`) because Approach C was picked over Approach A — see resolution note on `2026-05-21-high-draft-privacy-sweep-fail-sanitized-subject-leak.md`.

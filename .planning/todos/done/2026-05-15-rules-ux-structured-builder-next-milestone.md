@@ -41,3 +41,18 @@ For Zero Mail, natural language must not be the authoritative saved rule. Natura
 - The AI compile path produces deterministic structured output or asks for clarification.
 - Manual edits and AI-generated rules converge to the same schema.
 - The static prototype exists at `.planning/prototypes/rules-when-then-prototype.html` and should be used as the starting visual reference, not production code.
+
+---
+
+## Resolution — 2026-05-26
+
+Rules UX structured builder **shipped in v1.2 Phase 08.1** (`inbox-zero-style-rule-actions-and-admin-managed-examples-cat`). Implementation surface in `apps/web/features/rules/`:
+
+- `RulesWorkspace.tsx` / `RuleList.tsx` — table-shaped rule list (Enabled / Name / When / Then)
+- `RuleComposer.tsx` — structured When/Then editor with manual + AI-compile paths
+- `RulePreviewPanel.tsx` — preview-before-enable surface
+- `AvailableActionsPanel.tsx` — action catalog UI (label / archive / save_draft / send_reply / forward / send_email — matches CLAUDE.md action allowlist)
+
+Key commits: `0bafcf71 feat(08.1): ship rule actions and llm routing`, `adf4592d fix(08.1): align rule composer examples with Inbox Zero`, `929b0a05 feat(08.1-05): expand manual rule action builder`.
+
+Action allowlist evolved beyond the seed's original v1.0 list (`label`/`archive`/`save_draft`) to include outbound actions (`send_reply`/`forward_email`/`send_email`) gated by global `Auto-send rules` setting + runtime safety net. The seed's prediction that outbound actions need "separate security/product phase approval" became Phase 08.1's RACT-01..12 requirements.

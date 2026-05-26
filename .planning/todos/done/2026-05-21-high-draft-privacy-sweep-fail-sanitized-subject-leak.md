@@ -103,3 +103,20 @@ Medium — 1 focused plan với ~6 task:
 6. UNS-09 CleanupPrivacySweepTest re-verify (phải vẫn GREEN sau migration).
 
 **Trigger phase:** Phase 8.1 hoặc Phase 9 (security hardening). **Phải fix trước public ship.**
+
+---
+
+## Resolution — 2026-05-26 (Approach C — not in original todo)
+
+Fix landed via **policy reframing**, not Approach A or B:
+
+- **Decision:** subject + senderEmail ARE stored in `triage_audit` BY DESIGN — required by the user-facing audit projection so users can answer "what email did this triage act on" without opening Gmail.
+- **Privacy boundary:** subject/senderEmail are PII but bounded to the audit projection surface only. They MUST NOT appear in logs, exceptions, or other opaque persistence columns.
+- **Test rescoped accordingly:** `DraftPrivacySweepTest` now splits forbidden tokens into two lists:
+  - `FORBIDDEN_BODY_TOKENS` — body content, applies to ALL surfaces including audit projection
+  - `FORBIDDEN_HEADER_TOKENS` (subject + raw sender email) — applies to logs/exceptions/persistence-side-channels, **explicitly allowed in audit projection**
+- Sanitization layer: `GmailPreviewReadService.sanitizedText(subject)` + `SUBJECT_EXCERPT_MAX_LENGTH` truncate at the boundary; field renamed to `sanitizedSubjectExcerpt` in `RuleEvaluationInput` to match the truncated semantic.
+
+Key commits: `e32956f1 fix(tests): sync tests with subject + sender feature and base-ui tabs`, `888ad349 fix(core): resolve Spring Modulith boundaries`.
+
+This is **not** the Approach A (mask PII patterns) the todo recommended — instead the policy was relaxed for UX-justified storage of headers, with strict boundary enforcement elsewhere. Approach A's regex-mask-on-write path remains available if subject leakage shows up in production telemetry.
