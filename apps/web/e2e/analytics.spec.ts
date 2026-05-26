@@ -41,7 +41,10 @@ for (const viewport of [
 
     await expect(page).toHaveURL(/\/analytics\?window=30d/);
     await expect.poll(() => state.analyticsRequests).toContain('30d');
-    await expect(page.getByTestId('analytics-volume-panel')).toContainText('2494');
+    // Locale-aware formatting: en-US renders 2494 as "2,494" with a thousand
+    // separator. Match the formatted value (which Intl.NumberFormat emits) so
+    // the assertion survives both 'vi' and 'en' UI locales.
+    await expect(page.getByTestId('analytics-volume-panel')).toContainText('2,494');
     await expectNoHorizontalOverflow(page);
     await expectNoClaySkinClasses(page);
   });
