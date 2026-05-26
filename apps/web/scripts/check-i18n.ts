@@ -76,7 +76,6 @@ const EN_SCAN_FILES = [
   'features/onboarding/components/TemplateCard.tsx',
   'features/gmail/components/ConnectionHealthBadge.tsx',
   'features/gmail/components/ReconnectPrompt.tsx',
-  'features/llm/components/ByokForm.tsx',
   'features/rules/components/RulesWorkspace.tsx',
   'features/rules/components/RuleComposer.tsx',
   'features/rules/components/RuleList.tsx',

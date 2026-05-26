@@ -7,6 +7,7 @@ import {
   Check,
   CreditCard,
   Inbox,
+  KeyRound,
   Mail,
   Moon,
   Palette,
@@ -46,7 +47,6 @@ import { ConnectionHealthBadge } from '@/features/gmail/components/ConnectionHea
 import { ReconnectPromptGate } from '@/features/gmail/components/ReconnectPrompt';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
-import { ByokForm } from '@/features/llm/components/ByokForm';
 import { NotificationsSection } from '@/features/notifications/components/NotificationsSection';
 import { useToggleTriagePause } from '@/features/triage/hooks/useToggleTriagePause';
 import { useTriagePauseState } from '@/features/triage/hooks/useTriagePauseState';
@@ -333,7 +333,20 @@ export function SettingsClient({
 
         <NotificationsSection />
 
-        <ByokForm />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="text-muted-foreground size-4" aria-hidden="true" />
+              {t('ai.sections.provider.title')}
+            </CardTitle>
+            <CardDescription>{t('ai.byok.titleDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/ai" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+              {t('ai.page.title')}
+            </Link>
+          </CardContent>
+        </Card>
 
         {/* Privacy */}
         <Card>
