@@ -9,10 +9,15 @@ import type { ProtectedSenderResponse } from '@/features/triage/api/triage-api';
 
 const mocks = vi.hoisted(() => ({
   mutate: vi.fn(),
+  deleteMutate: vi.fn(),
 }));
 
 vi.mock('@/features/triage/hooks/useOptInSender', () => ({
   useOptInSender: () => ({ mutate: mocks.mutate, isPending: false }),
+}));
+
+vi.mock('@/features/triage/hooks/useDeleteProtectedSender', () => ({
+  useDeleteProtectedSender: () => ({ mutate: mocks.deleteMutate, isPending: false }),
 }));
 
 describe('SenderSafetyNetList', () => {
@@ -28,7 +33,7 @@ describe('SenderSafetyNetList', () => {
   it('renders the empty state', () => {
     renderWithMessages(<SenderSafetyNetList injectedSenders={[]} />);
 
-    expect(screen.getByText('No protected senders yet')).toBeInTheDocument();
+    expect(screen.getByText('No senders yet')).toBeInTheDocument();
   });
 
   it('renders a populated sender list', () => {
@@ -43,18 +48,24 @@ describe('SenderSafetyNetList', () => {
 
     expect(screen.getByText('ceo@example.com')).toBeInTheDocument();
     expect(screen.getByText('finance@example.com')).toBeInTheDocument();
-    expect(screen.getAllByText('Opted in').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Email').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('System').length).toBeGreaterThan(0);
   });
 
-  it('opts a sender into automation', async () => {
+  it('adds a sender pattern', async () => {
     renderWithMessages(
       <SenderSafetyNetList injectedSenders={[protectedSender('founder@example.com', false)]} />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Opt into automation' }));
+    fireEvent.change(screen.getByPlaceholderText('ceo@acme.com or @acme.com'), {
+      target: { value: '@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '+ Add sender' }));
 
-    expect(mocks.mutate).toHaveBeenCalledWith('founder@example.com', expect.any(Object));
-    await waitFor(() => expect(screen.getAllByText('Opted in').length).toBeGreaterThan(0));
+    expect(mocks.mutate).toHaveBeenCalledWith('@example.com', expect.any(Object));
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('ceo@acme.com or @acme.com')).toHaveValue(''),
+    );
   });
 });
 

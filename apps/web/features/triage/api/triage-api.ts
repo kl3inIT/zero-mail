@@ -146,3 +146,15 @@ export async function optInSender(senderEmail: string): Promise<SenderOptInRespo
     `/api/triage/sender-safety-net/${senderEmail}/opt-in failed: ${result.response.status}`,
   );
 }
+
+export async function deleteProtectedSender(id: string): Promise<void> {
+  const result = await api.DELETE('/api/triage/sender-safety-net/{id}', {
+    params: { path: { id } },
+  });
+  if (result.error || !result.response.ok) {
+    throw (
+      result.error ??
+      new Error(`/api/triage/sender-safety-net/${id} failed: ${result.response.status}`)
+    );
+  }
+}
