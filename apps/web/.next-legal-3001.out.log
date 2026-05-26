@@ -1,0 +1,65 @@
+../..                                    | [WARN] Unsupported engine: wanted: {"node":">=24.0.0"} (current: {"node":"v22.13.1","pnpm":"11.0.8"})
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://100.84.141.93:3001
+✓ Ready in 589ms
+
+○ Compiling /privacy ...
+ GET / 200 in 2.7s (next.js: 287ms, proxy.ts: 23ms, application-code: 2.3s)
+○ Compiling / ...
+ GET /docs/privacy 200 in 4.5s (next.js: 4.3s, proxy.ts: 21ms, application-code: 219ms)
+ GET /privacy 404 in 263ms (next.js: 9ms, proxy.ts: 9ms, application-code: 245ms)
+ GET /privacy 404 in 269ms (next.js: 7ms, proxy.ts: 24ms, application-code: 237ms)
+ GET /privacy 404 in 266ms (next.js: 6ms, proxy.ts: 13ms, application-code: 246ms)
+✓ Compiled in 838ms
+ GET /terms 404 in 1474ms (next.js: 327ms, proxy.ts: 132ms, application-code: 1015ms)
+ GET /privacy 404 in 1482ms (next.js: 821ms, proxy.ts: 135ms, application-code: 527ms)
+ GET /docs/privacy 200 in 268ms (next.js: 94ms, proxy.ts: 8ms, application-code: 166ms)
+✓ Compiled in 225ms
+ GET /docs/privacy 200 in 1458ms (next.js: 307ms, proxy.ts: 99ms, application-code: 1052ms)
+ GET /docs/privacy 200 in 796ms (next.js: 386ms, proxy.ts: 22ms, application-code: 387ms)
+ GET /docs/privacy 200 in 267ms (next.js: 124ms, proxy.ts: 52ms, application-code: 92ms)
+ GET /docs/privacy 200 in 285ms (next.js: 38ms, proxy.ts: 60ms, application-code: 187ms)
+ GET / 200 in 856ms (next.js: 35ms, proxy.ts: 20ms, application-code: 801ms)
+ GET /privacy 404 in 575ms (next.js: 208ms, proxy.ts: 8ms, application-code: 359ms)
+✓ Compiled in 223ms
+ GET / 200 in 1483ms (next.js: 140ms, proxy.ts: 91ms, application-code: 1252ms)
+ GET / 200 in 1081ms (next.js: 9ms, proxy.ts: 89ms, application-code: 983ms)
+ GET / 200 in 928ms (next.js: 31ms, proxy.ts: 119ms, application-code: 778ms)
+ GET / 200 in 896ms (next.js: 104ms, proxy.ts: 105ms, application-code: 687ms)
+ GET / 200 in 900ms (next.js: 59ms, proxy.ts: 104ms, application-code: 737ms)
+ GET / 200 in 900ms (next.js: 198ms, proxy.ts: 106ms, application-code: 597ms)
+✓ Compiled in 175ms
+ GET / 200 in 899ms (next.js: 141ms, proxy.ts: 109ms, application-code: 648ms)
+ GET / 200 in 505ms (next.js: 7ms, proxy.ts: 68ms, application-code: 430ms)
+ GET / 200 in 367ms (next.js: 40ms, proxy.ts: 101ms, application-code: 225ms)
+ GET / 200 in 369ms (next.js: 12ms, proxy.ts: 99ms, application-code: 259ms)
+ GET /terms 200 in 1839ms (next.js: 492ms, proxy.ts: 12ms, application-code: 1335ms)
+ GET /privacy 200 in 1849ms (next.js: 1081ms, proxy.ts: 11ms, application-code: 757ms)
+ GET /privacy 200 in 171ms (next.js: 4ms, proxy.ts: 5ms, application-code: 162ms)
+ GET /privacy 200 in 148ms (next.js: 4ms, proxy.ts: 8ms, application-code: 136ms)
+✓ Compiled in 221ms
+ GET /privacy 200 in 1470ms (next.js: 323ms, proxy.ts: 129ms, application-code: 1019ms)
+ GET /privacy 200 in 786ms (next.js: 7ms, proxy.ts: 167ms, application-code: 612ms)
+ GET /privacy 200 in 551ms (next.js: 91ms, proxy.ts: 118ms, application-code: 342ms)
+ GET /privacy 200 in 556ms (next.js: 13ms, proxy.ts: 117ms, application-code: 426ms)
+ GET /privacy 200 in 555ms (next.js: 48ms, proxy.ts: 117ms, application-code: 390ms)
+✓ Compiled in 236ms
+ GET /privacy 200 in 1496ms (next.js: 240ms, proxy.ts: 177ms, application-code: 1079ms)
+ GET /privacy 200 in 915ms (next.js: 23ms, proxy.ts: 154ms, application-code: 737ms)
+ GET /privacy 200 in 656ms (next.js: 16ms, proxy.ts: 153ms, application-code: 487ms)
+ GET /privacy 200 in 656ms (next.js: 57ms, proxy.ts: 154ms, application-code: 444ms)
+ GET /privacy 200 in 655ms (next.js: 117ms, proxy.ts: 155ms, application-code: 382ms)
+ GET /terms 200 in 1012ms (next.js: 314ms, proxy.ts: 10ms, application-code: 689ms)
+ GET /privacy 200 in 1026ms (next.js: 586ms, proxy.ts: 8ms, application-code: 432ms)
+ GET /privacy 200 in 299ms (next.js: 3ms, proxy.ts: 4ms, application-code: 292ms)
+ GET /privacy 200 in 326ms (next.js: 5ms, proxy.ts: 8ms, application-code: 314ms)
+ GET /privacy 200 in 374ms (next.js: 5ms, proxy.ts: 8ms, application-code: 362ms)
+ GET /terms 200 in 285ms (next.js: 4ms, proxy.ts: 5ms, application-code: 277ms)
+✓ Compiled in 211ms
+ GET /privacy 200 in 1676ms (next.js: 371ms, proxy.ts: 101ms, application-code: 1205ms)
+ GET /privacy 200 in 1003ms (next.js: 7ms, proxy.ts: 148ms, application-code: 849ms)
+ GET /privacy 200 in 795ms (next.js: 24ms, proxy.ts: 98ms, application-code: 673ms)
+ GET /privacy 200 in 794ms (next.js: 79ms, proxy.ts: 100ms, application-code: 615ms)
+ GET /privacy 200 in 797ms (next.js: 54ms, proxy.ts: 98ms, application-code: 644ms)
+ GET /privacy 200 in 795ms (next.js: 122ms, proxy.ts: 101ms, application-code: 572ms)

@@ -14,7 +14,7 @@ export default async function LandingPage() {
     <>
       <Hero />
       <Features />
-      <Pricing />
+      {/*<Pricing />*/}
       <Testimonials />
       <FAQ />
       <WaitlistDialog

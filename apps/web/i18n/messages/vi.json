@@ -1281,18 +1281,163 @@
     }
   },
   "legal": {
+    "contact": {
+      "TODO_real_email": "TODO: thay legal@zeromail.app bằng địa chỉ liên hệ pháp lý thật trước khi launch công khai.",
+      "body": "Liên hệ Zero Mail team qua legal@zeromail.app.",
+      "email": "legal@zeromail.app"
+    },
     "googleApiPolicy": {
       "body": "Dữ liệu Google API được xử lý theo <link>Chính sách dữ liệu người dùng Google API</link> và yêu cầu Limited Use."
     },
+    "lastUpdated": "Cập nhật lần cuối: 26/05/2026",
     "privacy": {
-      "placeholderBody": "Chính sách bảo mật đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). PROJECT.md mô tả cam kết ràng buộc về bảo mật: không lưu trữ lâu dài nội dung email, prompt, câu trả lời, hay embedding.",
-      "placeholderTitle": "Chính sách bảo mật"
+      "intro": "Chính sách bảo mật này giải thích Zero Mail thu thập dữ liệu gì, cố ý KHÔNG lưu trữ những gì, và xử lý tài khoản Gmail của bạn ra sao khi bạn kết nối. Zero Mail được vận hành bởi Zero Mail team — một dự án học thuật MVP, chưa launch công khai; chúng tôi xem quyền riêng tư của hộp thư bạn là phần lõi của sản phẩm, không phải thứ gắn thêm.",
+      "sections": {
+        "about": {
+          "body": "Zero Mail là một trợ lý AI giúp bạn về inbox zero trong Gmail bằng cách phân loại, gán nhãn, lưu trữ và soạn trả lời theo những quy tắc bạn viết bằng ngôn ngữ tự nhiên. Sản phẩm do Zero Mail team xây dựng và vận hành như một dự án học thuật ở giai đoạn MVP, chưa launch chính thức. Dù chưa phải là sản phẩm thương mại, các cam kết bảo mật được nêu dưới đây là ràng buộc kiến trúc — được code thực thi — chứ không chỉ là lời hứa giấy tờ chồng lên một hệ thống có thể hành xử khác đi.\n\nChính sách này áp dụng cho mọi trang trong ứng dụng web Zero Mail và cho các worker chạy nền xử lý thư Gmail thay bạn sau khi bạn cấp quyền Gmail. Chính sách không áp dụng cho Google, cho người gửi/nhận thư của bạn, hay cho bất kỳ bên thứ ba nào bạn tự tích hợp bằng khóa API riêng.",
+          "heading": "Về chính sách này và Zero Mail team"
+        },
+        "aiProviders": {
+          "body": "Mặc định, Zero Mail định tuyến các lượt gọi AI qua OpenRouter, và OpenRouter chuyển từng yêu cầu đến nhà cung cấp mô hình hạ nguồn thay chúng tôi. Bạn có thể dùng khóa API riêng cho nhà cung cấp được hỗ trợ (BYOK); khi đã cấu hình khóa BYOK, các yêu cầu của tài khoản bạn đi thẳng đến nhà cung cấp đó và không qua sổ tín dụng của Zero Mail.\n\nTheo chính sách mặc định công bố của OpenRouter và các nhà cung cấp lớn ở hạ nguồn, dữ liệu khách hàng gửi qua API KHÔNG được dùng để huấn luyện mô hình của họ. Nếu chính sách của một nhà cung cấp thay đổi, chúng tôi sẽ cập nhật tài liệu này và thông báo trong ứng dụng. Chúng tôi không ghi đầy đủ nội dung prompt/completion của quá trình xử lý email vào log ứng dụng hay vào database. Chỉ giữ lại metadata: mã tenant, tên nhà cung cấp, tên model, số token, độ trễ, và có truncate hay không. Đây là phần tối thiểu cần thiết để vận hành dịch vụ, phát hiện lạm dụng và tính credit chính xác.\n\nNếu bạn dùng khóa API riêng, quan hệ hợp đồng cho phần traffic đó là giữa bạn và nhà cung cấp bạn chọn. Chúng tôi không xem, lưu, hay xoay vòng khóa của bạn ngoài mức cần thiết để gửi yêu cầu: khóa BYOK được mã hóa khi lưu (encryption at rest) bằng cơ chế tiêu chuẩn ngành trước khi ghi vào database, và chỉ giải mã trong bộ nhớ ngay trước khi dispatch yêu cầu.",
+          "heading": "Nhà cung cấp AI bên thứ ba và cách định tuyến yêu cầu"
+        },
+        "childrenAndChanges": {
+          "body": "Zero Mail không hướng đến trẻ em dưới 13 tuổi, và chúng tôi không cố ý thu thập dữ liệu cá nhân từ bất kỳ ai dưới độ tuổi đó. Nếu bạn cho rằng một trẻ em đã kết nối Gmail vào Zero Mail, vui lòng liên hệ với chúng tôi — chúng tôi sẽ xóa tài khoản và dữ liệu liên quan.\n\nKhi sản phẩm phát triển, chính sách này có thể được cập nhật. Những thay đổi quan trọng sẽ được thông báo trong ứng dụng và qua địa chỉ email gắn với tài khoản của bạn. Tiếp tục dùng Zero Mail sau khi cập nhật có hiệu lực đồng nghĩa với việc bạn chấp nhận chính sách mới. Nếu thay đổi mở rộng đáng kể cách chúng tôi dùng dữ liệu của bạn, chúng tôi sẽ xin lại sự đồng ý trước khi áp dụng cho tài khoản.",
+          "heading": "Trẻ em và thay đổi chính sách"
+        },
+        "cookies": {
+          "body": "Zero Mail dùng đúng một cookie phiên (session cookie) do server phát hành. Cookie được ký, HttpOnly, SameSite=Lax, và bật Secure trong môi trường production. Trạng thái phiên thật sự được lưu phía server trong Spring Session backed bằng Redis, không nằm trong một token stateless; cookie chỉ mang một mã định danh không thể đọc ngược.\n\nChúng tôi không nhúng cookie analytics bên thứ ba, pixel quảng cáo, hay script theo dõi cross-site nào trên trang marketing hay trong ứng dụng. Nếu sau này có thêm công cụ analytics tôn trọng quyền riêng tư, chúng tôi sẽ cập nhật mục này, nêu rõ tên công cụ và cách opt-out.",
+          "heading": "Cookie và phiên đăng nhập"
+        },
+        "dataCollected": {
+          "body": "Để Zero Mail hoạt động, chúng tôi thu thập và lưu các nhóm dữ liệu sau:\n\nThông tin hồ sơ Google do Google trả về khi bạn đăng nhập: tên, địa chỉ email, URL ảnh đại diện, và mã định danh subject ổn định mà Google dùng để phân biệt tài khoản của bạn.\n\nThông tin đăng nhập OAuth do Google cấp cho tài khoản của bạn: refresh token và access token. Refresh token được mã hóa khi lưu (encryption at rest) bằng cơ chế tiêu chuẩn ngành trước khi ghi vào database; access token là loại ngắn hạn và chỉ giữ đủ lâu để phát sinh yêu cầu thay bạn.\n\nCấu hình rule do bạn tạo: các quy tắc When / Then có cấu trúc mà bộ tạo rule sinh ra, văn bản gốc bằng ngôn ngữ tự nhiên bạn đã gõ, và metadata audit gắn với từng rule.\n\nCấu hình trợ lý chat: các tin nhắn bạn trao đổi với trợ lý tạo rule, cùng những output có cấu trúc trợ lý tạo ra trong quá trình cấu hình. Đây là phần lịch sử cấu hình tài khoản theo góc nhìn người dùng.\n\nSổ tín dụng/billing: mọi lượt top-up, mọi lượt hold, mọi lượt thanh toán, và mọi lượt giải phóng credit — được lưu để số dư của bạn luôn dựng lại được và kiểm toán được.\n\nNgoài những phần trên, không có thứ gì khác về hộp thư của bạn được lưu phía server, ngoài những gì cần để vận hành các tính năng bạn đã bật.",
+          "heading": "Chúng tôi thu thập dữ liệu gì"
+        },
+        "googleApi": {
+          "body": "Việc Zero Mail sử dụng thông tin nhận được từ Google APIs tuân thủ Google API Services User Data Policy, bao gồm các yêu cầu Limited Use. Nói cho dễ hiểu, các cam kết dưới đây áp dụng cho mọi dữ liệu Zero Mail nhận từ Google APIs:\n\nChúng tôi chỉ dùng dữ liệu người dùng Google để cung cấp hoặc cải thiện các tính năng hướng người dùng nổi bật trên giao diện Zero Mail: phân loại thư đến, gán nhãn, lưu trữ, soạn và gửi trả lời (khi bạn đã chủ động bật tự động hóa outbound), và quản lý tài khoản.\n\nChúng tôi không chuyển dữ liệu người dùng Google cho bên khác, ngoại trừ khi cần để cung cấp hoặc cải thiện các tính năng hướng người dùng, để tuân thủ pháp luật, hoặc như một phần của sáp nhập, mua lại, bán tài sản — kèm thông báo cho người dùng.\n\nChúng tôi không dùng dữ liệu người dùng Google để phục vụ quảng cáo, bao gồm retargeting, quảng cáo cá nhân hóa, hay quảng cáo dựa trên sở thích.\n\nChúng tôi không cho phép con người đọc dữ liệu người dùng Google, trừ khi: đã có sự đồng ý rõ ràng của người dùng bị ảnh hưởng cho các thư cụ thể; việc truy cập là cần thiết cho mục đích bảo mật như điều tra lạm dụng; việc truy cập là cần thiết để tuân thủ pháp luật; hoặc dữ liệu đã được tổng hợp và ẩn danh cho vận hành nội bộ.\n\nMục này là phần khẳng định Limited Use có giá trị ràng buộc; nếu có xung đột với mục khác trong chính sách, mục này có hiệu lực.",
+          "heading": "Google API Services User Data Policy và Limited Use"
+        },
+        "notStored": {
+          "body": "Zero Mail KHÔNG giữ bản sao dài hạn của các nhóm dữ liệu sau:\n\nNội dung gốc của email Gmail giao đến bạn. HTML, plain text, và phần header ngoài những gì thật sự cần để quyết định triage — không phần nào được ghi vào nơi lưu trữ dài hạn.\n\nCác prompt LLM được dựng ra từ nội dung email đó trong quá trình triage hoặc soạn trả lời thay bạn, cùng với các completion LLM được trả về.\n\nEmbedding hay các biểu diễn vector của thư bạn. Zero Mail không vận hành vector store cho thư người dùng trong phiên bản này; nếu sau này có thêm, chúng tôi sẽ cập nhật chính sách trước.\n\nNhững mục loại trừ trên được bảo đảm bằng kiến trúc ứng dụng, không chỉ bằng chính sách. Pipeline xử lý mô tả ở mục kế tiếp là cơ chế kỹ thuật giữ những cam kết này đúng kể cả khi tải cao và khi worker restart.",
+          "heading": "Những gì chúng tôi cố ý không lưu"
+        },
+        "processing": {
+          "body": "Zero Mail xử lý hai loại nội dung email theo hai cách khác nhau, và chúng tôi muốn bạn phân biệt được rõ ràng giữa hai loại.\n\nThứ nhất, nội dung email được trích xuất — phần thân của một thư Gmail giao vào hộp thư bạn. Khi Zero Mail cần triage hoặc soạn trả lời cho thư đó, phần thân được fetch từ Gmail, đi qua một pipeline sanitization để loại script và chuẩn hóa Unicode, cắt ngắn theo budget token an toàn, chỉ giữ trong bộ nhớ trong suốt một lượt xử lý, gửi đến model ngôn ngữ, rồi hủy ngay sau khi phản hồi của model đã được xử lý xong. Phần thân này KHÔNG bao giờ được ghi vào database, KHÔNG bao giờ được ghi vào log ứng dụng, KHÔNG bao giờ được persist xuống ổ đĩa.\n\nThứ hai, nội dung bản nháp do người dùng tạo — các bản nháp mà trợ lý chat soạn ra để bạn gửi, trả lời, hoặc forward, rồi bạn xem lại trên một preview card trước khi bấm Gửi. Những bản nháp đó là sản phẩm của bạn: bạn đặt ra yêu cầu, bạn xem lại, bạn có thể chỉnh sửa, và bạn quyết định có gửi hay không. Chúng tôi giữ các bản nháp này trong suốt vòng đời của cuộc trò chuyện chat để bạn có thể mở lại, sửa và hành động sau. Chúng được lưu cùng cách như phần cấu hình chat còn lại của bạn, và theo cùng quy tắc xóa như dữ liệu tài khoản khác.\n\nPhân biệt này quan trọng vì hai loại nội dung xuất phát từ hai nguồn khác nhau và phục vụ hai mục đích khác nhau. Thư bạn nhận từ Gmail không phải thứ bạn cấp phép cho chúng tôi giữ, nên chúng tôi giữ ngắn nhất có thể về mặt kỹ thuật. Bản nháp bạn ủy quyền cho trợ lý soạn thay là của bạn để giữ, nên chúng tôi giữ chừng nào bạn còn giữ cuộc trò chuyện đó.",
+          "heading": "Chúng tôi xử lý nội dung email ra sao"
+        },
+        "retention": {
+          "body": "Các nhóm dữ liệu khác nhau có thời gian lưu khác nhau, được chọn để vừa đủ cho vận hành và audit mà không giữ quá mức cần thiết.\n\nKhóa OAuth Google được giữ cho đến khi bạn ngắt Gmail trong trang Cài đặt của Zero Mail hoặc xóa tài khoản; hành động nào xảy ra trước cũng đồng thời hủy quyền truy cập của chúng tôi và đưa các dòng liên quan vào hàng đợi dọn dẹp.\n\nCấu hình rule, cấu hình trợ lý chat, và thông tin hồ sơ tài khoản được giữ cho đến khi bạn xóa bản ghi tương ứng hoặc xóa tài khoản. Việc xóa lan tỏa qua mọi dòng có tham chiếu đến mã tenant của bạn.\n\nNội dung email nhận từ Gmail có thời gian lưu bằng 0: chúng chỉ tồn tại trong bộ nhớ thoáng qua khi xử lý. Sau khi yêu cầu fetch trả về, không thể tái dựng được nữa.\n\nLog audit cho hành động rule và hành động gửi outbound được giữ trong một cửa sổ vận hành có giới hạn — đủ ngắn để hạn chế tích lũy dữ liệu, đủ dài để điều tra sự cố người dùng báo lại. Cửa sổ hiện hành được nêu trong trang Cài đặt trong ứng dụng để có thể cập nhật mà không cần viết lại chính sách.\n\nSổ tín dụng/billing được giữ tối thiểu theo quy định pháp luật tài chính áp dụng.",
+          "heading": "Chúng tôi giữ dữ liệu trong bao lâu"
+        },
+        "security": {
+          "body": "Refresh token OAuth cho tài khoản Google của bạn được mã hóa khi lưu (encryption at rest) bằng cơ chế tiêu chuẩn ngành trước khi ghi vào database, và chỉ được giải mã trong bộ nhớ ngay trước khi gửi yêu cầu Gmail. Khóa mã hóa được giữ ngoài database, nên rò rỉ database không đồng nghĩa với rò rỉ token dùng được.\n\nPhiên người dùng là cookie ký, HttpOnly, SameSite=Lax, được Spring Session backed bằng Redis làm chỗ dựa. Chúng tôi không dùng token stateless có thể bị replay sau khi đã logout.\n\nLog ứng dụng được cố ý giữ không có nội dung. Log không chứa địa chỉ email, mã subject Google, byte của refresh token, nội dung thư, hay prompt/completion LLM. Log chỉ chứa metadata sự kiện có cấu trúc: mã tenant, tên event, mã trạng thái, thời lượng, và mã yêu cầu không thể đọc ngược. Người có quyền vào log có thể debug sự cố mà không thể đọc thư của bạn.",
+          "heading": "Chúng tôi bảo vệ dữ liệu của bạn ra sao"
+        },
+        "userRights": {
+          "body": "Bạn có thể xem lại cấu hình rule và lịch sử chat đã lưu qua trang Cài đặt trong ứng dụng web Zero Mail. Bạn có thể export cấu hình rule để giữ bản sao những rule mình đã tạo.\n\nBạn có thể ngắt Gmail bất kỳ lúc nào qua trang Cài đặt; thao tác này thu hồi cấp phép OAuth ở phía Google và dừng việc Zero Mail xử lý thêm bất kỳ thư nào cho tài khoản của bạn.\n\nBạn có thể xóa tài khoản qua trang Cài đặt. Việc xóa lan tỏa qua kết nối Gmail, OAuth token, cấu hình rule, lịch sử trợ lý chat, và mọi bản ghi audit liên quan.\n\nNếu một quyền nào đó áp dụng cho bạn nhưng chưa được expose dưới dạng thao tác self-service trong ứng dụng, hãy liên hệ legal@zeromail.app và chúng tôi sẽ phối hợp để thực hiện.",
+          "heading": "Quyền của bạn đối với dữ liệu của mình"
+        }
+      },
+      "title": "Chính sách bảo mật",
+      "toc": {
+        "about": "Về chính sách này",
+        "aiProviders": "Nhà cung cấp AI bên thứ ba",
+        "childrenAndChanges": "Trẻ em và thay đổi",
+        "cookies": "Cookie và phiên",
+        "dataCollected": "Dữ liệu chúng tôi thu thập",
+        "googleApi": "Google API Services Limited Use",
+        "notStored": "Những gì chúng tôi không lưu",
+        "processing": "Xử lý nội dung email",
+        "retention": "Thời gian lưu dữ liệu",
+        "security": "Bảo mật dữ liệu",
+        "userRights": "Quyền của bạn"
+      }
     },
     "terms": {
       "body": "Khi nhấn tiếp tục, bạn đồng ý với <terms>Điều khoản dịch vụ</terms> và <privacy>Chính sách bảo mật</privacy> của chúng tôi.",
-      "placeholderBody": "Nội dung pháp lý đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). Trang stub này tồn tại để các liên kết trong footer pháp lý phân giải đúng và để Zero Mail không bị chặn yêu cầu xác minh Google OAuth (CASA).",
-      "placeholderTitle": "Điều khoản dịch vụ"
-    }
+      "intro": "Các Điều khoản dịch vụ này điều chỉnh việc bạn dùng Zero Mail — một dự án học thuật ở giai đoạn beta, chưa launch chính thức, do Zero Mail team vận hành. Khi dùng dịch vụ, bạn đồng ý với các điều khoản dưới đây; nếu không đồng ý, vui lòng đừng kết nối tài khoản Gmail.",
+      "sections": {
+        "acceptance": {
+          "body": "Khi tạo tài khoản Zero Mail, kết nối tài khoản Gmail, hoặc sử dụng dịch vụ Zero Mail bằng cách nào đó, bạn đồng ý chịu ràng buộc bởi các Điều khoản dịch vụ này và bởi Chính sách bảo mật được tham chiếu từ chúng. Nếu bạn dùng Zero Mail thay mặt cho một tổ chức, bạn xác nhận rằng mình có thẩm quyền ràng buộc tổ chức đó với các điều khoản này, và các tham chiếu đến \"bạn\" trong tài liệu này bao gồm cả tổ chức đó khi phù hợp.\n\nNếu bạn không đồng ý với bất kỳ phần nào của các điều khoản này, vui lòng dừng dùng Zero Mail và ngắt tài khoản Gmail khỏi trang Cài đặt.",
+          "heading": "Chấp nhận các điều khoản này"
+        },
+        "acceptableUse": {
+          "body": "Khi dùng Zero Mail, bạn KHÔNG được làm các việc sau. Bạn không được dùng dịch vụ để gửi spam, lừa đảo, phishing, thư hàng loạt không được mời, hay marketing đại trà — bất kể danh sách người nhận được dựng nên bằng cách nào. Bạn không được vi phạm Chính sách chương trình Gmail hay bất kỳ luật gửi email nào áp dụng, bao gồm nhưng không giới hạn ở CAN-SPAM của Hoa Kỳ và các quy chế khu vực tương đương áp dụng nơi bạn hoặc người nhận của bạn cư trú.\n\nBạn không được lạm dụng tự động hóa để quấy rối, lừa dối, mạo danh, hay bôi nhọ bất kỳ cá nhân hay tổ chức nào. Bạn không được tìm cách qua mặt các safety gate, rate limit, kiểm soát idempotency, hay audit log mà dịch vụ dựa vào để chạy an toàn. Bạn không được dịch ngược (reverse-engineer) hay tìm cách vượt qua các kiểm soát truy cập tách biệt tài khoản của bạn khỏi mọi tài khoản khác trên cùng triển khai.",
+          "heading": "Sử dụng được chấp nhận"
+        },
+        "autoSendRules": {
+          "body": "Zero Mail có một tùy chọn toàn cục Auto-send rules trong trang Cài đặt. Tùy chọn mặc định BẬT. Khi bật, các rule AI CÓ THỂ thực hiện hành động outbound thay bạn — trả lời, forward, hoặc gửi mới — nhưng chỉ sau khi mọi safety gate runtime áp dụng được đều pass đối với thư cụ thể đó.\n\nCác safety gate runtime ít nhất bao gồm: kiểm tra người gửi mức tin thấp (low-trust sender guard) để chặn outbound với liên hệ mới hay chưa xác minh; rate cap theo tenant giới hạn số thư outbound tài khoản bạn có thể sinh ra trong một cửa sổ ngắn; daily cap theo tenant giới hạn tổng lượng outbound mỗi ngày; kiểm tra idempotency để một quyết định triage không thể gửi cùng một thư hai lần; và audit log chỉ ghi thêm (append-only) ghi lại mọi hành động outbound để rà lại sau.\n\nNếu bất kỳ gate nào fail, hoặc nếu tùy chọn Auto-send rules đang TẮT, rule sẽ tự động xuống còn lưu Gmail draft thay vì gửi. Draft sẽ xuất hiện trong thư mục Drafts trong Gmail và chờ bạn xem lại rồi gửi thủ công.\n\nTrợ lý chat luôn yêu cầu xác nhận rõ ràng của người dùng qua preview card trước khi gửi bất kỳ thư nào, không phụ thuộc vào tùy chọn toàn cục.\n\nBạn vẫn chịu trách nhiệm cho mọi hành động outbound thực hiện dưới tài khoản của mình, dù do rule kích hoạt tự động hay do bạn xác nhận thủ công qua trợ lý chat. Chúng tôi khuyến nghị bạn xem lại rule và tùy chọn toàn cục định kỳ.",
+          "heading": "Hành động outbound do AI ủy quyền và tùy chọn Auto-send rules"
+        },
+        "changes": {
+          "body": "Zero Mail team có thể cập nhật các điều khoản này khi sản phẩm phát triển. Những thay đổi quan trọng sẽ được thông báo trong ứng dụng và qua địa chỉ email gắn với tài khoản của bạn. Tiếp tục dùng Zero Mail sau khi cập nhật có hiệu lực đồng nghĩa với việc bạn chấp nhận điều khoản mới. Nếu bạn không đồng ý với một thay đổi, biện pháp khắc phục dành cho bạn là dừng dùng dịch vụ và xóa tài khoản.",
+          "heading": "Thay đổi các điều khoản này"
+        },
+        "contact": {
+          "body": "Mọi câu hỏi về các điều khoản này, vui lòng liên hệ Zero Mail team qua legal@zeromail.app. Chúng tôi sẽ phản hồi các yêu cầu bằng văn bản sớm trong khả năng của một team nhỏ.",
+          "heading": "Liên hệ"
+        },
+        "creditsAndBilling": {
+          "body": "Zero Mail dùng mô hình credit trả trước, pay-as-you-go. Bạn nạp credit khi muốn, và credit được tiêu khi các hành động AI chạy thay bạn. Không có subscription định kỳ trong giai đoạn beta; bạn không phải trả cho thời gian không dùng tới.\n\nBạn có thể dùng khóa API riêng (BYOK) cho các nhà cung cấp được hỗ trợ. Các hành động tính qua khóa BYOK hoàn toàn không đi qua sổ credit của Zero Mail; chi phí những lượt gọi đó được giải quyết giữa bạn và nhà cung cấp của bạn, không qua chúng tôi. Chuyển đổi giữa credit nền tảng và BYOK là một thay đổi trong Cài đặt bạn có thể thực hiện bất kỳ lúc nào.",
+          "heading": "Credit và thanh toán"
+        },
+        "description": {
+          "body": "Zero Mail là một dự án học thuật ở giai đoạn beta, chưa launch chính thức, do Zero Mail team vận hành. Dịch vụ giúp bạn về inbox zero trong Gmail bằng cách phân loại, gán nhãn, lưu trữ và soạn trả lời theo các quy tắc ngôn ngữ tự nhiên bạn tự viết. Trong giai đoạn này, dịch vụ được cung cấp cho mục đích đánh giá và thu thập phản hồi. Tính năng, giá và mức độ sẵn có có thể thay đổi mà không cần báo trước trong khi chúng tôi học xem điều gì hoạt động.\n\nKhông có nội dung nào trong tài liệu này nên được hiểu là cam kết rằng Zero Mail là sản phẩm cấp enterprise hay đã có tư cách pháp lý của một dịch vụ thương mại đã launch đầy đủ. Chúng tôi minh bạch về trạng thái beta vì muốn bạn ra quyết định có hiểu biết trước khi kết nối hộp thư thật.",
+          "heading": "Zero Mail là gì"
+        },
+        "eligibility": {
+          "body": "Để dùng Zero Mail, bạn phải đủ 13 tuổi (hoặc mức tuổi tối thiểu cao hơn áp dụng tại quốc gia của bạn), và bạn phải có một tài khoản Google còn hoạt động mà chủ sở hữu có thẩm quyền cấp cho Zero Mail các scope OAuth dịch vụ yêu cầu. Nếu bạn kết nối tài khoản Google Workspace, quản trị viên workspace của bạn có thể hạn chế hoặc thu hồi cấp phép đó; chúng tôi tôn trọng bất kỳ thu hồi nào ngay lập tức.\n\nNếu bạn truy cập Zero Mail thay mặt một tổ chức, tổ chức cũng phải đủ điều kiện theo cùng quy tắc, và bạn phải có thẩm quyền chấp nhận các điều khoản này thay tổ chức.",
+          "heading": "Điều kiện sử dụng"
+        },
+        "gmailAuthorization": {
+          "body": "Zero Mail chỉ yêu cầu các scope OAuth Gmail tối thiểu cần để vận hành. Khi có sự đồng ý của bạn, dịch vụ có thể thực hiện các hành động sau trên thư Gmail trong tài khoản bạn: đọc thư đến để AI có thể triage; gán hoặc gỡ nhãn Gmail; lưu trữ (archive) thư bằng cách bỏ khỏi hộp thư đến; lưu Gmail draft; đánh dấu thư đã đọc/chưa đọc; star/un-star thư; gắn cờ spam; và thêm thư vào digest hằng ngày để bạn xem lại gọn ở một chỗ.\n\nKhi bạn chủ động opt-in qua tùy chọn Auto-send rules, Zero Mail còn có thể gửi trả lời thay bạn, forward thư thay bạn, và gửi thư mới thay bạn — đều phụ thuộc vào các safety gate mô tả ở mục kế tiếp.\n\nCác hành động phá hủy KHÔNG nằm trong scope. Zero Mail không xóa vĩnh viễn thư trong tài khoản Gmail của bạn thay bạn, và không gọi webhook tùy ý đến các dịch vụ ngoài thay bạn. Nếu dịch vụ từng hỗ trợ các hành động đó, chúng sẽ phải qua một opt-in riêng do admin gắn nhãn rõ ràng.",
+          "heading": "Phạm vi cấp quyền Gmail"
+        },
+        "governingLaw": {
+          "body": "Các điều khoản này được điều chỉnh và giải thích theo pháp luật Việt Nam. Các tranh chấp phát sinh từ hoặc liên quan đến các điều khoản này hoặc đến việc bạn dùng Zero Mail trước hết sẽ được giải quyết thông qua thương lượng thiện chí giữa các bên. Nếu không thể giải quyết qua thương lượng, tranh chấp sẽ được giải quyết theo pháp luật Việt Nam áp dụng tại nơi có thẩm quyền tài phán phù hợp tại thời điểm tranh chấp phát sinh.\n\nMục này không từ bỏ bất kỳ quyền bảo vệ người tiêu dùng không thể từ bỏ nào mà bạn có theo pháp luật quốc gia cư trú của mình.",
+          "heading": "Luật áp dụng"
+        },
+        "intellectualProperty": {
+          "body": "Dịch vụ Zero Mail, bao gồm mã nguồn, giao diện người dùng, branding, văn bản và tài liệu, thuộc sở hữu của Zero Mail team. Không có nội dung nào trong các điều khoản này chuyển quyền sở hữu dịch vụ sang cho bạn. Bạn chỉ nhận một giấy phép sử dụng có giới hạn, có thể thu hồi, không thể chuyển nhượng để dùng dịch vụ phù hợp với các điều khoản này.\n\nBạn vẫn sở hữu nội dung email của mình, các cấu hình rule của mình, và các input bạn cung cấp cho trợ lý chat. Chúng tôi không tuyên bố quyền sở hữu nào với dữ liệu đó; chúng tôi chỉ tuyên bố quyền vận hành để xử lý dữ liệu thay bạn nhằm thực hiện điều bạn đã yêu cầu dịch vụ làm.",
+          "heading": "Sở hữu trí tuệ"
+        },
+        "liability": {
+          "body": "Trong phạm vi tối đa pháp luật áp dụng cho phép, tổng trách nhiệm của Zero Mail team đối với mọi khiếu nại phát sinh từ hoặc liên quan đến dịch vụ giới hạn ở tổng số tiền bạn đã trả cho credit của dịch vụ trong ba tháng ngay trước sự kiện làm phát sinh khiếu nại, hoặc bằng 0 nếu bạn không trả gì trong giai đoạn đó.\n\nZero Mail team không chịu trách nhiệm cho mọi thiệt hại gián tiếp, ngẫu nhiên, đặc biệt, hệ quả, hay mang tính trừng phạt — bao gồm mất lợi nhuận, mất doanh thu, mất cơ hội kinh doanh, hay mất dữ liệu — kể cả khi team đã được thông báo về khả năng xảy ra thiệt hại đó. Một số khu vực pháp lý không cho phép các giới hạn này; nơi đó các giới hạn chỉ áp dụng trong phạm vi pháp luật áp dụng cho phép.",
+          "heading": "Giới hạn trách nhiệm"
+        },
+        "refunds": {
+          "body": "Trong giai đoạn beta, credit chưa dùng được giữ lại vô thời hạn. Yêu cầu hoàn tiền credit chưa dùng sẽ được xem xét theo từng trường hợp tùy quyết định của Zero Mail team; để yêu cầu hoàn tiền, liên hệ legal@zeromail.app và mô tả hoàn cảnh. Chúng tôi không hoàn tiền cho credit đã được tiêu bởi hành động AI.",
+          "heading": "Hoàn tiền"
+        },
+        "termination": {
+          "body": "Bạn có thể chấm dứt việc dùng Zero Mail bất kỳ lúc nào bằng cách ngắt Gmail trong trang Cài đặt và xóa tài khoản. Không cần giải thích thêm.\n\nZero Mail team có thể tạm dừng hoặc chấm dứt tài khoản bất kỳ vì vi phạm trọng yếu các điều khoản này, vì lý do bảo mật nghiêm trọng, hoặc khi tiếp tục vận hành tài khoản đó sẽ là trái pháp luật. Khi có thể hợp lý, chúng tôi sẽ thông báo cho bạn trước khi chấm dứt tài khoản để bạn có cơ hội xử lý vấn đề.\n\nViệc chấm dứt bởi bên nào không xóa bỏ các quyền và nghĩa vụ đã phát sinh tại thời điểm chấm dứt, bao gồm mọi thời hạn giữ audit log và mọi giải quyết tài chính còn dang dở.",
+          "heading": "Chấm dứt"
+        },
+        "warrantiesDisclaimer": {
+          "body": "Zero Mail được cung cấp theo nguyên trạng (\"AS IS\") và theo mức độ sẵn có (\"AS AVAILABLE\"), không có bảo đảm dưới bất kỳ hình thức nào, dù minh thị hay ngụ ý, trong phạm vi tối đa pháp luật áp dụng cho phép. Không giới hạn ở những điều trên, Zero Mail team không bảo đảm dịch vụ sẽ không gián đoạn, không lỗi, an toàn tuyệt đối, hay không có thành phần gây hại, và không bảo đảm các quyết định triage hay bản nháp do AI tạo ra sẽ luôn chính xác, phù hợp, hay không thiên kiến trong mọi trường hợp.\n\nBạn chịu trách nhiệm xem lại các hành động outbound và bản nháp do AI tạo ra trước khi dựa vào chúng, và bạn chịu trách nhiệm cho hệ quả của bất kỳ hành động nào bạn cho phép AI thực hiện thay mình.",
+          "heading": "Miễn trừ bảo đảm"
+        }
+      },
+      "title": "Điều khoản dịch vụ",
+      "toc": {
+        "acceptance": "Chấp nhận điều khoản",
+        "acceptableUse": "Sử dụng được chấp nhận",
+        "autoSendRules": "Tự động gửi bằng rule",
+        "changes": "Thay đổi điều khoản",
+        "contact": "Liên hệ",
+        "creditsAndBilling": "Credit và thanh toán",
+        "description": "Zero Mail là gì",
+        "eligibility": "Điều kiện sử dụng",
+        "gmailAuthorization": "Phạm vi cấp quyền Gmail",
+        "governingLaw": "Luật áp dụng",
+        "intellectualProperty": "Sở hữu trí tuệ",
+        "liability": "Giới hạn trách nhiệm",
+        "refunds": "Hoàn tiền",
+        "termination": "Chấm dứt",
+        "warrantiesDisclaimer": "Miễn trừ bảo đảm"
+      }
+    },
+    "tocHeading": "Trên trang này"
   },
   "llm": {
     "byok": {
@@ -1359,7 +1504,7 @@
   "nav": {
     "ai": "Cấu hình AI",
     "analytics": "Phân tích",
-    "beta": "beta",
+    "beta": "v1",
     "billing": "Thanh toán",
     "chat": "Trợ lý",
     "cleanupGroup": "Hủy đăng ký",

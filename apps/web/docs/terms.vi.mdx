@@ -1,0 +1,146 @@
+---
+title: 'Điều khoản dịch vụ'
+slug: 'terms'
+order: 101
+locale: 'vi'
+hideFromIndex: true
+lastUpdated: '2026-05-26'
+---
+
+_Cập nhật lần cuối: 26/05/2026_
+
+Các Điều khoản dịch vụ này điều chỉnh việc bạn truy cập và sử dụng Zero Mail. Khi tạo tài khoản, kết nối Gmail, dùng ứng dụng web, dùng trợ lý chat, tạo rule hoặc cho phép Zero Mail hành động trên thư Gmail, bạn đồng ý với các điều khoản này và Chính sách bảo mật.
+
+## Chấp nhận các điều khoản này
+
+Bạn chỉ được dùng Zero Mail nếu có năng lực giao kết thỏa thuận ràng buộc và có thẩm quyền cấp các quyền Gmail mà bạn phê duyệt. Nếu dùng Zero Mail cho một tổ chức, bạn cam đoan mình có thẩm quyền chấp nhận các điều khoản này thay tổ chức đó.
+
+Nếu không đồng ý với các điều khoản này, bạn không được dùng Zero Mail và không được kết nối Gmail. Bạn có thể ngừng dùng Zero Mail bất kỳ lúc nào bằng cách ngắt Gmail và xóa tài khoản.
+
+## Zero Mail cung cấp gì
+
+Zero Mail là dịch vụ năng suất cho Gmail, giúp người dùng tiến tới inbox zero thông qua phân loại bằng AI, rule do người dùng định nghĩa, label, archive, đánh dấu đã đọc/chưa đọc, star, đánh dấu spam, digest, tạo draft và các luồng outbound có kiểm soát an toàn.
+
+Luồng cốt lõi là:
+
+- bạn kết nối Gmail;
+- bạn tạo rule bằng ngôn ngữ tự nhiên hoặc trình chỉnh sửa có cấu trúc;
+- Zero Mail lưu rule có hiệu lực dưới dạng cấu hình When / Then có cấu trúc;
+- thư đến được xử lý theo cài đặt bạn bật;
+- hành động outbound cần bạn xác nhận hoặc phải vượt qua safety gate runtime trước khi gửi;
+- tự động hóa outbound bị chặn sẽ chuyển sang lưu Gmail draft.
+
+Zero Mail không xóa vĩnh viễn thư Gmail và không gọi webhook tùy ý đến dịch vụ bên ngoài thay bạn.
+
+## Điều kiện sử dụng
+
+Để dùng Zero Mail, bạn phải từ 13 tuổi trở lên hoặc đạt độ tuổi tối thiểu tại quốc gia của bạn, tùy mức nào cao hơn. Bạn phải sở hữu hoặc được ủy quyền dùng tài khoản Google mà bạn kết nối.
+
+Nếu kết nối tài khoản Google Workspace, quản trị viên workspace của bạn có thể kiểm soát việc Zero Mail có được truy cập tài khoản đó hay không. Zero Mail tôn trọng sự kiện thu hồi, ngắt kết nối và xóa tài khoản khi nhận được.
+
+## Cấp quyền Gmail
+
+Zero Mail yêu cầu quyền Gmail và tài khoản Google để cung cấp các tính năng bạn chọn. Với sự đồng ý của bạn, Zero Mail có thể đọc thư, kiểm tra metadata thư, gán nhãn, gỡ nhãn, archive thư, lưu draft, đánh dấu đã đọc hoặc chưa đọc, star hoặc bỏ star, đánh dấu spam, thêm thư vào digest, gửi trả lời, forward thư và gửi email mới.
+
+Zero Mail chỉ dùng dữ liệu người dùng Google như mô tả trong Chính sách bảo mật và chỉ cho các tính năng hướng người dùng hiển thị trong sản phẩm. Bạn có thể thu hồi quyền Gmail của Zero Mail từ Settings của Zero Mail hoặc từ trang quyền tài khoản Google.
+
+## Hành động AI và an toàn outbound
+
+Zero Mail có thể chuẩn bị và thực hiện hành động bằng AI. Bạn vẫn chịu trách nhiệm với rule bạn tạo, cài đặt bạn bật và thư được gửi từ tài khoản Gmail của bạn.
+
+Hành động outbound do rule kích hoạt chỉ được phép khi toàn bộ điều kiện áp dụng đều pass:
+
+- tùy chọn toàn cục Auto-send rules cho phép tự động hóa outbound;
+- rule cụ thể đang bật và có hành động outbound;
+- kiểm tra độ tin cậy người gửi pass;
+- rate limit theo tài khoản và daily cap pass;
+- kiểm tra idempotency xác nhận cùng quyết định chưa gửi cùng một thư trước đó;
+- audit logging ghi nhận hành động.
+
+Nếu bất kỳ gate nào fail, hoặc Auto-send rules đang tắt, Zero Mail lưu Gmail draft thay vì gửi. Hành động gửi, trả lời và forward từ trợ lý chat yêu cầu người dùng xác nhận qua preview card trước khi thực thi.
+
+## Credit và thanh toán
+
+Zero Mail dùng credit trả trước cho mức sử dụng AI do nền tảng định tuyến. Credit được giữ, quyết toán hoặc hoàn giữ khi hành động chạy. Số dư của bạn dựa trên billing ledger trong tài khoản.
+
+Nếu bạn cấu hình nhà cung cấp hỗ trợ khóa riêng, các yêu cầu đủ điều kiện có thể dùng khóa nhà cung cấp của bạn và có thể bỏ qua tính credit nền tảng của Zero Mail. Phí từ tài khoản nhà cung cấp riêng của bạn được điều chỉnh bởi thỏa thuận giữa bạn và nhà cung cấp đó.
+
+Giá, gói credit, nhà cung cấp hỗ trợ và mức sử dụng bao gồm có thể thay đổi theo plan, khu vực, chi phí nhà cung cấp, thuế, khuyến mãi và yêu cầu vận hành. Màn hình mua hoặc checkout hiện hành điều chỉnh giá và lượng credit cho giao dịch.
+
+## Hoàn tiền
+
+Credit đã tiêu là không hoàn tiền vì công việc AI hoặc vận hành nền tảng đã được thực hiện. Với credit trả trước chưa dùng, khả năng hoàn tiền phụ thuộc vào phương thức thanh toán, rà soát gian lận, yêu cầu pháp luật, trạng thái tài khoản và hoàn cảnh của yêu cầu.
+
+Để yêu cầu xem xét hoàn tiền, hãy liên hệ legal@zeromail.app với email tài khoản, thông tin giao dịch và lý do yêu cầu. Khoản hoàn tiền được duyệt sẽ được trả về phương thức thanh toán ban đầu khi được hỗ trợ.
+
+## Sử dụng được chấp nhận
+
+Bạn không được dùng Zero Mail để:
+
+- gửi spam, lừa đảo, phishing, malware, nội dung gây hiểu lầm hoặc email hàng loạt không được mời;
+- vi phạm chính sách Gmail, luật gửi email, luật chống spam, luật quyền riêng tư hoặc quyền của người khác;
+- quấy rối, đe dọa, mạo danh, bôi nhọ hoặc lừa dối cá nhân hay tổ chức;
+- vượt qua safety gate, rate limit, kiểm tra idempotency, kiểm soát billing hoặc audit log;
+- kết nối tài khoản bạn không sở hữu hoặc không được ủy quyền dùng;
+- dịch ngược, scrape, gây quá tải, dò quét hoặc tấn công hệ thống Zero Mail;
+- dùng output AI như tư vấn pháp lý, y tế, tài chính hoặc chuyên môn được quản lý mà không có chuyên gia đủ điều kiện xem xét độc lập.
+
+Chúng tôi có thể tạm dừng hoặc chấm dứt tài khoản vi phạm các điều khoản này, tạo rủi ro bảo mật, tạo rủi ro pháp lý hoặc gây hại cho Zero Mail, Gmail, Google, người dùng khác hoặc người nhận email.
+
+## Nội dung người dùng và quyền sở hữu
+
+Bạn giữ quyền sở hữu đối với nội dung email, văn bản rule, cấu hình rule, tin nhắn chat, prompt bạn nhập và bản nháp do người dùng tạo. Bạn cấp cho Zero Mail quyền giới hạn cần thiết để host, xử lý, truyền, biến đổi và hiển thị nội dung đó chỉ nhằm cung cấp, bảo mật, hỗ trợ và cải thiện dịch vụ như mô tả trong Chính sách bảo mật.
+
+Bạn chịu trách nhiệm bảo đảm việc dùng Zero Mail và nội dung bạn xử lý qua dịch vụ là hợp pháp, đồng thời bạn có đủ quyền cần thiết để dùng nội dung đó với dịch vụ.
+
+## Sở hữu trí tuệ của Zero Mail
+
+Zero Mail, bao gồm phần mềm, giao diện, thiết kế, branding, tài liệu, workflow và nội dung dịch vụ, thuộc sở hữu của Zero Mail hoặc bên cấp phép của Zero Mail. Các điều khoản này không chuyển quyền sở hữu tài sản trí tuệ Zero Mail cho bạn.
+
+Theo các điều khoản này, Zero Mail cấp cho bạn quyền giới hạn, có thể thu hồi, không độc quyền, không thể chuyển nhượng để dùng dịch vụ cho năng suất email cá nhân hoặc nội bộ doanh nghiệp.
+
+## Thay đổi và mức độ sẵn có của dịch vụ
+
+Zero Mail có thể thêm, bỏ, thay đổi, tạm dừng hoặc giới hạn tính năng để cải thiện độ ổn định, bảo mật, tuân thủ, trải nghiệm người dùng, tương thích nhà cung cấp hoặc kiểm soát chi phí. Chúng tôi cố gắng tránh gián đoạn không cần thiết, nhưng không bảo đảm mọi tính năng luôn sẵn có.
+
+Dịch vụ phụ thuộc vào hệ thống bên thứ ba gồm Google APIs, nhà cung cấp AI, nhà cung cấp hosting, nhà cung cấp thanh toán và hạ tầng mạng. Gián đoạn hoặc thay đổi chính sách ở các hệ thống đó có thể ảnh hưởng đến Zero Mail.
+
+## Miễn trừ bảo đảm
+
+Zero Mail được cung cấp trên cơ sở "AS IS" và "AS AVAILABLE" trong phạm vi tối đa pháp luật cho phép. Chúng tôi không bảo đảm dịch vụ sẽ không gián đoạn, không lỗi, an toàn tuyệt đối, hoặc các quyết định, phân loại, label, tóm tắt hay draft của AI luôn chính xác, phù hợp, đầy đủ hoặc không thiên kiến.
+
+Bạn nên xem lại các label, archive, draft, thư outbound và rule tự động quan trọng. Bạn chịu trách nhiệm với quyết định được thực hiện trong tài khoản của mình và thư được gửi từ tài khoản Gmail của mình.
+
+## Giới hạn trách nhiệm
+
+Trong phạm vi tối đa pháp luật cho phép, Zero Mail không chịu trách nhiệm cho thiệt hại gián tiếp, ngẫu nhiên, đặc biệt, hệ quả, điển hình hoặc mang tính trừng phạt, bao gồm mất lợi nhuận, mất doanh thu, mất cơ hội kinh doanh, gián đoạn kinh doanh, mất thiện chí hoặc mất dữ liệu.
+
+Trong phạm vi tối đa pháp luật cho phép, tổng trách nhiệm của Zero Mail đối với khiếu nại phát sinh từ hoặc liên quan đến dịch vụ được giới hạn ở số tiền bạn đã trả cho Zero Mail trong ba tháng trước sự kiện làm phát sinh khiếu nại, hoặc 100 USD nếu bạn không trả gì trong giai đoạn đó.
+
+Một số khu vực pháp lý không cho phép một số giới hạn nhất định. Tại các khu vực đó, giới hạn chỉ áp dụng trong phạm vi pháp luật cho phép.
+
+## Bồi hoàn
+
+Nếu bạn dùng Zero Mail thay mặt doanh nghiệp hoặc tổ chức, doanh nghiệp hoặc tổ chức đó đồng ý bảo vệ, bồi hoàn và giữ Zero Mail không bị thiệt hại trước các khiếu nại, trách nhiệm, thiệt hại, tổn thất và chi phí phát sinh từ việc bạn dùng dịch vụ, nội dung của bạn, hành động Gmail của bạn, việc bạn vi phạm các điều khoản này hoặc vi phạm pháp luật.
+
+## Chấm dứt
+
+Bạn có thể ngừng dùng Zero Mail bất kỳ lúc nào bằng cách ngắt Gmail và xóa tài khoản. Zero Mail có thể tạm dừng hoặc chấm dứt quyền truy cập nếu bạn vi phạm các điều khoản này, tạo rủi ro, không thanh toán khoản đến hạn hoặc nếu tiếp tục vận hành là trái luật hoặc gây hại.
+
+Chấm dứt không ảnh hưởng đến nghĩa vụ đã phát sinh trước thời điểm chấm dứt, bao gồm nghĩa vụ thanh toán, lưu audit, giải quyết tranh chấp và các điều khoản mà theo bản chất nên tiếp tục có hiệu lực.
+
+## Luật áp dụng
+
+Các điều khoản này được điều chỉnh bởi pháp luật Việt Nam, không xét đến quy tắc xung đột pháp luật. Tranh chấp trước hết sẽ được xử lý bằng thương lượng thiện chí. Nếu không thể giải quyết qua thương lượng, tranh chấp sẽ được giải quyết tại tòa án hoặc diễn đàn có thẩm quyền theo pháp luật Việt Nam áp dụng.
+
+Mục này không giới hạn quyền người tiêu dùng không thể từ bỏ có thể áp dụng tại quốc gia cư trú của bạn.
+
+## Thay đổi các điều khoản này
+
+Chúng tôi có thể cập nhật các điều khoản này khi Zero Mail thay đổi. Thay đổi quan trọng sẽ được thông báo trong sản phẩm, qua email hoặc cả hai. Tiếp tục dùng Zero Mail sau khi điều khoản cập nhật có hiệu lực nghĩa là bạn chấp nhận điều khoản cập nhật.
+
+Nếu không đồng ý với điều khoản cập nhật, bạn phải ngừng dùng Zero Mail, ngắt Gmail và xóa tài khoản.
+
+## Liên hệ
+
+Đối với câu hỏi về các điều khoản này, billing, quyền riêng tư, bảo mật hoặc hỗ trợ tài khoản, hãy liên hệ Zero Mail tại legal@zeromail.app.

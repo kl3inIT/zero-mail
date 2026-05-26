@@ -13,7 +13,7 @@ export default async function Footer() {
           <div className="max-w-72">
             <Link href="/" className="zm-brand mb-4">
               <span className="zm-brand-mark">
-                <ZMLogoMark size={40} />
+                <ZMLogoMark size={48} />
               </span>
               <span className="zm-brand-wordmark">
                 <span>zero</span>

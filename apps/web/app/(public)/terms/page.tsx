@@ -1,14 +1,11 @@
-import { getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
+
+import { LegalDocPage, generateLegalDocMetadata } from '@/lib/docs/legal-page';
+
+export async function generateMetadata(): Promise<Metadata> {
+  return generateLegalDocMetadata('terms');
+}
 
 export default async function TermsPage() {
-  const t = await getTranslations();
-
-  return (
-    <section className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-      <h1 className="text-foreground mb-6 text-3xl font-semibold tracking-tight">
-        {t('legal.terms.placeholderTitle')}
-      </h1>
-      <p className="text-muted-foreground leading-relaxed">{t('legal.terms.placeholderBody')}</p>
-    </section>
-  );
+  return <LegalDocPage slug="terms" />;
 }
