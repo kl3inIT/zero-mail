@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: "Phase 08.1 shipped — PR #60"
-stopped_at: Phase 9 UI-SPEC approved
-last_updated: "2026-05-26T09:10:10.545Z"
+stopped_at: Phase 9 plans created — ready to execute
+last_updated: "2026-05-26T12:17:52.555Z"
 last_activity: "2026-05-25 - Completed quick task 260525-krs: per-tool UI components for 15 chat tools (port inbox-zero pattern, replace JSON dump)"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 21
+  total_plans: 28
   completed_plans: 20
   percent: 50
 ---
@@ -517,9 +517,9 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-26T09:10:10.510Z
-Stopped at: Phase 9 UI-SPEC approved
-Resume file: .planning/phases/09-user-settings-ui-on-curated-catalog/09-UI-SPEC.md
+Last session: 2026-05-26T12:17:52.524Z
+Stopped at: Phase 9 plans created — ready to execute
+Resume file: .planning/phases/09-user-settings-ui-on-curated-catalog/09-01-PLAN.md
 
 ## Operator Next Steps
 
