@@ -60,13 +60,6 @@ export function CampaignStatusPage({ jobId }: { jobId: string }) {
         </Link>
       </nav>
 
-      <div className="border-foreground/10 flex flex-col gap-2 border-b pb-5">
-        <h1 className="text-foreground text-2xl leading-tight font-semibold">
-          {t('cleanup.unsubscribe.status.title', { shortId })}
-        </h1>
-        <p className="text-muted-foreground text-sm">{statusLabel(t, status)}</p>
-      </div>
-
       {statusQuery.isPending && (
         <div className="flex flex-col gap-3">
           <Skeleton className="h-3 w-full" />
@@ -86,14 +79,19 @@ export function CampaignStatusPage({ jobId }: { jobId: string }) {
         <>
           <div className="flex flex-col gap-2">
             <Progress value={progressPct} />
-            <p className="text-muted-foreground text-xs tabular-nums">
-              {t('cleanup.unsubscribe.status.progress', {
-                percent: progressPct,
-                okCount,
-                failedCount,
-                totalCount,
-              })}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="bg-muted text-foreground rounded-md px-2 py-0.5 text-xs font-medium">
+                {statusLabel(t, status)}
+              </span>
+              <p className="text-muted-foreground text-xs tabular-nums">
+                {t('cleanup.unsubscribe.status.progress', {
+                  percent: progressPct,
+                  okCount,
+                  failedCount,
+                  totalCount,
+                })}
+              </p>
+            </div>
           </div>
 
           {status === 'COMPLETED' && (

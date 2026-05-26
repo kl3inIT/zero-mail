@@ -168,35 +168,6 @@ export function CandidateListPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border-border bg-background -mx-3 -mt-3 border-b px-4 py-3 sm:-mx-4 sm:-mt-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-          <div className="min-w-0">
-            <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-              {t('cleanup.unsubscribe.list.eyebrow')}
-            </p>
-            <h1 className="text-foreground text-[17px] font-semibold">
-              {t('cleanup.unsubscribe.list.title')}
-            </h1>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 sm:justify-end">
-            <UnsubscribeHelpAction />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-fit"
-              onClick={() => setSuppressionDialogOpen(true)}
-            >
-              <ShieldIcon className="size-4" aria-hidden="true" />
-              {t('cleanup.unsubscribe.list.suppressionLink')}
-            </Button>
-          </div>
-        </div>
-        <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-          {t('cleanup.unsubscribe.list.lead')}
-        </p>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           icon={MailXIcon}
@@ -220,7 +191,7 @@ export function CandidateListPage() {
         />
       </div>
 
-      <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+      <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-3 shadow-sm xl:flex-row xl:items-center xl:justify-between">
         <div className="relative w-full lg:w-[420px]">
           <SearchIcon
             className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
@@ -235,6 +206,17 @@ export function CandidateListPage() {
         </div>
 
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
+          <UnsubscribeHelpAction />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-11 w-full sm:w-auto"
+            onClick={() => setSuppressionDialogOpen(true)}
+          >
+            <ShieldIcon className="size-4" aria-hidden="true" />
+            {t('cleanup.unsubscribe.list.suppressionLink')}
+          </Button>
           <Select
             value={methodFilter}
             onValueChange={(value) => setMethodFilter(value as MethodFilter)}

@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 
 import { TopupPackageSelector, type TopupIntentDetails } from './TopupPackageSelector';
 import { TopupInstructions } from './TopupInstructions';
@@ -19,7 +18,6 @@ type StoredTopupIntent = TopupIntentDetails & {
 const STORAGE_PREFIX = 'zero-mail:billing-topup:';
 
 export function TopupClient() {
-  const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchCode = searchParams.get('code');
@@ -95,15 +93,6 @@ export function TopupClient() {
 
   return (
     <div className="space-y-12">
-      <div className="mb-12 space-y-4 text-center">
-        <h1 className="text-foreground from-foreground to-foreground/70 bg-linear-to-b bg-clip-text text-4xl font-extrabold tracking-tight text-transparent md:text-5xl">
-          {t('billing.topup.page.title')}
-        </h1>
-        <p className="text-muted-foreground mx-auto max-w-2xl text-lg leading-relaxed">
-          {t('billing.topup.page.description')}
-        </p>
-      </div>
-
       {step === 'success' && creditedBalance !== null ? (
         <TopupSuccess newBalance={creditedBalance} />
       ) : step === 'expired' ? (

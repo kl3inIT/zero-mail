@@ -16,7 +16,7 @@ test.describe('rules examples and auto-send setting', () => {
       const consoleErrors = captureConsoleErrors(page);
       await openWithRulesExamplesMock(page);
 
-      await expect(page.getByRole('heading', { name: 'Automation rules' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Create rule' })).toBeVisible();
 
       await page.getByRole('button', { name: 'Create rule' }).click();
       await expect(page.getByText('Choose from examples')).toBeVisible();

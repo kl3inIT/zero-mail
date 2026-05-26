@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { CalendarClock, Gift, ShieldCheck, WalletCards } from 'lucide-react';
+import { CalendarClock, CreditCard, Gift, ShieldCheck, WalletCards } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ErrorState } from '@/components/states/ErrorState';
+import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBillingBalance } from '@/features/billing/hooks/useBillingBalance';
@@ -16,10 +18,32 @@ export function BalanceCard() {
   const locale = useLocale();
   const hydrated = useHydrated();
   const balance = useBillingBalance();
+  const header = (
+    <CardHeader>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <CardTitle>{t('billing.balance.label')}</CardTitle>
+          <CardDescription>{t('billing.balance.description')}</CardDescription>
+        </div>
+        <Link
+          href="/billing/top-up"
+          className={buttonVariants({
+            variant: 'accent',
+            size: 'sm',
+            className: 'w-full shrink-0 sm:w-auto',
+          })}
+        >
+          <CreditCard className="size-4" aria-hidden="true" />
+          {t('billing.balance.topupCta')}
+        </Link>
+      </div>
+    </CardHeader>
+  );
 
   if (balance.isError) {
     return (
       <Card data-testid="billing-balance-card">
+        {header}
         <CardContent className="py-6">
           <ErrorState
             heading={t('billing.balance.error.title')}
@@ -46,17 +70,7 @@ export function BalanceCard() {
 
   return (
     <Card data-testid="billing-balance-card" className="min-h-72">
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle>{t('billing.balance.label')}</CardTitle>
-            <CardDescription>{t('billing.balance.description')}</CardDescription>
-          </div>
-          <div className="bg-accent-soft text-accent-foreground flex size-10 items-center justify-center rounded-lg">
-            <WalletCards className="size-5" aria-hidden="true" />
-          </div>
-        </div>
-      </CardHeader>
+      {header}
       <CardContent className="space-y-4">
         {showLoading ? (
           <div className="space-y-3" aria-busy="true">

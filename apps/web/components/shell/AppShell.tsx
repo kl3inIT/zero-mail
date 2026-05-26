@@ -12,17 +12,13 @@ import { AppSidebar } from './AppSidebar';
 
 function MobileSidebarTrigger() {
   const t = useTranslations();
-  const { isMobile, openMobile, setOpenMobile, toggleSidebar, state } = useSidebar();
-  // Show floating trigger only when sidebar is hidden:
-  //  - mobile: when sheet closed
-  //  - desktop: when collapsed (so user can re-expand without hunting the rail)
-  const hidden = isMobile ? openMobile : state === 'expanded';
-  if (hidden) return null;
+  const { isMobile, openMobile, setOpenMobile } = useSidebar();
+  if (!isMobile || openMobile) return null;
 
   return (
     <button
       type="button"
-      onClick={() => (isMobile ? setOpenMobile(true) : toggleSidebar())}
+      onClick={() => setOpenMobile(true)}
       className="bg-card text-foreground hover:bg-accent border-border absolute top-3 left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
       aria-label={t('shell.sidebar.toggle')}
       data-testid="mobile-sidebar-trigger"
@@ -44,7 +40,7 @@ export function AppShell({
       <SidebarProvider defaultOpen={defaultSidebarOpen} data-testid="app-shell">
         <div className="bg-sidebar flex h-screen w-screen overflow-hidden">
           <AppSidebar />
-          <SidebarInset className="bg-sidebar relative min-w-0 p-1.5 sm:p-2">
+          <SidebarInset className="bg-sidebar relative min-w-0 p-1.5 transition-[margin] sm:p-2 md:peer-data-[state=expanded]:-ml-8">
             <PauseBanner />
             <MobileSidebarTrigger />
             <div

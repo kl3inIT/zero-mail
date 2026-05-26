@@ -53,13 +53,6 @@ export function AiConfigPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-foreground text-xl font-semibold">{t('ai.page.title')}</h1>
-        <p className="text-muted-foreground max-w-3xl text-sm leading-6">
-          {t('ai.page.description')}
-        </p>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

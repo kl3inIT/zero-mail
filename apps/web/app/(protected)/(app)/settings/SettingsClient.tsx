@@ -245,9 +245,6 @@ export function SettingsClient({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-border border-b px-4 py-3">
-        <h1 className="text-foreground text-[17px] font-semibold">{t('settings.title')}</h1>
-      </div>
       <div className="flex-1 space-y-4 overflow-auto p-3 sm:p-4">
         {/* Row 1: Account + Credit + Display preferences */}
         <div className="grid gap-4 md:grid-cols-3">

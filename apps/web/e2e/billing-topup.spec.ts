@@ -119,7 +119,6 @@ for (const viewport of VIEWPORTS) {
     await openBilling(page, '/billing', state);
 
     await expect(page.getByTestId('app-shell')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible();
     await expect(page.getByTestId('billing-balance-figure')).toContainText('12');
     await expect(page.getByTestId('billing-beta-notice')).toContainText('Free during beta');
     await expect(page.getByTestId('billing-beta-credits')).toContainText('12');

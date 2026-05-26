@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 
 import {
   API_ROUTE_PATTERN,
@@ -26,6 +26,10 @@ type InboxMessageFixture = {
   renderedHtml: string;
 };
 
+const TODAY_RECEIVED_AT = fixtureReceivedAt(0, 14, 10);
+const YESTERDAY_RECEIVED_AT = fixtureReceivedAt(-1, 14, 5);
+const TWO_DAYS_AGO_RECEIVED_AT = fixtureReceivedAt(-2, 9, 10);
+
 const INBOX_FIXTURES: InboxMessageFixture[] = [
   {
     gmailMessageId: 'gmail-message-1',
@@ -35,7 +39,7 @@ const INBOX_FIXTURES: InboxMessageFixture[] = [
     from: 'Maya Chen <maya@example.com>',
     to: ['founder@example.com'],
     cc: ['ops@example.com'],
-    receivedAt: '2026-05-23T08:30:00.000Z',
+    receivedAt: TODAY_RECEIVED_AT,
     labelIds: ['INBOX', 'UNREAD', 'Label_finance'],
     labels: [
       { id: 'INBOX', name: 'INBOX' },
@@ -57,7 +61,7 @@ const INBOX_FIXTURES: InboxMessageFixture[] = [
     from: 'Alex Rivera <alex@example.com>',
     to: ['founder@example.com'],
     cc: [],
-    receivedAt: '2026-05-22T14:05:00.000Z',
+    receivedAt: YESTERDAY_RECEIVED_AT,
     labelIds: ['INBOX'],
     labels: [{ id: 'INBOX', name: 'INBOX' }],
     unread: false,
@@ -74,7 +78,7 @@ const INBOX_FIXTURES: InboxMessageFixture[] = [
     from: 'Priya Shah <priya@example.com>',
     to: ['founder@example.com'],
     cc: [],
-    receivedAt: '2026-05-21T09:10:00.000Z',
+    receivedAt: TWO_DAYS_AGO_RECEIVED_AT,
     labelIds: ['INBOX'],
     labels: [{ id: 'INBOX', name: 'INBOX' }],
     unread: false,
@@ -129,15 +133,44 @@ test('inbox renders recent Gmail messages, fetches detail, and lazy-loads the ne
   await page.goto('/inbox', { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('load');
 
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
+  await expect(page.getByTestId('inbox-message-list')).toBeVisible();
   await expect(
     page.getByTestId('inbox-message-row').filter({ hasText: 'Investor update for May' }),
   ).toBeVisible();
   await expect(
     page.getByTestId('inbox-message-row').filter({ hasText: 'Demo deck notes' }),
   ).toBeVisible();
+  const investorRow = page
+    .getByTestId('inbox-message-row')
+    .filter({ hasText: 'Investor update for May' });
+  await expect(investorRow.getByTestId('inbox-message-sender')).toHaveText('Maya Chen');
+  await expect(investorRow.getByTestId('inbox-message-sender')).not.toContainText('@');
+  await expect(investorRow.getByTestId('inbox-message-active-dot')).toBeVisible();
+  const senderAndDotMetrics = await senderDotMetrics(investorRow);
+  expect(senderAndDotMetrics.dotLeft).toBeGreaterThan(senderAndDotMetrics.senderRight);
+  expect(senderAndDotMetrics.dotLeft - senderAndDotMetrics.senderRight).toBeLessThanOrEqual(8);
+  await expect(investorRow.getByTestId('inbox-message-date')).toHaveText(
+    expectedInboxListDate(TODAY_RECEIVED_AT),
+  );
+  const demoRow = page.getByTestId('inbox-message-row').filter({ hasText: 'Demo deck notes' });
+  await expect(demoRow.getByTestId('inbox-message-date')).toHaveText(
+    expectedInboxListDate(YESTERDAY_RECEIVED_AT),
+  );
   await expect(page.getByText('Finance')).toBeVisible();
   await expect(page.getByText('Select a message to read it.')).toBeVisible();
+
+  const searchInput = page.getByTestId('inbox-search-input');
+  await searchInput.fill('Finance');
+  await expect(page.getByTestId('inbox-message-row')).toHaveCount(1);
+  await expect(page.getByTestId('inbox-message-row')).toContainText('Investor update for May');
+  await searchInput.fill('alex@example.com');
+  await expect(page.getByTestId('inbox-message-row')).toHaveCount(1);
+  await expect(page.getByTestId('inbox-message-row')).toContainText('Demo deck notes');
+  await searchInput.fill('Investor update');
+  await expect(page.getByTestId('inbox-message-row')).toHaveCount(1);
+  await expect(page.getByTestId('inbox-message-row')).toContainText('Maya Chen');
+  await page.getByTestId('inbox-search-clear').click();
+  await expect(page.getByTestId('inbox-message-row')).toHaveCount(2);
 
   await page.getByText('Investor update for May').click();
   await expect(
@@ -448,4 +481,48 @@ function chatIdFromBody(body: unknown): string {
   if (!body || typeof body !== 'object') return '';
   const chatId = (body as { chatId?: unknown }).chatId;
   return typeof chatId === 'string' ? chatId : '';
+}
+
+async function senderDotMetrics(row: Locator) {
+  return row.evaluate((rowElement) => {
+    const senderElement = rowElement.querySelector('[data-testid="inbox-message-sender"]');
+    const dotElement = rowElement.querySelector('[data-testid="inbox-message-active-dot"]');
+    if (!senderElement || !dotElement) {
+      throw new Error('Missing sender or active dot');
+    }
+    const senderRect = senderElement.getBoundingClientRect();
+    const dotRect = dotElement.getBoundingClientRect();
+    return {
+      dotLeft: dotRect.left,
+      senderRight: senderRect.right,
+    };
+  });
+}
+
+function fixtureReceivedAt(dayOffset: number, hour: number, minute: number): string {
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  return date.toISOString();
+}
+
+function expectedInboxListDate(value: string): string {
+  const receivedDate = new Date(value);
+  const now = new Date();
+  const sameDay =
+    receivedDate.getFullYear() === now.getFullYear() &&
+    receivedDate.getMonth() === now.getMonth() &&
+    receivedDate.getDate() === now.getDate();
+
+  if (sameDay) {
+    return new Intl.DateTimeFormat('en', {
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(receivedDate);
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    day: 'numeric',
+    month: 'short',
+  }).format(receivedDate);
 }

@@ -1,7 +1,6 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
 import { cookies, headers } from 'next/headers';
 import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
 
 import { fetchAnalyticsSummary } from '@/features/analytics/api/analytics-api';
 import { AnalyticsPageClient } from '@/features/analytics/components/AnalyticsPageClient';
@@ -14,7 +13,6 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ window?: string }>;
 }) {
-  const t = await getTranslations();
   const { window: rawWindow } = await searchParams;
   const selectedWindow = normalizeAnalyticsWindow(rawWindow ?? null);
 
@@ -34,21 +32,6 @@ export default async function AnalyticsPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="flex h-full flex-col">
-        <div className="border-border border-b px-4 py-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-            <div className="min-w-0">
-              <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                {t('analytics.page.eyebrow')}
-              </p>
-              <h1 className="text-foreground text-[17px] font-semibold">
-                {t('analytics.page.title')}
-              </h1>
-            </div>
-            <p className="text-muted-foreground max-w-2xl text-sm leading-6 sm:text-right">
-              {t('analytics.page.description')}
-            </p>
-          </div>
-        </div>
         <div className="flex-1 space-y-4 overflow-auto p-3 sm:p-4">
           <Suspense fallback={<AnalyticsSkeleton />}>
             <AnalyticsPageClient />
