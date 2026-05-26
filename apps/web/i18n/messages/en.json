@@ -1281,18 +1281,163 @@
     }
   },
   "legal": {
+    "contact": {
+      "TODO_real_email": "TODO: replace legal@zeromail.app with the real legal contact email before public launch.",
+      "body": "Reach the Zero Mail team at legal@zeromail.app.",
+      "email": "legal@zeromail.app"
+    },
     "googleApiPolicy": {
       "body": "Google API data is handled under the <link>Google API User Data Policy</link> and Limited Use requirements."
     },
+    "lastUpdated": "Last updated: 26 May 2026",
     "privacy": {
-      "placeholderBody": "Real privacy policy content will land in Phase 6 launch hardening. PROJECT.md describes the binding privacy contract: no long-term storage of email content, prompts, completions, or embeddings.",
-      "placeholderTitle": "Privacy Policy"
+      "intro": "This Privacy Policy explains what data Zero Mail collects, what it deliberately does not store, and how we handle your Gmail account when you connect it. Zero Mail is operated by the Zero Mail team, a pre-launch student / MVP academic project; we treat the privacy of your inbox as the core of the product, not an afterthought.",
+      "sections": {
+        "about": {
+          "body": "Zero Mail is an AI assistant that helps you reach inbox zero in Gmail by triaging, labeling, archiving, and drafting replies based on rules you write in plain language. The service is built and operated by the Zero Mail team as a pre-launch, MVP-stage academic project. Although the project is not yet a commercial product, the privacy invariants described below are architectural commitments enforced in the code itself, not policy promises layered on top of a system that could behave otherwise.\n\nThis policy applies to every page under the Zero Mail web application and to the background workers that process your Gmail messages on your behalf after you grant Gmail access. It does not apply to Google, to your email correspondents, or to any third party you choose to integrate with through your own API keys.",
+          "heading": "About this policy and who we are"
+        },
+        "aiProviders": {
+          "body": "By default, Zero Mail routes AI calls through OpenRouter, which forwards each request to a downstream model provider on our behalf. You may also bring your own API key for a supported provider (BYOK); when a BYOK key is configured, requests for your account go directly to that provider and bypass our credit ledger.\n\nUnder the default published policies of OpenRouter and the major underlying providers, customer data sent through the API is not used to train provider models. If a provider changes that policy, we will reflect the change in this document and notify users in-product. We do not log full prompt or completion payloads from email-content processing in our application logs or our database. Only request metadata is retained: tenant identifier, provider name, model name, token counts, latency, and whether truncation occurred. This metadata is what we need to operate the service, detect abuse, and bill credits accurately.\n\nIf you bring your own API key, the contractual relationship for that traffic is between you and your chosen provider. We do not see, store, or rotate your provider key beyond what is necessary to send the request: BYOK keys are encrypted at rest using industry-standard encryption before they are written to our database, and are only decrypted in memory immediately before a request is dispatched.",
+          "heading": "Third-party AI providers and how we route requests"
+        },
+        "childrenAndChanges": {
+          "body": "Zero Mail is not directed at children under the age of 13, and we do not knowingly collect personal data from anyone under that age. If you believe a child has connected a Gmail account to Zero Mail, please contact us and we will remove the account and its data.\n\nAs the product evolves, we may update this policy. Material changes will be announced in-product and via the email address associated with your account. Continued use of Zero Mail after an update takes effect constitutes acceptance of the revised policy. If a change would meaningfully expand how we use your data, we will ask for fresh consent before applying it to your account.",
+          "heading": "Children's privacy and changes to this policy"
+        },
+        "cookies": {
+          "body": "Zero Mail uses one server-issued session cookie. The cookie is signed, HttpOnly, SameSite=Lax, and marked Secure in production. The actual session state is held server-side in Redis-backed Spring Session, not inside a stateless token; the cookie carries only an opaque identifier.\n\nWe do not embed third-party analytics cookies, advertising pixels, or cross-site tracking scripts on our marketing pages or in the application. If we add a privacy-friendly analytics tool in the future, we will update this section, name the tool, and describe how to opt out.",
+          "heading": "Cookies and similar technologies"
+        },
+        "dataCollected": {
+          "body": "To make Zero Mail work, we collect and store the following categories of data:\n\nGoogle account profile information returned by Google when you sign in: your name, email address, profile picture URL, and the stable Google subject identifier that distinguishes your account.\n\nOAuth credentials issued by Google for your account: your refresh token and access token. Refresh tokens are encrypted at rest using industry-standard encryption before they are written to the database; access tokens are short-lived and held only as long as needed to issue requests on your behalf.\n\nRule configuration that you author: the structured When / Then rules generated by the rule builder, the original natural-language text you typed, and the audit metadata associated with each rule.\n\nChat assistant configuration: the messages you exchange with the rule-builder assistant, along with the structured tool outputs the assistant produces while configuring your rules. This information is the user-facing record of how your account was set up.\n\nBilling and credit ledger entries: every top-up, every hold, every settlement, and every release of credits, retained so that your balance is always reconstructable and auditable.\n\nNothing else about your inbox is persisted server-side beyond what is required to operate the features you have enabled.",
+          "heading": "What data we collect"
+        },
+        "googleApi": {
+          "body": "Zero Mail's use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. In plain language, that means the following commitments apply to all data that Zero Mail receives from Google APIs:\n\nWe use Google user data only to provide or improve the user-facing features that are prominent in the Zero Mail interface: triaging incoming mail, applying labels, archiving, drafting and sending replies (when you have explicitly enabled outbound automation), and managing your account.\n\nWe do not transfer Google user data to others except as necessary to provide or improve user-facing features, to comply with applicable law, or as part of a merger, acquisition, or sale of assets with notice to users.\n\nWe do not use Google user data to serve advertisements, including retargeting, personalized advertising, or interest-based advertising.\n\nWe do not allow humans to read Google user data unless we have obtained the affected user's explicit consent for specific messages; the access is necessary for security purposes such as investigating abuse; the access is necessary to comply with applicable law; or the data has been aggregated and anonymized for internal operations.\n\nThis section is the binding Limited Use affirmation; if it ever conflicts with another section of this policy, this section governs.",
+          "heading": "Google API Services User Data Policy and Limited Use"
+        },
+        "notStored": {
+          "body": "Zero Mail does not keep long-term copies of the following categories of data:\n\nThe raw bodies of emails that Gmail delivers to you. The HTML, the plain text, the headers beyond what is strictly required for triage decisions — none of it is written to a long-lived store.\n\nThe LLM prompts that are constructed from those email bodies while we triage them or draft replies on your behalf, and the LLM completions returned in response to those prompts.\n\nEmbeddings or other vector representations of your mail. Zero Mail does not run an embedding store on user mail in this release; if we ever introduce one, we will update this policy first.\n\nThese exclusions are enforced by the application architecture, not by policy alone. The processing pipeline described in the next section is the technical mechanism that keeps these commitments true even under load and even across worker restarts.",
+          "heading": "What we deliberately do not store"
+        },
+        "processing": {
+          "body": "Zero Mail handles two different kinds of email content in two different ways, and we want you to be able to distinguish them clearly.\n\nFirst, extracted email content — the body of a message that Gmail delivered to your inbox. When Zero Mail needs to triage such a message or draft a response to it, the body is fetched from Gmail, run through a sanitization pipeline that strips scripts and normalizes Unicode, truncated to a safe token budget, held in memory only for the duration of the request, sent to the language model, and then discarded as soon as the model's response has been processed. The body is never written to our database, never written to our application logs, and never persisted to disk.\n\nSecond, user-authored draft bodies — the drafts that the chat assistant prepares for you to send, reply with, or forward, and that you review on a preview card before clicking Send. These drafts are your work product: you commissioned them, you review them, you can edit them, and you decide whether to send them. We persist them for the lifetime of the chat conversation so that you can re-open the conversation, revise the draft, and act on it later. They are stored in the same way as the rest of your chat configuration, and they follow the same deletion rules as the rest of your account data.\n\nThe distinction matters because the two kinds of content come from different sources and serve different purposes. Mail bodies received from Gmail are not yours to license to us, so we hold them as briefly as physically possible. Drafts you authorize the assistant to compose for you are yours to keep, so we hold them as long as you keep the conversation around.",
+          "heading": "How we process email content"
+        },
+        "retention": {
+          "body": "Different categories of data have different retention windows, all chosen to keep operational and audit needs satisfied without keeping anything longer than necessary.\n\nGoogle OAuth tokens remain on file until you disconnect Gmail from inside the Zero Mail Settings page or delete your account; whichever happens first immediately revokes our access and queues the related rows for cleanup.\n\nRule configurations, chat assistant configurations, and account profile information remain on file until you delete the relevant record or delete your account. Deletion cascades through every related row that references your tenant identifier.\n\nEmail bodies received from Gmail have a retention window of zero: they exist only in transient memory during processing. They cannot be reconstructed after the request that fetched them returns.\n\nAudit logs for rule actions and outbound sends are retained for a bounded operational window that is short enough to limit data accumulation but long enough to investigate user-reported issues. The current window is documented in the in-product Settings page so it can be updated without a policy rewrite.\n\nBilling and credit ledger entries are retained for the minimum period required by applicable financial recordkeeping law.",
+          "heading": "How long we keep things"
+        },
+        "security": {
+          "body": "OAuth refresh tokens for your Google account are encrypted at rest using industry-standard encryption before they are written to our database, and they are only decrypted in memory immediately before a Gmail request is sent. The encryption key is held outside of the database, so a database leak alone does not yield usable tokens.\n\nUser sessions are signed, HttpOnly, SameSite=Lax cookies backed by Redis-backed Spring Session. We do not use stateless tokens that could be replayed long after a logout.\n\nApplication logs are deliberately content-free. They never contain user email addresses, Google subject identifiers, raw refresh-token bytes, message bodies, or LLM prompts and completions. They contain only structured event metadata such as tenant identifier, event name, status code, duration, and an opaque request identifier. Anyone with access to our logs can debug a failure without being able to read your mail.",
+          "heading": "How we secure your data"
+        },
+        "userRights": {
+          "body": "You can review your stored rule configuration and chat history through the Settings page in the Zero Mail web application. You can export your rule configuration so that you have a copy of the rules you authored.\n\nYou can disconnect Gmail at any time through the Settings page; doing so revokes the OAuth grant on Google's side and stops Zero Mail from processing any further messages for your account.\n\nYou can delete your account through the Settings page. Deletion cascades through your Gmail connection, your OAuth tokens, your rule configurations, your chat assistant history, and any associated audit records.\n\nIf any right that applies to you is not exposed as a self-service action in the application, contact legal@zeromail.app and we will work with you to honor the request.",
+          "heading": "Your rights over your data"
+        }
+      },
+      "title": "Privacy Policy",
+      "toc": {
+        "about": "About this policy",
+        "aiProviders": "Third-party AI providers",
+        "childrenAndChanges": "Children's privacy and changes",
+        "cookies": "Cookies and session storage",
+        "dataCollected": "What data we collect",
+        "googleApi": "Google API Services Limited Use",
+        "notStored": "What we do not store",
+        "processing": "How we process email content",
+        "retention": "How long we keep data",
+        "security": "How we secure data",
+        "userRights": "Your rights"
+      }
     },
     "terms": {
       "body": "By clicking continue, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
-      "placeholderBody": "Real legal content will land in Phase 6 launch hardening. This stub exists so the legal-footer link target resolves and Google OAuth verification (CASA) requirements are unblocked.",
-      "placeholderTitle": "Terms of Service"
-    }
+      "intro": "These Terms of Service govern your use of Zero Mail, a beta / pre-launch academic project operated by the Zero Mail team. By using the service, you agree to the terms set out below; if you do not agree, please do not connect your Gmail account.",
+      "sections": {
+        "acceptance": {
+          "body": "By creating a Zero Mail account, connecting your Gmail account, or otherwise using the Zero Mail service, you agree to be bound by these Terms of Service and by the Privacy Policy referenced from them. If you are using Zero Mail on behalf of an organization, you confirm that you have the authority to bind that organization to these terms, and references to you in this document include that organization where appropriate.\n\nIf you do not agree to any part of these terms, please stop using Zero Mail and disconnect your Gmail account from the Settings page.",
+          "heading": "Accepting these terms"
+        },
+        "acceptableUse": {
+          "body": "When using Zero Mail, you must not do any of the following. You must not use the service to send spam, scams, phishing messages, unsolicited bulk mail, or mass marketing, regardless of how the recipient list was assembled. You must not violate Gmail's Program Policies or any applicable email-sending law, including but not limited to the United States CAN-SPAM Act and equivalent regional regimes that apply where you or your recipients are located.\n\nYou must not abuse the automation to harass, deceive, impersonate, or defame any person or entity. You must not attempt to circumvent the safety gates, rate limits, idempotency controls, or audit logging that the service relies on to operate safely. You must not reverse-engineer or attempt to bypass the access controls that separate your account from any other account on the same deployment.",
+          "heading": "Acceptable use"
+        },
+        "autoSendRules": {
+          "body": "Zero Mail offers a global Auto-send rules setting in the Settings page. The setting defaults to ON. When it is ON, AI rules MAY take outbound actions on your behalf — sending a reply, forwarding a message, or sending a new message — but only after every applicable runtime safety gate passes for the specific message in question.\n\nThe runtime safety gates include, at a minimum: low-trust sender guards that prevent outbound automation against new or unverified contacts; per-tenant rate caps that limit how many outbound messages your account can produce in a short window; per-tenant daily caps that limit total outbound volume per day; idempotency checks that prevent a single triage decision from sending the same message more than once; and append-only audit logging that records every outbound action for later review.\n\nIf any gate fails, or if the Auto-send rules setting is OFF, the rule automatically downgrades to saving a Gmail draft instead of sending. The draft appears in your Gmail drafts folder and waits for you to review and send it manually.\n\nThe chat assistant always requires explicit user confirmation through a preview card before any outbound message is sent, regardless of the global setting.\n\nYou remain responsible for every outbound action taken under your account, whether triggered automatically by a rule or confirmed manually through the chat assistant. We strongly recommend reviewing your rules and the global setting periodically.",
+          "heading": "AI-authorized outbound actions and the Auto-send rules toggle"
+        },
+        "changes": {
+          "body": "The Zero Mail team may update these terms as the product evolves. Material changes will be announced in-product and via the email address associated with your account. Continued use of Zero Mail after an update takes effect constitutes acceptance of the revised terms. If you do not agree to a change, your remedy is to stop using the service and delete your account.",
+          "heading": "Changes to these terms"
+        },
+        "contact": {
+          "body": "For any question about these terms, contact the Zero Mail team at legal@zeromail.app. We will respond to written inquiries as promptly as our small team allows.",
+          "heading": "Contact"
+        },
+        "creditsAndBilling": {
+          "body": "Zero Mail uses a prepaid, pay-as-you-go credit model. You top up credits when you want to, and credits are consumed as AI actions run on your behalf. There is no recurring subscription during the beta period; you never pay for time you did not use.\n\nYou may bring your own API key (BYOK) for supported providers. Actions billed against a BYOK key bypass the Zero Mail credit ledger entirely; the cost of those calls is settled between you and your provider, not us. Switching between platform credits and BYOK is a Settings change you can make at any time.",
+          "heading": "Credits and billing"
+        },
+        "description": {
+          "body": "Zero Mail is a beta / pre-launch academic project operated by the Zero Mail team. The service helps you reach inbox zero in Gmail by triaging, labeling, archiving, and drafting replies based on natural-language rules you write yourself. It is provided for evaluation and feedback purposes during this period. Features, pricing, and availability may change without notice while we learn what works.\n\nNothing in this document should be read as a representation that Zero Mail is an enterprise-grade product or that it has the legal posture of a fully launched commercial service. We are transparent about the beta status because we want you to make an informed decision before connecting your real inbox.",
+          "heading": "What Zero Mail is"
+        },
+        "eligibility": {
+          "body": "To use Zero Mail you must be at least 13 years old (or the higher minimum age that applies in your country), and you must have a functioning Google account whose owner has the authority to grant Zero Mail the OAuth scopes the service requests. If you connect a Google Workspace account, your workspace administrator may restrict or revoke that grant; we honor any such revocation immediately.\n\nIf you are accessing Zero Mail on behalf of an organization, the organization must also be eligible under the same rules, and you must have the authority to accept these terms on its behalf.",
+          "heading": "Eligibility"
+        },
+        "gmailAuthorization": {
+          "body": "Zero Mail requests only the minimum Gmail OAuth scopes required to operate. With your consent, the service may perform the following actions on Gmail messages in your account: read incoming messages so that the AI can triage them; apply or remove Gmail labels; archive messages by removing them from your inbox; save Gmail drafts; mark messages as read or unread; star or unstar messages; flag messages as spam; and add messages to a daily digest you can review in one place.\n\nWith your explicit opt-in through the Auto-send rules setting, Zero Mail may additionally send replies on your behalf, forward messages on your behalf, and send new messages on your behalf, subject to the safety gates described in the next section.\n\nDestructive actions are NOT in scope. Zero Mail does not permanently delete messages from your Gmail account on your behalf, and it does not invoke arbitrary webhooks against external services on your behalf. If the service ever supports those actions, they will be gated by a separate, clearly-labeled administrative opt-in.",
+          "heading": "Scope of Gmail authorization"
+        },
+        "governingLaw": {
+          "body": "These terms are governed by and construed under the laws of Vietnam. Disputes arising from or related to these terms or to your use of Zero Mail will first be addressed through good-faith negotiation between the parties. If a dispute cannot be resolved through negotiation, it will be resolved under applicable Vietnamese law in the forum that has proper jurisdiction at the time the dispute arises.\n\nThis section does not waive any non-waivable consumer-protection right you may have under the law of your own country of residence.",
+          "heading": "Governing law"
+        },
+        "intellectualProperty": {
+          "body": "The Zero Mail service, including its source code, user interface, branding, copy, and documentation, is owned by the Zero Mail team. Nothing in these terms transfers any ownership of the service to you. You receive only a limited, revocable, non-transferable license to use the service in accordance with these terms.\n\nYou continue to own your email content, your rule configurations, and the inputs you provide to the chat assistant. We do not claim any ownership of that data; we only claim the operational right to process it on your behalf so that the service can do what you asked it to do.",
+          "heading": "Intellectual property"
+        },
+        "liability": {
+          "body": "To the maximum extent permitted by applicable law, the aggregate liability of the Zero Mail team for any claim arising from or related to the service is limited to the total amount you paid in credits for the service during the three months immediately preceding the event giving rise to the claim, or zero if you did not pay anything during that period.\n\nThe Zero Mail team is not liable for any indirect, incidental, special, consequential, or punitive damages, including lost profits, lost revenue, lost business opportunities, or lost data, even if the team has been advised of the possibility of such damages. Some jurisdictions do not allow these limitations, and where that is the case the limitations apply only to the extent permitted by the applicable law.",
+          "heading": "Limitation of liability"
+        },
+        "refunds": {
+          "body": "During the beta period, unused credits remain available indefinitely. Refunds for unused credits will be considered on a case-by-case basis at the Zero Mail team's discretion; to request a refund, contact legal@zeromail.app and describe the circumstances. We do not offer refunds for credits that have already been consumed by AI actions.",
+          "heading": "Refunds"
+        },
+        "termination": {
+          "body": "You may terminate your use of Zero Mail at any time by disconnecting Gmail from inside the Settings page and deleting your account. No further explanation is required.\n\nThe Zero Mail team may suspend or terminate any account for material breach of these terms, for serious security reasons, or where continued operation of the account would be unlawful. Where reasonably possible, we will notify you before terminating an account so that you have an opportunity to address the issue.\n\nTermination by either party does not extinguish any rights or obligations that have already accrued at the moment of termination, including any pending audit-log retention periods or any pending financial settlements.",
+          "heading": "Termination"
+        },
+        "warrantiesDisclaimer": {
+          "body": "Zero Mail is provided on an \"AS IS\" and \"AS AVAILABLE\" basis, without warranties of any kind, express or implied, to the maximum extent permitted by applicable law. Without limiting the foregoing, the Zero Mail team does not warrant that the service will be uninterrupted, error-free, secure, or free from harmful components, and does not warrant that the AI's triage decisions or generated drafts will be accurate, appropriate, or free from bias in any particular case.\n\nYou are responsible for reviewing outbound actions and AI-generated drafts before relying on them, and you are responsible for the consequences of any action you allow the AI to take on your behalf.",
+          "heading": "Warranties disclaimer"
+        }
+      },
+      "title": "Terms of Service",
+      "toc": {
+        "acceptance": "Accepting these terms",
+        "acceptableUse": "Acceptable use",
+        "autoSendRules": "Auto-send rules",
+        "changes": "Changes to these terms",
+        "contact": "Contact",
+        "creditsAndBilling": "Credits and billing",
+        "description": "What Zero Mail is",
+        "eligibility": "Eligibility",
+        "gmailAuthorization": "Gmail authorization scope",
+        "governingLaw": "Governing law",
+        "intellectualProperty": "Intellectual property",
+        "liability": "Limitation of liability",
+        "refunds": "Refunds",
+        "termination": "Termination",
+        "warrantiesDisclaimer": "Warranties disclaimer"
+      }
+    },
+    "tocHeading": "On this page"
   },
   "llm": {
     "byok": {
