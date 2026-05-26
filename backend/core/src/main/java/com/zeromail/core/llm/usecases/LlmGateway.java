@@ -55,6 +55,15 @@ public interface LlmGateway {
     }
 
     /**
+     * Preview text-generation path for user-reviewed settings helpers. Implementations keep the
+     * prompt and model output in memory only; audit rows, if written, are usage metadata only.
+     */
+    default String generatePreviewText(
+            CallSite callSite, String systemPrompt, String userMessage, int maxTokens) {
+        throw new UnsupportedOperationException("Preview text generation is unavailable");
+    }
+
+    /**
      * Resolves a batch of {@code SEMANTIC_INTENT} matchers for one message in one structured-output
      * LLM call.
      *

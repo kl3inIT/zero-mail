@@ -163,7 +163,8 @@ public class SpringAiLlmModelClient implements LlmModelClient {
                 new LlmUsage(
                         tokenCount(usage == null ? null : usage.getPromptTokens()),
                         tokenCount(usage == null ? null : usage.getCompletionTokens()),
-                        generation.getMetadata().getFinishReason()));
+                        generation.getMetadata().getFinishReason()),
+                assistantMessage.getText());
     }
 
     private int tokenCount(Integer tokenCount) {

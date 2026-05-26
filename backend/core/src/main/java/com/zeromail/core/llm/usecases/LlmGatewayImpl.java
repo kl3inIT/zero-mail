@@ -471,6 +471,65 @@ class LlmGatewayImpl implements LlmGateway {
     }
 
     @Override
+    public String generatePreviewText(
+            CallSite callSite, String systemPrompt, String userMessage, int maxTokens) {
+        if (callSite != CallSite.PREVIEW) {
+            throw new IllegalArgumentException("Preview text generation must use PREVIEW");
+        }
+        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        List<PlatformRoute> routes =
+                platformRoutes(LlmRuntimeTask.CHAT_ASSISTANT, llmProperties.compileModel());
+        PlatformRoute primaryRoute = routes.getFirst();
+        long startNanos = System.nanoTime();
+        return Observation.createNotStarted(
+                        "zero_mail.llm.gateway.preview_text", observationRegistry)
+                .lowCardinalityKeyValue("tenantId", tenantId.toString())
+                .lowCardinalityKeyValue("callSite", callSite.id())
+                .lowCardinalityKeyValue("provider", primaryRoute.provider())
+                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .observe(
+                        () -> {
+                            log.info(
+                                    "event=llm_preview_text_started tenantId={} callSite={} provider={} model={}",
+                                    tenantId,
+                                    callSite,
+                                    primaryRoute.provider(),
+                                    primaryRoute.model());
+
+                            SanitizationContext sanitizedContext =
+                                    sanitizationPipeline.sanitizeStructuredJson(userMessage);
+
+                            Optional<ResolvedLlmProviderCredential> byok =
+                                    resolveByokProviderCredential(tenantId, primaryRoute.model());
+                            if (byok.isPresent()) {
+                                return callViaResolvedProviderCredential(
+                                        byok.get(),
+                                        sanitizedContext,
+                                        callSite,
+                                        systemPrompt,
+                                        List.of(),
+                                        0.2,
+                                        maxTokens,
+                                        false,
+                                        this::parseTextGeneration);
+                            }
+
+                            return callPlatformModelClientWithCreditLedger(
+                                    tenantId,
+                                    callSite,
+                                    routes,
+                                    sanitizedContext,
+                                    systemPrompt,
+                                    List.of(),
+                                    startNanos,
+                                    0.2,
+                                    maxTokens,
+                                    false,
+                                    this::parseTextGeneration);
+                        });
+    }
+
+    @Override
     public Map<String, Boolean> evaluateSemanticIntents(
             CallSite callSite, String rawMessageContent, List<SemanticIntentRequest> intents) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
@@ -602,6 +661,32 @@ class LlmGatewayImpl implements LlmGateway {
             double temperature,
             Integer maxTokens,
             BiFunction<String, LlmChatResult, T> resultParser) {
+        return callPlatformModelClientWithCreditLedger(
+                tenantId,
+                callSite,
+                routes,
+                sanitizedContext,
+                systemPrompt,
+                tools,
+                startNanos,
+                temperature,
+                maxTokens,
+                true,
+                resultParser);
+    }
+
+    private <T> T callPlatformModelClientWithCreditLedger(
+            UUID tenantId,
+            CallSite callSite,
+            List<PlatformRoute> routes,
+            SanitizationContext sanitizedContext,
+            String systemPrompt,
+            List<LlmTool> tools,
+            long startNanos,
+            double temperature,
+            Integer maxTokens,
+            boolean toolChoiceRequired,
+            BiFunction<String, LlmChatResult, T> resultParser) {
         ReservationId reservationId;
         try {
             reservationId = creditLedger.reserve(tenantId, callSite);
@@ -628,6 +713,7 @@ class LlmGatewayImpl implements LlmGateway {
                             startNanos,
                             temperature,
                             maxTokens,
+                            toolChoiceRequired,
                             resultParser);
             gatewayResult = outcome.gatewayResult();
             usage = outcome.usage();
@@ -691,6 +777,32 @@ class LlmGatewayImpl implements LlmGateway {
             double temperature,
             Integer maxTokens,
             BiFunction<String, LlmChatResult, T> resultParser) {
+        return callPlatformRoutes(
+                tenantId,
+                callSiteLabel,
+                routes,
+                sanitizedContext,
+                systemPrompt,
+                tools,
+                startNanos,
+                temperature,
+                maxTokens,
+                true,
+                resultParser);
+    }
+
+    private <T> PlatformCallOutcome<T> callPlatformRoutes(
+            UUID tenantId,
+            String callSiteLabel,
+            List<PlatformRoute> routes,
+            SanitizationContext sanitizedContext,
+            String systemPrompt,
+            List<LlmTool> tools,
+            long startNanos,
+            double temperature,
+            Integer maxTokens,
+            boolean toolChoiceRequired,
+            BiFunction<String, LlmChatResult, T> resultParser) {
         RuntimeException lastRouteFailure = null;
         for (PlatformRoute route : routes) {
             try {
@@ -702,7 +814,7 @@ class LlmGatewayImpl implements LlmGateway {
                                 route.model(),
                                 temperature,
                                 maxTokens,
-                                true);
+                                toolChoiceRequired);
                 Optional<PlatformLlmRouteCredentials> routeCredentials = routeCredentials(route);
                 LlmChatResult result =
                         routeCredentials
@@ -997,6 +1109,28 @@ class LlmGatewayImpl implements LlmGateway {
             double temperature,
             Integer maxTokens,
             BiFunction<String, LlmChatResult, T> resultParser) {
+        return callViaResolvedProviderCredential(
+                resolvedCredential,
+                sanitizedContext,
+                callSite,
+                systemPrompt,
+                tools,
+                temperature,
+                maxTokens,
+                true,
+                resultParser);
+    }
+
+    private <T> T callViaResolvedProviderCredential(
+            ResolvedLlmProviderCredential resolvedCredential,
+            SanitizationContext sanitizedContext,
+            CallSite callSite,
+            String systemPrompt,
+            List<LlmTool> tools,
+            double temperature,
+            Integer maxTokens,
+            boolean toolChoiceRequired,
+            BiFunction<String, LlmChatResult, T> resultParser) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
         String provider = resolvedCredential.providerId();
         String model = resolvedCredential.modelId();
@@ -1014,7 +1148,7 @@ class LlmGatewayImpl implements LlmGateway {
                         model,
                         temperature,
                         maxTokens,
-                        true);
+                        toolChoiceRequired);
         LlmChatResult result;
         T gatewayResult;
         try {
@@ -1062,6 +1196,14 @@ class LlmGatewayImpl implements LlmGateway {
             throw new SafetyViolationException();
         }
         return toolCallResult;
+    }
+
+    private String parseTextGeneration(String model, LlmChatResult result) {
+        String assistantText = result.assistantText();
+        if (assistantText == null || assistantText.isBlank()) {
+            throw new IllegalStateException("Model returned empty preview text");
+        }
+        return assistantText.strip();
     }
 
     private static String draftUserMessage(
