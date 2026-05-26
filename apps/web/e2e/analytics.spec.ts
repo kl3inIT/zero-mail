@@ -33,7 +33,11 @@ for (const viewport of [
     await expect(page.getByTestId('analytics-rule-hits-panel')).toBeVisible();
     await expect.poll(() => state.analyticsRequests).toContain('7d');
 
-    await page.getByRole('tab', { name: 'Last 30 days' }).click();
+    // PR #66 redesign swapped the window selector from <Tabs> (TabsTrigger named
+    // "Last 30 days") to shadcn <Select> (combobox "Date range" → option "Last
+    // month"). Open the combobox, then click the option.
+    await page.getByRole('combobox', { name: 'Date range' }).click();
+    await page.getByRole('option', { name: 'Last month' }).click();
 
     await expect(page).toHaveURL(/\/analytics\?window=30d/);
     await expect.poll(() => state.analyticsRequests).toContain('30d');
