@@ -29,6 +29,15 @@ export interface GetCurrentUserOptions {
  * the getCurrentUser backwards-compat alias).
  */
 export async function fetchCurrentUser(opts: GetCurrentUserOptions = {}): Promise<CurrentUser> {
+  // Playwright e2e short-circuit (server-side only). Catches every RSC /me
+  // call site — proxy.ts middleware, app/layout.tsx, settings/page.tsx, landing
+  // Hero/TopBar — so the default playwright config never logs ECONNREFUSED from
+  // Next's internal fetch error reporter. Browser-side fetches keep going
+  // because Playwright's page.route() mocks intercept them at the network
+  // layer, so client React Query hooks still work without a real backend.
+  if (typeof window === 'undefined' && process.env.ZM_E2E === '1') {
+    throw new Error('ZM_E2E: skipping /me fetch in test mode');
+  }
   const { fetcher, signal, headers } = opts;
   const { data, error, response } = await api.GET('/api/me', {
     cache: fetcher || headers ? 'no-store' : undefined,
