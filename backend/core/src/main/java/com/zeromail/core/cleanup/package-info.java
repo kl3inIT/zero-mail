@@ -22,6 +22,7 @@
             "outbound :: api",
             "queue",
             "queue :: domain",
+            "shared :: net",
             "shared :: privacy",
             "shared :: persistence",
             "shared :: lang",

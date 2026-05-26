@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 9 Prototype — Cài đặt AI (/ai)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --background: #ffffff;
+        --foreground: #1c1d21;
+        --card: #ffffff;
+        --card-foreground: #1c1d21;
+        --popover: #ffffff;
+        --primary: #867aeb;
+        --primary-foreground: #ffffff;
+        --secondary: #f4f2f9;
+        --secondary-foreground: #1c1d21;
+        --muted: #f4f2f9;
+        --muted-foreground: #6b7280;
+        --accent: #eae8f7;
+        --accent-foreground: #5849c9;
+        --destructive: #b0413e;
+        --warning: #e3a023;
+        --border: #e5e7eb;
+        --input: #e5e7eb;
+        --ring: rgba(134, 122, 235, 0.5);
+        --sidebar: #f8f7fb;
+        --green: #2f7d5c;
+        --green-soft: #d8ead8;
+        --amber: #e3a023;
+        --amber-soft: #fde8ba;
+        --red: #b0413e;
+        --red-soft: #f5d7d2;
+        --blue: #2c5ba8;
+        --blue-soft: #d7e1f1;
+      }
+      body {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        font-feature-settings: 'rlig' 1, 'calt' 1;
+      }
+      .bg-background { background: var(--background); }
+      .bg-card { background: var(--card); }
+      .bg-muted { background: var(--muted); }
+      .bg-sidebar { background: var(--sidebar); }
+      .bg-primary { background: var(--primary); }
+      .bg-primary\/10 { background: rgba(134, 122, 235, 0.10); }
+      .bg-accent { background: var(--accent); }
+      .bg-secondary { background: var(--secondary); }
+      .text-foreground { color: var(--foreground); }
+      .text-muted-foreground { color: var(--muted-foreground); }
+      .text-primary { color: var(--primary); }
+      .text-primary-foreground { color: var(--primary-foreground); }
+      .text-accent-foreground { color: var(--accent-foreground); }
+      .text-destructive { color: var(--destructive); }
+      .border-border { border-color: var(--border); }
+      .ring-ring { box-shadow: 0 0 0 3px var(--ring); }
+      .focus-ring:focus { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+      .pill-green { background: var(--green-soft); color: var(--green); }
+      .pill-red { background: var(--red-soft); color: var(--red); }
+      .pill-amber { background: var(--amber-soft); color: var(--amber); }
+      .pill-blue { background: var(--blue-soft); color: var(--blue); }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .section-accent-bar {
+        width: 3px;
+        height: 22px;
+        border-radius: 2px;
+        background: var(--primary);
+      }
+      .setting-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px 22px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 36px;
+        padding: 0 14px;
+        border-radius: 7px;
+        font-size: 14px;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        background: var(--background);
+        color: var(--foreground);
+        cursor: pointer;
+        transition: background 120ms ease, border-color 120ms ease;
+      }
+      .btn:hover { background: var(--muted); }
+      .btn-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: var(--primary-foreground);
+      }
+      .btn-primary:hover { background: #6f63d6; border-color: #6f63d6; }
+      .btn-destructive {
+        background: var(--destructive);
+        border-color: var(--destructive);
+        color: white;
+      }
+      .btn-outline { background: var(--background); }
+      .btn-ghost { border-color: transparent; background: transparent; }
+      .btn-ghost:hover { background: var(--muted); }
+      .btn-sm { height: 30px; padding: 0 10px; font-size: 13px; }
+      .input {
+        height: 36px;
+        border: 1px solid var(--input);
+        border-radius: 7px;
+        padding: 0 12px;
+        font-size: 14px;
+        background: var(--background);
+        width: 100%;
+        color: var(--foreground);
+      }
+      .input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--ring); }
+      .textarea {
+        min-height: 120px;
+        border: 1px solid var(--input);
+        border-radius: 7px;
+        padding: 10px 12px;
+        font-size: 14px;
+        background: var(--background);
+        width: 100%;
+        line-height: 1.5;
+        resize: vertical;
+        color: var(--foreground);
+        font-family: inherit;
+      }
+      .textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--ring); }
+      .switch {
+        position: relative;
+        width: 36px;
+        height: 20px;
+        background: var(--muted);
+        border-radius: 999px;
+        cursor: pointer;
+        flex-shrink: 0;
+        border: 1px solid var(--border);
+      }
+      .switch::after {
+        content: '';
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        width: 16px;
+        height: 16px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        transition: transform 120ms ease;
+      }
+      .switch.on { background: var(--primary); border-color: var(--primary); }
+      .switch.on::after { transform: translateX(16px); }
+      .select {
+        height: 36px;
+        border: 1px solid var(--input);
+        border-radius: 7px;
+        padding: 0 32px 0 12px;
+        font-size: 14px;
+        background: var(--background)
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")
+          right 10px center / 12px no-repeat;
+        color: var(--foreground);
+        appearance: none;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      .table thead th {
+        text-align: left;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        font-size: 12.5px;
+        padding: 10px 14px;
+        background: var(--muted);
+        border-bottom: 1px solid var(--border);
+      }
+      .table tbody td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground);
+      }
+      .table tbody tr:last-child td { border-bottom: 0; }
+      .table tbody tr:hover { background: rgba(244, 242, 249, 0.5); }
+      .dialog {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 14, 26, 0.45);
+        display: grid;
+        place-items: center;
+        z-index: 50;
+      }
+      .dialog-content {
+        width: min(560px, calc(100vw - 32px));
+        background: var(--popover);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 24px 48px -12px rgba(20, 20, 18, 0.18);
+      }
+      .icon-btn {
+        display: inline-grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted-foreground);
+        border: 1px solid transparent;
+        cursor: pointer;
+      }
+      .icon-btn:hover { background: var(--muted); color: var(--foreground); }
+      .icon-btn.danger:hover { color: var(--destructive); background: rgba(176, 65, 62, 0.06); }
+      .segmented {
+        display: inline-flex;
+        align-items: center;
+        background: var(--muted);
+        border-radius: 8px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .segmented button {
+        height: 28px;
+        padding: 0 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+      }
+      .segmented button.active {
+        background: var(--background);
+        color: var(--foreground);
+        box-shadow: 0 1px 2px rgba(20, 20, 18, 0.06);
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        height: 22px;
+        padding: 0 8px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 500;
+        background: var(--secondary);
+        color: var(--secondary-foreground);
+      }
+      .badge-outline {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted-foreground);
+      }
+      .helper { color: var(--muted-foreground); font-size: 13.5px; line-height: 1.5; }
+      .word-count { color: var(--muted-foreground); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+      .separator { height: 1px; background: var(--border); margin: 32px 0; }
+      .grid-feature {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .grid-feature label { display: block; font-size: 13px; font-weight: 500; color: var(--muted-foreground); margin-bottom: 6px; }
+      @media (max-width: 640px) {
+        .grid-feature { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="mx-auto max-w-3xl px-4 sm:px-6 py-12">
+      <!-- Page header -->
+      <header class="mb-10">
+        <h1 class="text-3xl font-semibold tracking-tight text-foreground">Cài đặt AI</h1>
+        <p class="mt-2 helper">Tinh chỉnh giọng văn, hành vi, và nhà cung cấp AI.</p>
+      </header>
+
+      <!-- ───────── Section: Your voice ───────── -->
+      <section id="your-voice" class="space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="section-accent-bar"></div>
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight">Giọng văn của bạn</h2>
+            <p class="text-sm text-muted-foreground">Cách AI viết thay bạn</p>
+          </div>
+        </div>
+
+        <!-- Writing style (multi-field → SettingCard + Dialog) -->
+        <div class="setting-card flex items-start justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Phong cách viết</p>
+            <p class="mt-1 helper">200–500 từ mô tả cách bạn viết email thường ngày.</p>
+            <p class="mt-3 text-sm text-muted-foreground italic line-clamp-2">
+              "Mình hay viết ngắn gọn, ấm áp, dùng tiếng Việt có dấu, kết thư bằng 'Cảm ơn anh/chị nhiều'. Trong email công việc bằng tiếng Anh, mình giữ tone semi-formal, tránh slang…"
+            </p>
+          </div>
+          <button class="btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            Sửa
+          </button>
+        </div>
+
+        <!-- Personal instructions -->
+        <div class="setting-card flex items-start justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Về tôi (hướng dẫn cá nhân)</p>
+            <p class="mt-1 helper">Tối đa 2000 ký tự. Được lọc prompt-injection trước khi inject vào system prompt.</p>
+          </div>
+          <button class="btn">Sửa</button>
+        </div>
+
+        <!-- Email signature -->
+        <div class="setting-card flex items-start justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Chữ ký email</p>
+            <p class="mt-1 helper">Chữ ký AI sẽ chèn vào cuối thư nháp. Tối đa 500 ký tự.</p>
+          </div>
+          <button class="btn">Đặt giá trị</button>
+        </div>
+
+        <!-- Tone preset -->
+        <div class="setting-card flex items-start justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Tone giọng văn</p>
+            <p class="mt-1 helper">Đang dùng: <b class="text-foreground">Friendly</b></p>
+          </div>
+          <button class="btn">Sửa</button>
+        </div>
+
+        <!-- AI output language -->
+        <div class="setting-card flex items-start justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Ngôn ngữ AI viết</p>
+            <p class="mt-1 helper">Độc lập với ngôn ngữ giao diện. Đang dùng: <b class="text-foreground">Tiếng Việt</b></p>
+          </div>
+          <button class="btn">Sửa</button>
+        </div>
+
+        <!-- Knowledge snippets table -->
+        <div class="setting-card">
+          <div class="flex items-start justify-between gap-6 mb-4">
+            <div class="min-w-0 flex-1">
+              <p class="text-base font-medium">Kho kiến thức</p>
+              <p class="mt-1 helper">Đoạn thông tin AI sẽ tham khảo khi soạn thư. Sắp xếp theo lần cập nhật gần nhất.</p>
+            </div>
+            <button class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Thêm đoạn kiến thức
+            </button>
+          </div>
+          <div class="overflow-hidden rounded-lg border border-border">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Tiêu đề</th>
+                  <th class="w-44">Cập nhật</th>
+                  <th class="w-24 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="font-medium">Lịch họp tuần</span></td>
+                  <td class="text-muted-foreground text-sm">26 thg 5, 2026</td>
+                  <td>
+                    <div class="flex justify-end gap-1">
+                      <button class="icon-btn" title="Sửa"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                      <button class="icon-btn danger" title="Xóa"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="font-medium">Khách hàng VIP — ABC Corp</span></td>
+                  <td class="text-muted-foreground text-sm">24 thg 5, 2026</td>
+                  <td>
+                    <div class="flex justify-end gap-1">
+                      <button class="icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                      <button class="icon-btn danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="font-medium">Thông tin dự án Q3</span></td>
+                  <td class="text-muted-foreground text-sm">19 thg 5, 2026</td>
+                  <td>
+                    <div class="flex justify-end gap-1">
+                      <button class="icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                      <button class="icon-btn danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <div class="separator"></div>
+
+      <!-- ───────── Section: Behavior ───────── -->
+      <section id="behavior" class="space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="section-accent-bar"></div>
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight">Hành vi trợ lý</h2>
+            <p class="text-sm text-muted-foreground">Khi nào AI hành động tự động</p>
+          </div>
+        </div>
+
+        <!-- Auto-draft replies (inline switch) -->
+        <div class="setting-card flex items-center justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Tự động soạn nháp trả lời</p>
+            <p class="mt-1 helper">AI sẽ tạo nháp ngầm trong Gmail; bạn vẫn duyệt trước khi gửi.</p>
+          </div>
+          <div class="switch on" role="switch" aria-checked="true"></div>
+        </div>
+
+        <!-- Draft confidence (enum select via Dialog) -->
+        <div class="setting-card flex items-start justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Ngưỡng tự tin nháp</p>
+            <p class="mt-1 helper">Đang dùng: <b class="text-foreground">MEDIUM</b> · AI chỉ lưu nháp khi tự tin ≥ 0.70.</p>
+          </div>
+          <button class="btn">Sửa</button>
+        </div>
+
+        <!-- Sensitive data protection (inline switch) -->
+        <div class="setting-card flex items-center justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Bảo vệ dữ liệu nhạy cảm</p>
+            <p class="mt-1 helper">Tách PII (email, số điện thoại, thẻ) khỏi prompt gửi LLM. Khuyến nghị BẬT.</p>
+          </div>
+          <div class="switch on"></div>
+        </div>
+      </section>
+
+      <div class="separator"></div>
+
+      <!-- ───────── Section: Updates ───────── -->
+      <section id="updates" class="space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="section-accent-bar"></div>
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight">Cập nhật</h2>
+            <p class="text-sm text-muted-foreground">Tóm tắt hằng ngày và chế độ shadow</p>
+          </div>
+        </div>
+
+        <div class="setting-card flex items-center justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Tóm tắt hằng ngày</p>
+            <p class="mt-1 helper">Email tóm tắt hoạt động AI gửi 7:00 sáng mỗi ngày.</p>
+          </div>
+          <div class="switch on"></div>
+        </div>
+
+        <div class="setting-card flex items-center justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Chế độ shadow (chỉ ghi log)</p>
+            <p class="mt-1 helper">AI sẽ phân loại trong nền nhưng KHÔNG thực thi action. Dùng khi tinh chỉnh rule.</p>
+          </div>
+          <div class="switch"></div>
+        </div>
+      </section>
+
+      <div class="separator"></div>
+
+      <!-- ───────── Section: Safety net ───────── -->
+      <section id="safety-net" class="space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="section-accent-bar"></div>
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight">Lưới an toàn</h2>
+            <p class="text-sm text-muted-foreground">Người gửi mà AI không bao giờ tự xử lý</p>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="flex items-start justify-between gap-6 mb-4">
+            <div class="min-w-0 flex-1">
+              <p class="text-base font-medium">Người gửi được bảo vệ</p>
+              <p class="mt-1 helper">Mẹo: dùng <code class="px-1.5 py-0.5 bg-muted rounded text-xs">@acme.com</code> để bảo vệ toàn bộ domain.</p>
+            </div>
+          </div>
+
+          <!-- Inline add (no Dialog — single field) -->
+          <div class="flex gap-2 mb-4">
+            <input class="input flex-1" placeholder="ceo@acme.com hoặc @acme.com" />
+            <button class="btn btn-primary">Thêm người gửi</button>
+          </div>
+
+          <div class="overflow-hidden rounded-lg border border-border">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Mẫu</th>
+                  <th class="w-24">Loại</th>
+                  <th class="w-32">Thêm bởi</th>
+                  <th class="w-32">Ngày</th>
+                  <th class="w-16 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="font-medium">ceo@acme.com</span></td>
+                  <td><span class="badge">Email</span></td>
+                  <td><span class="badge badge-outline">Bạn</span></td>
+                  <td class="text-muted-foreground text-sm">20 thg 5</td>
+                  <td><div class="flex justify-end"><button class="icon-btn danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><span class="font-medium">@bigclient.vn</span></td>
+                  <td><span class="badge">Domain</span></td>
+                  <td><span class="badge badge-outline">Bạn</span></td>
+                  <td class="text-muted-foreground text-sm">18 thg 5</td>
+                  <td><div class="flex justify-end"><button class="icon-btn danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><span class="font-medium">support@partner.io</span></td>
+                  <td><span class="badge">Email</span></td>
+                  <td><span class="badge badge-outline">Hệ thống</span></td>
+                  <td class="text-muted-foreground text-sm">15 thg 5</td>
+                  <td><div class="flex justify-end"><button class="icon-btn" disabled title="Không thể xóa do hệ thống tự thêm" style="opacity:0.4;cursor:not-allowed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Auto-send rules (rehoused from existing /ai) -->
+        <div class="setting-card flex items-center justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-medium">Tự động gửi theo rule</p>
+            <p class="mt-1 helper">Toàn cục: nếu TẮT, mọi action gửi/forward/reply sẽ rớt về nháp Gmail.</p>
+          </div>
+          <div class="switch on"></div>
+        </div>
+      </section>
+
+      <div class="separator"></div>
+
+      <!-- ───────── Section: AI Provider ───────── -->
+      <section id="ai-provider" class="space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="section-accent-bar"></div>
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight">Nhà cung cấp AI</h2>
+            <p class="text-sm text-muted-foreground">Dùng key của bạn để chạy mọi tính năng AI</p>
+          </div>
+        </div>
+
+        <!-- BYOK card (single, with Active switch + base URL + model picker) -->
+        <div class="setting-card space-y-4">
+          <div>
+            <p class="text-base font-medium">Key cá nhân (BYOK)</p>
+            <p class="mt-1 helper">Bật để dùng key của bạn cho Chat, Triage, Draft. Khi tắt, hệ thống dùng key mặc định của Zero Mail. Key mã hóa AES-GCM, không bao giờ hiển thị lại sau khi lưu.</p>
+          </div>
+
+          <div class="grid-feature">
+            <div>
+              <label>Provider</label>
+              <select class="select">
+                <option>OpenAI</option>
+                <option>Anthropic</option>
+                <option>Google</option>
+                <option>DeepSeek</option>
+              </select>
+            </div>
+            <div>
+              <label>Model</label>
+              <select class="select">
+                <option>gpt-4o-mini</option>
+                <option>gpt-4o</option>
+                <option>gpt-4-turbo</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label>Base URL</label>
+            <input class="input" type="url" value="https://api.openai.com/v1" />
+          </div>
+
+          <div>
+            <label>API key</label>
+            <code class="input flex items-center text-sm text-muted-foreground font-mono" style="display: flex;">sk-****abc1</code>
+          </div>
+
+          <div class="flex items-center gap-3 text-sm pt-2">
+            <span class="text-muted-foreground">Trạng thái:</span>
+            <span class="pill pill-green">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              OK
+            </span>
+            <span class="text-muted-foreground">· kiểm tra lúc 14:32</span>
+          </div>
+
+          <div class="flex items-center gap-3 pt-2 border-t border-border" style="padding-top: 16px;">
+            <div>
+              <p class="text-sm font-medium">Bật BYOK</p>
+              <p class="helper">Áp dụng cho cả Chat, Triage, và Draft</p>
+            </div>
+            <span class="flex-1"></span>
+            <div class="switch on" role="switch" aria-checked="true" aria-label="Bật BYOK"></div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-2" style="justify-content: flex-end;">
+            <button class="btn btn-sm btn-outline">Kiểm tra kết nối</button>
+            <button class="btn btn-sm btn-outline" title="Thay key">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              Thay key
+            </button>
+            <button class="btn btn-primary btn-sm">Lưu</button>
+          </div>
+        </div>
+
+        <!-- Cost footer (not a card — plain text below) -->
+        <div class="px-4 py-2 text-sm text-muted-foreground flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Chi phí AI 7 ngày qua: <b class="text-foreground">$2.43</b>
+        </div>
+      </section>
+    </main>
+
+    <!-- ───────── Example open Dialog: Writing style (overlays everything) ───────── -->
+    <div class="dialog" id="dialog-demo" aria-modal="true" role="dialog">
+      <div class="dialog-content">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold tracking-tight">Sửa phong cách viết</h3>
+          <p class="mt-1 helper">200–500 từ. Mô tả tone, độ dài câu, kết thư bạn thường dùng.</p>
+        </div>
+
+        <textarea class="textarea" style="min-height: 180px;">Mình hay viết ngắn gọn, ấm áp, dùng tiếng Việt có dấu, kết thư bằng "Cảm ơn anh/chị nhiều". Trong email công việc bằng tiếng Anh, mình giữ tone semi-formal, mở thư bằng "Hi {name}", tránh slang, ưa câu chủ động. Mình ít dùng emoji trừ khi đối tác đã dùng trước. Với khách hàng VIP mình dùng tone trang trọng hơn một chút.</textarea>
+
+        <div class="mt-2 flex items-center justify-between">
+          <span class="word-count">62 / 200–500 từ <span style="color: var(--destructive)">(thiếu)</span></span>
+          <button class="btn btn-sm btn-outline">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            Tạo từ email đã gửi gần đây
+          </button>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-2">
+          <button class="btn" onclick="document.getElementById('dialog-demo').style.display='none'">Hủy</button>
+          <button class="btn btn-primary">Lưu</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Toggle switches in prototype for clickability demo
+      document.querySelectorAll('.switch').forEach((el) => {
+        el.addEventListener('click', () => el.classList.toggle('on'));
+      });
+      // Segmented toggles
+      document.querySelectorAll('.segmented').forEach((seg) => {
+        seg.addEventListener('click', (e) => {
+          if (e.target.tagName !== 'BUTTON') return;
+          seg.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+          e.target.classList.add('active');
+        });
+      });
+    </script>
+  </body>
+</html>

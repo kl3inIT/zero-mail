@@ -76,6 +76,7 @@
 - [ ] **SET-VOICE-04**: User can manage a list of titled knowledge-base snippets the AI consults when drafting
 - [ ] **SET-VOICE-05**: User can pick a tone preset (professional / friendly / casual / formal / custom) as a quick baseline
 - [ ] **SET-VOICE-06**: User can pick AI output language (VI / EN, default VI) — separate from UI language
+- [ ] **SET-VOICE-07**: User can trigger a "Generate from recent sent emails" action inside the writing-style edit dialog. The action fetches the most recent N sent emails (default N=20, max 50), feeds them transiently to the LLM along with a style-extraction prompt, and returns a concise style guide (≤500 words) that pre-populates the writing-style textarea for the user to review and edit before saving. Privacy invariant: raw email bodies and the LLM prompt/completion exchange MUST be in-memory-only (no DB, no log file, no audit row); only the user-reviewed-and-saved style guide is persisted (into the existing `assistant_settings.writing_style` column). Pulled into v1.2 Phase 9 scope from `SET-VOICE-FUT-03` on 2026-05-26 during discuss-phase.
 
 ### Settings Page — Behavior Toggles (carried from v1.1)
 
@@ -94,10 +95,10 @@
 
 ### Settings Page — AI Provider/Model (carried from v1.1, rewired onto curated catalog)
 
-- [ ] **SET-AI-01**: User can pick the AI provider per feature (chat, triage, draft) from the admin-curated catalog (`GET /api/settings/catalog?feature=...`). Provider list shows the platform default + the 4 BYOK providers the user has configured. 9Router and OpenRouter appear as platform-only (no BYOK toggle)
-- [ ] **SET-AI-02**: User can enter their BYOK API key per provider (OpenAI, Anthropic, Google, DeepSeek only — NOT OpenRouter, NOT 9Router); key is AES-GCM encrypted at rest (reuses v1.0 LLM-04); key is never logged, never returned to frontend after save, zeroed on logout
-- [ ] **SET-AI-03**: User can choose between "Use platform default" and "Use my key" independently per feature; per-feature cost estimate (last 7 days) visible next to the model picker. When "Use platform default" is selected, the resolved provider+model shows in subtle helper text (e.g. "Currently using: OpenRouter / openai/gpt-5")
-- [ ] **SET-AI-04**: User can test the BYOK connection (lightweight provider `/models` endpoint call) before relying on the key; the same enum-only error response shape applies as in MKEY-03
+- [ ] **SET-AI-01**: User has ONE BYOK card with an `Active` switch as the only on/off control. When the row is `active=true` AND has a tested model, every AI feature (chat / triage / draft / voice-generate) runs through that key+URL+model. When `active=false` (or no row), every feature falls back to the admin-curated catalog default. **Updated 2026-05-26 round 2** — no per-feature picker, no separate `Platform default ↔ Use my key` mode card; the `active` flag on the BYOK row replaces both
+- [ ] **SET-AI-02**: BYOK row holds provider (OpenAI / Anthropic / Google / DeepSeek only — NEVER OpenRouter, NEVER 9Router), base URL (auto-filled per provider, user-editable to support OpenAI-compatible / Anthropic-compatible endpoints; validated as `https://` except `http://localhost*` for dev), API key (AES-GCM encrypted via v1.0 LLM-04 / `RefreshTokenCipher`, never logged, never returned to the frontend after save — only `lastFourChars`), and a user-picked model from the Test-connection response. Saving any field clears `last_test_result` and `last_tested_at` and forces `active=false`. Switching providers/URLs/keys replaces the single tenant row
+- [ ] **SET-AI-03**: User sees a single tenant-wide last-7d AI cost figure below the BYOK card (e.g. `Chi phí AI 7 ngày qua: $2.43`). **Updated 2026-05-26** — per-feature cost rows removed; aggregation is a single tenant-scoped sum from existing `llm_call_audit` rows, no `call_site=CHAT` schema change required
+- [ ] **SET-AI-04**: User can test the BYOK connection (either against the stored row OR an inline-payload pre-save) using the same `/v1/models` probe and enum-only response shape (`OK / INVALID_KEY / RATE_LIMITED / NETWORK_ERROR / TIMEOUT`) as admin MKEY-03. On `OK` the response additionally carries `models[]` (provider's chat-completion-capable model IDs, capped at 100) so the user can pick a model from the result. Both admin and user paths delegate to a shared `ProviderConnectionTester` (D-14). Rate-limited to 10 tests/hour per tenant. Activating the BYOK row requires the last test to be `OK` AND a model to be picked, otherwise `PUT /api/byok/active` returns HTTP 400 `code=ai.byok.no_model_picked`
 
 ### Rule Actions and Examples Catalog (NEW — Phase 08.1)
 
@@ -164,7 +165,7 @@
 
 - **SET-VOICE-FUT-01**: Knowledge snippet auto-tagging (suggested when to apply)
 - **SET-VOICE-FUT-02**: Per-recipient tone (formal for boss, casual for friends)
-- **SET-VOICE-FUT-03**: Voice import from past sent mail (in-memory only, immediate discard)
+- **SET-VOICE-FUT-03**: ~~Voice import from past sent mail (in-memory only, immediate discard)~~ — **Pulled into v1.2 Phase 9 as `SET-VOICE-07` on 2026-05-26.**
 
 ### Tool Extensions (carried from v1.1)
 
@@ -265,6 +266,7 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | SET-VOICE-04 | Phase 9 | Pending |
 | SET-VOICE-05 | Phase 9 | Pending |
 | SET-VOICE-06 | Phase 9 | Pending |
+| SET-VOICE-07 | Phase 9 | Pending |
 | SET-BEHV-01 | Phase 9 | Pending |
 | SET-BEHV-02 | Phase 9 | Pending |
 | SET-BEHV-03 | Phase 9 | Pending |
@@ -288,7 +290,7 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 - v1.2 requirements: **73 total** (mapping confirmed 100% coverage, zero orphans)
   - Phase 8 (Admin Console & Operator Tooling, merged 2026-05-19 + WebAuthn pivot 2026-05-19): 42 reqs — 3 OPS-INFRA + 10 ADMIN (01-10) + 5 ARCH (08/09/10/11/12) + 8 MKEY + 7 CAT + 5 OPS-TENANT + 2 OPS-QUEUE + 2 OPS-SPEND
   - Phase 08.1 (Inbox Zero-style Rule Actions & Admin-managed Examples Catalog, inserted 2026-05-23): 12 reqs — RACT-01..12
-  - Phase 9 (User Settings UI on Curated Catalog): 19 reqs — 6 SET-VOICE + 5 SET-BEHV + 4 SET-SAFE + 4 SET-AI
+  - Phase 9 (User Settings UI on Curated Catalog): 20 reqs — 7 SET-VOICE + 5 SET-BEHV + 4 SET-SAFE + 4 SET-AI (SET-VOICE-07 pulled from `SET-VOICE-FUT-03` on 2026-05-26 during discuss-phase)
 - Phase mapping: ✓ Complete
 - Merge note: original Phase 8 (foundation, 15 reqs) and original Phase 9 (operator surface, 25 reqs) merged into single Phase 8 mega (40 reqs) during spec-phase 2026-05-19; former Phase 10 renumbered → Phase 9. Phase 8 then gained ADMIN-09 (admin_users schema) + ADMIN-10 (WebAuthn ceremonies) during discuss-phase pivot 2026-05-19 — pre-pivot ADMIN-01/02/03/06 + ARCH-08 also rewritten to reflect the WebAuthn + separate-frontend shape.
 

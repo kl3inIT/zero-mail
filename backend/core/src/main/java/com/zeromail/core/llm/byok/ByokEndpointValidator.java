@@ -4,12 +4,9 @@ import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
 import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.exception.InvalidByokException;
+import com.zeromail.core.shared.net.OutboundHostGuard;
 import com.zeromail.core.tenant.TenantContext;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -41,18 +38,25 @@ public class ByokEndpointValidator {
     private static final String GOOGLE_GENAI_DEFAULT_ENDPOINT =
             "https://generativelanguage.googleapis.com/v1beta";
     private static final String OPENAI_DEFAULT_ENDPOINT = "https://api.openai.com/v1";
-    private static final String METADATA_IPV4_ADDRESS = "169.254.169.254";
 
     private final ZeroMailLlmByokProperties byokProperties;
     private final Set<String> allowedExtraHosts;
+    private final OutboundHostGuard outboundHostGuard;
 
     @Autowired
-    public ByokEndpointValidator(ZeroMailCoreProperties zeroMailCoreProperties) {
-        this(zeroMailCoreProperties.llm().byok());
+    public ByokEndpointValidator(
+            ZeroMailCoreProperties zeroMailCoreProperties, OutboundHostGuard outboundHostGuard) {
+        this(zeroMailCoreProperties.llm().byok(), outboundHostGuard);
     }
 
     public ByokEndpointValidator(ZeroMailLlmByokProperties byokProperties) {
+        this(byokProperties, new OutboundHostGuard());
+    }
+
+    public ByokEndpointValidator(
+            ZeroMailLlmByokProperties byokProperties, OutboundHostGuard outboundHostGuard) {
         this.byokProperties = byokProperties;
+        this.outboundHostGuard = outboundHostGuard;
         this.allowedExtraHosts =
                 byokProperties.allowedExtraHosts().stream()
                         .map(ByokEndpointValidator::canonicalHost)
@@ -164,39 +168,9 @@ public class ByokEndpointValidator {
     }
 
     private void rejectPrivateResolvedAddresses(String host, BYOKProvider provider) {
-        InetAddress[] resolvedAddresses;
-        try {
-            resolvedAddresses = InetAddress.getAllByName(host);
-        } catch (UnknownHostException dnsFailure) {
+        if (outboundHostGuard.isBlocked(host)) {
             throw rejected(provider);
         }
-        for (InetAddress resolvedAddress : resolvedAddresses) {
-            if (isBlockedAddress(resolvedAddress)) {
-                throw rejected(provider);
-            }
-        }
-    }
-
-    private static boolean isBlockedAddress(InetAddress resolvedAddress) {
-        return resolvedAddress.isAnyLocalAddress()
-                || resolvedAddress.isLoopbackAddress()
-                || resolvedAddress.isLinkLocalAddress()
-                || resolvedAddress.isSiteLocalAddress()
-                || isMetadataAddress(resolvedAddress)
-                || isIpv6UniqueLocalAddress(resolvedAddress);
-    }
-
-    private static boolean isMetadataAddress(InetAddress resolvedAddress) {
-        return resolvedAddress instanceof Inet4Address
-                && METADATA_IPV4_ADDRESS.equals(resolvedAddress.getHostAddress());
-    }
-
-    private static boolean isIpv6UniqueLocalAddress(InetAddress resolvedAddress) {
-        if (!(resolvedAddress instanceof Inet6Address)) {
-            return false;
-        }
-        byte firstByte = resolvedAddress.getAddress()[0];
-        return (firstByte & 0xfe) == 0xfc;
     }
 
     private static boolean isAnthropicHost(String host) {

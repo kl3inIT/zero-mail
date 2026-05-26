@@ -138,7 +138,12 @@ class UnsubscribeHttpClientTest {
     }
 
     private static Object lookupBean() throws Exception {
-        return Class.forName(UNSUBSCRIBE_HTTP_CLIENT).getDeclaredConstructor().newInstance();
+        Class<?> outboundHostGuardClass =
+                Class.forName("com.zeromail.core.shared.net.OutboundHostGuard");
+        Object passthroughHostGuard = outboundHostGuardClass.getDeclaredConstructor().newInstance();
+        return Class.forName(UNSUBSCRIBE_HTTP_CLIENT)
+                .getDeclaredConstructor(outboundHostGuardClass)
+                .newInstance(passthroughHostGuard);
     }
 
     private static Object invokePostOneClick(

@@ -153,13 +153,21 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
 
-1. User can open `/settings` and switch between four shadcn `<Tabs>` (Personalization, Behavior, Safety Net, AI Provider/Model) via query-param-driven active tab on a single flat-folder `/settings/page.tsx` route
-2. In Personalization, user can edit free-text writing style (200–500 words), personal instructions (XML-fenced, prompt-injection-sentinel-sanitized, 2000-char cap), email signature, titled knowledge-base snippets, a tone preset (professional/friendly/casual/formal/custom), and pick AI output language (VI default, EN secondary) independent of UI language
-3. In Behavior, user can toggle auto-draft replies, set a draft confidence threshold slider (0.0–1.0), toggle daily digest (reuses v1.0 ANL-03), toggle sensitive-data protection (default ON), and surface the shadow-mode toggle from v1.0 TRG-07
-4. In Safety Net, user can view, add, paste-import (with parsed preview), and remove sender entries; pick per-entry mode (`protect` vs `escalate`); and see a visual indicator in the audit log when a rule was blocked by the safety net
-5. In AI Provider/Model, user can pick provider + model per feature (chat/triage/draft) from `GET /api/settings/catalog` (showing platform default + the 4 BYOK-eligible providers configured), enter their BYOK key (OpenAI / Anthropic / Google / DeepSeek only — never OpenRouter or 9Router) with AES-GCM encryption and no plaintext echo, toggle "Use platform default" vs "Use my key" independently per feature, see the resolved provider+model in helper text and last-7d cost estimate, and test the BYOK connection with the same enum-only response shape as MKEY-03
+1. User can open `/ai` and configure AI settings via flat `<SectionHeader>` groups (`Your voice`, `Behavior`, `Updates`, `Safety net`, `AI Provider`) on a single `/ai/page.tsx` route — Inbox Zero pattern. Every multi-field setting uses a `SettingCard` (title + description + Edit/Set button) opening a shadcn `Dialog`; short toggles render inline as `<Switch>` on the card. **Updated 2026-05-26 during discuss-phase** — superseded prior "four shadcn `<Tabs>` with query-param-driven active tab on `/settings`" wording.
+2. In `Your voice`, user can edit free-text writing style (200–500 words), personal instructions (XML-fenced, prompt-injection-sentinel-sanitized, 2000-char cap), email signature, titled knowledge-base snippets, a tone preset (professional/friendly/casual/formal/custom), and pick AI output language (VI default, EN secondary) independent of UI language. Knowledge snippets render as a `<Table>` (Title | Last Updated | Edit | Delete) with `+ Add` button; backend enforces `UNIQUE(tenant_id, title)` and orders by `updated_at DESC`.
+3. In `Behavior` + `Updates`, user can toggle auto-draft replies, pick draft confidence as an enum `LOW | MEDIUM | HIGH` (backend maps to internal thresholds 0.50 / 0.70 / 0.85), toggle daily digest (reuses v1.0 ANL-03), toggle sensitive-data protection (default ON), and surface the shadow-mode toggle from v1.0 TRG-07. **Updated 2026-05-26** — confidence pivoted from 0.0–1.0 slider to LOW/MEDIUM/HIGH enum per Inbox Zero pattern.
+4. In `Safety net`, user can view, add, and remove sender entries (single email or domain pattern), and see a visual indicator in the audit log when a rule was blocked by the safety net. **Updated 2026-05-26** — paste-import (SET-SAFE-02) and `protect`-vs-`escalate` mode (SET-SAFE-03) deferred to v1.3 per spec-phase round-1 scope decision; every user-added entry behaves as `protect`.
+5. In `AI Provider`, user fills a single BYOK card with: provider `<Select>` (OpenAI / Anthropic / Google / DeepSeek — never OpenRouter or 9Router), base URL `<Input>` (auto-filled per provider, user-editable for OpenAI-compatible / Anthropic-compatible endpoints), API key (AES-GCM encrypted, no plaintext echo, masked display on re-render), model `<Select>` (populated from the provider's `/v1/models` response returned by Test connection), an Active `<Switch>` (default OFF; disabled until a model is picked AND the last Test result is `OK`), `Kiểm tra kết nối`, and `Lưu`. When the row is `active=true` AND has a tested model, every AI feature (chat, triage, draft, voice-generate) runs through that BYOK row; otherwise the admin-curated catalog default applies. Test connection uses the SAME enum-only response (`OK / INVALID_KEY / RATE_LIMITED / NETWORK_ERROR / TIMEOUT`) as admin MKEY-03 via the shared `ProviderConnectionTester`, plus a `models[]` list on `OK` so the user can pick a model. A single tenant-wide last-7d cost figure renders below the card. BYOK lives on `/ai` because Zero Mail is single-tenant-per-user. **Updated 2026-05-26 during plan-phase round 2** — per-feature picker, per-feature `Platform default ↔ Use my key` toggle, AND the tenant-wide mode card all removed; replaced by a single BYOK card with an Active switch.
 
-**Plans**: TBD
+**Plans** (7 plans across 4 waves):
+- [ ] 09-01-PLAN.md — Wave 0: Liquibase changesets 094..097 + JPA entity scaffolding + 33 Wave-0 test stubs
+- [ ] 09-02-PLAN.md — Wave 1: Voice + Behavior + Knowledge backend (services/controllers/DTOs) + DraftReplyWorker + SensitiveDataRedactor wiring
+- [ ] 09-03-PLAN.md — Wave 1: Safety Net DELETE + DOMAIN pattern + triage audit blocked_by_safety_net_pattern badge
+- [ ] 09-04-PLAN.md — Wave 1: ProviderConnectionTester extraction + UserByokService + ByokProviderResolver + UserByokController + AiCostQueryService (D-17)
+- [ ] 09-05-PLAN.md — Wave 1: SET-VOICE-07 generate-from-sent (in-memory privacy invariant + Spring AI observation hardening)
+- [ ] 09-06-PLAN.md — Wave 2: OpenAPI regen + FE sections + Knowledge feature + AiProviderSection + ByokForm removal from /settings
+- [ ] 09-07-PLAN.md — Wave 3: Playwright e2e ai-settings.spec.ts + Phase9ArchitectureTest aggregate + manual UX checkpoint
+
 **UI hint**: yes
 
 ---
@@ -172,7 +180,7 @@ Plans:
 | 7. Chat Email Assistant | v1.1 | 6/6 | Complete | 2026-05-18 |
 | 8. Admin Console & Operator Tooling | v1.2 | 6/6 | Complete   | 2026-05-20 |
 | 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 5/6 | In Progress|  |
-| 9. User Settings UI on Curated Catalog | v1.2 | 0/0 | Not started | — |
+| 9. User Settings UI on Curated Catalog | v1.2 | 0/7 | In Progress | — |
 
 ---
 

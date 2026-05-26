@@ -62,7 +62,8 @@ class ChatOrchestratorAssistantTextPersistenceIT extends PostgresContainerTest {
                         "select id from chat where tenant_id = ?", UUID.class, tenantId);
         UUID loadedChatId = Objects.requireNonNull(chatId);
         List<ChatMessage> messages =
-                chatMessageRepository.findByChatIdOrderByCreatedAtAsc(loadedChatId);
+                chatMessageRepository.findByChatIdAndTenantIdOrderByCreatedAtAsc(
+                        tenantId, loadedChatId);
 
         assertThat(messages).hasSize(2);
         assertThat(messages.get(1).role()).isEqualTo(ChatRole.ASSISTANT);
@@ -73,7 +74,8 @@ class ChatOrchestratorAssistantTextPersistenceIT extends PostgresContainerTest {
                 .containsSubsequence("data-persistence:assistant-message-saved", "finish:complete");
 
         List<org.springframework.ai.chat.messages.Message> memoryMessages =
-                zeroMailChatMemory.get(loadedChatId.toString());
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(() -> zeroMailChatMemory.get(loadedChatId.toString()));
         assertThat(memoryMessages).hasSize(2);
         assertThat(memoryMessages.get(1)).isInstanceOf(AssistantMessage.class);
         assertThat(memoryMessages.get(1).getText()).isEqualTo("Xin chào, em là Zero Mail.");

@@ -1,6 +1,7 @@
 package com.zeromail.core.cleanup.usecases;
 
 import com.zeromail.core.cleanup.domain.UnsubscribeResult;
+import com.zeromail.core.shared.net.OutboundHostGuard;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -60,8 +61,10 @@ public class UnsubscribeHttpClient {
     private static final String FORM_FIELD_VALUE = "One-Click";
 
     private final RestClient unsubscribeRestClient;
+    private final OutboundHostGuard outboundHostGuard;
 
-    public UnsubscribeHttpClient() {
+    public UnsubscribeHttpClient(OutboundHostGuard outboundHostGuard) {
+        this.outboundHostGuard = outboundHostGuard;
         HttpClient nativeHttpClient =
                 HttpClient.newBuilder()
                         .connectTimeout(CONNECT_TIMEOUT)
@@ -96,6 +99,14 @@ public class UnsubscribeHttpClient {
         URI validatedHttpsUrl = parseAndValidateHttps(unsubscribeUrl);
         String senderDomain =
                 validatedHttpsUrl.getHost() == null ? "unknown" : validatedHttpsUrl.getHost();
+
+        if (outboundHostGuard.isBlocked(senderDomain)) {
+            log.warn(
+                    "event=cleanup_unsubscribe_http_post_failed tenantId={} senderDomain={} failureReason=BLOCKED_PRIVATE_HOST",
+                    tenantId,
+                    senderDomain);
+            return UnsubscribeResult.failed("BLOCKED_PRIVATE_HOST");
+        }
 
         LinkedMultiValueMap<String, String> formBody = new LinkedMultiValueMap<>();
         formBody.add(FORM_FIELD_NAME, FORM_FIELD_VALUE);

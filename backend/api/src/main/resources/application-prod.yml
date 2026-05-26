@@ -40,6 +40,8 @@ server:
   servlet:
     session:
       cookie:
+        # CASA V3.4.1 — explicit Secure flag in prod; fail-loud startup guard in
+        # ProdSessionCookieSecureGuard rejects any prod boot where this is false.
         secure: true
 
 # Actuator surface: only health + prometheus exposed. Prometheus is scrape-only over

@@ -101,7 +101,8 @@ class ChatOrchestratorReadToolLoopIT extends PostgresContainerTest {
         UUID chatId =
                 jdbcTemplate.queryForObject(
                         "select id from chat where tenant_id = ?", UUID.class, tenantId);
-        List<ChatMessage> messages = chatMessageRepository.findByChatIdOrderByCreatedAtAsc(chatId);
+        List<ChatMessage> messages =
+                chatMessageRepository.findByChatIdAndTenantIdOrderByCreatedAtAsc(tenantId, chatId);
         assertThat(messages).hasSize(4);
         assertThat(messages)
                 .extracting(ChatMessage::role)

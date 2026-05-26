@@ -20,7 +20,7 @@ set -euo pipefail
 BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/zeromail}"
 PG_CONTAINER="${PG_CONTAINER:-zeromail-postgres}"
 PG_SUPERUSER="${PG_SUPERUSER:-zeromail}"
-PG_SUPERUSER_PW="${PG_SUPERUSER_PW:-zeromail}"
+PG_SUPERUSER_PW="${PG_SUPERUSER_PW:?PG_SUPERUSER_PW must be exported (load from /etc/zeromail/postgres.passphrase or systemd LoadCredential)}"
 PASSPHRASE_FILE="${PASSPHRASE_FILE:-/etc/zeromail/backup.passphrase}"
 RCLONE_REMOTE="${RCLONE_REMOTE:-}"
 RCLONE_PATH="${RCLONE_PATH:-zeromail-backups}"
