@@ -44,7 +44,7 @@ export default async function TopBar() {
       <nav className="zm-nav-inner">
         <Link href="/" className="zm-brand">
           <span className="zm-brand-mark">
-            <ZMLogoMark size={40} />
+            <ZMLogoMark size={48} />
           </span>
           <span className="zm-brand-wordmark">
             <span>zero</span>

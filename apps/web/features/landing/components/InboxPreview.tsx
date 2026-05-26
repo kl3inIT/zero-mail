@@ -129,7 +129,7 @@ export default function InboxPreview() {
       <div className="zm-gm-app">
         <div className="zm-gm-rail">
           <div className="zm-gm-rail-logo">
-            <ZMLogoMark size={38} />
+            <ZMLogoMark size={44} />
           </div>
           <div className="zm-gm-rail-item active">
             <MailIcon size={17} />

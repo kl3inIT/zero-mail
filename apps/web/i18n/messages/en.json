@@ -1504,7 +1504,7 @@
   "nav": {
     "ai": "AI configuration",
     "analytics": "Analytics",
-    "beta": "beta",
+    "beta": "v1",
     "billing": "Billing",
     "chat": "Assistant",
     "cleanupGroup": "Unsubscribe",

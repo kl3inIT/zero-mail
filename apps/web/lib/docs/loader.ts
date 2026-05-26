@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs';
+import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
@@ -20,13 +20,32 @@ import { z } from 'zod';
 const HERE =
   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
-export const DOCS_DIR = path.resolve(HERE, '../../docs');
+const SOURCE_RELATIVE_DOCS_DIR = path.resolve(HERE, '../../docs');
+const CWD_RELATIVE_DOCS_DIR = path.resolve(process.cwd(), 'docs');
+
+export const DOCS_DIR = existsSync(SOURCE_RELATIVE_DOCS_DIR)
+  ? SOURCE_RELATIVE_DOCS_DIR
+  : CWD_RELATIVE_DOCS_DIR;
 
 export const FrontmatterSchema = z.object({
   title: z.string().min(1),
   slug: z.string().regex(/^[a-z0-9-]+$/),
   order: z.number().int().nonnegative(),
   locale: z.enum(['vi', 'en']),
+  /**
+   * Optional flag (quick task 260526-r73) — when true, /docs index hides this
+   * entry. Used by privacy.* and terms.* MDX bundles, which keep their own
+   * top-level routes (/privacy, /terms) and should not appear in /docs index.
+   */
+  hideFromIndex: z.boolean().optional(),
+  /**
+   * Optional ISO-8601 date (YYYY-MM-DD). Surfaced inside MDX prose; not
+   * rendered structurally by the page chrome.
+   */
+  lastUpdated: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 export type Frontmatter = z.infer<typeof FrontmatterSchema>;
