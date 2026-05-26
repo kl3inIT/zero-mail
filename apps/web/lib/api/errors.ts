@@ -50,8 +50,37 @@ function bundleKeyForCode(normalized: string): string {
   // and GlobalExceptionHandler). The FE bundle nests `errors.validation.*`, so the
   // string leaf is at `errors.validation.generic`.
   if (normalized === 'validation') return 'validation.generic';
-  return normalized;
+  return phaseNineErrorCodeMap[normalized] ?? normalized;
 }
+
+const phaseNineErrorCodeMap: Record<string, string> = {
+  'ai.byok.base_url_host_private': 'ai.byok.base_url_host_private',
+  'ai.byok.base_url_host_unresolvable': 'ai.byok.base_url_host_unresolvable',
+  'ai.byok.base_url_not_https': 'ai.byok.base_url_not_https',
+  'ai.byok.base_url_not_supported_for_provider': 'ai.byok.base_url_not_supported_for_provider',
+  'ai.byok.base_url_port_not_allowed': 'ai.byok.base_url_port_not_allowed',
+  'ai.byok.model_not_in_last_test': 'ai.byok.model_not_in_last_test',
+  'ai.byok.no_model_picked': 'ai.byok.no_model_picked',
+  'ai.byok.no_row': 'ai.byok.no_row',
+  'ai.byok.provider_not_allowed': 'ai.byok.provider_not_allowed',
+  'ai.byok.rate_limit_unavailable': 'ai.byok.rate_limit_unavailable',
+  'ai.byok.rate_limited': 'ai.byok.rate_limited',
+  'ai.byok.test_connection.rate_limited': 'ai.byok.test_connection.rate_limited',
+  'ai.test_connection.rate_limited': 'ai.test_connection.rate_limited',
+  'behavior.draft_confidence.invalid': 'behavior.draft_confidence.invalid',
+  'knowledge.not_found': 'knowledge.not_found',
+  'knowledge.title.duplicate': 'knowledge.title.duplicate',
+  'safety_net.not_found': 'safety_net.not_found',
+  'safety_net.observation_not_deletable': 'safety_net.observation_not_deletable',
+  'safety_net.pattern_invalid': 'safety_net.pattern_invalid',
+  'voice.generate.failed': 'voice.generate.failed',
+  'voice.generate.gmail_read_failed': 'voice.generate.gmail_read_failed',
+  'voice.generate.rate_limited': 'voice.generate.rate_limited',
+  'voice.personal_instructions.too_long': 'voice.personal_instructions.too_long',
+  'voice.tone_preset.invalid': 'voice.tone_preset.invalid',
+  'voice.writing_style.too_long': 'voice.writing_style.too_long',
+  'voice.writing_style.too_short': 'voice.writing_style.too_short',
+};
 
 /** Walk a dotted path and confirm the leaf is a string. */
 function hasNestedKey(messages: unknown, dottedKey: string): boolean {

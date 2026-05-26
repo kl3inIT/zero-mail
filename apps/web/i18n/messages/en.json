@@ -9,20 +9,236 @@
     "notify": "notify"
   },
   "ai": {
+    "actions": {
+      "addSender": "+ Add sender",
+      "addSnippet": "+ Add snippet",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "generateFromSent": "Generate from recent sent emails",
+      "remove": "Remove",
+      "replaceKey": "Replace key",
+      "save": "Save",
+      "set": "Set",
+      "testConnection": "Test connection"
+    },
+    "behavior": {
+      "autoDraftReplies": {
+        "description": "Let the AI draft replies when rules allow it.",
+        "title": "Auto-draft replies"
+      },
+      "draftConfidence": {
+        "description": "Only draft when confidence reaches your chosen threshold.",
+        "high": "HIGH - only when the AI is very confident",
+        "low": "LOW - draft more often, you review",
+        "medium": "MEDIUM - balance speed and caution",
+        "title": "Draft confidence threshold"
+      },
+      "sensitiveData": {
+        "description": "Strip sensitive data from prompts sent to the LLM.",
+        "title": "Sensitive data protection"
+      }
+    },
+    "byok": {
+      "active": {
+        "description": "Enable this key for all AI features.",
+        "disabledTooltip": "Pick a model and pass the connection test before enabling BYOK.",
+        "title": "Active"
+      },
+      "baseUrl": {
+        "label": "Base URL"
+      },
+      "costFooter": "AI cost last 7 days: {amount}",
+      "delete": {
+        "confirm": "Delete the BYOK key? Zero Mail will return to the platform key."
+      },
+      "empty": {
+        "body": "Cost runs through your Zero Mail account. Fill in the form below to use your own key.",
+        "title": "Using the platform key"
+      },
+      "key": {
+        "label": "API key",
+        "masked": "Saved key: ****{lastFourChars}"
+      },
+      "model": {
+        "empty": "Test the connection to load models",
+        "label": "Model"
+      },
+      "provider": {
+        "anthropic": "Anthropic",
+        "deepseek": "DeepSeek",
+        "google": "Google",
+        "label": "Provider",
+        "openai": "OpenAI"
+      },
+      "replace": {
+        "confirm": "Replace {provider} key? The previous key will be overwritten and cannot be recovered. BYOK will stay off until you test again and pick a model."
+      },
+      "status": {
+        "fail": "Error",
+        "ok": "OK"
+      },
+      "test": {
+        "disabledTooltip": "Save first, then test"
+      },
+      "title": "Personal key (BYOK)",
+      "titleDescription": "Enable your own key for all AI features. When disabled, Zero Mail uses the platform key."
+    },
+    "confirm": {
+      "deleteKnowledge": "Delete snippet {title}? This cannot be undone.",
+      "removeSafetyNet": "Remove {pattern} from the safety net? The AI will resume auto-actioning email from this sender."
+    },
+    "empty": {
+      "knowledge": {
+        "body": "Add facts about you or customers for the AI to use when drafting. Click + Add snippet to start.",
+        "title": "No snippets yet"
+      },
+      "safetyNet": {
+        "body": "Add an email (e.g. ceo@acme.com) or a domain (e.g. @acme.com) so the AI always leaves these to you.",
+        "title": "No senders yet"
+      },
+      "sent": {
+        "body": "Your Sent folder is empty so no style sample could be generated. Send a few emails and come back.",
+        "title": "No sent emails found"
+      }
+    },
+    "knowledge": {
+      "content": {
+        "label": "Content"
+      },
+      "dialog": {
+        "addTitle": "Add snippet",
+        "editTitle": "Edit snippet"
+      },
+      "table": {
+        "delete": "Delete",
+        "edit": "Edit",
+        "lastUpdated": "Last updated",
+        "title": "Title"
+      },
+      "title": {
+        "description": "Stable facts the AI should remember while drafting.",
+        "label": "Title",
+        "text": "Knowledge"
+      }
+    },
     "page": {
-      "description": "Teach the AI how to behave in your inbox — who is shielded from automation, and (soon) the voice and style you want it to mirror when drafting replies.",
-      "title": "AI configuration"
+      "description": "Tune your voice, behavior, and AI provider.",
+      "title": "AI settings"
+    },
+    "safetyNet": {
+      "add": {
+        "placeholder": "ceo@acme.com or @acme.com"
+      },
+      "autoSend": {
+        "description": "Allow rules to send automatically after all safety gates pass.",
+        "title": "Auto-send rules"
+      },
+      "createdBy": {
+        "system": "System",
+        "user": "You"
+      },
+      "deleteDisabled": "This sender was added by the system and cannot be deleted.",
+      "kind": {
+        "domain": "Domain",
+        "email": "Email"
+      },
+      "protectedSenders": {
+        "description": "Emails or domains the AI never auto-actions.",
+        "title": "Protected senders"
+      },
+      "tip": "Tip: use @acme.com to protect an entire domain."
+    },
+    "sections": {
+      "behavior": {
+        "helper": "When the AI acts automatically",
+        "title": "Behavior"
+      },
+      "provider": {
+        "helper": "Personal keys and AI cost",
+        "title": "AI Provider"
+      },
+      "safetyNet": {
+        "helper": "Senders the AI never auto-actions",
+        "title": "Safety net"
+      },
+      "updates": {
+        "helper": "Daily digest and shadow mode",
+        "title": "Updates"
+      },
+      "voice": {
+        "helper": "How the AI writes for you",
+        "title": "Your voice"
+      }
     },
     "senders": {
       "add": "Protect",
       "added": "Protected {email}",
       "addFailed": "Could not protect this sender. Try again.",
-      "adding": "Adding…",
-      "description": "Mail from these senders is always left alone — no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
+      "adding": "Adding...",
+      "description": "Mail from these senders is always left alone - no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
       "heading": "Protected senders",
       "inputLabel": "Sender email to protect",
       "inputPlaceholder": "boss@company.com",
       "invalidEmail": "Invalid email address."
+    },
+    "toast": {
+      "aiPreferenceSaved": "AI preference saved",
+      "behaviorSaved": "Behavior saved",
+      "byokDeleted": "Personal key deleted",
+      "byokKeySaved": "Key saved (will not be shown again)",
+      "byokTestOk": "Key works",
+      "genericFailure": "Couldn't save. Please try again.",
+      "safetyNetAdded": "Sender added to safety net",
+      "safetyNetRemoved": "Sender removed",
+      "snippetAdded": "Snippet added",
+      "snippetDeleted": "Snippet deleted",
+      "snippetUpdated": "Snippet updated",
+      "voiceGenerated": "Draft generated - review before saving",
+      "voiceSaved": "Voice saved"
+    },
+    "updates": {
+      "dailyDigest": {
+        "description": "Receive one daily email digest.",
+        "title": "Daily digest"
+      },
+      "pauseTriage": {
+        "description": "Pause automatic triage while keeping your configuration.",
+        "title": "Pause triage"
+      }
+    },
+    "voice": {
+      "language": {
+        "description": "Default language for AI drafts.",
+        "english": "English",
+        "title": "AI output language",
+        "vietnamese": "Vietnamese"
+      },
+      "personalInstructions": {
+        "description": "What the AI should know about you before drafting.",
+        "placeholder": "Example: keep replies concise, courteous, and explicit about next steps...",
+        "title": "About me (personal instructions)"
+      },
+      "signature": {
+        "description": "A signature the AI can include in drafts when appropriate.",
+        "placeholder": "Name, title, phone number...",
+        "title": "Email signature"
+      },
+      "tone": {
+        "casual": "Casual",
+        "custom": "Custom",
+        "description": "Default tone for AI drafts.",
+        "formal": "Formal",
+        "friendly": "Friendly",
+        "professional": "Professional",
+        "title": "Tone"
+      },
+      "wordCount": "{count} words",
+      "writingStyle": {
+        "description": "Describe how you usually write so the AI can mirror you more safely.",
+        "placeholder": "Write 200-500 words about how you greet, explain, decline, and close emails...",
+        "title": "Writing style"
+      }
     }
   },
   "analytics": {
@@ -189,6 +405,11 @@
       "30d": "Last 30 days",
       "7d": "Last 7 days",
       "90d": "Last 90 days"
+    }
+  },
+  "audit": {
+    "badge": {
+      "blockedBySafetyNet": "Blocked by safety net: {pattern}"
     }
   },
   "auth": {
@@ -722,6 +943,27 @@
     }
   },
   "errors": {
+    "ai": {
+      "byok": {
+        "base_url_host_private": "Base URL cannot point to a private network or localhost.",
+        "base_url_host_unresolvable": "Base URL host could not be resolved.",
+        "base_url_not_https": "Base URL must start with https://",
+        "base_url_not_supported_for_provider": "This Base URL is not supported for the selected provider.",
+        "base_url_port_not_allowed": "Base URL can only use the default HTTPS port.",
+        "model_not_in_last_test": "This model was not returned by the latest connection test.",
+        "no_model_picked": "Pick a model and pass the connection test before enabling BYOK.",
+        "no_row": "Save first, then test again.",
+        "provider_not_allowed": "BYOK is not supported for this provider.",
+        "rate_limit_unavailable": "Rate limiting is temporarily unavailable. Try again later.",
+        "rate_limited": "Too many attempts. Try again later.",
+        "test_connection": {
+          "rate_limited": "Too many test attempts. Try again in 1 hour."
+        }
+      },
+      "test_connection": {
+        "rate_limited": "Too many test attempts. Try again in 1 hour."
+      }
+    },
     "auth": {
       "consent_denied": "Gmail access was declined. Sign in with Google and approve Gmail access to continue.",
       "currentUserNotFound": "The current account could not be found. Sign in again.",
@@ -730,6 +972,11 @@
       "unauthorized": "Your session expired. Sign in with Google again."
     },
     "badRequest": "The request is invalid. Check it and try again.",
+    "behavior": {
+      "draft_confidence": {
+        "invalid": "Invalid draft confidence threshold."
+      }
+    },
     "billing": {
       "insufficient": "Insufficient credits — top up to continue.",
       "ledger": {
@@ -768,6 +1015,12 @@
     "fieldFallback": "This value is invalid. Check it and try again.",
     "gmail": {
       "disconnected": "Google access was revoked or expired. Reconnect Gmail."
+    },
+    "knowledge": {
+      "not_found": "This snippet could not be found. Reload the list.",
+      "title": {
+        "duplicate": "A snippet with this title already exists."
+      }
     },
     "llm": {
       "byok": {
@@ -831,6 +1084,11 @@
       "version_mismatch": "The rule changed before the action finished. Reload and try again.",
       "versionMismatch": "The rule changed before the action finished. Reload and try again."
     },
+    "safety_net": {
+      "not_found": "This safety-net sender could not be found. Reload the list.",
+      "observation_not_deletable": "Cannot delete a system-observed sender.",
+      "pattern_invalid": "Invalid sender pattern. Use an email or a domain like @acme.com."
+    },
     "schemaMismatch": "This page needs a newer API contract. Regenerate the typed client before continuing.",
     "triage": {
       "audit": {
@@ -855,6 +1113,23 @@
         }
       },
       "generic": "One or more fields are invalid. Please check them and try again."
+    },
+    "voice": {
+      "generate": {
+        "failed": "Could not generate a voice sample from sent emails. Try again later.",
+        "gmail_read_failed": "Could not read sent emails right now. Try again later.",
+        "rate_limited": "Reached the 3/hour limit. Try again later."
+      },
+      "personal_instructions": {
+        "too_long": "Personal instructions cannot exceed 2000 characters."
+      },
+      "tone_preset": {
+        "invalid": "Invalid tone preset."
+      },
+      "writing_style": {
+        "too_long": "Writing style cannot exceed 500 words.",
+        "too_short": "Writing style needs at least 200 words."
+      }
     }
   },
   "feat": {
@@ -1351,13 +1626,13 @@
       "body": "By clicking continue, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
       "intro": "These Terms of Service govern your use of Zero Mail, a beta / pre-launch academic project operated by the Zero Mail team. By using the service, you agree to the terms set out below; if you do not agree, please do not connect your Gmail account.",
       "sections": {
-        "acceptance": {
-          "body": "By creating a Zero Mail account, connecting your Gmail account, or otherwise using the Zero Mail service, you agree to be bound by these Terms of Service and by the Privacy Policy referenced from them. If you are using Zero Mail on behalf of an organization, you confirm that you have the authority to bind that organization to these terms, and references to you in this document include that organization where appropriate.\n\nIf you do not agree to any part of these terms, please stop using Zero Mail and disconnect your Gmail account from the Settings page.",
-          "heading": "Accepting these terms"
-        },
         "acceptableUse": {
           "body": "When using Zero Mail, you must not do any of the following. You must not use the service to send spam, scams, phishing messages, unsolicited bulk mail, or mass marketing, regardless of how the recipient list was assembled. You must not violate Gmail's Program Policies or any applicable email-sending law, including but not limited to the United States CAN-SPAM Act and equivalent regional regimes that apply where you or your recipients are located.\n\nYou must not abuse the automation to harass, deceive, impersonate, or defame any person or entity. You must not attempt to circumvent the safety gates, rate limits, idempotency controls, or audit logging that the service relies on to operate safely. You must not reverse-engineer or attempt to bypass the access controls that separate your account from any other account on the same deployment.",
           "heading": "Acceptable use"
+        },
+        "acceptance": {
+          "body": "By creating a Zero Mail account, connecting your Gmail account, or otherwise using the Zero Mail service, you agree to be bound by these Terms of Service and by the Privacy Policy referenced from them. If you are using Zero Mail on behalf of an organization, you confirm that you have the authority to bind that organization to these terms, and references to you in this document include that organization where appropriate.\n\nIf you do not agree to any part of these terms, please stop using Zero Mail and disconnect your Gmail account from the Settings page.",
+          "heading": "Accepting these terms"
         },
         "autoSendRules": {
           "body": "Zero Mail offers a global Auto-send rules setting in the Settings page. The setting defaults to ON. When it is ON, AI rules MAY take outbound actions on your behalf — sending a reply, forwarding a message, or sending a new message — but only after every applicable runtime safety gate passes for the specific message in question.\n\nThe runtime safety gates include, at a minimum: low-trust sender guards that prevent outbound automation against new or unverified contacts; per-tenant rate caps that limit how many outbound messages your account can produce in a short window; per-tenant daily caps that limit total outbound volume per day; idempotency checks that prevent a single triage decision from sending the same message more than once; and append-only audit logging that records every outbound action for later review.\n\nIf any gate fails, or if the Auto-send rules setting is OFF, the rule automatically downgrades to saving a Gmail draft instead of sending. The draft appears in your Gmail drafts folder and waits for you to review and send it manually.\n\nThe chat assistant always requires explicit user confirmation through a preview card before any outbound message is sent, regardless of the global setting.\n\nYou remain responsible for every outbound action taken under your account, whether triggered automatically by a rule or confirmed manually through the chat assistant. We strongly recommend reviewing your rules and the global setting periodically.",
@@ -1414,8 +1689,8 @@
       },
       "title": "Terms of Service",
       "toc": {
-        "acceptance": "Accepting these terms",
         "acceptableUse": "Acceptable use",
+        "acceptance": "Accepting these terms",
         "autoSendRules": "Auto-send rules",
         "changes": "Changes to these terms",
         "contact": "Contact",

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enMessages from '@/i18n/messages/en.json';
 import { SenderSafetyNetList } from '@/features/triage/components/SenderSafetyNetList';
+import type { ProtectedSenderResponse } from '@/features/triage/api/triage-api';
 
 const mocks = vi.hoisted(() => ({
   mutate: vi.fn(),
@@ -34,8 +35,8 @@ describe('SenderSafetyNetList', () => {
     renderWithMessages(
       <SenderSafetyNetList
         injectedSenders={[
-          { senderEmail: 'ceo@example.com', optedIn: false },
-          { senderEmail: 'finance@example.com', optedIn: true },
+          protectedSender('ceo@example.com', false),
+          protectedSender('finance@example.com', true),
         ]}
       />,
     );
@@ -47,9 +48,7 @@ describe('SenderSafetyNetList', () => {
 
   it('opts a sender into automation', async () => {
     renderWithMessages(
-      <SenderSafetyNetList
-        injectedSenders={[{ senderEmail: 'founder@example.com', optedIn: false }]}
-      />,
+      <SenderSafetyNetList injectedSenders={[protectedSender('founder@example.com', false)]} />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Opt into automation' }));
@@ -58,6 +57,18 @@ describe('SenderSafetyNetList', () => {
     await waitFor(() => expect(screen.getAllByText('Opted in').length).toBeGreaterThan(0));
   });
 });
+
+function protectedSender(senderEmail: string, optedIn: boolean): ProtectedSenderResponse {
+  return {
+    id: `00000000-0000-0000-0000-${senderEmail === 'finance@example.com' ? '000000000002' : '000000000001'}`,
+    pattern: senderEmail,
+    patternKind: 'EMAIL',
+    createdByUser: false,
+    createdAt: '2026-05-26T00:00:00.000Z',
+    senderEmail,
+    optedIn,
+  };
+}
 
 function renderWithMessages(children: ReactNode) {
   return render(

@@ -3,7 +3,7 @@ import type { components } from '@/lib/api/schema';
 
 export type ProtectedSenderResponse = components['schemas']['ProtectedSenderResponse'];
 export type ProtectedSendersResponse = components['schemas']['ProtectedSendersResponse'];
-export type SenderOptInResponse = components['schemas']['SenderOptInResponse'];
+export type SenderOptInResponse = components['schemas']['ProtectedSenderResponse'];
 export type UndoAuditResponse = components['schemas']['UndoAuditResponse'];
 
 export type AuditMessageRef = {

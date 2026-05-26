@@ -9,20 +9,236 @@
     "notify": "thông báo"
   },
   "ai": {
+    "actions": {
+      "addSender": "+ Thêm người gửi",
+      "addSnippet": "+ Thêm đoạn kiến thức",
+      "cancel": "Hủy",
+      "delete": "Xóa",
+      "edit": "Sửa",
+      "generateFromSent": "Tạo từ email đã gửi gần đây",
+      "remove": "Gỡ",
+      "replaceKey": "Thay key",
+      "save": "Lưu",
+      "set": "Đặt giá trị",
+      "testConnection": "Kiểm tra kết nối"
+    },
+    "behavior": {
+      "autoDraftReplies": {
+        "description": "AI tự tạo bản nháp trả lời khi quy tắc cho phép.",
+        "title": "Tự động soạn nháp trả lời"
+      },
+      "draftConfidence": {
+        "description": "Chỉ tạo nháp khi độ tin cậy đạt ngưỡng bạn chọn.",
+        "high": "HIGH - chỉ khi AI rất chắc chắn",
+        "low": "LOW - tạo nháp rộng hơn, bạn kiểm tra lại",
+        "medium": "MEDIUM - cân bằng giữa tốc độ và an toàn",
+        "title": "Ngưỡng tự tin nháp"
+      },
+      "sensitiveData": {
+        "description": "Loại bỏ dữ liệu nhạy cảm khỏi prompt gửi tới LLM.",
+        "title": "Bảo vệ dữ liệu nhạy cảm"
+      }
+    },
+    "byok": {
+      "active": {
+        "description": "Bật để dùng key này cho mọi tính năng AI.",
+        "disabledTooltip": "Chọn model và kiểm tra kết nối thành công trước khi bật BYOK.",
+        "title": "Đang hoạt động"
+      },
+      "baseUrl": {
+        "label": "Base URL"
+      },
+      "costFooter": "Chi phí AI 7 ngày qua: {amount}",
+      "delete": {
+        "confirm": "Xóa key BYOK? Zero Mail sẽ quay lại dùng key nền tảng."
+      },
+      "empty": {
+        "body": "AI sẽ tính chi phí qua tài khoản Zero Mail. Điền form bên dưới để dùng key cá nhân.",
+        "title": "Đang dùng key nền tảng"
+      },
+      "key": {
+        "label": "API key",
+        "masked": "Key đã lưu: ****{lastFourChars}"
+      },
+      "model": {
+        "empty": "Kiểm tra kết nối để tải danh sách model",
+        "label": "Model"
+      },
+      "provider": {
+        "anthropic": "Anthropic",
+        "deepseek": "DeepSeek",
+        "google": "Google",
+        "label": "Nhà cung cấp",
+        "openai": "OpenAI"
+      },
+      "replace": {
+        "confirm": "Thay key {provider}? Key cũ sẽ bị ghi đè và không khôi phục được. BYOK sẽ tắt đến khi bạn kiểm tra lại và chọn model."
+      },
+      "status": {
+        "fail": "Lỗi",
+        "ok": "OK"
+      },
+      "test": {
+        "disabledTooltip": "Lưu trước rồi kiểm tra"
+      },
+      "title": "Key cá nhân (BYOK)",
+      "titleDescription": "Bật để dùng key của bạn cho mọi tính năng AI. Khi tắt, hệ thống dùng key mặc định của Zero Mail."
+    },
+    "confirm": {
+      "deleteKnowledge": "Xóa đoạn kiến thức {title}? Hành động này không thể hoàn tác.",
+      "removeSafetyNet": "Gỡ {pattern} khỏi lưới an toàn? AI sẽ lại tự xử lý thư từ địa chỉ này."
+    },
+    "empty": {
+      "knowledge": {
+        "body": "Thêm thông tin về bạn hoặc khách hàng để AI dùng khi soạn thư. Bấm + Thêm đoạn kiến thức để bắt đầu.",
+        "title": "Chưa có đoạn kiến thức nào"
+      },
+      "safetyNet": {
+        "body": "Thêm email (vd. ceo@acme.com) hoặc domain (vd. @acme.com) để AI luôn để bạn xử lý tay.",
+        "title": "Chưa có người gửi nào"
+      },
+      "sent": {
+        "body": "Hộp thư Đã gửi trống nên không tạo được mẫu giọng văn. Hãy viết thử vài email rồi quay lại sau.",
+        "title": "Không tìm thấy email đã gửi"
+      }
+    },
+    "knowledge": {
+      "content": {
+        "label": "Nội dung"
+      },
+      "dialog": {
+        "addTitle": "Thêm đoạn kiến thức",
+        "editTitle": "Sửa đoạn kiến thức"
+      },
+      "table": {
+        "delete": "Xóa",
+        "edit": "Sửa",
+        "lastUpdated": "Cập nhật",
+        "title": "Tiêu đề"
+      },
+      "title": {
+        "description": "Thông tin cố định AI nên nhớ khi soạn thư.",
+        "label": "Tiêu đề",
+        "text": "Kho kiến thức"
+      }
+    },
     "page": {
-      "description": "Dạy AI cách hành xử với hộp thư của bạn — ai được bảo vệ khỏi tự động hoá, và (sắp tới) giọng văn cùng phong cách bạn muốn AI bắt chước khi soạn nháp.",
-      "title": "Cấu hình AI"
+      "description": "Tinh chỉnh giọng văn, hành vi, và nhà cung cấp AI.",
+      "title": "Cài đặt AI"
+    },
+    "safetyNet": {
+      "add": {
+        "placeholder": "ceo@acme.com hoặc @acme.com"
+      },
+      "autoSend": {
+        "description": "Cho phép rule tự gửi khi vượt qua toàn bộ cổng an toàn.",
+        "title": "Tự động gửi theo rule"
+      },
+      "createdBy": {
+        "system": "Hệ thống",
+        "user": "Bạn"
+      },
+      "deleteDisabled": "Người gửi này do hệ thống tự thêm nên không thể xóa.",
+      "kind": {
+        "domain": "Domain",
+        "email": "Email"
+      },
+      "protectedSenders": {
+        "description": "Email hoặc domain mà AI không bao giờ tự xử lý.",
+        "title": "Người gửi được bảo vệ"
+      },
+      "tip": "Mẹo: dùng @acme.com để bảo vệ toàn bộ domain."
+    },
+    "sections": {
+      "behavior": {
+        "helper": "Khi nào AI hành động tự động",
+        "title": "Hành vi trợ lý"
+      },
+      "provider": {
+        "helper": "Key cá nhân và chi phí AI",
+        "title": "Nhà cung cấp AI"
+      },
+      "safetyNet": {
+        "helper": "Người gửi mà AI không bao giờ tự xử lý",
+        "title": "Lưới an toàn"
+      },
+      "updates": {
+        "helper": "Tóm tắt hằng ngày và chế độ shadow",
+        "title": "Cập nhật"
+      },
+      "voice": {
+        "helper": "Cách AI viết thay bạn",
+        "title": "Giọng văn của bạn"
+      }
     },
     "senders": {
       "add": "Bảo vệ",
       "added": "Đã bảo vệ {email}",
       "addFailed": "Chưa thêm được người gửi. Hãy thử lại.",
-      "adding": "Đang thêm…",
-      "description": "Email từ những người gửi này luôn được giữ nguyên — không gắn nhãn, không lưu trữ, không soạn nháp tự động, dù quy tắc có khớp đến đâu.",
+      "adding": "Đang thêm...",
+      "description": "Email từ những người gửi này luôn được giữ nguyên - không gắn nhãn, không lưu trữ, không soạn nháp tự động, dù quy tắc có khớp đến đâu.",
       "heading": "Người gửi được bảo vệ",
       "inputLabel": "Email người gửi cần bảo vệ",
       "inputPlaceholder": "sep@congty.com",
       "invalidEmail": "Email không hợp lệ."
+    },
+    "toast": {
+      "aiPreferenceSaved": "Đã lưu lựa chọn AI",
+      "behaviorSaved": "Đã lưu hành vi",
+      "byokDeleted": "Đã xóa key cá nhân",
+      "byokKeySaved": "Đã lưu key (không hiển thị lại)",
+      "byokTestOk": "Key hoạt động bình thường",
+      "genericFailure": "Không lưu được. Thử lại nhé.",
+      "safetyNetAdded": "Đã thêm người gửi vào lưới an toàn",
+      "safetyNetRemoved": "Đã gỡ người gửi",
+      "snippetAdded": "Đã thêm đoạn kiến thức",
+      "snippetDeleted": "Đã xóa đoạn kiến thức",
+      "snippetUpdated": "Đã cập nhật đoạn kiến thức",
+      "voiceGenerated": "Đã tạo bản nháp - xem lại trước khi lưu",
+      "voiceSaved": "Đã lưu giọng văn"
+    },
+    "updates": {
+      "dailyDigest": {
+        "description": "Nhận một bản tóm tắt email hằng ngày.",
+        "title": "Tóm tắt hằng ngày"
+      },
+      "pauseTriage": {
+        "description": "Tạm dừng tự động xử lý nhưng vẫn giữ dữ liệu cấu hình.",
+        "title": "Tạm dừng triage"
+      }
+    },
+    "voice": {
+      "language": {
+        "description": "Ngôn ngữ mặc định khi AI soạn nháp.",
+        "english": "English",
+        "title": "Ngôn ngữ AI viết",
+        "vietnamese": "Tiếng Việt"
+      },
+      "personalInstructions": {
+        "description": "Những điều AI cần biết về bạn trước khi soạn thư.",
+        "placeholder": "Ví dụ: ưu tiên trả lời ngắn, lịch sự, nêu rõ bước tiếp theo...",
+        "title": "Về tôi (hướng dẫn cá nhân)"
+      },
+      "signature": {
+        "description": "Chữ ký AI có thể chèn vào bản nháp khi phù hợp.",
+        "placeholder": "Tên, chức danh, số điện thoại...",
+        "title": "Chữ ký email"
+      },
+      "tone": {
+        "casual": "Casual",
+        "custom": "Custom",
+        "description": "Tone mặc định khi AI tạo bản nháp.",
+        "formal": "Formal",
+        "friendly": "Friendly",
+        "professional": "Professional",
+        "title": "Tone giọng văn"
+      },
+      "wordCount": "{count} từ",
+      "writingStyle": {
+        "description": "Mô tả cách bạn thường viết để AI bắt chước an toàn hơn.",
+        "placeholder": "Viết 200-500 từ về cách bạn chào hỏi, giải thích, từ chối, và kết thúc email...",
+        "title": "Phong cách viết"
+      }
     }
   },
   "analytics": {
@@ -189,6 +405,11 @@
       "30d": "30 ngày qua",
       "7d": "7 ngày qua",
       "90d": "90 ngày qua"
+    }
+  },
+  "audit": {
+    "badge": {
+      "blockedBySafetyNet": "Chặn bởi lưới an toàn: {pattern}"
     }
   },
   "auth": {
@@ -722,6 +943,27 @@
     }
   },
   "errors": {
+    "ai": {
+      "byok": {
+        "base_url_host_private": "Base URL không được trỏ tới mạng nội bộ hoặc localhost.",
+        "base_url_host_unresolvable": "Không phân giải được host của Base URL.",
+        "base_url_not_https": "Base URL phải bắt đầu bằng https://",
+        "base_url_not_supported_for_provider": "Base URL này không phù hợp với nhà cung cấp đã chọn.",
+        "base_url_port_not_allowed": "Base URL chỉ được dùng cổng HTTPS mặc định.",
+        "model_not_in_last_test": "Model này không nằm trong lần kiểm tra kết nối gần nhất.",
+        "no_model_picked": "Hãy chọn model và kiểm tra kết nối thành công trước khi bật BYOK.",
+        "no_row": "Lưu trước rồi kiểm tra lại.",
+        "provider_not_allowed": "Nhà cung cấp này không hỗ trợ BYOK.",
+        "rate_limit_unavailable": "Tạm thời chưa kiểm tra được giới hạn. Thử lại sau.",
+        "rate_limited": "Bạn thao tác quá nhiều lần. Thử lại sau.",
+        "test_connection": {
+          "rate_limited": "Bạn đã kiểm tra quá nhiều lần. Thử lại sau 1 giờ."
+        }
+      },
+      "test_connection": {
+        "rate_limited": "Bạn đã kiểm tra quá nhiều lần. Thử lại sau 1 giờ."
+      }
+    },
     "auth": {
       "consent_denied": "Quyền truy cập Gmail bị từ chối. Hãy đăng nhập lại bằng Google và cấp quyền Gmail để tiếp tục.",
       "currentUserNotFound": "Không tìm thấy tài khoản hiện tại. Hãy đăng nhập lại.",
@@ -730,6 +972,11 @@
       "unauthorized": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại bằng Google."
     },
     "badRequest": "Yêu cầu không hợp lệ. Hãy kiểm tra lại và thử lần nữa.",
+    "behavior": {
+      "draft_confidence": {
+        "invalid": "Ngưỡng tự tin nháp không hợp lệ."
+      }
+    },
     "billing": {
       "insufficient": "Số dư tín dụng không đủ — vui lòng nạp thêm để tiếp tục.",
       "ledger": {
@@ -768,6 +1015,12 @@
     "fieldFallback": "Giá trị này không hợp lệ. Hãy kiểm tra lại.",
     "gmail": {
       "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
+    },
+    "knowledge": {
+      "not_found": "Không tìm thấy đoạn kiến thức này. Hãy tải lại danh sách.",
+      "title": {
+        "duplicate": "Đã có đoạn kiến thức với tiêu đề này."
+      }
     },
     "llm": {
       "byok": {
@@ -831,6 +1084,11 @@
       "version_mismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại.",
       "versionMismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại."
     },
+    "safety_net": {
+      "not_found": "Không tìm thấy người gửi trong lưới an toàn. Hãy tải lại danh sách.",
+      "observation_not_deletable": "Không thể xóa người gửi do hệ thống tự thêm.",
+      "pattern_invalid": "Mẫu người gửi không hợp lệ. Dùng email hoặc domain như @acme.com."
+    },
     "schemaMismatch": "Trang này cần hợp đồng API mới hơn. Hãy tạo lại typed client trước khi tiếp tục.",
     "triage": {
       "audit": {
@@ -855,6 +1113,23 @@
         }
       },
       "generic": "Một hoặc nhiều trường không hợp lệ. Hãy kiểm tra lại."
+    },
+    "voice": {
+      "generate": {
+        "failed": "Chưa tạo được giọng văn từ email đã gửi. Thử lại sau.",
+        "gmail_read_failed": "Không đọc được email đã gửi lúc này. Thử lại sau.",
+        "rate_limited": "Đã đạt giới hạn 3 lần/giờ. Thử lại sau."
+      },
+      "personal_instructions": {
+        "too_long": "Hướng dẫn cá nhân không được vượt 2000 ký tự."
+      },
+      "tone_preset": {
+        "invalid": "Tone không hợp lệ."
+      },
+      "writing_style": {
+        "too_long": "Mô tả giọng văn không được vượt 500 từ.",
+        "too_short": "Mô tả giọng văn cần ít nhất 200 từ."
+      }
     }
   },
   "feat": {
@@ -1351,13 +1626,13 @@
       "body": "Khi nhấn tiếp tục, bạn đồng ý với <terms>Điều khoản dịch vụ</terms> và <privacy>Chính sách bảo mật</privacy> của chúng tôi.",
       "intro": "Các Điều khoản dịch vụ này điều chỉnh việc bạn dùng Zero Mail — một dự án học thuật ở giai đoạn beta, chưa launch chính thức, do Zero Mail team vận hành. Khi dùng dịch vụ, bạn đồng ý với các điều khoản dưới đây; nếu không đồng ý, vui lòng đừng kết nối tài khoản Gmail.",
       "sections": {
-        "acceptance": {
-          "body": "Khi tạo tài khoản Zero Mail, kết nối tài khoản Gmail, hoặc sử dụng dịch vụ Zero Mail bằng cách nào đó, bạn đồng ý chịu ràng buộc bởi các Điều khoản dịch vụ này và bởi Chính sách bảo mật được tham chiếu từ chúng. Nếu bạn dùng Zero Mail thay mặt cho một tổ chức, bạn xác nhận rằng mình có thẩm quyền ràng buộc tổ chức đó với các điều khoản này, và các tham chiếu đến \"bạn\" trong tài liệu này bao gồm cả tổ chức đó khi phù hợp.\n\nNếu bạn không đồng ý với bất kỳ phần nào của các điều khoản này, vui lòng dừng dùng Zero Mail và ngắt tài khoản Gmail khỏi trang Cài đặt.",
-          "heading": "Chấp nhận các điều khoản này"
-        },
         "acceptableUse": {
           "body": "Khi dùng Zero Mail, bạn KHÔNG được làm các việc sau. Bạn không được dùng dịch vụ để gửi spam, lừa đảo, phishing, thư hàng loạt không được mời, hay marketing đại trà — bất kể danh sách người nhận được dựng nên bằng cách nào. Bạn không được vi phạm Chính sách chương trình Gmail hay bất kỳ luật gửi email nào áp dụng, bao gồm nhưng không giới hạn ở CAN-SPAM của Hoa Kỳ và các quy chế khu vực tương đương áp dụng nơi bạn hoặc người nhận của bạn cư trú.\n\nBạn không được lạm dụng tự động hóa để quấy rối, lừa dối, mạo danh, hay bôi nhọ bất kỳ cá nhân hay tổ chức nào. Bạn không được tìm cách qua mặt các safety gate, rate limit, kiểm soát idempotency, hay audit log mà dịch vụ dựa vào để chạy an toàn. Bạn không được dịch ngược (reverse-engineer) hay tìm cách vượt qua các kiểm soát truy cập tách biệt tài khoản của bạn khỏi mọi tài khoản khác trên cùng triển khai.",
           "heading": "Sử dụng được chấp nhận"
+        },
+        "acceptance": {
+          "body": "Khi tạo tài khoản Zero Mail, kết nối tài khoản Gmail, hoặc sử dụng dịch vụ Zero Mail bằng cách nào đó, bạn đồng ý chịu ràng buộc bởi các Điều khoản dịch vụ này và bởi Chính sách bảo mật được tham chiếu từ chúng. Nếu bạn dùng Zero Mail thay mặt cho một tổ chức, bạn xác nhận rằng mình có thẩm quyền ràng buộc tổ chức đó với các điều khoản này, và các tham chiếu đến \"bạn\" trong tài liệu này bao gồm cả tổ chức đó khi phù hợp.\n\nNếu bạn không đồng ý với bất kỳ phần nào của các điều khoản này, vui lòng dừng dùng Zero Mail và ngắt tài khoản Gmail khỏi trang Cài đặt.",
+          "heading": "Chấp nhận các điều khoản này"
         },
         "autoSendRules": {
           "body": "Zero Mail có một tùy chọn toàn cục Auto-send rules trong trang Cài đặt. Tùy chọn mặc định BẬT. Khi bật, các rule AI CÓ THỂ thực hiện hành động outbound thay bạn — trả lời, forward, hoặc gửi mới — nhưng chỉ sau khi mọi safety gate runtime áp dụng được đều pass đối với thư cụ thể đó.\n\nCác safety gate runtime ít nhất bao gồm: kiểm tra người gửi mức tin thấp (low-trust sender guard) để chặn outbound với liên hệ mới hay chưa xác minh; rate cap theo tenant giới hạn số thư outbound tài khoản bạn có thể sinh ra trong một cửa sổ ngắn; daily cap theo tenant giới hạn tổng lượng outbound mỗi ngày; kiểm tra idempotency để một quyết định triage không thể gửi cùng một thư hai lần; và audit log chỉ ghi thêm (append-only) ghi lại mọi hành động outbound để rà lại sau.\n\nNếu bất kỳ gate nào fail, hoặc nếu tùy chọn Auto-send rules đang TẮT, rule sẽ tự động xuống còn lưu Gmail draft thay vì gửi. Draft sẽ xuất hiện trong thư mục Drafts trong Gmail và chờ bạn xem lại rồi gửi thủ công.\n\nTrợ lý chat luôn yêu cầu xác nhận rõ ràng của người dùng qua preview card trước khi gửi bất kỳ thư nào, không phụ thuộc vào tùy chọn toàn cục.\n\nBạn vẫn chịu trách nhiệm cho mọi hành động outbound thực hiện dưới tài khoản của mình, dù do rule kích hoạt tự động hay do bạn xác nhận thủ công qua trợ lý chat. Chúng tôi khuyến nghị bạn xem lại rule và tùy chọn toàn cục định kỳ.",
@@ -1414,8 +1689,8 @@
       },
       "title": "Điều khoản dịch vụ",
       "toc": {
-        "acceptance": "Chấp nhận điều khoản",
         "acceptableUse": "Sử dụng được chấp nhận",
+        "acceptance": "Chấp nhận điều khoản",
         "autoSendRules": "Tự động gửi bằng rule",
         "changes": "Thay đổi điều khoản",
         "contact": "Liên hệ",
