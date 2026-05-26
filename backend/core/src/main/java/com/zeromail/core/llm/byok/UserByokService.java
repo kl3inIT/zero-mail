@@ -139,7 +139,10 @@ public class UserByokService {
             ConnectionTestResult connectionTestResult =
                     providerConnectionTester.probeConnection(
                             provider, validatedTarget, plaintextKey);
-            List<String> cappedModels = capModelIds(connectionTestResult.models());
+            List<String> cappedModels =
+                    connectionTestResult.result() == MasterKeyTestResult.OK
+                            ? capModelIds(connectionTestResult.models())
+                            : List.of();
             String modelsJson =
                     connectionTestResult.result() == MasterKeyTestResult.OK
                             ? writeModelsJson(cappedModels)
