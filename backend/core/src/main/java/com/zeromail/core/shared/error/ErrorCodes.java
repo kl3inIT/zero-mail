@@ -67,6 +67,15 @@ public final class ErrorCodes {
             "error.cleanup.campaign.undo_window_expired";
     public static final String CAMPAIGN_RETRY_CONFLICT = "error.cleanup.campaign.retry_conflict";
     public static final String SENDER_SUPPRESSED = "error.cleanup.sender_suppressed";
+    public static final String VOICE_WRITING_STYLE_TOO_SHORT = "voice.writing_style.too_short";
+    public static final String VOICE_WRITING_STYLE_TOO_LONG = "voice.writing_style.too_long";
+    public static final String VOICE_PERSONAL_INSTRUCTIONS_TOO_LONG =
+            "voice.personal_instructions.too_long";
+    public static final String VOICE_TONE_PRESET_INVALID = "voice.tone_preset.invalid";
+    public static final String BEHAVIOR_DRAFT_CONFIDENCE_INVALID =
+            "behavior.draft_confidence.invalid";
+    public static final String KNOWLEDGE_TITLE_DUPLICATE = "knowledge.title.duplicate";
+    public static final String KNOWLEDGE_NOT_FOUND = "knowledge.not_found";
 
     private ErrorCodes() {}
 }
