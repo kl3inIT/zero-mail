@@ -69,7 +69,8 @@ public class TriageAuditSaga {
                                 command.ruleNameSnapshot(),
                                 command.actionType(),
                                 command.preWriteIntent(),
-                                command.reasonEvidence())
+                                command.reasonEvidence(),
+                                command.blockedBySafetyNetPattern())
                         .or(
                                 () ->
                                         triageAuditWriter.findPendingAuditId(
@@ -305,7 +306,8 @@ public class TriageAuditSaga {
                         command.actionType(),
                         command.preWriteIntent(),
                         command.reasonEvidence(),
-                        terminalDecision);
+                        terminalDecision,
+                        command.blockedBySafetyNetPattern());
         log.info(
                 "event=triage_audit_terminal tenantId={} gmailMessageId={} ruleId={} actionType={} decision={}",
                 command.tenantId(),
@@ -347,7 +349,35 @@ public class TriageAuditSaga {
             RuleActionType actionType,
             TriageActionResult preWriteIntent,
             ReplyHeaders replyHeaders,
-            String reasonEvidence) {
+            String reasonEvidence,
+            String blockedBySafetyNetPattern) {
+
+        public TriageAuditCommand(
+                UUID tenantId,
+                String gmailMessageId,
+                String gmailThreadId,
+                String sanitizedSubject,
+                String sanitizedSenderEmail,
+                UUID ruleId,
+                String ruleNameSnapshot,
+                RuleActionType actionType,
+                TriageActionResult preWriteIntent,
+                ReplyHeaders replyHeaders,
+                String reasonEvidence) {
+            this(
+                    tenantId,
+                    gmailMessageId,
+                    gmailThreadId,
+                    sanitizedSubject,
+                    sanitizedSenderEmail,
+                    ruleId,
+                    ruleNameSnapshot,
+                    actionType,
+                    preWriteIntent,
+                    replyHeaders,
+                    reasonEvidence,
+                    null);
+        }
 
         public TriageAuditCommand {
             Objects.requireNonNull(tenantId, "tenantId must not be null");

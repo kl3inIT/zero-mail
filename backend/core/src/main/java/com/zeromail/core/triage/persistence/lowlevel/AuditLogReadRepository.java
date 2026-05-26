@@ -35,7 +35,8 @@ public class AuditLogReadRepository {
                         select audit_id, gmail_thread_id, gmail_message_id,
                                sanitized_subject, sanitized_sender_email,
                                rule_name_snapshot,
-                               action_type, reason, decision, external_ref, created_at, applied_at
+                               action_type, reason, decision, external_ref, created_at, applied_at,
+                               blocked_by_safety_net_pattern
                         from triage_audit
                         where tenant_id = ?
                         """);
@@ -80,7 +81,8 @@ public class AuditLogReadRepository {
                                     ? null
                                     : TriageUndoPolicy.undoableUntil(
                                             appliedAtTimestamp.toInstant()),
-                            resultSet.getString("external_ref"));
+                            resultSet.getString("external_ref"),
+                            resultSet.getString("blocked_by_safety_net_pattern"));
                 },
                 parameters.toArray());
     }

@@ -244,6 +244,35 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
     }
 
     @Test
+    void pendingAuditCanStoreBlockedSafetyNetPatternForAuditBadge() {
+        UUID tenantId = seedTenant("triage-audit-safety-net-badge");
+
+        UUID auditId =
+                withTenant(
+                        tenantId,
+                        () ->
+                                triageAuditWriter
+                                        .insertPending(
+                                                tenantId,
+                                                "gmail-message-safety-net-badge",
+                                                "gmail-thread-safety-net-badge",
+                                                "Subject excerpt",
+                                                "sender@acme.com",
+                                                UUID.randomUUID(),
+                                                "Archive VIP",
+                                                RuleActionType.ARCHIVE,
+                                                new TriageActionResult.Archive(),
+                                                "sender-net:protected",
+                                                "@acme.com")
+                                        .orElseThrow());
+
+        TriageAuditEntity auditEntity =
+                withTenant(tenantId, () -> triageAuditRepository.findById(auditId).orElseThrow());
+
+        assertThat(auditEntity.getBlockedBySafetyNetPattern()).isEqualTo("@acme.com");
+    }
+
+    @Test
     void sender_safety_repositories_are_tenant_scoped_sources_for_future_endpoints() {
         UUID tenantId = seedTenant("triage-sender-net");
         String senderEmail = "founder@example.com";

@@ -75,7 +75,35 @@ public class TriageAuditWriter {
                 actionType.id(),
                 canonicalHash(actionType, preWriteIntent),
                 actionResultJsonValidator.toJson(preWriteIntent),
-                reasonEvidence);
+                reasonEvidence,
+                null);
+    }
+
+    public Optional<UUID> insertPending(
+            UUID tenantId,
+            String gmailMessageId,
+            String gmailThreadId,
+            String sanitizedSubject,
+            String sanitizedSenderEmail,
+            UUID ruleId,
+            String ruleNameSnapshot,
+            RuleActionType actionType,
+            TriageActionResult preWriteIntent,
+            String reasonEvidence,
+            String blockedBySafetyNetPattern) {
+        return triageAuditRepository.insertAuditPendingIfAbsent(
+                tenantId,
+                gmailMessageId,
+                gmailThreadId,
+                sanitizedSubject,
+                sanitizedSenderEmail,
+                ruleId,
+                ruleNameSnapshot,
+                actionType.id(),
+                canonicalHash(actionType, preWriteIntent),
+                actionResultJsonValidator.toJson(preWriteIntent),
+                reasonEvidence,
+                blockedBySafetyNetPattern);
     }
 
     public Optional<UUID> insertTerminal(
@@ -106,7 +134,41 @@ public class TriageAuditWriter {
                 canonicalHash(actionType, preWriteIntent),
                 actionResultJsonValidator.toJson(preWriteIntent),
                 reasonEvidence,
-                terminalDecision.id());
+                terminalDecision.id(),
+                null);
+    }
+
+    public Optional<UUID> insertTerminal(
+            UUID tenantId,
+            String gmailMessageId,
+            String gmailThreadId,
+            String sanitizedSubject,
+            String sanitizedSenderEmail,
+            UUID ruleId,
+            String ruleNameSnapshot,
+            RuleActionType actionType,
+            TriageActionResult preWriteIntent,
+            String reasonEvidence,
+            TriageDecision terminalDecision,
+            String blockedBySafetyNetPattern) {
+        if (!DIRECT_TERMINAL_DECISIONS.contains(terminalDecision)) {
+            throw new IllegalArgumentException(
+                    "terminalDecision must be a direct terminal insert state");
+        }
+        return triageAuditRepository.insertAuditTerminalIfAbsent(
+                tenantId,
+                gmailMessageId,
+                gmailThreadId,
+                sanitizedSubject,
+                sanitizedSenderEmail,
+                ruleId,
+                ruleNameSnapshot,
+                actionType.id(),
+                canonicalHash(actionType, preWriteIntent),
+                actionResultJsonValidator.toJson(preWriteIntent),
+                reasonEvidence,
+                terminalDecision.id(),
+                blockedBySafetyNetPattern);
     }
 
     public Optional<UUID> findPendingAuditId(

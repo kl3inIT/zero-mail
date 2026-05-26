@@ -184,15 +184,16 @@ public class TriageOrchestratorService {
             return OrchestrationResult.empty();
         }
 
+        SafetyNetEvaluation safetyNetEvaluation =
+                safetyNetEvaluation(
+                        tenantId, triageRuleEvaluationInput.sanitizedSenderEmail(), observedEvent);
         TriageDispatchContext dispatchContext =
                 new TriageDispatchContext(
                         tenantId,
                         observedEvent.gmailMessageId(),
                         triageRuleEvaluationInput,
-                        senderProtected(
-                                tenantId,
-                                triageRuleEvaluationInput.sanitizedSenderEmail(),
-                                observedEvent),
+                        safetyNetEvaluation.blocksOutboundSend(),
+                        safetyNetEvaluation.matchedPattern(),
                         autoSendRulesEnabled,
                         senderAnchoredByRuleId);
         int appliedActions = handleProposals(dispatchContext, mergeResult.proposals());
@@ -209,7 +210,8 @@ public class TriageOrchestratorService {
             UUID tenantId,
             String gmailMessageId,
             TriageRuleEvaluationInput triageRuleEvaluationInput,
-            boolean senderProtected,
+            boolean blockedBySafetyNet,
+            String blockedBySafetyNetPattern,
             boolean autoSendRulesEnabled,
             Map<UUID, Boolean> senderAnchoredByRuleId) {
 
@@ -404,7 +406,10 @@ public class TriageOrchestratorService {
                 actionType,
                 preWriteIntent,
                 replyHeadersFor(preWriteIntent, evaluationContext),
-                reasonEvidence(actionProposal, fallbackReason));
+                reasonEvidence(actionProposal, fallbackReason),
+                SENDER_SAFETY_NET.equals(fallbackReason)
+                        ? dispatchContext.blockedBySafetyNetPattern()
+                        : null);
     }
 
     private TriageActionResult preWriteIntent(
@@ -508,23 +513,41 @@ public class TriageOrchestratorService {
                         false));
     }
 
-    private boolean senderProtected(
+    private SafetyNetEvaluation safetyNetEvaluation(
             UUID tenantId, String sanitizedSenderEmail, MailMessageObserved observedEvent) {
         if (sanitizedSenderEmail == null || sanitizedSenderEmail.isBlank()) {
             log.warn(
                     "event=triage_sender_missing tenantId={} gmailMessageId={}",
                     tenantId,
                     observedEvent.gmailMessageId());
-            return true;
+            return SafetyNetEvaluation.blockedWithoutPattern();
         }
         try {
-            return senderSafetyNetService.isProtected(tenantId, sanitizedSenderEmail);
+            return senderSafetyNetService
+                    .matchedProtectedPattern(tenantId, sanitizedSenderEmail)
+                    .map(SafetyNetEvaluation::blockedByPattern)
+                    .orElseGet(SafetyNetEvaluation::notBlocked);
         } catch (IllegalArgumentException senderSafetyNetFailure) {
             log.warn(
                     "event=triage_sender_malformed tenantId={} gmailMessageId={}",
                     tenantId,
                     observedEvent.gmailMessageId());
-            return true;
+            return SafetyNetEvaluation.blockedWithoutPattern();
+        }
+    }
+
+    private record SafetyNetEvaluation(boolean blocksOutboundSend, String matchedPattern) {
+
+        static SafetyNetEvaluation notBlocked() {
+            return new SafetyNetEvaluation(false, null);
+        }
+
+        static SafetyNetEvaluation blockedByPattern(String matchedPattern) {
+            return new SafetyNetEvaluation(true, matchedPattern);
+        }
+
+        static SafetyNetEvaluation blockedWithoutPattern() {
+            return new SafetyNetEvaluation(true, null);
         }
     }
 
@@ -1023,7 +1046,7 @@ public class TriageOrchestratorService {
         if (!dispatchContext.autoSendRulesEnabled()) {
             return AUTO_SEND_DISABLED;
         }
-        if (dispatchContext.senderProtected()) {
+        if (dispatchContext.blockedBySafetyNet()) {
             return SENDER_SAFETY_NET;
         }
         if (!allContributingRulesHaveSenderAnchor(dispatchContext, actionProposal)) {

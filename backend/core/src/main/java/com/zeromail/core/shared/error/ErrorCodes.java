@@ -76,6 +76,10 @@ public final class ErrorCodes {
             "behavior.draft_confidence.invalid";
     public static final String KNOWLEDGE_TITLE_DUPLICATE = "knowledge.title.duplicate";
     public static final String KNOWLEDGE_NOT_FOUND = "knowledge.not_found";
+    public static final String SAFETY_NET_PATTERN_INVALID = "safety_net.pattern_invalid";
+    public static final String SAFETY_NET_OBSERVATION_NOT_DELETABLE =
+            "safety_net.observation_not_deletable";
+    public static final String SAFETY_NET_NOT_FOUND = "safety_net.not_found";
 
     private ErrorCodes() {}
 }

@@ -2,6 +2,7 @@ package com.zeromail.api.dto.triage;
 
 import com.zeromail.core.triage.usecases.ProtectedSenderListItem;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.Instant;
 import java.util.List;
 
 @Schema(requiredProperties = "senders")
@@ -12,12 +13,34 @@ public record ProtectedSendersResponse(List<ProtectedSenderResponse> senders) {
                 protectedSenders.stream().map(ProtectedSenderResponse::from).toList());
     }
 
-    @Schema(requiredProperties = {"senderEmail", "optedIn"})
-    public record ProtectedSenderResponse(String senderEmail, boolean optedIn) {
+    @Schema(
+            requiredProperties = {
+                "id",
+                "pattern",
+                "patternKind",
+                "createdByUser",
+                "createdAt",
+                "senderEmail",
+                "optedIn"
+            })
+    public record ProtectedSenderResponse(
+            java.util.UUID id,
+            String pattern,
+            @Schema(allowableValues = {"EMAIL", "DOMAIN"}) String patternKind,
+            boolean createdByUser,
+            Instant createdAt,
+            String senderEmail,
+            boolean optedIn) {
 
-        private static ProtectedSenderResponse from(ProtectedSenderListItem protectedSender) {
+        public static ProtectedSenderResponse from(ProtectedSenderListItem protectedSender) {
             return new ProtectedSenderResponse(
-                    protectedSender.senderEmail(), protectedSender.optedIn());
+                    protectedSender.id(),
+                    protectedSender.pattern(),
+                    protectedSender.patternKind(),
+                    protectedSender.createdByUser(),
+                    protectedSender.createdAt(),
+                    protectedSender.pattern(),
+                    protectedSender.createdByUser());
         }
     }
 }

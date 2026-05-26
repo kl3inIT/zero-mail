@@ -21,13 +21,15 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
                               sanitized_subject, sanitized_sender_email,
                               rule_id, rule_name_snapshot,
                               action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
+                              blocked_by_safety_net_pattern,
                               attempt_count, last_attempt_at, lease_owner, decided_at, created_at, updated_at, version
                             )
                             VALUES (
                               gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId,
                               :sanitizedSubject, :sanitizedSenderEmail,
                               :ruleId, :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb), NULL,
-                              :reason, 'PENDING', 0, NULL, NULL, NOW(), NOW(), NOW(), 0
+                              :reason, 'PENDING', :blockedBySafetyNetPattern,
+                              0, NULL, NULL, NOW(), NOW(), NOW(), 0
                             )
                             ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
                             RETURNING audit_id
@@ -45,7 +47,8 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             @Param("actionType") String actionType,
             @Param("argsHash") byte[] argsHash,
             @Param("actionArgsJson") String actionArgsJson,
-            @Param("reason") String reason);
+            @Param("reason") String reason,
+            @Param("blockedBySafetyNetPattern") String blockedBySafetyNetPattern);
 
     @Query(
             value =
@@ -55,13 +58,15 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
                               sanitized_subject, sanitized_sender_email,
                               rule_id, rule_name_snapshot,
                               action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
+                              blocked_by_safety_net_pattern,
                               attempt_count, last_attempt_at, lease_owner, decided_at, created_at, updated_at, version
                             )
                             VALUES (
                               gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId,
                               :sanitizedSubject, :sanitizedSenderEmail,
                               :ruleId, :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb), NULL,
-                              :reason, :decision, 0, NULL, NULL, NOW(), NOW(), NOW(), 0
+                              :reason, :decision, :blockedBySafetyNetPattern,
+                              0, NULL, NULL, NOW(), NOW(), NOW(), 0
                             )
                             ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
                             RETURNING audit_id
@@ -80,7 +85,8 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             @Param("argsHash") byte[] argsHash,
             @Param("actionArgsJson") String actionArgsJson,
             @Param("reason") String reason,
-            @Param("decision") String decision);
+            @Param("decision") String decision,
+            @Param("blockedBySafetyNetPattern") String blockedBySafetyNetPattern);
 
     @Query(
             value =
