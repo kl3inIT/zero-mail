@@ -239,3 +239,6 @@ databaseChangeLog:
   - include:
       file: changes/093-billing-package-presentation-fields.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/098-chat-message-composite-fk.yaml
+      relativeToChangelogFile: true

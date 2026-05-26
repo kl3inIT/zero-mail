@@ -9,6 +9,7 @@ import com.zeromail.core.chat.domain.parts.ToolCallPart;
 import com.zeromail.core.chat.domain.parts.ToolOutputPart;
 import com.zeromail.core.chat.persistence.ChatMessageJdbcRepository;
 import com.zeromail.core.chat.usecases.LlmTokenizer;
+import com.zeromail.core.tenant.TenantContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -77,7 +78,12 @@ public class ZeroMailChatMemory implements ChatMemory {
 
     private List<Message> loadMessages(String conversationId) {
         UUID chatId = UUID.fromString(conversationId);
-        return chatMessageRepository.findByChatIdOrderByCreatedAtAsc(chatId).stream()
+        // Chat memory loads MUST be tenant-scoped (CASA V4.2.1). If TenantContext is not bound
+        // when Spring AI calls get(conversationId), throw — there is no safe default tenant.
+        UUID tenantId = TenantContext.currentTenantUuid();
+        return chatMessageRepository
+                .findByChatIdAndTenantIdOrderByCreatedAtAsc(tenantId, chatId)
+                .stream()
                 .map(this::toSpringAiMessage)
                 .toList();
     }

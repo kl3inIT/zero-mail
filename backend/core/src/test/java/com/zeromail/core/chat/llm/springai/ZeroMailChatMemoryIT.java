@@ -10,6 +10,7 @@ import com.zeromail.core.chat.domain.parts.ToolCallPart;
 import com.zeromail.core.chat.domain.parts.ToolOutputPart;
 import com.zeromail.core.chat.persistence.ChatMessageJdbcRepository;
 import com.zeromail.core.support.PostgresContainerTest;
+import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +86,9 @@ class ZeroMailChatMemoryIT extends PostgresContainerTest {
                                                 Instant.now()))),
                         Instant.now().minusSeconds(1)));
 
-        List<Message> messages = zeroMailChatMemory.get(seedData.chatId().toString());
+        List<Message> messages =
+                ScopedValue.where(TenantContext.TENANT, seedData.tenantId().toString())
+                        .call(() -> zeroMailChatMemory.get(seedData.chatId().toString()));
 
         assertThat(messages).hasSize(4);
         assertThat(messages.get(1)).isInstanceOf(AssistantMessage.class);
@@ -127,7 +130,9 @@ class ZeroMailChatMemoryIT extends PostgresContainerTest {
                                                 Instant.now()))),
                         Instant.now().minusSeconds(1)));
 
-        List<Message> messages = zeroMailChatMemory.get(seedData.chatId().toString(), 1);
+        List<Message> messages =
+                ScopedValue.where(TenantContext.TENANT, seedData.tenantId().toString())
+                        .call(() -> zeroMailChatMemory.get(seedData.chatId().toString(), 1));
 
         assertThat(messages).hasSize(1);
         assertThat(messages.getFirst().getText()).contains("newest message survives");

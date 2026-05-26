@@ -69,15 +69,32 @@ public class ChatMessageJdbcRepository {
                 .findFirst();
     }
 
-    public java.util.List<ChatMessage> findByChatIdOrderByCreatedAtAsc(UUID chatId) {
+    public Optional<ChatMessage> findByIdAndTenantId(UUID messageId, UUID tenantId) {
+        return jdbcTemplate
+                .query(
+                        """
+                        SELECT id, chat_id, tenant_id, role, parts::text AS parts, created_at
+                        FROM chat_message
+                        WHERE id = ? AND tenant_id = ?
+                        """,
+                        chatMessageRowMapper,
+                        messageId,
+                        tenantId)
+                .stream()
+                .findFirst();
+    }
+
+    public java.util.List<ChatMessage> findByChatIdAndTenantIdOrderByCreatedAtAsc(
+            UUID tenantId, UUID chatId) {
         return jdbcTemplate.query(
                 """
                 SELECT id, chat_id, tenant_id, role, parts::text AS parts, created_at
                 FROM chat_message
-                WHERE chat_id = ?
+                WHERE tenant_id = ? AND chat_id = ?
                 ORDER BY created_at, id
                 """,
                 chatMessageRowMapper,
+                tenantId,
                 chatId);
     }
 

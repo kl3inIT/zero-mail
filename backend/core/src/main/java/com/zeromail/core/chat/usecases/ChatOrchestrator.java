@@ -278,7 +278,7 @@ public class ChatOrchestrator {
                             modelFor(command),
                             personalizationRenderer.render(tenantId.toString()),
                             chatToolCatalog,
-                            history(preparedTurn.chatId()),
+                            history(tenantId, preparedTurn.chatId()),
                             oneShotToolResponses);
             trackingDisposable.add(chatLlmGateway.streamChat(streamRequest, interceptingSink));
             TurnOutcome outcome = awaitOutcome(interceptingSink, trackingDisposable);
@@ -339,10 +339,10 @@ public class ChatOrchestrator {
                 .orElse(chatProperties.defaultModel());
     }
 
-    private List<ChatMessage> history(UUID chatId) {
+    private List<ChatMessage> history(UUID tenantId, UUID chatId) {
         zeroMailChatMemory.get(chatId.toString(), chatProperties.maxHistoryTokens());
         return budgetHistory(
-                chatMessageRepository.findByChatIdOrderByCreatedAtAsc(chatId),
+                chatMessageRepository.findByChatIdAndTenantIdOrderByCreatedAtAsc(tenantId, chatId),
                 chatProperties.maxHistoryTokens());
     }
 

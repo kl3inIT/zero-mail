@@ -36,8 +36,9 @@ public class ChatHistoryProjector {
             return null;
         }
         List<ChatMessageProjection> messages =
-                chatMessageRepository.findByChatIdOrderByCreatedAtAsc(chatId).stream()
-                        .filter(chatMessage -> chatMessage.tenantId().equals(tenantId.toString()))
+                chatMessageRepository
+                        .findByChatIdAndTenantIdOrderByCreatedAtAsc(tenantId, chatId)
+                        .stream()
                         .map(ChatHistoryProjector::toProjection)
                         .toList();
         return new ChatHistoryDetail(

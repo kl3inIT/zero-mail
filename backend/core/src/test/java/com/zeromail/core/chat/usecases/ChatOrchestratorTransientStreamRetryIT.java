@@ -107,7 +107,8 @@ class ChatOrchestratorTransientStreamRetryIT extends PostgresContainerTest {
         UUID chatId =
                 jdbcTemplate.queryForObject(
                         "select id from chat where tenant_id = ?", UUID.class, tenantId);
-        List<ChatMessage> messages = chatMessageRepository.findByChatIdOrderByCreatedAtAsc(chatId);
+        List<ChatMessage> messages =
+                chatMessageRepository.findByChatIdAndTenantIdOrderByCreatedAtAsc(tenantId, chatId);
         assertThat(messages)
                 .extracting(ChatMessage::role)
                 .containsExactly(ChatRole.USER, ChatRole.ASSISTANT);

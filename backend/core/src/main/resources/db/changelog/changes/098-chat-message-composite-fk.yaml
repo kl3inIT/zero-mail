@@ -1,0 +1,45 @@
+databaseChangeLog:
+  - changeSet:
+      id: 098-chat-message-composite-fk
+      author: zeromail
+      comment: >
+        CASA Tier 2 V4.2.1 — replace the single-column FK on chat_message.chat_id with a
+        composite FK on (chat_id, tenant_id) → chat(id, tenant_id) so a malicious caller cannot
+        insert a chat_message row whose chat_id belongs to a different tenant than the tenant_id
+        stored on the row. Postgres requires a UNIQUE/PRIMARY KEY on the target columns, so we
+        first add UNIQUE (id, tenant_id) on chat. The existing chat.id PRIMARY KEY is preserved
+        — UNIQUE adds a secondary unique index, no behavior change.
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: SELECT count(*) FROM information_schema.tables WHERE table_name = 'chat_message'
+        - sqlCheck:
+            expectedResult: 1
+            sql: SELECT count(*) FROM pg_constraint WHERE conname = 'chat_message_chat_id_fkey'
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE chat ADD CONSTRAINT ux_chat_id_tenant UNIQUE (id, tenant_id);
+
+              ALTER TABLE chat_message DROP CONSTRAINT chat_message_chat_id_fkey;
+
+              ALTER TABLE chat_message
+                ADD CONSTRAINT fk_chat_message_chat_tenant
+                FOREIGN KEY (chat_id, tenant_id)
+                REFERENCES chat (id, tenant_id)
+                ON DELETE CASCADE;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE chat_message DROP CONSTRAINT fk_chat_message_chat_tenant;
+
+              ALTER TABLE chat_message
+                ADD CONSTRAINT chat_message_chat_id_fkey
+                FOREIGN KEY (chat_id)
+                REFERENCES chat (id)
+                ON DELETE CASCADE;
+
+              ALTER TABLE chat DROP CONSTRAINT ux_chat_id_tenant;
