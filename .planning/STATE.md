@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: executing
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-05-26T17:41:55.514Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-05-26T19:14:53.399Z"
 last_activity: 2026-05-26
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 28
-  completed_plans: 21
+  completed_plans: 22
   percent: 50
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 ## Current Position
 
 Phase: 09 (user-settings-ui-on-curated-catalog) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-05-26
 
@@ -169,6 +169,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 08.1 P04 | 19min | 4 tasks | 26 files |
 | Phase 08.1 P05 | 34min | 3 tasks | 27 files |
 | Phase 09 P01 | 34 | 3 tasks | 45 files |
+| Phase 09 P02 | 74min | 3 tasks | 46 files |
 
 ## Accumulated Context
 
@@ -364,6 +365,8 @@ Recent decisions affecting current work:
 - [Phase 09]: RefreshTokenCipher single-blob envelope for user BYOK — Verified cipher output includes key version, nonce, and ciphertext in one byte array, so Phase 9 stores only api_key_ciphertext.
 - [Phase 09]: Keep tenant_byok_credentials intact during Phase 9 — Wave 1 plans can run before 09-04 removes legacy mappings, so 097 forward-migrates rows without renaming or dropping the legacy table.
 - [Phase 09]: Assistant knowledge updated_at remains inherited — AssistantKnowledgeMemoryEntity already extends AbstractAuditableEntity, which maps created_at, updated_at, and version from changelog 046.
+- [Phase 09]: Phase 09-02: Triage reads assistant draft settings through the TriageDraftSettings port, and sensitive-data protection is exported from llm.usecases via SensitiveDataProtectionDecider. — Broad Modulith verification exposed a triage -> chat cycle and a dependency on a non-exported llm.redaction package. Ports keep draft runtime settings available without weakening module boundaries.
+- [Phase 09]: Phase 09-02: Draft confidence threshold mapping is implemented and tested, but runtime confidence gating is deferred until auto-draft execution exposes a draft confidence score. — The current runtime path can resolve LOW/MEDIUM/HIGH thresholds but has no reliable score input to compare. Adding fake normalization would weaken behavior; future draft scoring should wire into the existing resolver.
 
 ### Roadmap Evolution
 
@@ -527,8 +530,8 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-26T17:41:55.496Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-05-26T19:14:53.383Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
