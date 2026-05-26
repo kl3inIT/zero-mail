@@ -43,6 +43,7 @@
             "triage :: usecases",
             "tenant",
             "config",
+            "shared :: exception",
             "shared :: lock",
             "shared :: persistence",
             "shared :: lang",

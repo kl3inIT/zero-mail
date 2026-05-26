@@ -1,5 +1,6 @@
 package com.zeromail.core.triage;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -24,6 +25,7 @@ import com.zeromail.core.triage.usecases.TriageAuditSaga.GmailWriteResult;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.ReservePhaseResult;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.TriageAuditCommand;
 import com.zeromail.core.triage.usecases.TriageDraftBodyGenerator;
+import com.zeromail.core.triage.usecases.TriageDraftSettings;
 import com.zeromail.core.triage.usecases.TriageOrchestratorService;
 import com.zeromail.core.triage.usecases.TriageRuleEvaluationInputFactory;
 import com.zeromail.core.triage.usecases.TriageRuleEvaluationInputFactory.TriageRuleEvaluationInput;
@@ -61,6 +63,7 @@ class TriageOutboundRuntimeGateTest {
     private final TriageAuditSaga triageAuditSaga = mock(TriageAuditSaga.class);
     private final TriageDraftBodyGenerator draftBodyGenerator =
             mock(TriageDraftBodyGenerator.class);
+    private final TriageDraftSettings triageDraftSettings = mock(TriageDraftSettings.class);
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService =
             mock(ClassifyThreadReplyStatusService.class);
     private final PlatformTransactionManager transactionManager =
@@ -105,6 +108,21 @@ class TriageOutboundRuntimeGateTest {
         verify(triageAuditSaga)
                 .outboundDraftFallbackPhase(
                         any(TriageAuditCommand.class), eq(AUDIT_ID), eq("SENDER_SAFETY_NET"));
+    }
+
+    @Test
+    void auto_draft_replies_disabled_skips_save_draft_before_reserving_audit() throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(true, false, senderDomainMatcher(), saveDraftAction());
+        when(triageDraftSettings.autoDraftRepliesEnabled(TENANT_ID)).thenReturn(false);
+
+        TriageOrchestratorService.OrchestrationResult orchestrationResult =
+                withTenant(
+                        TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        assertThat(orchestrationResult.appliedActions()).isZero();
+        verify(draftBodyGenerator, never()).generate(any(), any(), any(), any());
+        verify(triageAuditSaga, never()).reservePhase(any(TriageAuditCommand.class), any());
     }
 
     @Test
@@ -233,6 +251,7 @@ class TriageOutboundRuntimeGateTest {
                                         actionIntentsJson)));
         when(ruleAutomationSettingsService.readOrDefault(TENANT_ID))
                 .thenReturn(new RuleAutomationSettingsView(autoSendRulesEnabled));
+        when(triageDraftSettings.autoDraftRepliesEnabled(TENANT_ID)).thenReturn(true);
         when(senderSafetyNetService.isProtected(TENANT_ID, "sender@example.com"))
                 .thenReturn(senderProtected);
 
@@ -250,6 +269,7 @@ class TriageOutboundRuntimeGateTest {
                 senderSafetyNetService,
                 triageAuditSaga,
                 draftBodyGenerator,
+                triageDraftSettings,
                 classifyThreadReplyStatusService,
                 transactionManager,
                 meterRegistryProvider);
@@ -314,6 +334,12 @@ class TriageOutboundRuntimeGateTest {
                 """;
     }
 
+    private static String saveDraftAction() {
+        return """
+                [{"type":"save_draft","instruction":"Draft a concise reply"}]
+                """;
+    }
+
     private static String sendReplyAction() {
         return """
                 [{"type":"send_reply","instruction":"Reply with a short confirmation"}]
@@ -352,12 +378,13 @@ class TriageOutboundRuntimeGateTest {
                 .isEqualTo("TENANT_CONTEXT_MISMATCH");
     }
 
-    private static void withTenant(UUID tenantId, TenantRunnable tenantRunnable) {
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(tenantRunnable::run);
+    private static <T> T withTenant(UUID tenantId, TenantSupplier<T> tenantSupplier) {
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(tenantSupplier::get);
     }
 
     @FunctionalInterface
-    private interface TenantRunnable {
-        void run();
+    private interface TenantSupplier<T> {
+        T get();
     }
 }

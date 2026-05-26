@@ -1,6 +1,7 @@
 package com.zeromail.core.draft.usecases;
 
 import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.chat.usecases.settings.AssistantDraftSettingsService;
 import com.zeromail.core.draft.domain.ToneContext;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.exception.SafetyViolationException;
@@ -11,9 +12,12 @@ import com.zeromail.core.llm.usecases.ToolCallResult;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.usecases.TriageDraftBodyGenerator;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,17 +28,42 @@ public class DraftBodyGenerator implements TriageDraftBodyGenerator {
     private final SanitizationPipeline sanitizationPipeline;
     private final ToneContextBuilder toneContextBuilder;
     private final LlmGateway llmGateway;
+    private final Function<UUID, Optional<String>> emailSignatureResolver;
 
     public DraftBodyGenerator(
             SanitizationPipeline sanitizationPipeline,
             ToneContextBuilder toneContextBuilder,
             LlmGateway llmGateway) {
+        this(sanitizationPipeline, toneContextBuilder, llmGateway, _ -> Optional.empty());
+    }
+
+    @Autowired
+    public DraftBodyGenerator(
+            SanitizationPipeline sanitizationPipeline,
+            ToneContextBuilder toneContextBuilder,
+            LlmGateway llmGateway,
+            AssistantDraftSettingsService assistantDraftSettingsService) {
+        this(
+                sanitizationPipeline,
+                toneContextBuilder,
+                llmGateway,
+                assistantDraftSettingsService::emailSignature);
+    }
+
+    DraftBodyGenerator(
+            SanitizationPipeline sanitizationPipeline,
+            ToneContextBuilder toneContextBuilder,
+            LlmGateway llmGateway,
+            Function<UUID, Optional<String>> emailSignatureResolver) {
         this.sanitizationPipeline =
                 Objects.requireNonNull(
                         sanitizationPipeline, "sanitizationPipeline must not be null");
         this.toneContextBuilder =
                 Objects.requireNonNull(toneContextBuilder, "toneContextBuilder must not be null");
         this.llmGateway = Objects.requireNonNull(llmGateway, "llmGateway must not be null");
+        this.emailSignatureResolver =
+                Objects.requireNonNull(
+                        emailSignatureResolver, "emailSignatureResolver must not be null");
     }
 
     @Override
@@ -67,9 +96,17 @@ public class DraftBodyGenerator implements TriageDraftBodyGenerator {
         if (!(draftBody instanceof String body) || body.isBlank()) {
             throw new SafetyViolationException();
         }
+        String generatedDraftBody = appendEmailSignature(tenantId, body.trim());
         log.info(
                 "event=draft_body_generated tenantId={} gmailThreadId={}", tenantId, gmailThreadId);
-        return body.trim();
+        return generatedDraftBody;
+    }
+
+    private String appendEmailSignature(UUID tenantId, String generatedDraftBody) {
+        return emailSignatureResolver
+                .apply(tenantId)
+                .map(emailSignature -> generatedDraftBody + "\n\n" + emailSignature)
+                .orElse(generatedDraftBody);
     }
 
     private static String requireText(String value, String fieldName) {

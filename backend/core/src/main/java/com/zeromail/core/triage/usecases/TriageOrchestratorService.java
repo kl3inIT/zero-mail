@@ -91,6 +91,7 @@ public class TriageOrchestratorService {
     private final SenderSafetyNetService senderSafetyNetService;
     private final TriageAuditSaga triageAuditSaga;
     private final TriageDraftBodyGenerator draftBodyGenerator;
+    private final TriageDraftSettings triageDraftSettings;
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
     private final MeterRegistry meterRegistry;
     private final TransactionTemplate tenantScopedOrchestrationTransaction;
@@ -105,6 +106,7 @@ public class TriageOrchestratorService {
             SenderSafetyNetService senderSafetyNetService,
             TriageAuditSaga triageAuditSaga,
             TriageDraftBodyGenerator draftBodyGenerator,
+            TriageDraftSettings triageDraftSettings,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
             PlatformTransactionManager transactionManager,
             ObjectProvider<MeterRegistry> meterRegistryProvider) {
@@ -120,6 +122,7 @@ public class TriageOrchestratorService {
         this.senderSafetyNetService = senderSafetyNetService;
         this.triageAuditSaga = triageAuditSaga;
         this.draftBodyGenerator = draftBodyGenerator;
+        this.triageDraftSettings = triageDraftSettings;
         this.classifyThreadReplyStatusService = classifyThreadReplyStatusService;
         this.meterRegistry = meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new);
         this.tenantScopedOrchestrationTransaction = new TransactionTemplate(transactionManager);
@@ -275,6 +278,9 @@ public class TriageOrchestratorService {
             boolean outboundAction = isOutboundAction(actionType);
             String outboundFallbackReason =
                     outboundAction ? outboundFallbackReason(dispatchContext, actionProposal) : null;
+            if (shouldSkipDraftWrite(dispatchContext, actionType, outboundFallbackReason)) {
+                continue;
+            }
 
             TriageAuditCommand command =
                     commandFor(
@@ -311,6 +317,28 @@ public class TriageOrchestratorService {
         return appliedActions;
     }
 
+    private boolean shouldSkipDraftWrite(
+            TriageDispatchContext dispatchContext,
+            RuleActionType actionType,
+            String outboundFallbackReason) {
+        if (!wouldWriteDraft(actionType, outboundFallbackReason)) {
+            return false;
+        }
+        if (triageDraftSettings.autoDraftRepliesEnabled(dispatchContext.tenantId())) {
+            return false;
+        }
+        log.info(
+                "event=draft.skipped reason=auto_disabled tenantId={} gmailMessageId={}",
+                dispatchContext.tenantId(),
+                dispatchContext.gmailMessageId());
+        return true;
+    }
+
+    private static boolean wouldWriteDraft(
+            RuleActionType actionType, String outboundFallbackReason) {
+        return actionType == RuleActionType.SAVE_DRAFT || outboundFallbackReason != null;
+    }
+
     private GmailWriteResult executeGmailPhase(
             TriageAuditCommand command,
             UUID auditId,
@@ -336,6 +364,13 @@ public class TriageOrchestratorService {
                     command.gmailMessageId(),
                     command.actionType(),
                     outboundSendFailure.getClass().getSimpleName());
+            if (!triageDraftSettings.autoDraftRepliesEnabled(command.tenantId())) {
+                log.info(
+                        "event=draft.skipped reason=auto_disabled tenantId={} gmailMessageId={}",
+                        command.tenantId(),
+                        command.gmailMessageId());
+                return GmailWriteResult.failed("AUTO_DRAFT_DISABLED");
+            }
             return triageAuditSaga.outboundDraftFallbackPhase(
                     command, auditId, OUTBOUND_SEND_FAILED);
         }
