@@ -71,7 +71,9 @@ public class ProviderConnectionTester {
                 return new ConnectionTestResult(catalogResult, List.of());
             }
             List<String> models =
-                    modelsProbeClient.parseModelCatalog(provider, catalogResponse.body()).stream()
+                    modelsProbeClient
+                            .parseModelCatalog(provider, catalogResponse.responsePayload())
+                            .stream()
                             .map(ModelsProbeClient.RawModel::modelId)
                             .filter(ProviderConnectionTester::isChatCapableModelId)
                             .limit(MODEL_LIMIT)

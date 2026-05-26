@@ -144,7 +144,7 @@ public class PinnedHttpClientFactory {
         }
     }
 
-    public record PinnedHttpResponse(int statusCode, String body) {}
+    public record PinnedHttpResponse(int statusCode, String responsePayload) {}
 
     @FunctionalInterface
     interface PinnedResolutionObserver {
