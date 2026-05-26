@@ -76,5 +76,12 @@ test('analytics renders Vietnamese copy', async ({ page }) => {
   await openAuthenticatedRoute(page, '/analytics', state);
 
   await expect(page.getByRole('heading', { name: 'Phân tích' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: '7 ngày qua' })).toBeVisible();
+  // PR #66 swapped the window Tabs for a shadcn Select. The combobox is
+  // aria-labeled with analytics.range.label (vi: "Khoảng thời gian") and the
+  // displayed value is the current range — analytics.range.lastWeek (vi:
+  // "Tuần trước") since the route lands on the default 7d window.
+  await expect(page.getByRole('combobox', { name: 'Khoảng thời gian' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Khoảng thời gian' })).toContainText(
+    'Tuần trước',
+  );
 });
