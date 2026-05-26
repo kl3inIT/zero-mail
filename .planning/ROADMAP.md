@@ -165,7 +165,7 @@ Plans:
 - [x] 09-03-PLAN.md — Wave 1: Safety Net DELETE + DOMAIN pattern + triage audit blocked_by_safety_net_pattern badge
 - [x] 09-04-PLAN.md — Wave 1: ProviderConnectionTester extraction + UserByokService + ByokProviderResolver + UserByokController + AiCostQueryService (D-17)
 - [x] 09-05-PLAN.md — Wave 1: SET-VOICE-07 generate-from-sent (in-memory privacy invariant + Spring AI observation hardening)
-- [ ] 09-06-PLAN.md — Wave 2: OpenAPI regen + FE sections + Knowledge feature + AiProviderSection + ByokForm removal from /settings
+- [x] 09-06-PLAN.md — Wave 2: OpenAPI regen + FE sections + Knowledge feature + AiProviderSection + ByokForm removal from /settings
 - [ ] 09-07-PLAN.md — Wave 3: Playwright e2e ai-settings.spec.ts + Phase9ArchitectureTest aggregate + manual UX checkpoint
 
 **UI hint**: yes
@@ -180,7 +180,7 @@ Plans:
 | 7. Chat Email Assistant | v1.1 | 6/6 | Complete | 2026-05-18 |
 | 8. Admin Console & Operator Tooling | v1.2 | 6/6 | Complete   | 2026-05-20 |
 | 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 5/6 | In Progress|  |
-| 9. User Settings UI on Curated Catalog | v1.2 | 3/7 | In Progress|  |
+| 9. User Settings UI on Curated Catalog | v1.2 | 6/7 | In Progress|  |
 
 ---
 
