@@ -14,6 +14,7 @@ import {
   type UIEvent,
 } from 'react';
 import {
+  ArrowLeft,
   Bold,
   Clipboard,
   ExternalLink,
@@ -85,27 +86,59 @@ import { cn } from '@/lib/utils';
 const EMAIL_FRAME_CSS = `
   :root { color-scheme: light; }
   html, body { margin: 0; padding: 0; background: #fff; color: #202124; }
+  html { width: 100%; }
   body {
     box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
-    padding: 20px 24px 32px;
+    padding: 16px;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
     line-height: 1.55;
     overflow-wrap: anywhere;
-    overflow: hidden;
+    word-break: break-word;
+    overflow-x: auto;
   }
-  img { max-width: 100%; height: auto; }
-  table { max-width: 100%; border-collapse: collapse; }
-  a { color: #1a73e8; text-decoration: none; }
+  .zm-mail-wrapper {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .zm-mail-wrapper > * {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  img, video, iframe, embed, object {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  img {
+    display: block;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  table {
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    border-collapse: collapse;
+  }
+  td, th { word-break: break-word; }
+  a { color: #1a73e8; text-decoration: none; word-break: break-all; }
   a:hover { text-decoration: underline; }
   blockquote { margin: 12px 0 12px 12px; padding-left: 12px; border-left: 2px solid #dadce0; color: #5f6368; }
   pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  @media (max-width: 640px) {
+    body { padding: 12px; font-size: 15px; }
+    h1, h2 { font-size: 1.5rem !important; line-height: 1.3; }
+    h3 { font-size: 1.25rem !important; line-height: 1.3; }
+    h1, h2, h3, h4, h5, h6, p, span, div, td { max-width: 100%; }
+  }
 `;
 
 function emailFrameSrcDoc(renderedHtml: string, locale: string) {
   const documentLanguage = locale.replace(/[^A-Za-z-]/g, '') || 'en';
-  return `<!doctype html><html lang="${documentLanguage}"><head><meta charset="utf-8"><base target="_blank"><style>${EMAIL_FRAME_CSS}</style></head><body>${renderedHtml}</body></html>`;
+  return `<!doctype html><html lang="${documentLanguage}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"><base target="_blank"><style>${EMAIL_FRAME_CSS}</style></head><body><div class="zm-mail-wrapper">${renderedHtml}</div></body></html>`;
 }
 
 export function InboxPageClient() {
@@ -184,12 +217,19 @@ export function InboxPageClient() {
         </div>
       ) : null}
 
-      <div className="bg-background grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(430px,42vw)_minmax(0,1fr)] xl:grid-cols-[500px_minmax(0,1fr)]">
-        <section className="border-border lg:border-r-border flex min-h-0 flex-col border-b lg:border-r lg:border-b-0">
-          <div className="border-border shrink-0 border-b px-3 py-2.5">
+      <div className="bg-background grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(430px,42vw)_minmax(0,1fr)] xl:grid-cols-[500px_minmax(0,1fr)]">
+        <section
+          className={cn(
+            'border-border lg:border-r-border min-h-0 flex-col lg:flex lg:border-r lg:border-b-0',
+            selectedMessageId ? 'hidden lg:flex' : 'flex',
+          )}
+        >
+          <div className="border-border shrink-0 border-b px-4 py-2.5">
             <div className="flex h-8 items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Inbox className="text-muted-foreground size-4" aria-hidden="true" />
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-8 items-center justify-center">
+                  <Inbox className="text-muted-foreground size-5" aria-hidden="true" />
+                </span>
                 <span className="text-sm font-medium">{t('nav.inbox')}</span>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -214,14 +254,14 @@ export function InboxPageClient() {
             </div>
             <div className="relative mt-2">
               <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2"
                 aria-hidden="true"
               />
               <Input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder={t('inbox.search.placeholder')}
-                className="bg-background h-9 pr-9 pl-9 text-sm"
+                className="bg-background h-9 pr-9 pl-8 text-sm"
                 data-testid="inbox-search-input"
               />
               {searchQuery ? (
@@ -289,7 +329,12 @@ export function InboxPageClient() {
           </div>
         </section>
 
-        <section className="min-h-0 min-w-0 overflow-hidden">
+        <section
+          className={cn(
+            'min-h-0 min-w-0 overflow-hidden lg:block',
+            selectedMessageId ? 'block' : 'hidden lg:block',
+          )}
+        >
           <InboxMessageDetailPanel
             selectedMessage={selectedMessage ?? null}
             renderedText={detailQuery.data?.renderedText ?? ''}
@@ -298,6 +343,7 @@ export function InboxPageClient() {
             error={detailQuery.error}
             locale={locale}
             currentUserEmail={currentUser.data?.email ?? null}
+            onBack={() => setRequestedSelectedMessageId(null)}
           />
         </section>
       </div>
@@ -325,7 +371,7 @@ function InboxMessageRow({
       type="button"
       aria-current={active ? 'true' : undefined}
       className={cn(
-        'group relative flex w-full items-start gap-2.5 px-4 py-2.5 text-left transition-colors',
+        'group relative flex min-h-[76px] w-full items-start gap-2.5 px-4 py-3 text-left transition-colors',
         message.unread ? 'bg-background' : 'bg-muted/20',
         'hover:bg-muted/60',
         active &&
@@ -336,35 +382,33 @@ function InboxMessageRow({
     >
       <div
         className={cn(
-          'bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+          'bg-muted text-muted-foreground mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
           message.unread && 'bg-primary/10 text-primary',
         )}
       >
         {senderInitial}
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span
-              className={cn(
-                'text-foreground min-w-0 truncate text-sm leading-5',
-                message.unread ? 'font-semibold' : 'font-medium',
-              )}
-              data-testid="inbox-message-sender"
-            >
-              {senderName}
-            </span>
-            {message.unread ? (
-              <span
-                className="bg-primary size-2 shrink-0 rounded-full"
-                aria-label={t('inbox.badge.unread')}
-                data-testid="inbox-message-active-dot"
-              />
-            ) : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              'text-foreground min-w-0 flex-1 truncate text-sm leading-5',
+              message.unread ? 'font-semibold' : 'font-medium',
+            )}
+            data-testid="inbox-message-sender"
+          >
+            {senderName}
           </span>
+          {message.unread ? (
+            <span
+              className="bg-primary size-2 shrink-0 rounded-full"
+              aria-label={t('inbox.badge.unread')}
+              data-testid="inbox-message-active-dot"
+            />
+          ) : null}
           <time
             className={cn(
-              'text-muted-foreground shrink-0 text-right text-xs',
+              'text-muted-foreground shrink-0 text-right text-[11px] whitespace-nowrap tabular-nums',
               message.unread && 'text-foreground font-semibold',
             )}
             dateTime={message.receivedAt}
@@ -373,7 +417,7 @@ function InboxMessageRow({
             {formatInboxListDate(message.receivedAt, locale)}
           </time>
         </div>
-        <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           {message.hasAttachment ? (
             <Paperclip className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
           ) : null}
@@ -388,7 +432,7 @@ function InboxMessageRow({
           </p>
         </div>
         {visibleLabels.length > 0 ? (
-          <div className="mt-0.5 flex min-w-0 flex-wrap gap-1">
+          <div className="flex min-w-0 flex-wrap gap-1">
             {visibleLabels.slice(0, 3).map((label) => (
               <InboxLabelChip key={label.id} label={label} />
             ))}
@@ -407,6 +451,7 @@ function InboxMessageDetailPanel({
   error,
   locale,
   currentUserEmail,
+  onBack,
 }: {
   selectedMessage: InboxMessage | null;
   renderedText: string;
@@ -415,10 +460,17 @@ function InboxMessageDetailPanel({
   error: unknown;
   locale: string;
   currentUserEmail: string | null;
+  onBack: () => void;
 }) {
   const t = useTranslations();
   const selectedMessageId = selectedMessage?.gmailMessageId ?? null;
   const [composerState, setComposerState] = useState<InboxComposerState | null>(null);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [trackedMessageId, setTrackedMessageId] = useState<string | null>(selectedMessageId);
+  if (trackedMessageId !== selectedMessageId) {
+    setTrackedMessageId(selectedMessageId);
+    setDetailsExpanded(false);
+  }
   const activeComposerState =
     composerState?.gmailMessageId === selectedMessageId ? composerState : null;
 
@@ -449,7 +501,13 @@ function InboxMessageDetailPanel({
   }
 
   const readableText = renderedText.trim() || selectedMessage.snippet;
-  const senderInitial = selectedMessage.from.trim().charAt(0).toUpperCase() || '?';
+  const senderDisplayName =
+    inboxSenderDisplayName(selectedMessage.from) || selectedMessage.from || '?';
+  const senderInitial = senderDisplayName.trim().charAt(0).toUpperCase() || '?';
+  const primaryRecipient =
+    currentUserEmail && selectedMessage.to.includes(currentUserEmail)
+      ? t('inbox.detail.you')
+      : selectedMessage.to[0] || t('inbox.detail.you');
   const openComposer = (mode: InboxComposerMode, autoGenerate = false) => {
     setComposerState({
       gmailMessageId: selectedMessage.gmailMessageId,
@@ -468,6 +526,19 @@ function InboxMessageDetailPanel({
         data-testid="inbox-detail-scroll"
       >
         <header className="border-border bg-background border-b" data-testid="inbox-detail-header">
+          <div className="border-border flex items-center gap-1 border-b px-2 py-1.5 lg:hidden">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground -ml-1 gap-1.5"
+              onClick={onBack}
+              data-testid="inbox-detail-back"
+            >
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              {t('inbox.action.back')}
+            </Button>
+          </div>
           <div className="px-5 py-4">
             {visibleInboxLabels(selectedMessage.labels).length > 0 ||
             selectedMessage.hasAttachment ? (
@@ -507,43 +578,63 @@ function InboxMessageDetailPanel({
               </Button>
             </div>
 
-            <div className="mt-3 flex min-w-0 items-center gap-3">
-              <div className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+            <div className="mt-3 flex min-w-0 items-start gap-3">
+              <div className="bg-primary/10 text-primary mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
                 {senderInitial}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
                   <span className="text-foreground min-w-0 truncate text-sm font-medium">
-                    {selectedMessage.from}
+                    {senderDisplayName}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setDetailsExpanded((value) => !value)}
+                    className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer text-xs underline-offset-2 hover:underline"
+                    aria-expanded={detailsExpanded}
+                    data-testid="inbox-detail-toggle"
+                  >
+                    {detailsExpanded ? t('inbox.detail.hide') : t('inbox.detail.details')}
+                  </button>
                   <time
-                    className="text-muted-foreground shrink-0 text-xs"
+                    className="text-muted-foreground ml-auto shrink-0 text-xs whitespace-nowrap"
                     dateTime={selectedMessage.receivedAt}
                   >
                     {formatDateTime(selectedMessage.receivedAt, locale)}
                   </time>
                 </div>
-                <div className="text-muted-foreground mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                  <span className="flex min-w-0 items-baseline gap-1">
-                    <span>{t('inbox.detail.to')}</span>
-                    <span className="text-foreground/80 min-w-0 truncate">
+                {detailsExpanded ? (
+                  <dl className="text-muted-foreground mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-xs">
+                    <dt>{t('inbox.detail.from')}</dt>
+                    <dd className="text-foreground/90 min-w-0 break-all">{selectedMessage.from}</dd>
+                    <dt>{t('inbox.detail.to')}</dt>
+                    <dd className="text-foreground/90 min-w-0 break-all">
                       {selectedMessage.to.join(', ') || t('inbox.detail.you')}
-                    </span>
-                  </span>
-                  {selectedMessage.cc.length > 0 ? (
-                    <span className="flex min-w-0 items-baseline gap-1">
-                      <span>{t('inbox.detail.cc')}</span>
-                      <span className="text-foreground/80 min-w-0 truncate">
-                        {selectedMessage.cc.join(', ')}
-                      </span>
-                    </span>
-                  ) : null}
-                  {selectedMessage.unread ? (
-                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-                      {t('inbox.badge.unread')}
-                    </Badge>
-                  ) : null}
-                </div>
+                    </dd>
+                    {selectedMessage.cc.length > 0 ? (
+                      <>
+                        <dt>{t('inbox.detail.cc')}</dt>
+                        <dd className="text-foreground/90 min-w-0 break-all">
+                          {selectedMessage.cc.join(', ')}
+                        </dd>
+                      </>
+                    ) : null}
+                    <dt>{t('inbox.detail.date')}</dt>
+                    <dd className="text-foreground/90 min-w-0">
+                      {formatDateTime(selectedMessage.receivedAt, locale)}
+                    </dd>
+                  </dl>
+                ) : (
+                  <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                    {t('inbox.detail.to')}:{' '}
+                    <span className="text-foreground/80">{primaryRecipient}</span>
+                  </p>
+                )}
+                {selectedMessage.unread ? (
+                  <Badge variant="secondary" className="mt-1.5 h-5 px-1.5 text-[10px]">
+                    {t('inbox.badge.unread')}
+                  </Badge>
+                ) : null}
               </div>
             </div>
           </div>
@@ -1590,7 +1681,7 @@ function EmailHtmlFrame({
 function PlainEmailContent({ text }: { text: string }) {
   const paragraphs = text.split(/\n{2,}/).filter((paragraph) => paragraph.trim().length > 0);
   return (
-    <div className="bg-white p-5 text-sm leading-6 text-neutral-900">
+    <div className="mx-auto max-w-[720px] bg-white p-5 text-sm leading-6 text-neutral-900">
       {paragraphs.map((paragraph, index) => (
         <p key={index} className="mb-4 break-words whitespace-pre-wrap">
           {linkifyPlainText(paragraph)}
