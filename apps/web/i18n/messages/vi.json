@@ -935,10 +935,8 @@
     "privacy": "Bảo mật",
     "product": "Sản phẩm",
     "security": "Bảo mật",
-    "status": "Hệ thống hoạt động bình thường",
-    "tagline": "Phân loại email tự động bằng AI mà bạn có thể tin tưởng giao cho hộp thư thật. Dành cho Gmail, do nhóm sinh viên FPT xây dựng.",
-    "terms": "Điều khoản",
-    "version": "v1.0 · Gmail"
+    "tagline": "AI phân loại Gmail tự động bạn có thể tin tưởng — gắn nhãn, soạn nháp trả lời và dọn hộp thư theo quy tắc bạn đặt.",
+    "terms": "Điều khoản"
   },
   "how": {
     "audit": {
@@ -973,6 +971,7 @@
   },
   "inbox": {
     "action": {
+      "back": "Quay lại hộp thư",
       "forward": "Chuyển tiếp",
       "generate": "Soạn bằng AI",
       "loadingMore": "Đang tải…",
@@ -1052,7 +1051,10 @@
     },
     "detail": {
       "cc": "Cc",
+      "date": "Ngày",
+      "details": "Chi tiết",
       "from": "Từ",
+      "hide": "Ẩn chi tiết",
       "to": "Đến",
       "you": "Bạn"
     },
@@ -1244,7 +1246,7 @@
   "landingTestimonials": {
     "header": {
       "body": "Khách hàng của chúng tôi yêu thích việc tiết kiệm thời gian với Zero Mail.",
-      "title": "Gia nhập cùng 20,000+ người đang tiết kiệm thời gian email"
+      "title": "Tiết kiệm thời gian quản lý email cùng Zero Mail"
     },
     "r1": {
       "role": "CTO",

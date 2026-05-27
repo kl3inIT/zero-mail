@@ -10,21 +10,29 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { PauseBanner } from '@/features/triage/components/PauseBanner';
 import { AppSidebar } from './AppSidebar';
 
-function MobileSidebarTrigger() {
+function MobileTopBar() {
   const t = useTranslations();
-  const { isMobile, openMobile, setOpenMobile } = useSidebar();
-  if (!isMobile || openMobile) return null;
+  const { isMobile, setOpenMobile } = useSidebar();
+  if (!isMobile) return null;
 
   return (
-    <button
-      type="button"
-      onClick={() => setOpenMobile(true)}
-      className="bg-card text-foreground hover:bg-accent border-border absolute top-3 left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
-      aria-label={t('shell.sidebar.toggle')}
-      data-testid="mobile-sidebar-trigger"
+    <div
+      className="border-border bg-card flex h-12 shrink-0 items-center gap-2.5 border-b px-4"
+      data-testid="mobile-top-bar"
     >
-      <Menu className="size-4" aria-hidden="true" />
-    </button>
+      <button
+        type="button"
+        onClick={() => setOpenMobile(true)}
+        className="text-foreground hover:bg-accent flex size-8 items-center justify-center rounded-md transition-colors"
+        aria-label={t('shell.sidebar.toggle')}
+        data-testid="mobile-sidebar-trigger"
+      >
+        <Menu className="size-5" aria-hidden="true" />
+      </button>
+      <span className="text-foreground text-base font-semibold tracking-tight">
+        Zero<span className="text-muted-foreground font-normal">Mail</span>
+      </span>
+    </div>
   );
 }
 
@@ -42,11 +50,11 @@ export function AppShell({
           <AppSidebar />
           <SidebarInset className="bg-sidebar relative min-w-0 p-1.5 transition-[margin] sm:p-2 md:peer-data-[state=expanded]:-ml-8">
             <PauseBanner />
-            <MobileSidebarTrigger />
             <div
               className="border-border bg-card flex flex-1 flex-col overflow-hidden rounded-xl border"
               data-testid="app-shell-content"
             >
+              <MobileTopBar />
               <div className="flex-1 overflow-auto">{children}</div>
             </div>
           </SidebarInset>

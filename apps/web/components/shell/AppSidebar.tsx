@@ -13,7 +13,6 @@ import {
   Inbox,
   ListChecks,
   LogOut,
-  MailQuestion,
   MailX,
   PanelLeft,
   RefreshCw,
@@ -48,10 +47,8 @@ import {
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useLogout } from '@/features/account/hooks/useLogout';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
-import { useToReplyCount } from '@/features/needs-reply/hooks/useToReplyCount';
 import { shouldShowBetaOnboarding } from '@/features/onboarding/config';
 import { getApiUrl } from '@/lib/api/base-url';
-import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
@@ -63,20 +60,17 @@ type NavItem = {
     | 'nav.inbox'
     | 'nav.ai'
     | 'nav.analytics'
-    | 'nav.needsReply'
     | 'nav.rules'
     | 'nav.billing'
     | 'nav.settings'
     | 'nav.onboardingProgress'
     | 'nav.cleanupUnsubscribe';
   icon: typeof Inbox;
-  badge?: 'needs-reply';
 };
 
 const CORE_NAV: NavItem[] = [
   { href: '/inbox' as Route, labelKey: 'nav.inbox', icon: Inbox },
   { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
-  { href: '/needs-reply', labelKey: 'nav.needsReply', icon: MailQuestion, badge: 'needs-reply' },
 ];
 
 const MANAGE_NAV: NavItem[] = [
@@ -200,11 +194,8 @@ export function AppSidebar() {
   const pathname = usePathname();
   const t = useTranslations();
   const currentUser = useCurrentUser();
-  const toReplyCount = useToReplyCount();
-  const hydrated = useHydrated();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const visibleToReplyCount = hydrated ? (toReplyCount.data ?? 0) : 0;
   const onboardingStep = currentUser.data?.onboardingStep;
   const showOnboarding = shouldShowBetaOnboarding(onboardingStep);
 
@@ -229,7 +220,7 @@ export function AppSidebar() {
         <SidebarMenuButton
           tooltip={label}
           className={cn(
-            'flex h-9 items-center gap-3 rounded-lg transition-colors',
+            'flex h-9 items-center gap-3 rounded-lg font-medium transition-colors',
             isCollapsed ? 'mx-auto h-9 w-9 justify-center p-0' : 'mx-2 w-[calc(100%-1rem)] px-3',
             active
               ? 'bg-sidebar-accent! text-sidebar-accent-foreground! font-semibold'
@@ -239,14 +230,6 @@ export function AppSidebar() {
         >
           <Icon className="size-4 shrink-0" aria-hidden="true" />
           <span className="truncate text-sm group-data-[collapsible=icon]:hidden">{label}</span>
-          {item.badge === 'needs-reply' && visibleToReplyCount > 0 && (
-            <span
-              aria-label={`${visibleToReplyCount}`}
-              className="bg-primary/15 text-primary ml-auto flex h-[20px] min-w-[20px] items-center justify-center rounded-full px-1 font-mono text-[11px] font-semibold group-data-[collapsible=icon]:hidden"
-            >
-              {visibleToReplyCount}
-            </span>
-          )}
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
