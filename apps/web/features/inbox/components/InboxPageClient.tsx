@@ -390,22 +390,26 @@ function InboxMessageRow({
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-2">
-          <span
-            className={cn(
-              'text-foreground min-w-0 flex-1 truncate text-sm leading-5',
-              message.unread ? 'font-semibold' : 'font-medium',
-            )}
-            data-testid="inbox-message-sender"
-          >
-            {senderName}
-          </span>
-          {message.unread ? (
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
             <span
-              className="bg-primary size-2 shrink-0 rounded-full"
-              aria-label={t('inbox.badge.unread')}
-              data-testid="inbox-message-active-dot"
-            />
-          ) : null}
+              className={cn(
+                'min-w-0 truncate text-sm leading-5',
+                message.unread
+                  ? 'text-foreground font-semibold'
+                  : 'text-muted-foreground font-normal',
+              )}
+              data-testid="inbox-message-sender"
+            >
+              {senderName}
+            </span>
+            {message.unread ? (
+              <span
+                className="bg-primary size-2 shrink-0 rounded-full"
+                aria-label={t('inbox.badge.unread')}
+                data-testid="inbox-message-active-dot"
+              />
+            ) : null}
+          </div>
           <time
             className={cn(
               'text-muted-foreground shrink-0 text-right text-[11px] whitespace-nowrap tabular-nums',
@@ -423,8 +427,8 @@ function InboxMessageRow({
           ) : null}
           <p
             className={cn(
-              'min-w-0 flex-1 truncate text-sm leading-5',
-              message.unread ? 'text-foreground font-semibold' : 'text-muted-foreground',
+              'min-w-0 flex-1 truncate text-sm leading-5 font-normal',
+              message.unread ? 'text-foreground/80' : 'text-muted-foreground/70',
             )}
             data-testid="inbox-message-subject"
           >
