@@ -935,10 +935,8 @@
     "privacy": "Privacy",
     "product": "Product",
     "security": "Security",
-    "status": "All systems normal",
-    "tagline": "AI auto-triage you can trust with your real inbox. Built for Gmail by a student team at FPT.",
-    "terms": "Terms",
-    "version": "v1.0 · Gmail"
+    "tagline": "AI Gmail auto-triage you can trust — labels, drafts replies, and clears your inbox by the rules you set.",
+    "terms": "Terms"
   },
   "how": {
     "audit": {
@@ -973,6 +971,7 @@
   },
   "inbox": {
     "action": {
+      "back": "Back to inbox",
       "forward": "Forward",
       "generate": "Write by AI",
       "loadingMore": "Loading…",
@@ -1052,7 +1051,10 @@
     },
     "detail": {
       "cc": "Cc",
+      "date": "Date",
+      "details": "Details",
       "from": "From",
+      "hide": "Hide details",
       "to": "To",
       "you": "You"
     },
@@ -1244,7 +1246,7 @@
   "landingTestimonials": {
     "header": {
       "body": "Our customers love saving time with Zero Mail.",
-      "title": "Join 20,000+ saving time on email"
+      "title": "Save time on email with Zero Mail"
     },
     "r1": {
       "role": "CTO",

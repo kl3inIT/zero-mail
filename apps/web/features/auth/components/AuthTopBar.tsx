@@ -40,13 +40,13 @@ export default async function AuthTopBar({ backHref = '/', children, surface = '
             : 'relative z-[1] mx-auto flex h-[60px] w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8'
         }
       >
-        <Link href={backHref} aria-label={`zeromail - ${t('nav.logoLabel')}`} className="zm-brand">
+        <Link href={backHref} aria-label={`ZeroMail - ${t('nav.logoLabel')}`} className="zm-brand">
           <span className="zm-brand-mark">
-            <ZMLogoMark size={48} />
+            <ZMLogoMark size={64} />
           </span>
           <span className="zm-brand-wordmark">
-            <span>zero</span>
-            <span className="light">mail</span>
+            <span>Zero</span>
+            <span className="light">Mail</span>
           </span>
         </Link>
         {children ? <div className="hidden md:block">{children}</div> : null}
