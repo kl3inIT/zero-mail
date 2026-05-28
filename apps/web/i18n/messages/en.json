@@ -2101,6 +2101,33 @@
     "contactSales": "Contact Sales",
     "credits": "Credits",
     "currentPlan": "Current Plan",
+    "feature": {
+      "drafts": {
+        "basic": "Basic AI auto-draft replies",
+        "high": "High-quality auto-draft replies based on rules",
+        "unlimited": "Unlimited rule executions & outbound safety audits"
+      },
+      "limits": {
+        "1gmail": "1 Gmail account integration",
+        "3gmail": "Up to 3 Gmail accounts integrated",
+        "unlimited": "Unlimited Gmail accounts"
+      },
+      "rules": {
+        "advanced": "Advanced rule builder with custom filters",
+        "api": "API access & custom webhook triggers",
+        "basic": "Standard natural-language rule builder"
+      },
+      "support": {
+        "basic": "Community support",
+        "dedicated": "Dedicated 24/7 support & guided onboarding",
+        "priority": "Priority email support"
+      },
+      "triage": {
+        "advanced": "Advanced AI triage & priority instant processing",
+        "basic": "Basic AI triage (auto-archive, label, star)",
+        "enterprise": "Enterprise-grade zero-latency triage pipeline"
+      }
+    },
     "featureAgents": "Full access to AI Slides, AI Developer, and more agents",
     "featureAudio": "Audio & Music: ElevenLabs, MiniMax, and more",
     "featureChat": "Chat: Claude Opus 4.7, GPT-5.5, and more",
@@ -2119,6 +2146,11 @@
     "getStarted": "Get Started",
     "monthly": "Monthly",
     "perMonth": "/month",
+    "plan": {
+      "plus": "Plus",
+      "pro": "Pro",
+      "starter": "Starter"
+    },
     "plus": {
       "b1": "Unlimited emails processed",
       "b2": "AI auto-draft replies",
@@ -2143,6 +2175,11 @@
     },
     "professionalWorkspace": "Professional workspace",
     "savePercent": "SAVE 20%",
+    "section": {
+      "credits": "Credits",
+      "limits": "Limits & Support",
+      "triage": "AI Email Automation"
+    },
     "subtitle": "Simple pricing, no hidden fees. Upgrade or downgrade anytime.",
     "title": "Upgrade your subscription",
     "toStart": "To start",

@@ -2101,6 +2101,33 @@
     "contactSales": "Liên hệ",
     "credits": "Tín dụng",
     "currentPlan": "Gói hiện tại",
+    "feature": {
+      "drafts": {
+        "basic": "Tự động soạn nháp email cơ bản",
+        "high": "Tự động soạn nháp phản hồi chất lượng cao",
+        "unlimited": "Không giới hạn lượt chạy quy tắc & Kiểm tra an toàn"
+      },
+      "limits": {
+        "1gmail": "Kết nối 1 tài khoản Gmail",
+        "3gmail": "Kết nối tối đa 3 tài khoản Gmail",
+        "unlimited": "Không giới hạn tài khoản Gmail"
+      },
+      "rules": {
+        "advanced": "Trình tạo quy tắc nâng cao với bộ lọc tùy chỉnh",
+        "api": "Hỗ trợ API và kích hoạt webhook tùy chỉnh",
+        "basic": "Hệ thống quy tắc ngôn ngữ tự nhiên tiêu chuẩn"
+      },
+      "support": {
+        "basic": "Hỗ trợ qua cộng đồng",
+        "dedicated": "Hỗ trợ chuyên biệt 24/7 & Hướng dẫn cài đặt",
+        "priority": "Hỗ trợ ưu tiên qua email"
+      },
+      "triage": {
+        "advanced": "Phân loại AI nâng cao & Ưu tiên xử lý tức thì",
+        "basic": "Phân loại AI cơ bản (Tự động lưu trữ, nhãn, gắn sao)",
+        "enterprise": "Hệ thống triage doanh nghiệp không độ trễ"
+      }
+    },
     "featureAgents": "Toàn quyền truy cập AI Slides, AI Developer, và nhiều tác tử khác",
     "featureAudio": "Âm thanh & Âm nhạc: ElevenLabs, MiniMax, và hơn thế nữa",
     "featureChat": "Trò chuyện: Claude Opus 4.7, GPT-5.5, và hơn thế nữa",
@@ -2119,6 +2146,11 @@
     "getStarted": "Bắt đầu",
     "monthly": "Hàng tháng",
     "perMonth": "/tháng",
+    "plan": {
+      "plus": "Plus",
+      "pro": "Pro",
+      "starter": "Starter"
+    },
     "plus": {
       "b1": "Email xử lý không giới hạn",
       "b2": "Tự động soạn nháp trả lời",
@@ -2143,6 +2175,11 @@
     },
     "professionalWorkspace": "Không gian làm việc chuyên nghiệp",
     "savePercent": "TIẾT KIỆM 20%",
+    "section": {
+      "credits": "Tín dụng",
+      "limits": "Giới hạn & Hỗ trợ",
+      "triage": "Tự động hóa email AI"
+    },
     "subtitle": "Đơn giản, minh bạch. Nâng cấp hoặc hạ cấp bất cứ lúc nào.",
     "title": "Nâng cấp gói đăng ký của bạn",
     "toStart": "Bắt đầu",
