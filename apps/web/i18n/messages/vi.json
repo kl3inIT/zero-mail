@@ -238,7 +238,7 @@
       "label": "Tín dụng hiện có",
       "monthlyGrant": "{credits} tín dụng / tháng",
       "noExpiry": "Không reset theo kỳ beta",
-      "paidCredits": "Tín dụng đã nạp",
+      "paidCredits": "Tín dụng trả phí",
       "refreshLabel": "Tự cập nhật",
       "refreshValue": "Mỗi 45 giây",
       "resetsAt": "Reset lúc",
@@ -259,9 +259,9 @@
         "timestamp": "Thời gian",
         "type": "Loại"
       },
-      "description": "Các lượt cấp, nạp, giữ, trừ và hoàn tín dụng gần đây.",
+      "description": "Các lượt cấp, giữ, trừ và hoàn tín dụng gần đây.",
       "empty": {
-        "body": "Các lượt nạp và sử dụng tín dụng sẽ xuất hiện ở đây. Hãy nạp tín dụng để bắt đầu.",
+        "body": "Khi bạn dùng các tác vụ AI của Zero Mail, lịch sử tín dụng sẽ xuất hiện ở đây.",
         "heading": "Chưa có giao dịch"
       },
       "error": {
@@ -277,7 +277,7 @@
         "release": "Hoàn giữ",
         "reserve": "Giữ",
         "settle": "Trừ",
-        "topup": "Nạp"
+        "topup": "Cộng"
       },
       "unavailable": {
         "body": "Zero Mail đã có số dư tín dụng, nhưng danh sách giao dịch chi tiết sẽ được bật trong một bản cập nhật sau.",
@@ -286,7 +286,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Theo dõi tín dụng beta miễn phí và lịch sử sử dụng gần đây.",
+      "description": "Theo dõi tín dụng beta miễn phí, tín dụng đã nạp và lịch sử sử dụng gần đây.",
       "title": "Thanh toán"
     }
   },
@@ -2095,10 +2095,18 @@
     }
   },
   "subscription": {
+    "allSotaModels": "Tất cả mô hình SOTA",
     "annual": "Hàng năm",
     "billedAnnually": "Thanh toán hàng năm",
     "contactSales": "Liên hệ",
+    "credits": "Tín dụng",
     "currentPlan": "Gói hiện tại",
+    "featureAgents": "Toàn quyền truy cập AI Slides, AI Developer, và nhiều tác tử khác",
+    "featureAudio": "Âm thanh & Âm nhạc: ElevenLabs, MiniMax, và hơn thế nữa",
+    "featureChat": "Trò chuyện: Claude Opus 4.7, GPT-5.5, và hơn thế nữa",
+    "featureImage": "Hình ảnh: GPT Image 2, Nano Banana Pro, và hơn thế nữa",
+    "featureStorage": "Bộ nhớ 50GB với AI Drive",
+    "featureVideo": "Video: Gemini Veo 3.1, Seedance v2, và hơn thế nữa",
     "free": {
       "b1": "50 email xử lý mỗi ngày",
       "b2": "Phân loại AI cơ bản",
@@ -2133,9 +2141,11 @@
       "includesIntro": "Mọi thứ trong gói Plus, cộng thêm:",
       "name": "Professional"
     },
-    "savePercent": "Tiết kiệm 20%",
+    "professionalWorkspace": "Không gian làm việc chuyên nghiệp",
+    "savePercent": "TIẾT KIỆM 20%",
     "subtitle": "Đơn giản, minh bạch. Nâng cấp hoặc hạ cấp bất cứ lúc nào.",
-    "title": "Chọn gói của bạn",
+    "title": "Nâng cấp gói đăng ký của bạn",
+    "toStart": "Bắt đầu",
     "upgrade": "Nâng cấp"
   },
   "templates": {

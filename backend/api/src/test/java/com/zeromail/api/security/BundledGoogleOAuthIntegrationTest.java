@@ -271,11 +271,7 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
     }
 
     private Set<String> fullScopes() {
-        return Set.of(
-                "openid",
-                "profile",
-                "email",
-                "https://www.googleapis.com/auth/gmail.modify");
+        return Set.of("openid", "profile", "email", "https://www.googleapis.com/auth/gmail.modify");
     }
 
     private void stubAuthorizedClient(

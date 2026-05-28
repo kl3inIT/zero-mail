@@ -259,9 +259,9 @@
         "timestamp": "Time",
         "type": "Type"
       },
-      "description": "Recent grants, top-ups, holds, spends, and releases.",
+      "description": "Recent grants, holds, spends, and releases.",
       "empty": {
-        "body": "Your top-ups and credit usage will show up here. Add credits to get started.",
+        "body": "Your credit activity will show up here once you use Zero Mail AI actions.",
         "heading": "No transactions yet"
       },
       "error": {
@@ -277,7 +277,7 @@
         "release": "Release",
         "reserve": "Reserve",
         "settle": "Settle",
-        "topup": "Top-up"
+        "topup": "Credit"
       },
       "unavailable": {
         "body": "Zero Mail can show your credit balance now. Detailed transaction history will arrive in a later update.",
@@ -286,7 +286,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Track free beta credits and recent usage activity.",
+      "description": "Track free beta credits, paid credits, and recent usage activity.",
       "title": "Billing"
     }
   },
@@ -2095,10 +2095,18 @@
     }
   },
   "subscription": {
+    "allSotaModels": "All SOTA models",
     "annual": "Annual",
     "billedAnnually": "Billed annually",
     "contactSales": "Contact Sales",
+    "credits": "Credits",
     "currentPlan": "Current Plan",
+    "featureAgents": "Full access to AI Slides, AI Developer, and more agents",
+    "featureAudio": "Audio & Music: ElevenLabs, MiniMax, and more",
+    "featureChat": "Chat: Claude Opus 4.7, GPT-5.5, and more",
+    "featureImage": "Image: GPT Image 2, Nano Banana Pro, and more",
+    "featureStorage": "50GB storage with AI Drive",
+    "featureVideo": "Video: Gemini Veo 3.1, Seedance v2, and more",
     "free": {
       "b1": "50 emails processed per day",
       "b2": "Basic AI triage",
@@ -2133,9 +2141,11 @@
       "includesIntro": "Everything in Plus, plus:",
       "name": "Professional"
     },
-    "savePercent": "Save 20%",
+    "professionalWorkspace": "Professional workspace",
+    "savePercent": "SAVE 20%",
     "subtitle": "Simple pricing, no hidden fees. Upgrade or downgrade anytime.",
-    "title": "Choose your plan",
+    "title": "Upgrade your subscription",
+    "toStart": "To start",
     "upgrade": "Upgrade"
   },
   "templates": {
