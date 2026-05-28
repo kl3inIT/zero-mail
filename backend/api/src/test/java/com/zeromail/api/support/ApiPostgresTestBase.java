@@ -87,8 +87,7 @@ public abstract class ApiPostgresTestBase {
                 """
         TRUNCATE TABLE
           credit_ledger_entry,
-          credit_reservation,
-          billing_topup_intent
+          credit_reservation
         RESTART IDENTITY CASCADE
         """);
     }

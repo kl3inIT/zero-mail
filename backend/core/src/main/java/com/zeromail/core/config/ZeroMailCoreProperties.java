@@ -18,7 +18,7 @@ import org.springframework.validation.annotation.Validated;
 public record ZeroMailCoreProperties(
         @Valid @NotNull CryptoProperties crypto,
         @Valid @DefaultValue GmailProperties gmail,
-        @Valid @NotNull BillingProperties billing,
+        @Valid @DefaultValue BillingProperties billing,
         @Valid @DefaultValue LlmProperties llm,
         @Valid @DefaultValue AdminProperties admin) {
 

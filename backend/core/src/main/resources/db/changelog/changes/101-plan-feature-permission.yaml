@@ -1,0 +1,102 @@
+databaseChangeLog:
+  - changeSet:
+      id: 101-plan-feature-permission
+      author: zeromail
+      comment: >-
+        Junction table: per-(plan x feature) permission with optional credit-cost
+        override and daily/monthly invocation limits. Seeded as the Cartesian product
+        of billing_plan x feature_catalog with enabled=true and all override columns
+        NULL (full access for every plan in v1). Operators tune permission later by
+        flipping rows or setting overrides without a redeploy. A synthetic uuid PK is
+        used so the entity slots into the AbstractAuditableEntity hierarchy; the
+        (plan_id, feature_code) pair is enforced unique.
+      changes:
+        - createTable:
+            tableName: plan_feature_permission
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: plan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_plan_feature_permission_plan
+                    references: billing_plan(id)
+                    deleteCascade: true
+              - column:
+                  name: feature_code
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_plan_feature_permission_feature
+                    references: feature_catalog(code)
+                    deleteCascade: true
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: credit_cost_override
+                  type: int
+              - column:
+                  name: daily_invocation_limit
+                  type: int
+              - column:
+                  name: monthly_invocation_limit
+                  type: int
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: plan_feature_permission
+            constraintName: uq_plan_feature_permission_plan_feature
+            columnNames: plan_id, feature_code
+        - sql:
+            sql: ALTER TABLE plan_feature_permission ADD CONSTRAINT ck_plan_feature_permission_credit_cost_override_non_negative CHECK (credit_cost_override IS NULL OR credit_cost_override >= 0)
+        - sql:
+            sql: ALTER TABLE plan_feature_permission ADD CONSTRAINT ck_plan_feature_permission_daily_limit_positive CHECK (daily_invocation_limit IS NULL OR daily_invocation_limit > 0)
+        - sql:
+            sql: ALTER TABLE plan_feature_permission ADD CONSTRAINT ck_plan_feature_permission_monthly_limit_positive CHECK (monthly_invocation_limit IS NULL OR monthly_invocation_limit > 0)
+        - createIndex:
+            tableName: plan_feature_permission
+            indexName: idx_plan_feature_permission_feature
+            columns:
+              - column:
+                  name: feature_code
+        - sql:
+            comment: >-
+              Seed Cartesian product of billing_plan x feature_catalog with enabled=true.
+              Skips rows already present so re-running on a partial DB does not duplicate.
+            sql: >-
+              INSERT INTO plan_feature_permission (id, plan_id, feature_code, enabled, created_at, updated_at, version)
+              SELECT gen_random_uuid(), bp.id, fc.code, true, now(), now(), 0
+                FROM billing_plan bp
+                CROSS JOIN feature_catalog fc
+                ON CONFLICT (plan_id, feature_code) DO NOTHING
+      rollback:
+        - dropTable:
+            tableName: plan_feature_permission
+            cascadeConstraints: true

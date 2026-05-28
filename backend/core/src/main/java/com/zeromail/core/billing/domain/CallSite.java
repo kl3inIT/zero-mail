@@ -5,35 +5,27 @@ import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
 /**
- * Billable call-site cost map. Implements {@link IdentifiedEnum}, not OrderedEnum: there is no
- * progression order, and the integer payload is {@link #cost()} rather than weight.
+ * Billable call-site identifier. Implements {@link IdentifiedEnum}; the integer payload that used
+ * to live on each constant (the per-call credit cost) has been moved to the {@code feature_catalog}
+ * Postgres table where it can be tuned without a redeploy. See {@code
+ * com.zeromail.core.billing.usecases.FeatureCatalogCache} for the runtime lookup.
  *
  * <p><b>Locked membership (D-G3 + Phase 4 D-E1):</b> {@code TRIAGE}, {@code DRAFT}, {@code
  * PREVIEW}, {@code TRIAGE_PLATFORM_LLM}, {@code TRIAGE_DETERMINISTIC}. There is intentionally no
  * BYOK member because BYOK traffic bypasses the ledger entirely. The ledger service contract
  * documents the BYOK skip path.
  *
- * <p><b>Costs:</b> TRIAGE = 1, DRAFT = 2, PREVIEW = 1, TRIAGE_PLATFORM_LLM = 1,
- * TRIAGE_DETERMINISTIC = 0. The v1 triage orchestrator charges TRIAGE_PLATFORM_LLM for semantic
- * matching and TRIAGE_DETERMINISTIC for deterministic-only processing; TRIAGE and DRAFT remain
- * stable public ledger sites for non-orchestrator AI calls.
+ * <p><b>Cost source:</b> {@code feature_catalog.default_credit_cost} keyed by {@link #id()} (which
+ * equals {@link #name()}). A {@code FeatureCatalogConsistencyChecker} startup validator enforces
+ * that every constant here has a row in that table — so {@code
+ * FeatureCatalogCache.defaultCost(...)} is total over this enum.
  */
 public enum CallSite implements IdentifiedEnum {
-    TRIAGE(1),
-    DRAFT(2),
-    PREVIEW(1),
-    TRIAGE_PLATFORM_LLM(1),
-    TRIAGE_DETERMINISTIC(0);
-
-    private final int cost;
-
-    CallSite(int cost) {
-        this.cost = cost;
-    }
-
-    public int cost() {
-        return cost;
-    }
+    TRIAGE,
+    DRAFT,
+    PREVIEW,
+    TRIAGE_PLATFORM_LLM,
+    TRIAGE_DETERMINISTIC;
 
     @Override
     public String id() {

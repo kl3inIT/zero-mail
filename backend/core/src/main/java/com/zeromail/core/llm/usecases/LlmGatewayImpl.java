@@ -676,7 +676,7 @@ class LlmGatewayImpl implements LlmGateway {
                 successfulRoute.model(),
                 "PLATFORM",
                 usage,
-                callSite.cost());
+                creditLedger.defaultCost(callSite));
         return gatewayResult;
     }
 
@@ -821,7 +821,7 @@ class LlmGatewayImpl implements LlmGateway {
                 semanticIntentRouteOutcome.route().model(),
                 "PLATFORM",
                 semanticIntentRouteOutcome.result().usage(),
-                callSite.cost());
+                creditLedger.defaultCost(callSite));
         return semanticIntentRouteOutcome.result().matches();
     }
 
@@ -1219,6 +1219,11 @@ class LlmGatewayImpl implements LlmGateway {
 
         @Override
         public void release(ReservationId reservationId) {}
+
+        @Override
+        public int defaultCost(CallSite callSite) {
+            return 0;
+        }
 
         @Override
         public com.zeromail.core.billing.domain.CreditBalance balance(UUID tenantId) {

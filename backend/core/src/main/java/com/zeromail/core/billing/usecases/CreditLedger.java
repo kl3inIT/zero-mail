@@ -76,13 +76,25 @@ import java.util.UUID;
 public interface CreditLedger {
 
     /**
-     * Atomically reserve {@code callSite.cost()} credits against the tenant's available balance.
+     * Atomically reserve the call-site's default credit cost (resolved from {@code
+     * feature_catalog.default_credit_cost} via {@link #defaultCost(CallSite)}) against the tenant's
+     * available balance.
      *
      * @return a handle for the subsequent {@link #settle(ReservationId)} or {@link
      *     #release(ReservationId)} call.
-     * @throws InsufficientCreditsException if {@code availableCredits < callSite.cost()}.
+     * @throws InsufficientCreditsException if {@code availableCredits < defaultCost(callSite)}.
      */
     ReservationId reserve(UUID tenantId, CallSite callSite);
+
+    /**
+     * Resolve the per-call credit cost for the given call site from {@code feature_catalog}. Cached
+     * at startup; safe on hot paths. Used by usage-recording callers (e.g., {@code
+     * LlmGatewayImpl#recordUsage}) that need to report how many credits were charged.
+     *
+     * <p>BYOK note: BYOK traffic still resolves a cost here, but the caller MUST NOT pass it to
+     * {@link #reserve} — BYOK bypasses the ledger entirely.
+     */
+    int defaultCost(CallSite callSite);
 
     /**
      * Finalize a reservation as consumed. Idempotent on repeat call; throws {@link
