@@ -179,4 +179,16 @@ export const billingMessages = {
     vi: 'Sao chép {label}',
     en: 'Copy {label}',
   },
+  'errors.billing.plan.featureDisabled': {
+    vi: 'Tính năng này chưa khả dụng trong gói hiện tại của bạn.',
+    en: 'This feature is not available on your current plan.',
+  },
+  'errors.billing.plan.notFound': {
+    vi: 'Không tìm thấy gói thanh toán này. Hãy chọn một gói khác.',
+    en: 'This billing plan was not found. Choose another plan.',
+  },
+  'errors.billing.checkout.unavailable': {
+    vi: 'Chưa thể mở trang thanh toán. Hãy thử lại sau.',
+    en: 'Checkout is temporarily unavailable. Try again later.',
+  },
 } as const;

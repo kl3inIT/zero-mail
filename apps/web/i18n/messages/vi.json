@@ -643,9 +643,16 @@
     },
     "badRequest": "Yêu cầu không hợp lệ. Hãy kiểm tra lại và thử lần nữa.",
     "billing": {
+      "checkout": {
+        "unavailable": "Chưa thể mở trang thanh toán. Hãy thử lại sau."
+      },
       "insufficient": "Số dư tín dụng không đủ. Vui lòng thử lại sau.",
       "ledger": {
         "invalidState": "Lỗi nội bộ trong sổ tín dụng — vui lòng thử lại sau."
+      },
+      "plan": {
+        "featureDisabled": "Tính năng này chưa khả dụng trong gói hiện tại của bạn.",
+        "notFound": "Không tìm thấy gói thanh toán này. Hãy chọn một gói khác."
       }
     },
     "boundary": {

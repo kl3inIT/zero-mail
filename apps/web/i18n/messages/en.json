@@ -643,9 +643,16 @@
     },
     "badRequest": "The request is invalid. Check it and try again.",
     "billing": {
+      "checkout": {
+        "unavailable": "Checkout is temporarily unavailable. Try again later."
+      },
       "insufficient": "Insufficient credits. Please try again later.",
       "ledger": {
         "invalidState": "Internal billing-state error — please try again later."
+      },
+      "plan": {
+        "featureDisabled": "This feature is not available on your current plan.",
+        "notFound": "This billing plan was not found. Choose another plan."
       }
     },
     "boundary": {

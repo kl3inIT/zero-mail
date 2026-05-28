@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -79,6 +79,7 @@ export function AnalyticsPageClient() {
   const rawWindow = searchParams.get('window');
   const selectedWindow = normalizeAnalyticsWindow(rawWindow);
   const summaryQuery = useAnalyticsSummary(selectedWindow);
+  const previousSelectedWindowRef = useRef(selectedWindow);
   const [groupBy, setGroupBy] = useState<GroupByMode>('week');
   const [sourceMode, setSourceMode] = useState<SourceMode>('email');
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
@@ -96,8 +97,15 @@ export function AnalyticsPageClient() {
   }, [canonicalHref, rawWindow, router, selectedWindow]);
 
   useEffect(() => {
-    void summaryQuery.refetch();
-  }, [selectedWindow, summaryQuery.refetch]);
+    if (previousSelectedWindowRef.current === selectedWindow) {
+      return;
+    }
+
+    previousSelectedWindowRef.current = selectedWindow;
+    if (rawWindow === selectedWindow) {
+      void summaryQuery.refetch();
+    }
+  }, [rawWindow, selectedWindow, summaryQuery]);
 
   const observed = safeCount(summaryQuery.data.volumeObserved);
   const applied = safeCount(summaryQuery.data.volumeApplied);
