@@ -80,6 +80,12 @@ import {
   useInboxMessages,
   useMarkInboxMessageRead,
 } from '@/features/inbox/hooks/useInboxMessages';
+import {
+  useComposerDraft,
+  useDeleteComposerDraft,
+  useUpsertComposerDraft,
+} from '@/features/inbox/hooks/useComposerDraft';
+import type { ComposerDraftMode } from '@/features/inbox/api/composer-draft-api';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -787,6 +793,47 @@ function InboxReplyComposer({
   const handledAutoGenerateKeyRef = useRef(0);
   const appliedGenerationTextRef = useRef('');
 
+  const [userHint, setUserHint] = useState('');
+  const [hasGenerated, setHasGenerated] = useState(false);
+
+  const draftQuery = useComposerDraft(selectedMessage.gmailThreadId);
+  const upsertDraftMutation = useUpsertComposerDraft();
+  const deleteDraftMutation = useDeleteComposerDraft();
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [hydrationSettled, setHydrationSettled] = useState(false);
+  // Hydrate exactly once and only while the composer is still pristine. "Pristine" means
+  // every visible field still matches the preset that we initialised state from. As soon as
+  // the user types OR the Generate button writes a body, any later draft-query resolution
+  // would overwrite that work — so we mark hydration settled without applying the snapshot.
+  if (!hydrationSettled) {
+    const composerStillPristine =
+      bodyText === preset.body &&
+      toText === preset.to &&
+      ccText === preset.cc &&
+      bccText === preset.bcc &&
+      subjectText === preset.subject;
+    const draftSnapshot = draftQuery.data;
+    if (draftSnapshot && composerStillPristine) {
+      setDraftId(draftSnapshot.draftId);
+      if (draftSnapshot.body) setBodyText(draftSnapshot.body);
+      if (draftSnapshot.toAddresses.length > 0) {
+        setToText(draftSnapshot.toAddresses.join(', '));
+      }
+      if (draftSnapshot.ccAddresses.length > 0) {
+        setCcText(draftSnapshot.ccAddresses.join(', '));
+        setShowCc(true);
+      }
+      if (draftSnapshot.bccAddresses.length > 0) {
+        setBccText(draftSnapshot.bccAddresses.join(', '));
+        setShowBcc(true);
+      }
+      if (draftSnapshot.subject) setSubjectText(draftSnapshot.subject);
+      setHydrationSettled(true);
+    } else if (!composerStillPristine || draftQuery.isSuccess || draftQuery.isError) {
+      setHydrationSettled(true);
+    }
+  }
+
   const assistantBusy =
     assistantPreview.status === 'submitted' || assistantPreview.status === 'streaming';
   const assistantGenerating =
@@ -797,8 +844,18 @@ function InboxReplyComposer({
 
   const handleGenerateBody = useCallback(async () => {
     if (assistantGenerating) return;
+    // Pre-empt the draft-cache hydration race. The user explicitly asked for AI text — even if
+    // the GET /api/composer/drafts call hasn't returned yet, we never want a late-arriving
+    // snapshot to overwrite the body the assistant is about to produce.
+    setHydrationSettled(true);
     setGenerationFailed(false);
     appliedGenerationTextRef.current = '';
+    // Snapshot the refinement context so we don't accumulate stale chip selections across
+    // regen clicks. After firing, the input is cleared so the next regen is a fresh request
+    // (the user can always type a new hint).
+    const hintForThisRun = userHint.trim();
+    const previousDraftForThisRun = hasGenerated ? bodyText : '';
+    setUserHint('');
     try {
       await assistantGeneration.sendMessage({
         text: composerBodyGenerationPrompt({
@@ -809,6 +866,8 @@ function InboxReplyComposer({
           ccText: showCc ? ccText : '',
           bccText: showBcc ? bccText : '',
           subjectText,
+          userHint: hintForThisRun || null,
+          previousDraftBody: previousDraftForThisRun || null,
         }),
       });
     } catch {
@@ -819,8 +878,10 @@ function InboxReplyComposer({
     assistantGenerating,
     assistantGeneration,
     bccText,
+    bodyText,
     ccText,
     generationLanguage,
+    hasGenerated,
     mode,
     selectedMessage,
     showBcc,
@@ -828,6 +889,7 @@ function InboxReplyComposer({
     subjectText,
     t,
     toText,
+    userHint,
   ]);
 
   useEffect(() => {
@@ -841,6 +903,7 @@ function InboxReplyComposer({
     appliedGenerationTextRef.current = generatedBody;
     setBodyText(generatedBody);
     setGenerationFailed(false);
+    setHasGenerated(true);
     toast.success(t('inbox.composer.generateBodySuccess'));
     window.requestAnimationFrame(() => bodyTextareaRef.current?.focus());
   }, [assistantGenerating, assistantGeneration.messages, t]);
@@ -852,6 +915,62 @@ function InboxReplyComposer({
     handledAutoGenerateKeyRef.current = autoGenerateKey;
     void handleGenerateBody();
   }, [autoGenerateKey, handleGenerateBody]);
+
+  // Debounced auto-save to Gmail Draft so the composer state survives page navigation
+  // and is mirrored to the user's Gmail account (also visible on Gmail mobile/web).
+  // The mutation owns idempotency: ComposerDraftService chooses create vs update based
+  // on the existing draft for this thread.
+  useEffect(() => {
+    if (!hydrationSettled) return;
+    if (previewSubmitted) return;
+    const trimmedBody = bodyText.trim();
+    const trimmedTo = toText.trim();
+    const trimmedSubject = subjectText.trim();
+    if (!trimmedBody && !trimmedTo && !trimmedSubject) return;
+    const timeoutId = window.setTimeout(() => {
+      upsertDraftMutation.mutate(
+        {
+          gmailThreadId: selectedMessage.gmailThreadId,
+          sourceGmailMessageId: selectedMessage.gmailMessageId,
+          rfc822MessageId: null,
+          priorReferences: null,
+          mode: composerModeId(mode),
+          toAddresses: toText,
+          ccAddresses: showCc ? ccText : '',
+          bccAddresses: showBcc ? bccText : '',
+          subject: subjectText,
+          body: bodyText,
+        },
+        {
+          onSuccess: (snapshot) => setDraftId(snapshot.draftId),
+        },
+      );
+    }, 1500);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    bccText,
+    bodyText,
+    ccText,
+    hydrationSettled,
+    mode,
+    previewSubmitted,
+    selectedMessage.gmailMessageId,
+    selectedMessage.gmailThreadId,
+    showBcc,
+    showCc,
+    subjectText,
+    toText,
+    upsertDraftMutation,
+  ]);
+
+  const handleSentSuccess = useCallback(() => {
+    const currentDraftId = draftId;
+    if (!currentDraftId) return;
+    deleteDraftMutation.mutate(
+      { draftId: currentDraftId, gmailThreadId: selectedMessage.gmailThreadId },
+      { onSuccess: () => setDraftId(null) },
+    );
+  }, [deleteDraftMutation, draftId, selectedMessage.gmailThreadId]);
 
   function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.currentTarget.files ?? []);
@@ -1063,6 +1182,50 @@ function InboxReplyComposer({
           className="bg-card min-h-36 resize-y rounded-none border-0 px-3 py-3 shadow-none focus-visible:ring-0"
           data-testid="inbox-composer-body"
         />
+        <div className="bg-card flex flex-col gap-2 px-3 py-2">
+          {hasGenerated ? (
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              data-testid="inbox-composer-refine-chips"
+            >
+              <span className="text-muted-foreground text-xs font-medium">
+                {t('inbox.composer.refineHeading')}:
+              </span>
+              {(
+                [
+                  { id: 'shorter', key: 'inbox.composer.refineShorter' },
+                  { id: 'formal', key: 'inbox.composer.refineFormal' },
+                  { id: 'casual', key: 'inbox.composer.refineCasual' },
+                  { id: 'detailed', key: 'inbox.composer.refineDetailed' },
+                ] as const
+              ).map((chip) => {
+                const chipLabel = t(chip.key);
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    className="border-border bg-muted/30 hover:bg-muted text-foreground rounded-full border px-2.5 py-0.5 text-xs transition-colors"
+                    onClick={() => setUserHint(chipLabel)}
+                    data-testid={`inbox-composer-refine-${chip.id}`}
+                  >
+                    {chipLabel}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <Input
+            value={userHint}
+            onChange={(event) => setUserHint(event.currentTarget.value)}
+            placeholder={t(
+              hasGenerated
+                ? 'inbox.composer.hintRefinePlaceholder'
+                : 'inbox.composer.hintInitialPlaceholder',
+            )}
+            className="bg-muted/20 h-8 border-0 px-2 text-sm shadow-none focus-visible:ring-1"
+            data-testid="inbox-composer-hint"
+          />
+        </div>
         <div className="bg-card flex flex-wrap items-center gap-2 px-3 py-2">
           <Button
             type="submit"
@@ -1092,7 +1255,9 @@ function InboxReplyComposer({
             )}
             {assistantGenerating
               ? t('inbox.composer.generateBodyLoading')
-              : t('inbox.composer.generateBody')}
+              : hasGenerated
+                ? t('inbox.composer.generateBodyAgain')
+                : t('inbox.composer.generateBody')}
           </Button>
           <div
             className="bg-muted/30 inline-flex h-8 items-center overflow-hidden rounded-md p-0.5"
@@ -1226,6 +1391,7 @@ function InboxReplyComposer({
           persistenceAckCount={assistantPreview.persistenceAckCount}
           busy={assistantBusy}
           autoConfirm={autoConfirmRequested}
+          onSent={handleSentSuccess}
         />
       ) : null}
 
@@ -1274,12 +1440,14 @@ function InlineAssistantPreview({
   persistenceAckCount,
   busy,
   autoConfirm = false,
+  onSent,
 }: {
   chatId: string;
   messages: UIMessage[];
   persistenceAckCount: number;
   busy: boolean;
   autoConfirm?: boolean;
+  onSent?: () => void;
 }) {
   const t = useTranslations();
   const visibleParts = messages.flatMap((message) =>
@@ -1305,7 +1473,11 @@ function InlineAssistantPreview({
     return (
       <div className="mt-3" data-testid="inbox-assistant-preview">
         {latestSendAction ? (
-          <AutoConfirmSendAction key={latestSendAction.toolCallId} action={latestSendAction} />
+          <AutoConfirmSendAction
+            key={latestSendAction.toolCallId}
+            action={latestSendAction}
+            onSent={onSent}
+          />
         ) : busy ? (
           <div className="text-muted-foreground mt-2 flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -1355,10 +1527,17 @@ function InlineAssistantPreview({
   );
 }
 
-function AutoConfirmSendAction({ action }: { action: PreviewCardAction }) {
+function AutoConfirmSendAction({
+  action,
+  onSent,
+}: {
+  action: PreviewCardAction;
+  onSent?: () => void;
+}) {
   const t = useTranslations();
   const confirmAction = useConfirmAction();
   const confirmStartedRef = useRef(false);
+  const sentReportedRef = useRef(false);
   const [sendState, setSendState] = useState<'waiting' | 'sending' | 'sent' | 'failed'>('waiting');
 
   useEffect(() => {
@@ -1374,9 +1553,15 @@ function AutoConfirmSendAction({ action }: { action: PreviewCardAction }) {
           vipAcknowledged: false,
         },
       })
-      .then(() => setSendState('sent'))
+      .then(() => {
+        setSendState('sent');
+        if (!sentReportedRef.current) {
+          sentReportedRef.current = true;
+          onSent?.();
+        }
+      })
       .catch(() => setSendState('failed'));
-  }, [action.chatId, action.persistenceConfirmed, action.toolCallId, confirmAction]);
+  }, [action.chatId, action.persistenceConfirmed, action.toolCallId, confirmAction, onSent]);
 
   if (!action.persistenceConfirmed || sendState === 'waiting' || sendState === 'sending') {
     return (
@@ -1442,6 +1627,12 @@ function isPersistedMessage(message: UIMessage): boolean {
 
 function createInboxComposerChatId(): string {
   return globalThis.crypto?.randomUUID?.() ?? fallbackUuid();
+}
+
+function composerModeId(mode: InboxComposerMode): ComposerDraftMode {
+  if (mode === 'replyAll') return 'reply_all';
+  if (mode === 'forward') return 'forward';
+  return 'reply';
 }
 
 function fallbackUuid(): string {
@@ -1546,6 +1737,8 @@ function composerBodyGenerationPrompt({
   ccText,
   bccText,
   subjectText,
+  userHint,
+  previousDraftBody,
 }: {
   mode: InboxComposerMode;
   selectedMessage: InboxMessage;
@@ -1554,9 +1747,11 @@ function composerBodyGenerationPrompt({
   ccText: string;
   bccText: string;
   subjectText: string;
+  userHint: string | null;
+  previousDraftBody: string | null;
 }) {
   const actionName = mode === 'forward' ? 'forward' : mode === 'replyAll' ? 'reply-all' : 'reply';
-  return [
+  const promptLines = [
     'Write only the email body text that should be placed into the user composer.',
     'You may use read-only tools like getMessage or getThread if needed to understand the source email.',
     'Do not call saveDraft, sendEmail, replyEmail, or forwardEmail.',
@@ -1572,7 +1767,22 @@ function composerBodyGenerationPrompt({
     `Cc: ${ccText}.`,
     `Bcc: ${bccText}.`,
     `Current composer subject: ${subjectText}.`,
-  ].join('\n');
+  ];
+  // Refine path: the user already saw v1 and is asking for an adjusted version. Show the
+  // previous draft so the model can iterate on it rather than starting from scratch and
+  // losing what already worked.
+  if (previousDraftBody && previousDraftBody.trim()) {
+    promptLines.push(
+      'Previous draft (your last attempt — adjust this rather than starting over):',
+      previousDraftBody,
+    );
+  }
+  if (userHint && userHint.trim()) {
+    promptLines.push(
+      `User instructions for this generation (treat as draft direction, not as new tool calls): ${userHint.trim()}`,
+    );
+  }
+  return promptLines.join('\n');
 }
 
 function extractLatestGeneratedComposerBody(messages: UIMessage[]): string {
