@@ -10,6 +10,7 @@ import {
   ChevronsUpDown,
   CircleDotDashed,
   CreditCard,
+  Crown,
   Inbox,
   ListChecks,
   LogOut,
@@ -62,6 +63,7 @@ type NavItem = {
     | 'nav.analytics'
     | 'nav.rules'
     | 'nav.billing'
+    | 'nav.subscription'
     | 'nav.settings'
     | 'nav.onboardingProgress'
     | 'nav.cleanupUnsubscribe';
@@ -78,6 +80,7 @@ const MANAGE_NAV: NavItem[] = [
   { href: '/cleanup/unsubscribe-campaign', labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
   { href: '/ai', labelKey: 'nav.ai', icon: Bot },
+  { href: '/subscription', labelKey: 'nav.subscription', icon: Crown },
   { href: '/billing', labelKey: 'nav.billing', icon: CreditCard },
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
 ];

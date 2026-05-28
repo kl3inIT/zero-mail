@@ -101,7 +101,7 @@ class CreditReserveWatchdogTest extends PostgresContainerTest {
                                             UUID.randomUUID(),
                                             tenantId,
                                             10,
-                                            "SEPAY-WATCHDOG-" + tenantId));
+                                            "TEST-WATCHDOG-" + tenantId));
                             creditReservationRepository.saveAndFlush(
                                     new CreditReservationEntity(
                                             reservationId,

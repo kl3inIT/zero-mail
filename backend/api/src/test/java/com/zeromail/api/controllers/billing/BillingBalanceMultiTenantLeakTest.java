@@ -81,7 +81,7 @@ class BillingBalanceMultiTenantLeakTest extends ApiPostgresTestBase {
                                             UUID.randomUUID(),
                                             tenantId,
                                             credits,
-                                            "SEPAY-LEAK-" + tenantId));
+                                            "TEST-LEAK-" + tenantId));
                         });
         testSessionMinter.mint(googleSubject, email);
         return new Seed(tenantId, googleSubject, email, credits);

@@ -242,3 +242,6 @@ databaseChangeLog:
   - include:
       file: changes/098-chat-message-composite-fk.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/094-drop-sepay-topup.yaml
+      relativeToChangelogFile: true

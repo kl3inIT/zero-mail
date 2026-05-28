@@ -337,7 +337,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                                                 UUID.randomUUID(),
                                                 tenantId,
                                                 startingCredits,
-                                                "SEPAY-BYOK-TEST-" + tenantId)));
+                                                "TEST-BYOK-TEST-" + tenantId)));
     }
 
     private static String providerModel(BYOKProvider provider) {

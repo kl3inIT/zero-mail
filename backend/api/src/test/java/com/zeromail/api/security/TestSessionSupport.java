@@ -138,15 +138,13 @@ public class TestSessionSupport {
     @Bean
     @Order(3)
     SecurityFilterChain testSecurityChain(HttpSecurity http, OncePerRequestFilter testAuthFilter) {
-        // Must not overlap with PubSubSecurityConfig @Order(1) (/internal/pubsub/**) or
-        // BillingWebhookSecurityConfig @Order(2) (/api/billing/sepay/**) — Spring Security 7's
-        // WebSecurityFilterChainValidator throws UnreachableFilterChainException when an earlier
-        // chain's matcher is fully shadowed by a later one with the same order.
+        // Must not overlap with PubSubSecurityConfig @Order(1) (/internal/pubsub/**) — Spring
+        // Security 7's WebSecurityFilterChainValidator throws UnreachableFilterChainException when
+        // an earlier chain's matcher is fully shadowed by a later one with the same order.
         RequestMatcher userChainMatcher =
                 request -> {
                     String path = request.getServletPath();
-                    return !path.startsWith("/internal/pubsub/")
-                            && !path.startsWith("/api/billing/sepay/");
+                    return !path.startsWith("/internal/pubsub/");
                 };
         return http.securityMatcher(userChainMatcher)
                 .csrf(AbstractHttpConfigurer::disable)

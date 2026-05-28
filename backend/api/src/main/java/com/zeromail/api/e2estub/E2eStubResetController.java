@@ -1,9 +1,7 @@
 package com.zeromail.api.e2estub;
 
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
-import com.zeromail.core.billing.persistence.BillingPackageEntity;
-import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
-import com.zeromail.core.billing.usecases.BillingTopupService;
+import com.zeromail.core.billing.usecases.CreditGrantService;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
@@ -14,7 +12,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -45,12 +42,11 @@ public class E2eStubResetController {
     private static final int DELIVERY_PROCESSING_BATCH_SIZE = 50;
     private static final int DELIVERY_PROCESSING_LOCK_SECONDS = 120;
     private static final long E2E_STUB_INITIAL_HISTORY_ID = 1L;
-    private static final AtomicLong SEPAY_TRANSACTION_COUNTER = new AtomicLong();
 
     private final E2eStubGmailApiClientFactory e2eStubGmailFactory;
     private final OAuthProvisioningService oauthProvisioningService;
     private final GmailConnectionService gmailConnectionService;
-    private final BillingTopupService billingTopupService;
+    private final CreditGrantService creditGrantService;
     private final CreditLedger creditLedger;
     private final PubSubDeliveryRepository pubSubDeliveryRepository;
     private final GmailDeliveryProcessingService gmailDeliveryProcessingService;
@@ -59,14 +55,14 @@ public class E2eStubResetController {
             E2eStubGmailApiClientFactory e2eStubGmailFactory,
             OAuthProvisioningService oauthProvisioningService,
             GmailConnectionService gmailConnectionService,
-            BillingTopupService billingTopupService,
+            CreditGrantService creditGrantService,
             CreditLedger creditLedger,
             PubSubDeliveryRepository pubSubDeliveryRepository,
             GmailDeliveryProcessingService gmailDeliveryProcessingService) {
         this.e2eStubGmailFactory = e2eStubGmailFactory;
         this.oauthProvisioningService = oauthProvisioningService;
         this.gmailConnectionService = gmailConnectionService;
-        this.billingTopupService = billingTopupService;
+        this.creditGrantService = creditGrantService;
         this.creditLedger = creditLedger;
         this.pubSubDeliveryRepository = pubSubDeliveryRepository;
         this.gmailDeliveryProcessingService = gmailDeliveryProcessingService;
@@ -143,40 +139,13 @@ public class E2eStubResetController {
         if (creditLedger.balance(tenantId).availableCredits() >= MINIMUM_LAUNCH_SMOKE_CREDITS) {
             return;
         }
-
-        List<BillingPackageEntity> activePackages = billingTopupService.listActivePackages();
-        if (activePackages.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "No active billing package available");
-        }
-
-        BillingPackageEntity billingPackage = activePackages.getFirst();
-        BillingTopupIntentEntity topupIntent =
-                billingTopupService.createIntent(tenantId, billingPackage.getCode());
-        billingTopupService.applyWebhook(
-                nextSepayTransactionId(),
-                topupIntent.getCode(),
-                topupIntent.getCode(),
-                billingPackage.getCode(),
-                topupIntent.getCode() + " " + billingPackage.getCode(),
-                "in",
-                topupIntent.getAmountVnd());
-
+        creditGrantService.grantCurrentBetaCredits(tenantId);
         int availableCredits = creditLedger.balance(tenantId).availableCredits();
         if (availableCredits < MINIMUM_LAUNCH_SMOKE_CREDITS) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, "E2E stub credit seed failed");
         }
-        log.info(
-                "event=e2e_stub_seed_credits tenantId={} packageCode={} credits={}",
-                tenantId,
-                billingPackage.getCode(),
-                availableCredits);
-    }
-
-    private static long nextSepayTransactionId() {
-        long sequenceOffset = SEPAY_TRANSACTION_COUNTER.incrementAndGet() % 1_000L;
-        return (System.currentTimeMillis() * 1_000L) + sequenceOffset;
+        log.info("event=e2e_stub_seed_credits tenantId={} credits={}", tenantId, availableCredits);
     }
 
     public record SeedSessionResponse(

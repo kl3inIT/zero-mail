@@ -110,7 +110,7 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                                                 UUID.randomUUID(),
                                                 tenantId,
                                                 credits,
-                                                "SEPAY-BALANCE-" + tenantId)));
+                                                "TEST-BALANCE-" + tenantId)));
     }
 
     private record Seed(UUID tenantId, String googleSubject, String email) {}

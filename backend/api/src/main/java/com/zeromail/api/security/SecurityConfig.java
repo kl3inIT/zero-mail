@@ -130,8 +130,7 @@ public class SecurityConfig {
                     return !path.startsWith("/internal/pubsub/")
                             && !path.startsWith("/api/admin/")
                             && !path.startsWith("/webauthn/")
-                            && !path.startsWith("/login/webauthn/")
-                            && !path.startsWith("/api/billing/sepay/");
+                            && !path.startsWith("/login/webauthn/");
                 };
         http.securityMatcher(userChainMatcher)
                 .cors(Customizer.withDefaults())

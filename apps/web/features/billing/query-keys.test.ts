@@ -4,8 +4,8 @@ import { billingKeys } from './query-keys';
 
 describe('billingKeys', () => {
   it('builds stable query keys for billing resources', () => {
-    expect(billingKeys.packages()).toEqual(['billing', 'packages']);
+    expect(billingKeys.all).toEqual(['billing']);
+    expect(billingKeys.balance()).toEqual(['billing', 'balance']);
     expect(billingKeys.ledger()).toEqual(['billing', 'ledger']);
-    expect(billingKeys.topupIntent('ZM-123')).toEqual(['billing', 'topup-intent', 'ZM-123']);
   });
 });

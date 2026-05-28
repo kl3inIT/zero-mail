@@ -54,18 +54,6 @@ zero-mail:
         topic-name: projects/test-project/topics/zero-mail-gmail-test
   crypto:
     refresh-token-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-  billing:
-    sepay:
-      webhook-api-key: test-sepay-key-fixture
-    payment-account:
-      bank-code: VCB
-      bank-name: Vietcombank
-      account-number: "0123456789"
-      account-name: Zero Mail Test
-      qr-payload: ""
-    vnd-per-credit: 1000
-    max-pending-intents-per-tenant: 5
-    intent-expiry: PT24H
   llm:
     platform:
       api-key: test-platform-llm-key

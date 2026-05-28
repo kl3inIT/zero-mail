@@ -72,19 +72,6 @@ public abstract class ApiPostgresTestBase {
         dynamicPropertyRegistry.add(
                 "zero-mail.api.gmail.pubsub.sa-principal-email",
                 () -> "pubsub-sa@test-project.iam.gserviceaccount.com");
-        dynamicPropertyRegistry.add(
-                "zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
-        dynamicPropertyRegistry.add("zero-mail.billing.payment-account.bank-code", () -> "VCB");
-        dynamicPropertyRegistry.add(
-                "zero-mail.billing.payment-account.bank-name", () -> "Vietcombank");
-        dynamicPropertyRegistry.add(
-                "zero-mail.billing.payment-account.account-number", () -> "0123456789");
-        dynamicPropertyRegistry.add(
-                "zero-mail.billing.payment-account.account-name", () -> "Zero Mail Test");
-        dynamicPropertyRegistry.add("zero-mail.billing.payment-account.qr-payload", () -> "");
-        dynamicPropertyRegistry.add("zero-mail.billing.vnd-per-credit", () -> "1000");
-        dynamicPropertyRegistry.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
-        dynamicPropertyRegistry.add("zero-mail.billing.intent-expiry", () -> "PT24H");
         // Spring AI starters are present transitively in API test contexts after Phase 02C wiring.
         // The
         // gateway itself is not exercised here, but model auto-configuration still requires keys.

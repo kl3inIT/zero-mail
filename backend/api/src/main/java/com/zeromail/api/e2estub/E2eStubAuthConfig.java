@@ -92,13 +92,12 @@ public class E2eStubAuthConfig {
     @Order(3)
     public SecurityFilterChain e2eStubSecurityChain(
             HttpSecurity http, OncePerRequestFilter e2eStubAuthFilter) throws Exception {
-        // Must not overlap with PubSubSecurityConfig @Order(1) or BillingWebhookSecurityConfig
-        // @Order(2) — see TestSessionSupport.testSecurityChain for the same rationale.
+        // Must not overlap with PubSubSecurityConfig @Order(1) — see
+        // TestSessionSupport.testSecurityChain for the same rationale.
         RequestMatcher e2eStubChainMatcher =
                 request -> {
                     String path = request.getServletPath();
-                    return !path.startsWith("/internal/pubsub/")
-                            && !path.startsWith("/api/billing/sepay/");
+                    return !path.startsWith("/internal/pubsub/");
                 };
         return http.securityMatcher(e2eStubChainMatcher)
                 .csrf(AbstractHttpConfigurer::disable)

@@ -5,17 +5,11 @@ import type { components } from '@/lib/api/schema';
  * Billing API surface:
  * - GET /api/billing/balance returns beta-aware credit summary metadata.
  * - GET /api/billing/ledger returns recent credit activity.
- * - POST /api/billing/topup/intent creates a SePay top-up intent.
- * - GAP: no top-up intent-status endpoint or intentId as of 05A — see 05A-RESEARCH.md A6.
- * - GAP: TopupIntentResponse carries no separate bank account/name fields; qrPayload is authoritative.
  */
 
 export type BillingBalanceResponse = components['schemas']['BillingBalanceResponse'];
 export type BillingLedgerEntryResponse = components['schemas']['BillingLedgerEntryResponse'];
 export type BillingLedgerHistoryResponse = components['schemas']['BillingLedgerHistoryResponse'];
-export type BillingPackageResponse = components['schemas']['BillingPackageResponse'];
-export type TopupIntentRequest = components['schemas']['TopupIntentRequest'];
-export type TopupIntentResponse = components['schemas']['TopupIntentResponse'];
 
 export type LedgerHistoryPage = Omit<BillingLedgerHistoryResponse, 'nextCursor'> & {
   nextCursor: string | null;
@@ -49,19 +43,6 @@ export async function getBillingBalance({
     signal,
   });
   return unwrap(result, `/api/billing/balance failed: ${result.response.status}`);
-}
-
-export async function listBillingPackages(): Promise<BillingPackageResponse[]> {
-  const result = await api.GET('/api/billing/packages', {});
-  return unwrap(result, `/api/billing/packages failed: ${result.response.status}`);
-}
-
-export async function createTopupIntent(packageCode: string): Promise<TopupIntentResponse> {
-  const body: TopupIntentRequest = { packageCode };
-  const result = await api.POST('/api/billing/topup/intent', {
-    body,
-  });
-  return unwrap(result, `/api/billing/topup/intent failed: ${result.response.status}`);
 }
 
 export async function getLedgerHistory(limit = 50): Promise<LedgerHistoryPage> {
