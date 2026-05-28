@@ -86,4 +86,11 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
     public String getAiOutputLanguage() {
         return aiOutputLanguage;
     }
+
+    public void applyProfile(
+            String personalInstructions, String writingStyle, String aiOutputLanguage) {
+        this.personalInstructions = personalInstructions;
+        this.writingStyle = writingStyle;
+        this.aiOutputLanguage = aiOutputLanguage;
+    }
 }

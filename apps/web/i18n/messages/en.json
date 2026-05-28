@@ -23,6 +23,31 @@
       "inputLabel": "Sender email to protect",
       "inputPlaceholder": "boss@company.com",
       "invalidEmail": "Invalid email address."
+    },
+    "writingProfile": {
+      "charCount": "{current} / {max}",
+      "description": "Applied to both the chat assistant and the Generate button in the inbox composer. Leave blank to skip.",
+      "language": {
+        "auto": "Infer from email",
+        "en": "English",
+        "label": "Preferred AI language",
+        "vi": "Vietnamese"
+      },
+      "personalInstructions": {
+        "help": "Context the AI should know about you — name, role, current projects, preferred sign-off.",
+        "label": "Personal instructions",
+        "placeholder": "Example: My name is Alex, founder of Zero Mail. Always sign off \"Best, Alex\". I am hiring interns in Q1 2026."
+      },
+      "save": "Save profile",
+      "saved": "AI writing profile saved.",
+      "saveFailed": "Save failed. Try again.",
+      "saving": "Saving…",
+      "title": "AI writing profile",
+      "writingStyle": {
+        "help": "How you want the AI to write — length, tone, language, other preferences.",
+        "label": "Writing style",
+        "placeholder": "Example: Default to short replies (≤3 sentences). English only when the recipient prefers it. No emoji."
+      }
     }
   },
   "analytics": {
@@ -259,9 +284,9 @@
         "timestamp": "Time",
         "type": "Type"
       },
-      "description": "Recent grants, top-ups, holds, spends, and releases.",
+      "description": "Recent grants, holds, spends, and releases.",
       "empty": {
-        "body": "Your top-ups and credit usage will show up here. Add credits to get started.",
+        "body": "Your credit activity will show up here once you use Zero Mail AI actions.",
         "heading": "No transactions yet"
       },
       "error": {
@@ -277,7 +302,7 @@
         "release": "Release",
         "reserve": "Reserve",
         "settle": "Settle",
-        "topup": "Top-up"
+        "topup": "Credit"
       },
       "unavailable": {
         "body": "Zero Mail can show your credit balance now. Detailed transaction history will arrive in a later update.",
@@ -286,7 +311,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Track free beta credits and recent usage activity.",
+      "description": "Track free beta credits, paid credits, and recent usage activity.",
       "title": "Billing"
     }
   },
@@ -923,6 +948,7 @@
       "copyUnavailable": "Couldn't copy body.",
       "discard": "Discard composer",
       "generateBody": "Write with AI",
+      "generateBodyAgain": "Regenerate",
       "generateBodyError": "Couldn't write AI text. Try again in a moment.",
       "generateBodyLoading": "Writing...",
       "generateBodySuccess": "AI text was added to the composer.",
@@ -934,6 +960,8 @@
       "generateLanguageLabel": "AI writing language",
       "generateLanguageVi": "Vietnamese",
       "generateSuccess": "AI text generated.",
+      "hintInitialPlaceholder": "AI instructions (optional) — e.g. \"Decline politely and suggest a reschedule\"",
+      "hintRefinePlaceholder": "Adjust how? — e.g. \"Add a thank-you line at the end\"",
       "italic": "Italic",
       "link": "Insert link",
       "list": "List",
@@ -942,6 +970,11 @@
       "previewAttachment": "Preview",
       "previewError": "Couldn't prepare the email for sending.",
       "previewLoading": "Preparing to send...",
+      "refineCasual": "More casual",
+      "refineDetailed": "More detailed",
+      "refineFormal": "More formal",
+      "refineHeading": "Refine",
+      "refineShorter": "Shorter",
       "removeAttachment": "Remove {name}",
       "saveTemplate": "Templates",
       "sendFailed": "Couldn't send the email. Try again.",

@@ -43,4 +43,72 @@ export const aiMessages = {
     vi: 'Email không hợp lệ.',
     en: 'Invalid email address.',
   },
+  'ai.writingProfile.title': {
+    vi: 'Phong cách AI viết',
+    en: 'AI writing profile',
+  },
+  'ai.writingProfile.description': {
+    vi: 'Hồ sơ này được áp dụng cho trợ lý chat lẫn nút Tạo bằng AI trong hộp thư. Bỏ trống nếu chưa muốn dùng.',
+    en: 'Applied to both the chat assistant and the Generate button in the inbox composer. Leave blank to skip.',
+  },
+  'ai.writingProfile.personalInstructions.label': {
+    vi: 'Hướng dẫn cá nhân',
+    en: 'Personal instructions',
+  },
+  'ai.writingProfile.personalInstructions.placeholder': {
+    vi: 'Ví dụ: Tôi tên Nguyễn Văn A, Founder Zero Mail. Luôn ký "Trân trọng, A". Tôi đang tuyển intern Q1 2026.',
+    en: 'Example: My name is Alex, founder of Zero Mail. Always sign off "Best, Alex". I am hiring interns in Q1 2026.',
+  },
+  'ai.writingProfile.personalInstructions.help': {
+    vi: 'Bối cảnh AI cần biết về bạn — tên, vai trò, dự án hiện tại, chữ ký mong muốn.',
+    en: 'Context the AI should know about you — name, role, current projects, preferred sign-off.',
+  },
+  'ai.writingProfile.writingStyle.label': {
+    vi: 'Phong cách viết',
+    en: 'Writing style',
+  },
+  'ai.writingProfile.writingStyle.placeholder': {
+    vi: 'Ví dụ: Mặc định ngắn (≤3 câu). Tiếng Việt trừ khi người nhận chỉ biết English. Không dùng emoji.',
+    en: 'Example: Default to short replies (≤3 sentences). English only when the recipient prefers it. No emoji.',
+  },
+  'ai.writingProfile.writingStyle.help': {
+    vi: 'Cách bạn muốn AI viết — độ dài, giọng văn, ngôn ngữ, sở thích khác.',
+    en: 'How you want the AI to write — length, tone, language, other preferences.',
+  },
+  'ai.writingProfile.language.label': {
+    vi: 'Ngôn ngữ AI ưu tiên',
+    en: 'Preferred AI language',
+  },
+  'ai.writingProfile.language.auto': {
+    vi: 'Tự suy luận theo email',
+    en: 'Infer from email',
+  },
+  'ai.writingProfile.language.vi': {
+    vi: 'Tiếng Việt',
+    en: 'Vietnamese',
+  },
+  'ai.writingProfile.language.en': {
+    vi: 'English',
+    en: 'English',
+  },
+  'ai.writingProfile.save': {
+    vi: 'Lưu phong cách',
+    en: 'Save profile',
+  },
+  'ai.writingProfile.saving': {
+    vi: 'Đang lưu…',
+    en: 'Saving…',
+  },
+  'ai.writingProfile.saved': {
+    vi: 'Đã lưu phong cách AI.',
+    en: 'AI writing profile saved.',
+  },
+  'ai.writingProfile.saveFailed': {
+    vi: 'Lưu chưa được. Hãy thử lại.',
+    en: 'Save failed. Try again.',
+  },
+  'ai.writingProfile.charCount': {
+    vi: '{current} / {max}',
+    en: '{current} / {max}',
+  },
 } as const;

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { AssistantWritingProfileCard } from '@/features/ai/components/AssistantWritingProfileCard';
 import {
   useRuleAutomationSettings,
   useUpdateRuleAutomationSettings,
@@ -53,6 +54,8 @@ export function AiConfigPage() {
 
   return (
     <div className="space-y-6">
+      <AssistantWritingProfileCard />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

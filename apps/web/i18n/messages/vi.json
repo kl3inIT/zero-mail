@@ -23,6 +23,31 @@
       "inputLabel": "Email người gửi cần bảo vệ",
       "inputPlaceholder": "sep@congty.com",
       "invalidEmail": "Email không hợp lệ."
+    },
+    "writingProfile": {
+      "charCount": "{current} / {max}",
+      "description": "Hồ sơ này được áp dụng cho trợ lý chat lẫn nút Tạo bằng AI trong hộp thư. Bỏ trống nếu chưa muốn dùng.",
+      "language": {
+        "auto": "Tự suy luận theo email",
+        "en": "English",
+        "label": "Ngôn ngữ AI ưu tiên",
+        "vi": "Tiếng Việt"
+      },
+      "personalInstructions": {
+        "help": "Bối cảnh AI cần biết về bạn — tên, vai trò, dự án hiện tại, chữ ký mong muốn.",
+        "label": "Hướng dẫn cá nhân",
+        "placeholder": "Ví dụ: Tôi tên Nguyễn Văn A, Founder Zero Mail. Luôn ký \"Trân trọng, A\". Tôi đang tuyển intern Q1 2026."
+      },
+      "save": "Lưu phong cách",
+      "saved": "Đã lưu phong cách AI.",
+      "saveFailed": "Lưu chưa được. Hãy thử lại.",
+      "saving": "Đang lưu…",
+      "title": "Phong cách AI viết",
+      "writingStyle": {
+        "help": "Cách bạn muốn AI viết — độ dài, giọng văn, ngôn ngữ, sở thích khác.",
+        "label": "Phong cách viết",
+        "placeholder": "Ví dụ: Mặc định ngắn (≤3 câu). Tiếng Việt trừ khi người nhận chỉ biết English. Không dùng emoji."
+      }
     }
   },
   "analytics": {
@@ -238,7 +263,7 @@
       "label": "Tín dụng hiện có",
       "monthlyGrant": "{credits} tín dụng / tháng",
       "noExpiry": "Không reset theo kỳ beta",
-      "paidCredits": "Tín dụng đã nạp",
+      "paidCredits": "Tín dụng trả phí",
       "refreshLabel": "Tự cập nhật",
       "refreshValue": "Mỗi 45 giây",
       "resetsAt": "Reset lúc",
@@ -259,9 +284,9 @@
         "timestamp": "Thời gian",
         "type": "Loại"
       },
-      "description": "Các lượt cấp, nạp, giữ, trừ và hoàn tín dụng gần đây.",
+      "description": "Các lượt cấp, giữ, trừ và hoàn tín dụng gần đây.",
       "empty": {
-        "body": "Các lượt nạp và sử dụng tín dụng sẽ xuất hiện ở đây. Hãy nạp tín dụng để bắt đầu.",
+        "body": "Khi bạn dùng các tác vụ AI của Zero Mail, lịch sử tín dụng sẽ xuất hiện ở đây.",
         "heading": "Chưa có giao dịch"
       },
       "error": {
@@ -277,7 +302,7 @@
         "release": "Hoàn giữ",
         "reserve": "Giữ",
         "settle": "Trừ",
-        "topup": "Nạp"
+        "topup": "Cộng"
       },
       "unavailable": {
         "body": "Zero Mail đã có số dư tín dụng, nhưng danh sách giao dịch chi tiết sẽ được bật trong một bản cập nhật sau.",
@@ -286,7 +311,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Theo dõi tín dụng beta miễn phí và lịch sử sử dụng gần đây.",
+      "description": "Theo dõi tín dụng beta miễn phí, tín dụng đã nạp và lịch sử sử dụng gần đây.",
       "title": "Thanh toán"
     }
   },
@@ -923,6 +948,7 @@
       "copyUnavailable": "Không sao chép được nội dung.",
       "discard": "Bỏ soạn thảo",
       "generateBody": "Viết bằng AI",
+      "generateBodyAgain": "Tạo lại",
       "generateBodyError": "Không viết được nội dung AI. Thử lại sau.",
       "generateBodyLoading": "Đang viết...",
       "generateBodySuccess": "Đã đưa nội dung AI vào ô soạn.",
@@ -934,6 +960,8 @@
       "generateLanguageLabel": "Ngôn ngữ viết AI",
       "generateLanguageVi": "Tiếng Việt",
       "generateSuccess": "Đã tạo nội dung AI.",
+      "hintInitialPlaceholder": "Hướng dẫn riêng cho AI (tuỳ chọn) — ví dụ: \"Từ chối lịch sự nhưng vẫn đề nghị reschedule\"",
+      "hintRefinePlaceholder": "Sửa theo hướng nào? — ví dụ: \"Thêm 1 câu cảm ơn ở cuối\"",
       "italic": "In nghiêng",
       "link": "Chèn liên kết",
       "list": "Danh sách",
@@ -942,6 +970,11 @@
       "previewAttachment": "Xem",
       "previewError": "Không chuẩn bị được email để gửi.",
       "previewLoading": "Đang chuẩn bị gửi...",
+      "refineCasual": "Thân mật hơn",
+      "refineDetailed": "Chi tiết hơn",
+      "refineFormal": "Trang trọng hơn",
+      "refineHeading": "Tinh chỉnh",
+      "refineShorter": "Ngắn hơn",
       "removeAttachment": "Bỏ {name}",
       "saveTemplate": "Mẫu trả lời",
       "sendFailed": "Không gửi được email. Hãy thử lại.",
