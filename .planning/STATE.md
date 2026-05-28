@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.2
-milestone_name: Admin Console Foundation + Settings UI
+milestone_name: — Admin Console + User Settings UI
 status: "Phase 08.1 shipped — PR #60"
-stopped_at: Phase 9 plans created — ready to execute
-last_updated: "2026-05-26T12:17:52.555Z"
-last_activity: "2026-05-25 - Completed quick task 260525-krs: per-tool UI components for 15 chat tools (port inbox-zero pattern, replace JSON dump)"
+stopped_at: Phase 10 context gathered
+last_updated: "2026-05-28T08:34:55.016Z"
+last_activity: "2026-05-26 - Completed quick task 260526-so3: tightened app shell gutter between sidebar and content"
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 28
-  completed_plans: 20
-  percent: 50
+  completed_phases: 1
+  total_plans: 22
+  completed_plans: 14
+  percent: 25
 ---
 
 # Project State
@@ -372,6 +372,7 @@ Recent decisions affecting current work:
 - Phase 01.5 inserted after Phase 1.4: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (URGENT)
 - Phase 01.6 inserted after Phase 1: Brand Identity, Design Tokens, and Landing Page (URGENT)
 - Phase 08.1 inserted after Phase 8: Inbox Zero-style rule actions and admin-managed examples catalog (URGENT)
+- Phase 10 added (2026-05-28): Telegram Messaging Assistant — promotes SEED-007 from dormant umbrella to draft SPEC; introduces `core.messaging.telegram` Modulith module, single global bot, signed stateless link code, DM-only enforcement, cross-actor permission check on callbacks, deterministic 16-char action token, reuse of existing `OutboundSendExecutor` + chat assistant pipeline with `responseSurface=TELEGRAM`; extends ARCH-02 body-content ban to Telegram payloads via new `TelegramPathBodyBanTest`; draft SPEC lives in `.planning/seeds/SEED-007-messaging-assistant-slack-telegram-zalo.md` ready for /gsd-spec-phase. Slack/Teams out of scope; Zalo OA deferred to follow-on phase pending business registration.
 
 ### Pending Todos
 
@@ -523,9 +524,9 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-26T12:17:52.524Z
-Stopped at: Phase 9 plans created — ready to execute
-Resume file: .planning/phases/09-user-settings-ui-on-curated-catalog/09-01-PLAN.md
+Last session: 2026-05-28T08:34:55.005Z
+Stopped at: Phase 10 context gathered
+Resume file: .planning/phases/10-telegram-messaging-assistant/10-CONTEXT.md
 
 ## Operator Next Steps
 
