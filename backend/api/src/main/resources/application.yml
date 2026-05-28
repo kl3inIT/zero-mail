@@ -129,6 +129,15 @@ zero-mail:
       enabled: ${ZEROMAIL_BILLING_BETA_ENABLED:true}
       monthly-credits: ${ZEROMAIL_BILLING_BETA_MONTHLY_CREDITS:300}
       daily-hard-cap: ${ZEROMAIL_BILLING_BETA_DAILY_HARD_CAP:100}
+    lemon-squeezy:
+      # Optional in dev/test (record is fully-nullable). Required in prod for
+      # Required by checkout creation and the webhook controller to verify HMAC.
+      # apiKey + webhookSigningSecret are secrets — supply via
+      # Docker secret / systemd credential / .env.local, never commit.
+      store-id: ${LEMON_SQUEEZY_STORE_ID:}
+      store-slug: ${LEMON_SQUEEZY_STORE_SLUG:}
+      api-key: ${LEMON_SQUEEZY_API_KEY:}
+      webhook-signing-secret: ${LEMON_SQUEEZY_WEBHOOK_SECRET:}
   llm:
     platform:
       provider: openai

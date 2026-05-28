@@ -63,11 +63,13 @@ public record ZeroMailCoreProperties(
 
     public record BillingProperties(
             @Valid @NotNull BillingCostProperties cost,
-            @Valid @DefaultValue BillingBetaProperties beta) {
+            @Valid @DefaultValue BillingBetaProperties beta,
+            @Valid @DefaultValue LemonSqueezyProperties lemonSqueezy) {
 
         public BillingProperties {
             cost = cost == null ? BillingCostProperties.defaults() : cost;
             beta = beta == null ? BillingBetaProperties.defaults() : beta;
+            lemonSqueezy = lemonSqueezy == null ? LemonSqueezyProperties.defaults() : lemonSqueezy;
         }
 
         public record BillingBetaProperties(
@@ -87,9 +89,41 @@ public record ZeroMailCoreProperties(
             }
         }
 
+        /**
+         * Lemon Squeezy integration config. All fields nullable so the app boots in test/dev
+         * contexts without LS credentials; {@link #isConfigured()} reports readiness and services
+         * that require LS throw a clear error when called against an unconfigured instance.
+         */
+        public record LemonSqueezyProperties(
+                Long storeId, String storeSlug, String apiKey, String webhookSigningSecret) {
+
+            public LemonSqueezyProperties {
+                storeSlug = (storeSlug == null || storeSlug.isBlank()) ? null : storeSlug;
+                apiKey = (apiKey == null || apiKey.isBlank()) ? null : apiKey;
+                webhookSigningSecret =
+                        (webhookSigningSecret == null || webhookSigningSecret.isBlank())
+                                ? null
+                                : webhookSigningSecret;
+            }
+
+            static LemonSqueezyProperties defaults() {
+                return new LemonSqueezyProperties(null, null, null, null);
+            }
+
+            public boolean isConfigured() {
+                return storeId != null && storeSlug != null;
+            }
+        }
+
         @Override
         public @NonNull String toString() {
-            return "BillingProperties[cost=" + cost + ", beta=" + beta + "]";
+            return "BillingProperties[cost="
+                    + cost
+                    + ", beta="
+                    + beta
+                    + ", lemonSqueezy="
+                    + (lemonSqueezy.isConfigured() ? "configured" : "not_configured")
+                    + "]";
         }
     }
 

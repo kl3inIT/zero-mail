@@ -67,7 +67,7 @@ class RestClientConfigTest {
         return new ZeroMailCoreProperties(
                 new CryptoProperties("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
                 null,
-                new BillingProperties(new BillingCostProperties(0), null),
+                new BillingProperties(new BillingCostProperties(0), null, null),
                 new LlmProperties(
                         new ZeroMailLlmProperties(
                                 null,

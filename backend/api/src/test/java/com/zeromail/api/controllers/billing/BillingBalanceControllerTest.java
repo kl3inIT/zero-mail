@@ -3,11 +3,14 @@ package com.zeromail.api.controllers.billing;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.api.dto.billing.BillingBalanceResponse;
+import com.zeromail.api.dto.billing.BillingCheckoutResponse;
 import com.zeromail.api.dto.billing.BillingLedgerHistoryResponse;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.billing.persistence.BillingPlanEntity;
+import com.zeromail.core.billing.persistence.BillingPlanRepository;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.tenant.TenantContext;
@@ -18,16 +21,25 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
 
 @ActiveProfiles("test")
+@TestPropertySource(
+        properties = {
+            "zero-mail.billing.lemon-squeezy.store-id=123",
+            "zero-mail.billing.lemon-squeezy.store-slug=zeromail-test"
+        })
 @Import(TestSessionSupport.class)
 class BillingBalanceControllerTest extends ApiPostgresTestBase {
 
     @LocalServerPort int port;
     @Autowired TenantRepository tenantRepository;
     @Autowired UserRepository userRepository;
+    @Autowired BillingPlanRepository billingPlanRepository;
     @Autowired CreditLedgerEntryRepository creditLedgerEntryRepository;
     @Autowired TestSessionSupport.TestSessionMinter testSessionMinter;
 
@@ -81,6 +93,47 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                             assertThat(ledgerEntry.type()).isEqualTo("topup");
                             assertThat(ledgerEntry.amountCredits()).isEqualTo(42);
                         });
+    }
+
+    @Test
+    void authenticated_plans_do_not_include_checkout_url() {
+        Seed seed = seedUser("billing-plans");
+
+        ResponseEntity<String> response =
+                RestClient.create("http://localhost:" + port)
+                        .get()
+                        .uri("/api/billing/plans")
+                        .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, seed.email())
+                        .retrieve()
+                        .onStatus(HttpStatusCode::isError, (_, _) -> {})
+                        .toEntity(String.class);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).contains("\"currentPlanCode\":\"FREE\"");
+        assertThat(response.getBody()).doesNotContain("checkoutUrl");
+    }
+
+    @Test
+    void authenticated_checkout_returns_url_after_plan_click() {
+        Seed seed = seedUser("billing-checkout");
+        BillingPlanEntity plusPlan = billingPlanRepository.findByCode("PLUS").orElseThrow();
+        plusPlan.updateLemonSqueezyIds(99L, 123456L);
+        billingPlanRepository.saveAndFlush(plusPlan);
+
+        BillingCheckoutResponse response =
+                RestClient.create("http://localhost:" + port)
+                        .post()
+                        .uri("/api/billing/plans/PLUS/checkout")
+                        .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, seed.email())
+                        .retrieve()
+                        .body(BillingCheckoutResponse.class);
+
+        assertThat(response.checkoutUrl())
+                .startsWith("https://zeromail-test.lemonsqueezy.com/buy/123456?");
+        assertThat(response.checkoutUrl()).contains(seed.tenantId().toString());
+        assertThat(response.checkoutUrl()).contains(seed.email());
     }
 
     private Seed seedUser(String label) {

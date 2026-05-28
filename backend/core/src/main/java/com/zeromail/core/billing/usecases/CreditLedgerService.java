@@ -38,6 +38,7 @@ class CreditLedgerService implements CreditLedger {
     private final AdvisoryLockJdbcHelper advisoryLockHelper;
     private final ZeroMailCoreProperties coreProperties;
     private final FeatureCatalogCache featureCatalogCache;
+    private final FeaturePermissionResolver featurePermissionResolver;
 
     CreditLedgerService(
             CreditLedgerEntryRepository entryRepository,
@@ -46,7 +47,8 @@ class CreditLedgerService implements CreditLedger {
             CreditReservationRepository reservationRepository,
             AdvisoryLockJdbcHelper advisoryLockHelper,
             ZeroMailCoreProperties coreProperties,
-            FeatureCatalogCache featureCatalogCache) {
+            FeatureCatalogCache featureCatalogCache,
+            FeaturePermissionResolver featurePermissionResolver) {
         this.entryRepository = entryRepository;
         this.grantRepository = grantRepository;
         this.grantService = grantService;
@@ -54,12 +56,16 @@ class CreditLedgerService implements CreditLedger {
         this.advisoryLockHelper = advisoryLockHelper;
         this.coreProperties = coreProperties;
         this.featureCatalogCache = featureCatalogCache;
+        this.featurePermissionResolver = featurePermissionResolver;
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ReservationId reserve(UUID tenantId, CallSite callSite) {
-        int requiredCredits = featureCatalogCache.defaultCost(callSite);
+        // Throws FeaturePermissionDeniedException (→ HTTP 402) if the tenant's plan does not
+        // enable this feature; otherwise returns the effective cost (override > catalog default).
+        int requiredCredits =
+                featurePermissionResolver.resolve(tenantId, callSite).effectiveCreditCost();
         if (requiredCredits < 0) {
             throw new IllegalLedgerStateException("Call-site cost cannot be negative: " + callSite);
         }

@@ -1,7 +1,6 @@
 import { promises as fs } from 'node:fs';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import matter from 'gray-matter';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import { getLocale } from 'next-intl/server';
@@ -56,17 +55,16 @@ function extractLevelTwoHeadings(source: string): LegalHeading[] {
 }
 
 async function readLegalDocSource(slug: LegalDocSlug) {
-  const locale = await getLocale();
-  if (locale !== 'vi' && locale !== 'en') notFound();
+  const locale = await resolveLegalLocale();
 
   const filePath = buildDocPath(slug, locale);
 
   try {
     const source = await fs.readFile(filePath, 'utf8');
     const parsedFrontmatter = FrontmatterSchema.safeParse(matter(source).data);
-    if (!parsedFrontmatter.success) notFound();
+    if (!parsedFrontmatter.success) return null;
     if (parsedFrontmatter.data.slug !== slug || parsedFrontmatter.data.locale !== locale)
-      notFound();
+      return null;
 
     return {
       frontmatter: parsedFrontmatter.data,
@@ -74,7 +72,16 @@ async function readLegalDocSource(slug: LegalDocSlug) {
       source,
     };
   } catch {
-    notFound();
+    return null;
+  }
+}
+
+async function resolveLegalLocale(): Promise<'en' | 'vi'> {
+  try {
+    const locale = await getLocale();
+    return locale === 'vi' ? 'vi' : 'en';
+  } catch {
+    return 'en';
   }
 }
 
@@ -121,12 +128,9 @@ const mdxComponents = {
 };
 
 export async function generateLegalDocMetadata(slug: LegalDocSlug): Promise<Metadata> {
-  const { frontmatter } = await readLegalDocSource(slug);
-  const title = frontmatter.title;
-  const description =
-    slug === 'privacy'
-      ? 'How Zero Mail collects, uses, protects, and limits access to Gmail and account data.'
-      : 'The terms that govern use of Zero Mail, including Gmail authorization, AI actions, credits, and acceptable use.';
+  const document = await readLegalDocSource(slug);
+  const title = document?.frontmatter.title ?? fallbackLegalTitle(slug);
+  const description = fallbackLegalDescription(slug);
 
   return {
     title,
@@ -143,7 +147,23 @@ export async function generateLegalDocMetadata(slug: LegalDocSlug): Promise<Meta
 }
 
 export async function LegalDocPage({ slug }: { slug: LegalDocSlug }) {
-  const { frontmatter, source } = await readLegalDocSource(slug);
+  const document = await readLegalDocSource(slug);
+  if (!document) {
+    return (
+      <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-4 py-8 sm:py-12 lg:grid-cols-[minmax(0,48rem)_16rem] lg:items-start lg:px-6">
+        <article className="min-w-0">
+          <h1 className="text-foreground mb-3 text-4xl font-semibold tracking-tight">
+            {fallbackLegalTitle(slug)}
+          </h1>
+          <div className="legal-mdx">
+            <p>{fallbackLegalBody(slug)}</p>
+          </div>
+        </article>
+      </section>
+    );
+  }
+
+  const { frontmatter, source } = document;
   const headings = extractLevelTwoHeadings(source);
   const { content } = await compileMDX({
     source,
@@ -183,4 +203,20 @@ export async function LegalDocPage({ slug }: { slug: LegalDocSlug }) {
       </aside>
     </section>
   );
+}
+
+function fallbackLegalTitle(slug: LegalDocSlug): string {
+  return slug === 'privacy' ? 'Chính sách bảo mật' : 'Điều khoản dịch vụ';
+}
+
+function fallbackLegalDescription(slug: LegalDocSlug): string {
+  return slug === 'privacy'
+    ? 'How Zero Mail collects, uses, protects, and limits access to Gmail and account data.'
+    : 'The terms that govern use of Zero Mail, including Gmail authorization, AI actions, credits, and acceptable use.';
+}
+
+function fallbackLegalBody(slug: LegalDocSlug): string {
+  return slug === 'privacy'
+    ? 'This page explains how Zero Mail handles account data, Gmail access, automation, and privacy safeguards.'
+    : 'These terms describe how Zero Mail can be used, including Gmail authorization, automation controls, credits, and acceptable use.';
 }

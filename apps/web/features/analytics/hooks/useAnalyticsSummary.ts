@@ -15,7 +15,8 @@ export function useAnalyticsSummary(window: AnalyticsWindow) {
   return useSuspenseQuery({
     queryKey: analyticsKeys.summary(window),
     queryFn: () => fetchAnalyticsSummary(window),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 }

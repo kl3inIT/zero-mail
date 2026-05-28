@@ -28,6 +28,9 @@ public final class ErrorCodes {
     public static final String AUTH_GMAIL_SCOPE_REQUIRED = "error.auth.gmail_scope_required";
     public static final String BILLING_INSUFFICIENT_CREDITS = "error.billing.insufficient";
     public static final String BILLING_LEDGER_INVALID_STATE = "error.billing.ledger.invalidState";
+    public static final String BILLING_PLAN_FEATURE_DISABLED = "error.billing.plan.featureDisabled";
+    public static final String BILLING_PLAN_NOT_FOUND = "error.billing.plan.notFound";
+    public static final String BILLING_CHECKOUT_UNAVAILABLE = "error.billing.checkout.unavailable";
     public static final String LLM_SAFETY_VIOLATION = "error.llm.safety_violation";
     public static final String LLM_SANITIZATION_FAILED = "error.llm.sanitization_failed";
     public static final String LLM_BYOK_INVALID = "error.llm.byok.invalid";

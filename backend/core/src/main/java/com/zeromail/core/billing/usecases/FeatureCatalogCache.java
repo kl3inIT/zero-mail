@@ -75,6 +75,14 @@ public class FeatureCatalogCache {
         return row != null && row.isActive();
     }
 
+    /**
+     * Read a catalog row by its string code. Used by plan-listing flows that join {@code
+     * plan_feature_permission.feature_code} with the catalog without re-hitting the DB.
+     */
+    public java.util.Optional<FeatureCatalogEntity> findByCode(String featureCode) {
+        return java.util.Optional.ofNullable(rowsByCode.get(featureCode));
+    }
+
     private void loadAndValidate() {
         List<FeatureCatalogEntity> rows = featureCatalogRepository.findAll();
         Map<String, FeatureCatalogEntity> freshRowsByCode =

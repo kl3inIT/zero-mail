@@ -95,6 +95,10 @@ export function AnalyticsPageClient() {
     }
   }, [canonicalHref, rawWindow, router, selectedWindow]);
 
+  useEffect(() => {
+    void summaryQuery.refetch();
+  }, [selectedWindow, summaryQuery.refetch]);
+
   const observed = safeCount(summaryQuery.data.volumeObserved);
   const applied = safeCount(summaryQuery.data.volumeApplied);
   const untouched = Math.max(0, observed - applied);
