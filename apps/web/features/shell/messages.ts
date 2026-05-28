@@ -19,6 +19,10 @@ export const shellMessages = {
     vi: 'Thanh toán',
     en: 'Billing',
   },
+  'nav.subscription': {
+    vi: 'Gói đăng ký',
+    en: 'Subscription',
+  },
   'nav.settings': {
     vi: 'Cài đặt',
     en: 'Settings',

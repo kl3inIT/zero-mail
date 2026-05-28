@@ -55,17 +55,17 @@ public class CreditLedgerEntryEntity extends AbstractTenantOwnedEntity {
     }
 
     public static CreditLedgerEntryEntity topup(
-            UUID id, UUID tenantId, int amountCredits, String sepayTransactionId) {
-        return topup(id, tenantId, amountCredits, sepayTransactionId, null);
+            UUID id, UUID tenantId, int amountCredits, String transactionId) {
+        return topup(id, tenantId, amountCredits, transactionId, null);
     }
 
     public static CreditLedgerEntryEntity topup(
-            UUID id, UUID tenantId, int amountCredits, String sepayTransactionId, UUID grantId) {
+            UUID id, UUID tenantId, int amountCredits, String transactionId, UUID grantId) {
         if (amountCredits <= 0) {
             throw new IllegalArgumentException("TOPUP amountCredits must be positive");
         }
         return new CreditLedgerEntryEntity(
-                id, tenantId, "TOPUP", amountCredits, "PAYMENT_SEPAY", sepayTransactionId, grantId);
+                id, tenantId, "TOPUP", amountCredits, "PAYMENT", transactionId, grantId);
     }
 
     public static CreditLedgerEntryEntity grant(

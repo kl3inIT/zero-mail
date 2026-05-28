@@ -188,7 +188,6 @@ function TenantDetailRoute() {
                   <dl className="grid gap-4 md:grid-cols-2">
                     <Fact label="Số dư tín dụng" value={formatInteger(billing.data.creditsBalance)} />
                     <Fact label="Gói cước" value={billing.data.plan} />
-                    <Fact label="Lần nạp gần nhất" value={formatDateTime(billing.data.lastTopUpAt)} mono />
                   </dl>
                 </CardContent>
               </Card>

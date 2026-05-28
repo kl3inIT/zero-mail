@@ -1,4 +1,4 @@
-import { existsSync, promises as fs } from 'node:fs';
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
@@ -20,12 +20,7 @@ import { z } from 'zod';
 const HERE =
   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
-const SOURCE_RELATIVE_DOCS_DIR = path.resolve(HERE, '../../docs');
-const CWD_RELATIVE_DOCS_DIR = path.resolve(process.cwd(), 'docs');
-
-export const DOCS_DIR = existsSync(SOURCE_RELATIVE_DOCS_DIR)
-  ? SOURCE_RELATIVE_DOCS_DIR
-  : CWD_RELATIVE_DOCS_DIR;
+export const DOCS_DIR = path.resolve(HERE, '../../docs');
 
 export const FrontmatterSchema = z.object({
   title: z.string().min(1),

@@ -602,7 +602,7 @@ public class TriageOrchestratorService {
     }
 
     private void reserveDeterministicMessageCredit(UUID tenantId) {
-        if (CallSite.TRIAGE_DETERMINISTIC.cost() == 0) {
+        if (creditLedger.defaultCost(CallSite.TRIAGE_DETERMINISTIC) == 0) {
             return;
         }
         ReservationId reservationId = creditLedger.reserve(tenantId, CallSite.TRIAGE_DETERMINISTIC);

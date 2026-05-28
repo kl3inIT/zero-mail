@@ -9,18 +9,6 @@ zero-mail:
         push-audience-url: https://loadtest.invalid/internal/pubsub/gmail
         sa-principal-email: loadtest-sa@loadtest.invalid
         oidc-certificates-url: https://www.googleapis.com/oauth2/v3/certs
-  billing:
-    sepay:
-      webhook-api-key: loadtest-sepay-key
-    payment-account:
-      bank-code: loadtest-bank
-      bank-name: loadtest
-      account-number: "0000"
-      account-name: loadtest-account
-      qr-payload: ""
-    vnd-per-credit: 1000
-    max-pending-intents-per-tenant: 5
-    intent-expiry: PT24H
   llm:
     platform:
       api-key: loadtest-llm-key

@@ -69,12 +69,7 @@ class GoogleOAuthSuccessHandlerTest {
                         .clientSecret("test-cs")
                         .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                         .redirectUri("http://localhost/login/oauth2/code/google")
-                        .scope(
-                                Set.of(
-                                        "openid",
-                                        "profile",
-                                        "email",
-                                        OAuthScopes.GMAIL_MODIFY))
+                        .scope(Set.of("openid", "profile", "email", OAuthScopes.GMAIL_MODIFY))
                         .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
                         .tokenUri("https://oauth2.googleapis.com/token")
                         .build();
@@ -84,11 +79,7 @@ class GoogleOAuthSuccessHandlerTest {
                         "fake-at",
                         Instant.now(),
                         Instant.now().plusSeconds(3600),
-                        Set.of(
-                                "openid",
-                                "profile",
-                                "email",
-                                OAuthScopes.GMAIL_MODIFY));
+                        Set.of("openid", "profile", "email", OAuthScopes.GMAIL_MODIFY));
         var refreshToken = new OAuth2RefreshToken("fake-rt", Instant.now());
         when(authorizedClients.loadAuthorizedClient(eq("google"), anyString()))
                 .thenReturn(

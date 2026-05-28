@@ -1,0 +1,737 @@
+﻿gates / Frontend Web	UNKNOWN STEP	﻿2026-05-28T03:51:36.7536866Z Current runner version: '2.334.0'
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7564002Z ##[group]Runner Image Provisioner
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7564821Z Hosted Compute Agent
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7565485Z Version: 20260520.533
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7566081Z Commit: 189110e25284a9812c124fd27b339e2fb4f2f9db
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7566811Z Build Date: 2026-05-20T17:44:04Z
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7567502Z Worker ID: {7972ed2d-b9b7-47e7-8340-79f501566556}
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7568191Z Azure Region: eastus2
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7568708Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7570413Z ##[group]Operating System
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7570988Z Ubuntu
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7571516Z 24.04.4
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7572070Z LTS
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7572502Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7573285Z ##[group]Runner Image
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7573933Z Image: ubuntu-24.04
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7574475Z Version: 20260525.161.1
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7575701Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260525.161/images/ubuntu/Ubuntu2404-Readme.md
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7577231Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260525.161
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7578114Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7579169Z ##[group]GITHUB_TOKEN Permissions
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7581705Z Contents: read
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7582291Z Metadata: read
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7582835Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7585561Z Secret source: Actions
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7586595Z Prepare workflow directory
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7917922Z Prepare all required actions
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:36.7956099Z Getting action download info
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.1552704Z Download action repository 'actions/checkout@v6' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.2574136Z Download action repository 'pnpm/action-setup@v6' (SHA:0e279bb959325dab635dd2c09392533439d90093)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.4013938Z Download action repository 'actions/setup-node@v6' (SHA:48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.4988404Z Download action repository 'actions/upload-artifact@v7' (SHA:043fb46d1a93c77aae656e7c1c64a875d1fc6a0a)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.6836764Z Uses: kl3inIT/zero-mail/.github/workflows/gates.yml@refs/pull/72/merge (5939077a94c7e76da69e04d8b0aa24ac9dcf956c)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.6841379Z ##[group] Inputs
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.6842234Z   run-ai-eval: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.6842687Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.6843394Z Complete job name: gates / Frontend Web
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7646928Z ##[group]Run actions/checkout@v6
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7647778Z with:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7648204Z   repository: kl3inIT/zero-mail
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7648978Z   token: ***
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7649398Z   ssh-strict: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7649829Z   ssh-user: git
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7650286Z   persist-credentials: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7650765Z   clean: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7651190Z   sparse-checkout-cone-mode: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7651679Z   fetch-depth: 1
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7652088Z   fetch-tags: false
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7652508Z   show-progress: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7652966Z   lfs: false
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7653699Z   submodules: false
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7654125Z   set-safe-directory: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.7655130Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8718411Z Syncing repository: kl3inIT/zero-mail
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8720495Z ##[group]Getting Git version info
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8721238Z Working directory is '/home/runner/work/zero-mail/zero-mail'
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8722485Z [command]/usr/bin/git version
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8768511Z git version 2.54.0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8790744Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8806702Z Temporarily overriding HOME='/home/runner/work/_temp/81e7f4f8-57a9-455b-804b-12d3df42a4d5' before making global git config changes
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8809159Z Adding repository directory to the temporary git global config as a safe directory
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8812550Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/zero-mail/zero-mail
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8859765Z Deleting the contents of '/home/runner/work/zero-mail/zero-mail'
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8864930Z ##[group]Initializing the repository
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8869497Z [command]/usr/bin/git init /home/runner/work/zero-mail/zero-mail
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8967600Z hint: Using 'master' as the name for the initial branch. This default branch name
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8972902Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8974175Z hint: to use in all of your new repositories, which will suppress this warning,
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8974946Z hint: call:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8975326Z hint:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8976039Z hint: 	git config --global init.defaultBranch <name>
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8976700Z hint:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8977447Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8978431Z hint: 'development'. The just-created branch can be renamed via this command:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8979160Z hint:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8979561Z hint: 	git branch -m <name>
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8980026Z hint:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8980832Z hint: Disable this message with "git config set advice.defaultBranchName false"
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8982123Z Initialized empty Git repository in /home/runner/work/zero-mail/zero-mail/.git/
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.8984796Z [command]/usr/bin/git remote add origin https://github.com/kl3inIT/zero-mail
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9022080Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9022902Z ##[group]Disabling automatic garbage collection
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9026285Z [command]/usr/bin/git config --local gc.auto 0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9054978Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9056348Z ##[group]Setting up auth
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9056885Z Removing SSH command configuration
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9061856Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9094595Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9428206Z Removing HTTP extra header
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9434344Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9467286Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9691823Z Removing includeIf entries pointing to credentials config files
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9698613Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9731508Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:37.9973519Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:38.0010307Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/zero-mail/zero-mail/.git.path /home/runner/work/_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:38.0041630Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/zero-mail/zero-mail/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:38.0076040Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:38.0109509Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:38.0136246Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:38.0136965Z ##[group]Fetching the repository
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:38.0145605Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +5939077a94c7e76da69e04d8b0aa24ac9dcf956c:refs/remotes/pull/72/merge
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2407453Z From https://github.com/kl3inIT/zero-mail
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2410711Z  * [new ref]         5939077a94c7e76da69e04d8b0aa24ac9dcf956c -> pull/72/merge
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2450359Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2451440Z ##[group]Determining the checkout info
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2452648Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2457813Z [command]/usr/bin/git sparse-checkout disable
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2505974Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2537511Z ##[group]Checking out the ref
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.2540417Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/72/merge
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5565121Z Note: switching to 'refs/remotes/pull/72/merge'.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5566042Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5566693Z You are in 'detached HEAD' state. You can look around, make experimental
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5568264Z changes and commit them, and you can discard any commits you make in this
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5569884Z state without impacting any branches by switching back to a branch.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5570791Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5571363Z If you want to create a new branch to retain commits you create, you may
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5572728Z do so (now or later) by using -c with the switch command. Example:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5573825Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5574167Z   git switch -c <new-branch-name>
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5574768Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5575103Z Or undo this operation with:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5575632Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5575907Z   git switch -
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5576339Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5577069Z Turn off this advice by setting config variable advice.detachedHead to false
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5578185Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5579494Z HEAD is now at 5939077 Merge 88608ed0734f89afed3e11fe4c81612f626c3dd8 into 520d8b565e89a65fde9a5dceb32bc002c0688cd7
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5584220Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5626652Z [command]/usr/bin/git log -1 --format=%H
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.5652356Z 5939077a94c7e76da69e04d8b0aa24ac9dcf956c
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6047331Z ##[group]Run pnpm/action-setup@v6
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6048420Z with:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6049202Z   dest: ~/setup-pnpm
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6050070Z   run_install: null
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6050914Z   cache: false
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6051815Z   cache_dependency_path: pnpm-lock.yaml
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6053379Z   package_json_file: package.json
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6054500Z   standalone: false
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.6055365Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:39.7553684Z ##[group]Running self-installer...
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:40.9845845Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:40.9846801Z added 1 package, and audited 2 packages in 984ms
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:40.9847269Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:40.9847443Z 1 package is looking for funding
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:40.9847900Z   run `npm fund` for details
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:40.9853432Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:40.9853666Z found 0 vulnerabilities
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:41.5257998Z Checking for updates...
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:41.6669237Z Switching pnpm from v11.1.1 to v11.0.8...
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:41.9708653Z .../.bin/global/v11/a44-19e6cb59c8d      | Progress: resolved 1, reused 0, downloaded 0, added 0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:41.9723636Z .../.bin/global/v11/a44-19e6cb59c8d      |   +1 +
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.1745446Z .../.bin/global/v11/a44-19e6cb59c8d      | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.1976514Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2001801Z Successfully updated pnpm to v11.0.8
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2218883Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2300971Z Installation Completed!
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2414548Z ##[group]Run actions/setup-node@v6
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2414845Z with:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2415057Z   node-version: 24
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2415268Z   check-latest: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2415695Z   cache: pnpm
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2415918Z   cache-dependency-path: pnpm-lock.yaml
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2416334Z   token: ***
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2416548Z   package-manager-cache: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2416793Z env:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2417021Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.2417323Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.3988869Z Attempt to resolve the latest version from manifest...
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.8248699Z Resolved as '24.16.0'
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.8261383Z Found in cache @ /opt/hostedtoolcache/node/24.16.0/x64
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:42.8265057Z ##[group]Environment details
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:43.2010598Z node: v24.16.0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:43.2032221Z npm: 11.13.0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:43.2032537Z yarn: 1.22.22
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:43.2033561Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:43.2034006Z [command]/home/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:43.7227855Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:43.7941982Z Cache hit for: node-cache-Linux-x64-pnpm-63a526a6fbdc408943a961617ece309276697aea29b827778bdd75a43cfde793
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:44.7496821Z Received 250579639 of 250579639 (100.0%), 260.6 MBs/sec
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:44.7498428Z Cache Size: ~239 MB (250579639 B)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:44.7532141Z [command]/usr/bin/tar -xf /home/runner/work/_temp/0af546bc-2bf5-4083-b9b1-7ab58197cbe3/cache.tzst -P -C /home/runner/work/zero-mail/zero-mail --use-compress-program unzstd
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:47.5267183Z Cache restored successfully
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:47.5390966Z Cache restored from key: node-cache-Linux-x64-pnpm-63a526a6fbdc408943a961617ece309276697aea29b827778bdd75a43cfde793
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:47.5617635Z ##[group]Run pnpm install --frozen-lockfile
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:47.5618045Z ^[[36;1mpnpm install --frozen-lockfile^[[0m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:47.5657228Z shell: /usr/bin/bash -e {0}
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:47.5657493Z env:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:47.5657750Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:47.5658090Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:48.0961362Z Scope: all 3 workspace projects
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:48.1727738Z Lockfile is up to date, resolution step is skipped
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:48.2306352Z Progress: resolved 1, reused 0, downloaded 0, added 0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:48.3578265Z Packages: +1167
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:48.3579689Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:49.2322019Z Progress: resolved 1167, reused 1167, downloaded 0, added 438
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:49.8435089Z Progress: resolved 1167, reused 1167, downloaded 0, added 1167, done
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.4350499Z .../node_modules/@swc/core postinstall$ node postinstall.js
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.4364338Z .../node_modules/@parcel/watcher install$ node scripts/build-from-source.js
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.4846720Z .../node_modules/@parcel/watcher install: Done
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.4884194Z .../node_modules/@swc/core postinstall: Done
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6519229Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6520036Z devDependencies:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6520558Z + @playwright/test 1.60.0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6520943Z + husky 9.1.7
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6521288Z + lint-staged 17.0.5
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6521848Z + prettier 3.8.3
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6522362Z + prettier-plugin-tailwindcss 0.8.0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6522795Z + turbo 2.9.14
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6523191Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.6923508Z . prepare$ husky
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.7489740Z . prepare: Done
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.7642847Z Done in 2.9s using pnpm v11.0.8
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.8550570Z ##[group]Run pnpm --filter web run lint
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.8550923Z ^[[36;1mpnpm --filter web run lint^[[0m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.8580073Z shell: /usr/bin/bash -e {0}
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.8580332Z env:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.8580586Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:50.8580897Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:51:51.3796497Z $ eslint
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:02.9819347Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:02.9820366Z /home/runner/work/zero-mail/zero-mail/apps/web/app/(public)/page.tsx
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:02.9854446Z ##[warning]  5:8  warning  'Pricing' is defined but never used  @typescript-eslint/no-unused-vars
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:02.9864378Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:02.9865053Z ✖ 1 problem (0 errors, 1 warning)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:02.9865380Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:03.2754689Z ##[group]Run pnpm --filter web run typecheck
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:03.2755082Z ^[[36;1mpnpm --filter web run typecheck^[[0m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:03.2784039Z shell: /usr/bin/bash -e {0}
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:03.2784299Z env:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:03.2784559Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:03.2784876Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:03.8137956Z $ tsc --noEmit
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:14.5601393Z ##[group]Run pnpm --filter web run test:coverage
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:14.5602019Z ^[[36;1mpnpm --filter web run test:coverage^[[0m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:14.5642382Z shell: /usr/bin/bash -e {0}
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:14.5642779Z env:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:14.5643460Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:14.5643803Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:15.1029927Z $ vitest run --coverage
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:15.4771526Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:15.4776012Z ^[[1m^[[30m^[[46m RUN ^[[49m^[[39m^[[22m ^[[36mv4.1.7 ^[[39m^[[90m/home/runner/work/zero-mail/zero-mail/apps/web^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:15.4776909Z       ^[[2mCoverage enabled with ^[[22m^[[33mv8^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:15.4777266Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:17.2196020Z  ^[[32m✓^[[39m __tests__/architecture/feature-folders.test.ts ^[[2m(^[[22m^[[2m31 tests^[[22m^[[2m)^[[22m^[[32m 17^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:17.3011673Z  ^[[32m✓^[[39m __tests__/features/account/me-cache-dedupe.test.ts ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[32m 19^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:18.2684254Z  ^[[32m✓^[[39m __tests__/components/LanguageSwitcher.test.tsx ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[33m 694^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:18.2705548Z      ^[[33m^[[2m✓^[[22m^[[39m renders trigger with localized aria-label and current locale visible ^[[33m 349^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.1745625Z  ^[[32m✓^[[39m __tests__/i18n/error-render.test.tsx ^[[2m(^[[22m^[[2m11 tests^[[22m^[[2m)^[[22m^[[32m 108^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9443968Z  ^[[31m❯^[[39m __tests__/docs/mdx-pipeline.test.ts ^[[2m(^[[22m^[[2m10 tests^[[22m^[[2m | ^[[22m^[[31m1 failed^[[39m^[[2m)^[[22m^[[32m 94^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9447532Z      ^[[32m✓^[[39m docs/ exists with at least 4 MDX files (2 slugs x 2 locales)^[[32m 5^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9449223Z      ^[[32m✓^[[39m every MDX filename matches <slug>.<locale>.mdx (D-D5)^[[32m 1^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9450774Z        ^[[32m✓^[[39m all sample MDX files have valid gray-matter frontmatter^[[32m 74^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9451988Z      ^[[32m✓^[[39m docs index page reads filesystem with gray-matter^[[32m 0^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9466826Z      ^[[32m✓^[[39m docs slug page uses compileMDX with await params (Next 16 Pattern 2)^[[32m 0^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9468498Z      ^[[32m✓^[[39m docs slug page enforces slug regex ^[a-z0-9-]+$ (Pitfall 4 path traversal)^[[32m 0^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9471850Z      ^[[32m✓^[[39m docs slug page uses zod safeParse for frontmatter validation^[[32m 0^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9476774Z      ^[[32m✓^[[39m docs slug page enforces slug+locale consistency (fm.data.slug !== params.slug -> notFound)^[[32m 0^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9567691Z ^[[31m     ^[[31m×^[[31m lib/docs/loader.ts exists with deterministic path resolver (no process.cwd())^[[39m^[[32m 8^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:19.9576737Z      ^[[32m✓^[[39m docs/[slug]/loading.tsx exists^[[32m 0^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:20.0205564Z  ^[[32m✓^[[39m features/notifications/__tests__/NotificationsSection.test.tsx ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[33m 622^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:20.0236449Z      ^[[33m^[[2m✓^[[22m^[[39m optimistically persists send-hour changes ^[[33m 408^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:20.0445880Z  ^[[32m✓^[[39m features/llm/components/ByokForm.test.tsx ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[33m 2153^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:20.0479457Z      ^[[33m^[[2m✓^[[22m^[[39m renders provider options and keeps actions disabled until required fields are present ^[[33m 792^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:20.0488907Z      ^[[33m^[[2m✓^[[22m^[[39m requires endpoint only for compatible presets ^[[33m 304^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:21.5556790Z  ^[[32m✓^[[39m __tests__/i18n/messages.contract.test.ts ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[32m 28^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:22.3707558Z  ^[[32m✓^[[39m __tests__/chat/tool-results.test.tsx ^[[2m(^[[22m^[[2m19 tests^[[22m^[[2m)^[[22m^[[33m 477^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:22.8576326Z  ^[[32m✓^[[39m features/analytics/__tests__/AnalyticsPanels.test.tsx ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[33m 1064^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:22.8577830Z      ^[[33m^[[2m✓^[[22m^[[39m renders seeded panel data ^[[33m 768^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:23.1005804Z  ^[[32m✓^[[39m features/rules/components/RulesWorkspace.test.tsx ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[33m 686^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:23.1024970Z      ^[[33m^[[2m✓^[[22m^[[39m renders one inline clarification prompt under the original source textarea ^[[33m 501^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:23.8539379Z  ^[[32m✓^[[39m __tests__/rules-feature-contract.test.ts ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[32m 37^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:24.4885519Z  ^[[32m✓^[[39m features/rules/lib/rule-structure.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 23^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:24.6923687Z  ^[[32m✓^[[39m features/needs-reply/components/NeedsReplyTable.test.tsx ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[33m 722^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:24.6925944Z      ^[[33m^[[2m✓^[[22m^[[39m renders both buckets at zero, one, and many thread counts ^[[33m 369^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:24.8335562Z  ^[[32m✓^[[39m features/triage/hooks/useToggleTriagePause.test.tsx ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 56^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.1149936Z  ^[[32m✓^[[39m __tests__/pages/login-error-rendering.test.tsx ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[33m 431^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2085947Z ^[[90mstderr^[[2m | __tests__/app/global-error.test.tsx^[[2m > ^[[22m^[[2mglobal-error.tsx^[[2m > ^[[22m^[[2mrenders English-only fallback copy without next-intl provider
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2087930Z ^[[22m^[[39mIn HTML, <html> cannot be a child of <div>.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2088747Z This will cause a hydration error.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2089364Z Error: boom
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2090467Z     at ^[[90m/home/runner/work/zero-mail/zero-mail/apps/web/^[[39m__tests__/app/global-error.test.tsx:20:32
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2092532Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:302:11
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2120496Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:1903:26
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2127183Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2326:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2128428Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2130055Z     at runWithCancel (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2323:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2132307Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2305:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2133838Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2135713Z     at runWithTimeout (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2272:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2138164Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2955:64
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2139238Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2237616Z ^[[90mstderr^[[2m | __tests__/app/global-error.test.tsx^[[2m > ^[[22m^[[2mglobal-error.tsx^[[2m > ^[[22m^[[2mdoes NOT render error.message
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2264987Z ^[[22m^[[39mError: SECRET-GLOBAL-LEAK-XXX
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2294570Z     at ^[[90m/home/runner/work/zero-mail/zero-mail/apps/web/^[[39m__tests__/app/global-error.test.tsx:51:19
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2296899Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:302:11
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2326279Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:1903:26
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2354790Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2326:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2383833Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2392461Z     at runWithCancel (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2323:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2424749Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2305:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2443763Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2475015Z     at runWithTimeout (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2272:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2484718Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2955:64
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.2513502Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4085363Z ^[[90mstderr^[[2m | __tests__/app/global-error.test.tsx^[[2m > ^[[22m^[[2mglobal-error.tsx^[[2m > ^[[22m^[[2minvokes unstable_retry when reload button clicked
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4104304Z ^[[22m^[[39mError: boom
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4118790Z     at ^[[90m/home/runner/work/zero-mail/zero-mail/apps/web/^[[39m__tests__/app/global-error.test.tsx:58:32
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4121161Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:302:11
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4138991Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:1903:26
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4174555Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2326:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4180252Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4182176Z     at runWithCancel (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2323:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4214839Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2305:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4235272Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4254685Z     at runWithTimeout (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2272:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4270882Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2955:64
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4272181Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4291386Z ^[[90mstderr^[[2m | __tests__/app/global-error.test.tsx^[[2m > ^[[22m^[[2mglobal-error.tsx^[[2m > ^[[22m^[[2mfalls back to window.location.reload when unstable_retry throws
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4313692Z ^[[22m^[[39mError: boom
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4344174Z     at ^[[90m/home/runner/work/zero-mail/zero-mail/apps/web/^[[39m__tests__/app/global-error.test.tsx:79:34
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4374545Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:302:11
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4376951Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:1903:26
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4405216Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2326:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4433749Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4464799Z     at runWithCancel (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2323:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4484849Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2305:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4493626Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4524874Z     at runWithTimeout (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2272:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4554662Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2955:64
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4558941Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:26.4765099Z  ^[[32m✓^[[39m __tests__/app/global-error.test.tsx ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[32m 291^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.8020377Z  ^[[32m✓^[[39m features/rules/components/RuleComposer.test.tsx ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[33m 923^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.8075125Z      ^[[33m^[[2m✓^[[22m^[[39m renders DB-backed persona examples and replaces the source textarea exactly ^[[33m 742^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9635431Z ^[[90mstderr^[[2m | __tests__/app/error.test.tsx^[[2m > ^[[22m^[[2m(protected)/error.tsx boundary^[[2m > ^[[22m^[[2mrenders title and body from i18n keys
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9656875Z ^[[22m^[[39mError: boom
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9658357Z     at ^[[90m/home/runner/work/zero-mail/zero-mail/apps/web/^[[39m__tests__/app/error.test.tsx:40:29
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9660203Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:302:11
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9662022Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:1903:26
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9664109Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2326:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9665252Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9666805Z     at runWithCancel (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2323:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9669021Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2305:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9670140Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9671644Z     at runWithTimeout (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2272:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9700465Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2955:64
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9701428Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9748540Z ^[[90mstderr^[[2m | __tests__/app/error.test.tsx^[[2m > ^[[22m^[[2m(protected)/error.tsx boundary^[[2m > ^[[22m^[[2mdoes NOT render error.message anywhere in DOM
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9756641Z ^[[22m^[[39mError: SECRET-PII-LEAK-XXX
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9757879Z     at ^[[90m/home/runner/work/zero-mail/zero-mail/apps/web/^[[39m__tests__/app/error.test.tsx:46:19
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9789433Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:302:11
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9811311Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:1903:26
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9821163Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2326:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9834041Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9836014Z     at runWithCancel (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2323:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9838473Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2305:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9839807Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9841637Z     at runWithTimeout (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2272:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9844270Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2955:64
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9885804Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9924827Z ^[[90mstderr^[[2m | __tests__/app/error.test.tsx^[[2m > ^[[22m^[[2m(protected)/error.tsx boundary^[[2m > ^[[22m^[[2mdoes NOT render error.stack
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9944335Z ^[[22m^[[39m[STACK-XXX-this-must-not-leak]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:27.9973505Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.0515207Z  ^[[32m✓^[[39m features/triage/components/AuditLog.test.tsx ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[33m 859^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.0544718Z      ^[[33m^[[2m✓^[[22m^[[39m renders a page-full of entries and the load-older affordance ^[[33m 625^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.1967003Z ^[[90mstderr^[[2m | __tests__/app/error.test.tsx^[[2m > ^[[22m^[[2m(protected)/error.tsx boundary^[[2m > ^[[22m^[[2minvokes the unstable_retry prop when CTA clicked
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.1977809Z ^[[22m^[[39mError: boom
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.1978926Z     at ^[[90m/home/runner/work/zero-mail/zero-mail/apps/web/^[[39m__tests__/app/error.test.tsx:62:29
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.1980830Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:302:11
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2005181Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:1903:26
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2011943Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2326:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2013472Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2015240Z     at runWithCancel (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2323:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2040939Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2305:20
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2043970Z     at new Promise (<anonymous>)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2045838Z     at runWithTimeout (file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2272:10)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2048846Z     at file:///home/runner/work/zero-mail/zero-mail/node_modules/^[[4m.pnpm^[[24m/@vitest+runner@4.1.7/node_modules/^[[4m@vitest/runner^[[24m/dist/chunk-artifact.js:2955:64
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2050172Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2104862Z  ^[[32m✓^[[39m features/cleanup/unsubscribe-campaign/hooks/__tests__/useCampaignStatus.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 48^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:28.2657593Z  ^[[32m✓^[[39m __tests__/app/error.test.tsx ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[33m 353^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:29.3925831Z  ^[[32m✓^[[39m features/cleanup/suppression/hooks/__tests__/useSuppressionList.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 11^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:29.8142262Z  ^[[32m✓^[[39m __tests__/api/isomorphic-shape.test.ts ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[32m 12^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:30.0242050Z  ^[[32m✓^[[39m features/billing/components/LedgerTable.test.tsx ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 176^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:30.2110871Z  ^[[32m✓^[[39m __tests__/app/not-found.test.tsx ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[33m 308^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:30.8585278Z  ^[[32m✓^[[39m __tests__/architecture/route-groups.test.ts ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[32m 13^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:31.3565341Z  ^[[32m✓^[[39m __tests__/workspace/workspace-cleanup.test.ts ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[32m 29^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:31.5450848Z  ^[[32m✓^[[39m __tests__/byok-key-handling.test.ts ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[32m 10^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:31.8345488Z  ^[[32m✓^[[39m features/billing/hooks/useBillingBalance.test.tsx ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 41^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:32.8020900Z  ^[[32m✓^[[39m features/rules/components/AvailableActionsPanel.test.tsx ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 137^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:33.1335517Z  ^[[32m✓^[[39m __tests__/i18n-erase-protection.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 170^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:33.3973854Z  ^[[32m✓^[[39m __tests__/api/error-codes-parity.test.ts ^[[2m(^[[22m^[[2m31 tests^[[22m^[[2m)^[[22m^[[32m 14^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:33.6265442Z  ^[[32m✓^[[39m features/triage/components/SenderSafetyNetList.test.tsx ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[33m 378^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:34.5445675Z  ^[[31m❯^[[39m __tests__/landing/landing-page.test.tsx ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m | ^[[22m^[[31m1 failed^[[39m^[[2m)^[[22m^[[32m 58^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:34.5460511Z ^[[31m     ^[[31m×^[[31m renders Hero, Features, Pricing, Testimonials, FAQ, and waitlist dialog^[[39m^[[32m 53^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:35.0535840Z ^[[90mstderr^[[2m | __tests__/app/theme-cookie.test.tsx^[[2m > ^[[22m^[[2mRootLayout zm-theme cookie^[[2m > ^[[22m^[[2mapplies dark class when zm-theme=dark
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:35.0594678Z ^[[22m^[[39mIn HTML, <html> cannot be a child of <div>.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:35.0651211Z This will cause a hydration error.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:35.0697559Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:35.0995058Z  ^[[32m✓^[[39m __tests__/app/theme-cookie.test.tsx ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 66^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:35.1798491Z  ^[[32m✓^[[39m features/gmail/components/ReconnectPrompt.test.tsx ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[33m 355^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:35.1824586Z      ^[[33m^[[2m✓^[[22m^[[39m renders when status is CONNECTED but ingestionHealth is WATCH_UNHEALTHY ^[[33m 306^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:35.5615365Z  ^[[32m✓^[[39m __tests__/chat/tool-catalog-contract.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 13^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:36.6715036Z  ^[[32m✓^[[39m __tests__/pages/onboarding-complete-redirect.test.tsx ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[33m 373^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:36.6716932Z      ^[[33m^[[2m✓^[[22m^[[39m redirects to settings after completing onboarding from the completion CTA ^[[33m 338^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:36.9665358Z  ^[[32m✓^[[39m __tests__/features/onboarding/onboarding-step-indicator.test.tsx ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[32m 91^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:37.0855348Z  ^[[32m✓^[[39m __tests__/api/server-safe-client.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 7^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:37.1595331Z  ^[[32m✓^[[39m features/triage/components/PauseBanner.test.tsx ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[33m 369^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:37.1644552Z      ^[[33m^[[2m✓^[[22m^[[39m renders_when_triagePaused_true ^[[33m 304^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:38.0955733Z  ^[[32m✓^[[39m __tests__/landing/landing-token-parity.test.ts ^[[2m(^[[22m^[[2m16 tests^[[22m^[[2m)^[[22m^[[32m 12^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:38.5345661Z ^[[90mstderr^[[2m | __tests__/app/root-layout-fonts.test.tsx^[[2m > ^[[22m^[[2mRootLayout fonts^[[2m > ^[[22m^[[2mhtml className does not include next/font CSS-variable classes
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:38.5348593Z ^[[22m^[[39mIn HTML, <html> cannot be a child of <div>.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:38.5374218Z This will cause a hydration error.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:38.5413586Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:38.5684934Z  ^[[32m✓^[[39m __tests__/app/root-layout-fonts.test.tsx ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 46^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:38.7715173Z  ^[[32m✓^[[39m __tests__/landing/public-layout.test.tsx ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 50^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:38.9871152Z  ^[[32m✓^[[39m __tests__/landing/zm-logo-mark.test.tsx ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 116^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:39.5754046Z  ^[[32m✓^[[39m __tests__/api/base-url.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 13^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:40.0091521Z  ^[[32m✓^[[39m features/rules/api/rules-api.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 6^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:40.2226605Z  ^[[32m✓^[[39m features/rules/query-keys.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 7^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:40.4122380Z  ^[[32m✓^[[39m features/onboarding/config.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 4^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:40.8405449Z  ^[[32m✓^[[39m features/billing/query-keys.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 4^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:41.0809869Z  ^[[32m✓^[[39m features/billing/util/format-vnd.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 4^[[2mms^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5756664Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5757737Z ^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m^[[1m^[[41m Failed Tests 2 ^[[49m^[[22m^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5758067Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5760503Z ^[[41m^[[1m FAIL ^[[22m^[[49m __tests__/docs/mdx-pipeline.test.ts^[[2m > ^[[22mPhase 1.3 — MDX docs pipeline (D-D1..D-D5)^[[2m > ^[[22mlib/docs/loader.ts exists with deterministic path resolver (no process.cwd())
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5767421Z ^[[31m^[[1mAssertionError^[[22m: expected 'import { existsSync, promises as fs }…' not to match /process\.cwd\(\)/^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5768335Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5768613Z ^[[32m- Expected:^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5768970Z /process\.cwd\(\)/
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5769156Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5769356Z ^[[31m+ Received:^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5769873Z "import { existsSync, promises as fs } from 'node:fs';
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5770428Z import path from 'node:path';
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5770917Z import { fileURLToPath } from 'node:url';
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5771373Z import { z } from 'zod';
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5771588Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5771698Z /**
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5772262Z  * Deterministic docs-dir resolver + zod frontmatter schema (Phase 1.3 Plan 06).
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5772814Z  *
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5773273Z  * REVIEWS Revision 6 (OpenCode MEDIUM):
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5773871Z  *  - Anchor on this module's file location via __dirname (CJS) or
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5774695Z  *    fileURLToPath(import.meta.url) (ESM, the Next 16 default). From this file
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5775288Z  *    (apps/web/lib/docs/loader.ts) the docs dir is at ../../docs
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5775754Z  *    (apps/web/docs). Resolution is independent of the caller's working
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5776264Z  *    directory, so deployments that change cwd (Cloud Run, Vercel) stay correct.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5777189Z  *  - Replace `as Frontmatter` TS cast with runtime zod validation
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5777788Z  *    (FrontmatterSchema.safeParse). Fail-closed → caller invokes notFound().
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5778164Z  *
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5778522Z  * This module is server-only (uses fs/path); never import from a client component.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5778895Z  */
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5779071Z const HERE =
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5779492Z   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5779841Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5782485Z const SOURCE_RELATIVE_DOCS_DIR = path.resolve(HERE, '../../docs');
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5783389Z const CWD_RELATIVE_DOCS_DIR = path.resolve(process.cwd(), 'docs');
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5783667Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5783911Z export const DOCS_DIR = existsSync(SOURCE_RELATIVE_DOCS_DIR)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5784259Z   ? SOURCE_RELATIVE_DOCS_DIR
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5784506Z   : CWD_RELATIVE_DOCS_DIR;
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5784653Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5784839Z export const FrontmatterSchema = z.object({
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5785134Z   title: z.string().min(1),
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5785406Z   slug: z.string().regex(/^[a-z0-9-]+$/),
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5785720Z   order: z.number().int().nonnegative(),
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5786017Z   locale: z.enum(['vi', 'en']),
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5786252Z   /**
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5786717Z    * Optional flag (quick task 260526-r73) — when true, /docs index hides this
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5787235Z    * entry. Used by privacy.* and terms.* MDX bundles, which keep their own
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5787757Z    * top-level routes (/privacy, /terms) and should not appear in /docs index.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5788122Z    */
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5788356Z   hideFromIndex: z.boolean().optional(),
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5788618Z   /**
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5788957Z    * Optional ISO-8601 date (YYYY-MM-DD). Surfaced inside MDX prose; not
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5789378Z    * rendered structurally by the page chrome.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5789647Z    */
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5789825Z   lastUpdated: z
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5790033Z     .string()
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5790253Z     .regex(/^\\d{4}-\\d{2}-\\d{2}$/)
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5790499Z     .optional(),
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5790729Z });
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5790877Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5791151Z export type Frontmatter = z.infer<typeof FrontmatterSchema>;
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5791404Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5791616Z export const FILENAME_RE = /^([a-z0-9-]+)\\.(vi|en)\\.mdx$/;
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5792204Z export const SLUG_RE = /^[a-z0-9-]+$/;
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5792481Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5793256Z /** Lists MDX filenames matching <slug>.<locale>.mdx (D-D5). Silent-empty on read failure. */
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5794233Z export async function listDocFilenames(): Promise<string[]> {
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5794749Z   try {
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5795121Z     const entries = await fs.readdir(DOCS_DIR);
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5795705Z     return entries.filter((n) => FILENAME_RE.test(n));
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5796207Z   } catch {
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5796490Z     return [];
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5796783Z   }
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5797048Z }
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5797189Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5797310Z /**
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5797705Z  * Build a docs-dir absolute path from slug + locale.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5798316Z  *
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5798887Z  * T-1.3.06-01 mitigation (path traversal): caller MUST validate slug against
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5799713Z  * SLUG_RE before invoking. Re-asserted here as defense-in-depth.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5800237Z  */
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5800861Z export function buildDocPath(slug: string, locale: 'vi' | 'en'): string {
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5801489Z   if (!SLUG_RE.test(slug)) {
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5801945Z     throw new Error(`invalid slug: ${slug}`);
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5802374Z   }
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5802785Z   return path.join(DOCS_DIR, `${slug}.${locale}.mdx`);
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5803498Z }
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5803762Z "
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5803905Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5804558Z ^[[36m ^[[2m❯^[[22m __tests__/docs/mdx-pipeline.test.ts:^[[2m125:21^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5807881Z     ^[[90m123|^[[39m     ^[[34mexpect^[[39m(deterministic)^[[33m.^[[39m^[[34mtoBe^[[39m(^[[35mtrue^[[39m)^[[33m;^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5809173Z     ^[[90m124|^[[39m     ^[[90m// Must NOT use process.cwd() for the docs dir resolution^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5810552Z     ^[[90m125|^[[39m     ^[[34mexpect^[[39m(src)^[[33m.^[[39mnot^[[33m.^[[39m^[[34mtoMatch^[[39m(^[[36m/process\.cwd\(\)/^[[39m)^[[33m;^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5811615Z     ^[[90m   |^[[39m                     ^[[31m^^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5812247Z     ^[[90m126|^[[39m   })^[[33m;^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5813204Z     ^[[90m127|^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5813423Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5814060Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5814407Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5815809Z ^[[41m^[[1m FAIL ^[[22m^[[49m __tests__/landing/landing-page.test.tsx^[[2m > ^[[22m(public)/page.tsx^[[2m > ^[[22mrenders Hero, Features, Pricing, Testimonials, FAQ, and waitlist dialog
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5817558Z ^[[31m^[[1mTestingLibraryElementError^[[22m: Unable to find an element by: [data-testid="pricing"]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5818139Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5818315Z Ignored nodes: comments, script, style
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5818631Z ^[[36m<body>^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5818858Z   ^[[36m<div>^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5819081Z     ^[[36m<div^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5819373Z       ^[[33mdata-testid^[[31m=^[[32m"hero"^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5819656Z     ^[[36m/>^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5819865Z     ^[[36m<div^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5820167Z       ^[[33mdata-testid^[[31m=^[[32m"features"^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5820489Z     ^[[36m/>^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5820700Z     ^[[36m<div^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5821008Z       ^[[33mdata-testid^[[31m=^[[32m"testimonials"^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5821313Z     ^[[36m/>^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5821618Z     ^[[36m<div^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5821992Z       ^[[33mdata-testid^[[31m=^[[32m"faq"^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5822280Z     ^[[36m/>^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5822502Z     ^[[36m<div^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5822833Z       ^[[33mdata-testid^[[31m=^[[32m"waitlist-dialog"^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5823487Z     ^[[36m/>^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5823705Z   ^[[36m</div>^[[31m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5823945Z ^[[36m</body>^[[31m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5824863Z ^[[90m ^[[2m❯^[[22m Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:^[[2m37:19^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5826048Z ^[[90m ^[[2m❯^[[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:^[[2m76:38^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5827134Z ^[[90m ^[[2m❯^[[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:^[[2m52:17^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5828807Z ^[[90m ^[[2m❯^[[22m ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:^[[2m95:19^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5830177Z ^[[36m ^[[2m❯^[[22m __tests__/landing/landing-page.test.tsx:^[[2m42:19^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5831047Z     ^[[90m 40|^[[39m     ^[[34mexpect^[[39m(screen^[[33m.^[[39m^[[34mgetByTestId^[[39m(^[[32m'hero'^[[39m))^[[33m.^[[39m^[[34mtoBeInTheDocument^[[39m()^[[33m;^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5832019Z     ^[[90m 41|^[[39m     ^[[34mexpect^[[39m(screen^[[33m.^[[39m^[[34mgetByTestId^[[39m(^[[32m'features'^[[39m))^[[33m.^[[39m^[[34mtoBeInTheDocument^[[39m()^[[33m;^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5833172Z     ^[[90m 42|^[[39m     ^[[34mexpect^[[39m(screen^[[33m.^[[39m^[[34mgetByTestId^[[39m(^[[32m'pricing'^[[39m))^[[33m.^[[39m^[[34mtoBeInTheDocument^[[39m()^[[33m;^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5833953Z     ^[[90m   |^[[39m                   ^[[31m^^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5835211Z     ^[[90m 43|^[[39m     ^[[34mexpect^[[39m(screen^[[33m.^[[39m^[[34mgetByTestId^[[39m(^[[32m'testimonials'^[[39m))^[[33m.^[[39m^[[34mtoBeInTheDocument^[[39m()^[[33m;^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5836213Z     ^[[90m 44|^[[39m     ^[[34mexpect^[[39m(screen^[[33m.^[[39m^[[34mgetByTestId^[[39m(^[[32m'faq'^[[39m))^[[33m.^[[39m^[[34mtoBeInTheDocument^[[39m()^[[33m;^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5836888Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5837281Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯^[[22m^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5837500Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5837530Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5844561Z ^[[2m Test Files ^[[22m ^[[1m^[[31m2 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m49 passed^[[39m^[[22m^[[90m (51)^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5845438Z ^[[2m      Tests ^[[22m ^[[1m^[[31m2 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m277 passed^[[39m^[[22m^[[90m (279)^[[39m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5845929Z ^[[2m   Start at ^[[22m 03:52:15
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5846794Z ^[[2m   Duration ^[[22m 27.09s^[[2m (transform 2.37s, setup 7.87s, import 12.19s, tests 12.60s, environment 50.22s)^[[22m
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5847183Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5856552Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5897157Z ##[error]AssertionError: expected 'import { existsSync, promises as fs }…' not to match /process\.cwd\(\)/
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	- Expected:
+gates / Frontend Web	UNKNOWN STEP	/process\.cwd\(\)/
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	+ Received:
+gates / Frontend Web	UNKNOWN STEP	"import { existsSync, promises as fs } from 'node:fs';
+gates / Frontend Web	UNKNOWN STEP	import path from 'node:path';
+gates / Frontend Web	UNKNOWN STEP	import { fileURLToPath } from 'node:url';
+gates / Frontend Web	UNKNOWN STEP	import { z } from 'zod';
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	/**
+gates / Frontend Web	UNKNOWN STEP	 * Deterministic docs-dir resolver + zod frontmatter schema (Phase 1.3 Plan 06).
+gates / Frontend Web	UNKNOWN STEP	 *
+gates / Frontend Web	UNKNOWN STEP	 * REVIEWS Revision 6 (OpenCode MEDIUM):
+gates / Frontend Web	UNKNOWN STEP	 *  - Anchor on this module's file location via __dirname (CJS) or
+gates / Frontend Web	UNKNOWN STEP	 *    fileURLToPath(import.meta.url) (ESM, the Next 16 default). From this file
+gates / Frontend Web	UNKNOWN STEP	 *    (apps/web/lib/docs/loader.ts) the docs dir is at ../../docs
+gates / Frontend Web	UNKNOWN STEP	 *    (apps/web/docs). Resolution is independent of the caller's working
+gates / Frontend Web	UNKNOWN STEP	 *    directory, so deployments that change cwd (Cloud Run, Vercel) stay correct.
+gates / Frontend Web	UNKNOWN STEP	 *  - Replace `as Frontmatter` TS cast with runtime zod validation
+gates / Frontend Web	UNKNOWN STEP	 *    (FrontmatterSchema.safeParse). Fail-closed → caller invokes notFound().
+gates / Frontend Web	UNKNOWN STEP	 *
+gates / Frontend Web	UNKNOWN STEP	 * This module is server-only (uses fs/path); never import from a client component.
+gates / Frontend Web	UNKNOWN STEP	 */
+gates / Frontend Web	UNKNOWN STEP	const HERE =
+gates / Frontend Web	UNKNOWN STEP	  typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	const SOURCE_RELATIVE_DOCS_DIR = path.resolve(HERE, '../../docs');
+gates / Frontend Web	UNKNOWN STEP	const CWD_RELATIVE_DOCS_DIR = path.resolve(process.cwd(), 'docs');
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	export const DOCS_DIR = existsSync(SOURCE_RELATIVE_DOCS_DIR)
+gates / Frontend Web	UNKNOWN STEP	  ? SOURCE_RELATIVE_DOCS_DIR
+gates / Frontend Web	UNKNOWN STEP	  : CWD_RELATIVE_DOCS_DIR;
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	export const FrontmatterSchema = z.object({
+gates / Frontend Web	UNKNOWN STEP	  title: z.string().min(1),
+gates / Frontend Web	UNKNOWN STEP	  slug: z.string().regex(/^[a-z0-9-]+$/),
+gates / Frontend Web	UNKNOWN STEP	  order: z.number().int().nonnegative(),
+gates / Frontend Web	UNKNOWN STEP	  locale: z.enum(['vi', 'en']),
+gates / Frontend Web	UNKNOWN STEP	  /**
+gates / Frontend Web	UNKNOWN STEP	   * Optional flag (quick task 260526-r73) — when true, /docs index hides this
+gates / Frontend Web	UNKNOWN STEP	   * entry. Used by privacy.* and terms.* MDX bundles, which keep their own
+gates / Frontend Web	UNKNOWN STEP	   * top-level routes (/privacy, /terms) and should not appear in /docs index.
+gates / Frontend Web	UNKNOWN STEP	   */
+gates / Frontend Web	UNKNOWN STEP	  hideFromIndex: z.boolean().optional(),
+gates / Frontend Web	UNKNOWN STEP	  /**
+gates / Frontend Web	UNKNOWN STEP	   * Optional ISO-8601 date (YYYY-MM-DD). Surfaced inside MDX prose; not
+gates / Frontend Web	UNKNOWN STEP	   * rendered structurally by the page chrome.
+gates / Frontend Web	UNKNOWN STEP	   */
+gates / Frontend Web	UNKNOWN STEP	  lastUpdated: z
+gates / Frontend Web	UNKNOWN STEP	    .string()
+gates / Frontend Web	UNKNOWN STEP	    .regex(/^\\d{4}-\\d{2}-\\d{2}$/)
+gates / Frontend Web	UNKNOWN STEP	    .optional(),
+gates / Frontend Web	UNKNOWN STEP	});
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	export type Frontmatter = z.infer<typeof FrontmatterSchema>;
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	export const FILENAME_RE = /^([a-z0-9-]+)\\.(vi|en)\\.mdx$/;
+gates / Frontend Web	UNKNOWN STEP	export const SLUG_RE = /^[a-z0-9-]+$/;
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	/** Lists MDX filenames matching <slug>.<locale>.mdx (D-D5). Silent-empty on read failure. */
+gates / Frontend Web	UNKNOWN STEP	export async function listDocFilenames(): Promise<string[]> {
+gates / Frontend Web	UNKNOWN STEP	  try {
+gates / Frontend Web	UNKNOWN STEP	    const entries = await fs.readdir(DOCS_DIR);
+gates / Frontend Web	UNKNOWN STEP	    return entries.filter((n) => FILENAME_RE.test(n));
+gates / Frontend Web	UNKNOWN STEP	  } catch {
+gates / Frontend Web	UNKNOWN STEP	    return [];
+gates / Frontend Web	UNKNOWN STEP	  }
+gates / Frontend Web	UNKNOWN STEP	}
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	/**
+gates / Frontend Web	UNKNOWN STEP	 * Build a docs-dir absolute path from slug + locale.
+gates / Frontend Web	UNKNOWN STEP	 *
+gates / Frontend Web	UNKNOWN STEP	 * T-1.3.06-01 mitigation (path traversal): caller MUST validate slug against
+gates / Frontend Web	UNKNOWN STEP	 * SLUG_RE before invoking. Re-asserted here as defense-in-depth.
+gates / Frontend Web	UNKNOWN STEP	 */
+gates / Frontend Web	UNKNOWN STEP	export function buildDocPath(slug: string, locale: 'vi' | 'en'): string {
+gates / Frontend Web	UNKNOWN STEP	  if (!SLUG_RE.test(slug)) {
+gates / Frontend Web	UNKNOWN STEP	    throw new Error(`invalid slug: ${slug}`);
+gates / Frontend Web	UNKNOWN STEP	  }
+gates / Frontend Web	UNKNOWN STEP	  return path.join(DOCS_DIR, `${slug}.${locale}.mdx`);
+gates / Frontend Web	UNKNOWN STEP	}
+gates / Frontend Web	UNKNOWN STEP	"
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	 ❯ __tests__/docs/mdx-pipeline.test.ts:125:21
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5907567Z 
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.5914318Z ##[error]TestingLibraryElementError: Unable to find an element by: [data-testid="pricing"]
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	Ignored nodes: comments, script, style
+gates / Frontend Web	UNKNOWN STEP	<body>
+gates / Frontend Web	UNKNOWN STEP	  <div>
+gates / Frontend Web	UNKNOWN STEP	    <div
+gates / Frontend Web	UNKNOWN STEP	      data-testid="hero"
+gates / Frontend Web	UNKNOWN STEP	    />
+gates / Frontend Web	UNKNOWN STEP	    <div
+gates / Frontend Web	UNKNOWN STEP	      data-testid="features"
+gates / Frontend Web	UNKNOWN STEP	    />
+gates / Frontend Web	UNKNOWN STEP	    <div
+gates / Frontend Web	UNKNOWN STEP	      data-testid="testimonials"
+gates / Frontend Web	UNKNOWN STEP	    />
+gates / Frontend Web	UNKNOWN STEP	    <div
+gates / Frontend Web	UNKNOWN STEP	      data-testid="faq"
+gates / Frontend Web	UNKNOWN STEP	    />
+gates / Frontend Web	UNKNOWN STEP	    <div
+gates / Frontend Web	UNKNOWN STEP	      data-testid="waitlist-dialog"
+gates / Frontend Web	UNKNOWN STEP	    />
+gates / Frontend Web	UNKNOWN STEP	  </div>
+gates / Frontend Web	UNKNOWN STEP	</body>
+gates / Frontend Web	UNKNOWN STEP	 ❯ Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+gates / Frontend Web	UNKNOWN STEP	 ❯ ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+gates / Frontend Web	UNKNOWN STEP	 ❯ ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+gates / Frontend Web	UNKNOWN STEP	 ❯ ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+gates / Frontend Web	UNKNOWN STEP	 ❯ __tests__/landing/landing-page.test.tsx:42:19
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7603316Z /home/runner/work/zero-mail/zero-mail/apps/web:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7604211Z [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] web@0.1.0 test:coverage: `vitest run --coverage`
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7604874Z Exit status 1
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7858463Z ##[error]Process completed with exit code 1.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7922862Z ##[group]Run actions/upload-artifact@v7
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7923441Z with:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7923635Z   name: vitest-coverage
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7923866Z   path: apps/web/coverage/
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7924088Z   retention-days: 14
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7924301Z   if-no-files-found: warn
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7924525Z   compression-level: 6
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7924732Z   overwrite: false
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7924938Z   include-hidden-files: false
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7925168Z   archive: true
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7925357Z env:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7925585Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.7925890Z ##[endgroup]
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.9361430Z ##[warning]No files were found with the provided path: apps/web/coverage/. No artifacts will be uploaded.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:42.9496599Z Post job cleanup.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.1065322Z Pruning is unnecessary.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.1240583Z Post job cleanup.
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2226747Z [command]/usr/bin/git version
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2271206Z git version 2.54.0
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2310434Z Temporarily overriding HOME='/home/runner/work/_temp/e3f52e59-96b7-4cbe-a396-c2b39e6996e3' before making global git config changes
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2312178Z Adding repository directory to the temporary git global config as a safe directory
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2316143Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/zero-mail/zero-mail
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2350594Z Removing SSH command configuration
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2358573Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2396796Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2656138Z Removing HTTP extra header
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2663195Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2699944Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2955201Z Removing includeIf entries pointing to credentials config files
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2964270Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2991458Z includeif.gitdir:/home/runner/work/zero-mail/zero-mail/.git.path
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2992692Z includeif.gitdir:/home/runner/work/zero-mail/zero-mail/.git/worktrees/*.path
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2994078Z includeif.gitdir:/github/workspace/.git.path
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.2995028Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3001215Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/zero-mail/zero-mail/.git.path
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3025670Z /home/runner/work/_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3036835Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/zero-mail/zero-mail/.git.path /home/runner/work/_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3076762Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/zero-mail/zero-mail/.git/worktrees/*.path
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3100698Z /home/runner/work/_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3109831Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/zero-mail/zero-mail/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3143783Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3166498Z /github/runner_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3174855Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3207936Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3231979Z /github/runner_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3271851Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3305842Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3557914Z Removing credentials config '/home/runner/work/_temp/git-credentials-a536fc26-a502-4b6e-8a7f-037baa62a537.config'
+gates / Frontend Web	UNKNOWN STEP	2026-05-28T03:52:43.3722576Z Cleaning up orphan processes

@@ -1,12 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { CalendarClock, CreditCard, Gift, ShieldCheck, WalletCards } from 'lucide-react';
+import { CalendarClock, Gift, ShieldCheck, WalletCards } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ErrorState } from '@/components/states/ErrorState';
-import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBillingBalance } from '@/features/billing/hooks/useBillingBalance';
@@ -20,22 +18,9 @@ export function BalanceCard() {
   const balance = useBillingBalance();
   const header = (
     <CardHeader>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <CardTitle>{t('billing.balance.label')}</CardTitle>
-          <CardDescription>{t('billing.balance.description')}</CardDescription>
-        </div>
-        <Link
-          href="/billing/top-up"
-          className={buttonVariants({
-            variant: 'accent',
-            size: 'sm',
-            className: 'w-full shrink-0 sm:w-auto',
-          })}
-        >
-          <CreditCard className="size-4" aria-hidden="true" />
-          {t('billing.balance.topupCta')}
-        </Link>
+      <div className="min-w-0 space-y-1">
+        <CardTitle>{t('billing.balance.label')}</CardTitle>
+        <CardDescription>{t('billing.balance.description')}</CardDescription>
       </div>
     </CardHeader>
   );

@@ -25,7 +25,6 @@ public class TenantDeletionRegistry {
                                 new TenantOwnedTable("credit_reservation", "tenant_id", 90),
                                 new TenantOwnedTable("credit_ledger_entry", "tenant_id", 100),
                                 new TenantOwnedTable("credit_grant", "tenant_id", 110),
-                                new TenantOwnedTable("billing_topup_intent", "tenant_id", 120),
                                 new TenantOwnedTable("rules", "tenant_id", 130),
                                 new TenantOwnedTable("triage_audit", "tenant_id", 140),
                                 new TenantOwnedTable("mail_message_observed", "tenant_id", 150),

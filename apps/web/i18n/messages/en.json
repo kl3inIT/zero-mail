@@ -243,7 +243,6 @@
       "refreshValue": "Every 45 seconds",
       "resetsAt": "Resets at",
       "resetUnknown": "Unknown",
-      "topupCta": "Top up credits",
       "unit": "credits"
     },
     "copy": {
@@ -260,9 +259,9 @@
         "timestamp": "Time",
         "type": "Type"
       },
-      "description": "Recent grants, top-ups, holds, spends, and releases.",
+      "description": "Recent grants, holds, spends, and releases.",
       "empty": {
-        "body": "Your top-ups and credit usage will show up here. Add credits to get started.",
+        "body": "Your credit activity will show up here once you use Zero Mail AI actions.",
         "heading": "No transactions yet"
       },
       "error": {
@@ -278,7 +277,7 @@
         "release": "Release",
         "reserve": "Reserve",
         "settle": "Settle",
-        "topup": "Top-up"
+        "topup": "Credit"
       },
       "unavailable": {
         "body": "Zero Mail can show your credit balance now. Detailed transaction history will arrive in a later update.",
@@ -289,93 +288,6 @@
     "page": {
       "description": "Track free beta credits, paid credits, and recent usage activity.",
       "title": "Billing"
-    },
-    "topup": {
-      "accountName": {
-        "label": "Account name"
-      },
-      "accountNumber": {
-        "label": "Account number"
-      },
-      "amount": {
-        "body": "You will receive a VietQR payload for this exact amount.",
-        "cta": "Continue to payment",
-        "error": {
-          "generic": "Couldn't create the top-up code. Try again.",
-          "invalidPackage": "Choose one of the available top-up package amounts.",
-          "invalidResponse": "The backend did not return complete VietQR details. Try again.",
-          "minimum": "Enter an amount greater than 0 VND."
-        },
-        "label": "Top-up amount",
-        "preview": "Transfer amount: {amount}",
-        "submitting": "Creating code",
-        "title": "Choose a top-up amount"
-      },
-      "amountVnd": {
-        "label": "Amount in VND"
-      },
-      "bank": {
-        "label": "Receiving bank"
-      },
-      "emv": {
-        "label": "VietQR EMV payload"
-      },
-      "expired": {
-        "body": "We didn't see the transfer in time, so this code is no longer being watched. Create a new one.",
-        "cta": "Start a new top-up",
-        "heading": "This top-up expired"
-      },
-      "expiresAt": {
-        "label": "Expires at"
-      },
-      "expiresIn": "Expires in {time}",
-      "package": {
-        "display": "{name} - {credits} credits",
-        "label": "Credit package"
-      },
-      "packages": {
-        "credits": "{credits} credits",
-        "cta": "Choose package",
-        "defaultDescription": "Credits for Zero Mail AI actions.",
-        "error": {
-          "generic": "Couldn't create the payment code. Try again.",
-          "invalidResponse": "The backend did not return complete payment details. Try again.",
-          "load": "Couldn't load billing packages. Try again."
-        },
-        "feature": {
-          "expiry": "Payment code held for a safe expiry window",
-          "instant": "Instant transfer code generation",
-          "webhook": "Automatic crediting after SePay confirmation"
-        },
-        "includes": "Includes",
-        "recommended": "Popular",
-        "startsAt": "Pay"
-      },
-      "page": {
-        "description": "Create a VietQR transfer, scan it with your banking app, and Zero Mail will update your balance automatically.",
-        "title": "Top up credits"
-      },
-      "qr": {
-        "alt": "SePay payment QR code",
-        "body": "Scan this with your banking app. Keep the amount and transfer content unchanged.",
-        "heading": "Scan this QR with your banking app",
-        "missing": "Not enough details to create the QR code"
-      },
-      "reference": {
-        "label": "Transfer reference"
-      },
-      "success": {
-        "backCta": "Back to billing",
-        "body": "Your credit balance increased. You can keep using Zero Mail.",
-        "heading": "Credits added"
-      },
-      "transferContent": {
-        "label": "Transfer content"
-      },
-      "waiting": {
-        "body": "Zero Mail will update your balance when the webhook credits the transfer.",
-        "heading": "Waiting for your transfer"
-      }
     }
   },
   "chat": {
@@ -731,13 +643,16 @@
     },
     "badRequest": "The request is invalid. Check it and try again.",
     "billing": {
-      "insufficient": "Insufficient credits — top up to continue.",
+      "checkout": {
+        "unavailable": "Checkout is temporarily unavailable. Try again later."
+      },
+      "insufficient": "Insufficient credits. Please try again later.",
       "ledger": {
         "invalidState": "Internal billing-state error — please try again later."
       },
-      "sepay": {
-        "auth_invalid": "Invalid webhook request.",
-        "reference_invalid": "Invalid transaction reference code."
+      "plan": {
+        "featureDisabled": "This feature is not available on your current plan.",
+        "notFound": "This billing plan was not found. Choose another plan."
       }
     },
     "boundary": {
@@ -1353,13 +1268,13 @@
       "body": "By clicking continue, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
       "intro": "These Terms of Service govern your use of Zero Mail, a beta / pre-launch academic project operated by the Zero Mail team. By using the service, you agree to the terms set out below; if you do not agree, please do not connect your Gmail account.",
       "sections": {
-        "acceptance": {
-          "body": "By creating a Zero Mail account, connecting your Gmail account, or otherwise using the Zero Mail service, you agree to be bound by these Terms of Service and by the Privacy Policy referenced from them. If you are using Zero Mail on behalf of an organization, you confirm that you have the authority to bind that organization to these terms, and references to you in this document include that organization where appropriate.\n\nIf you do not agree to any part of these terms, please stop using Zero Mail and disconnect your Gmail account from the Settings page.",
-          "heading": "Accepting these terms"
-        },
         "acceptableUse": {
           "body": "When using Zero Mail, you must not do any of the following. You must not use the service to send spam, scams, phishing messages, unsolicited bulk mail, or mass marketing, regardless of how the recipient list was assembled. You must not violate Gmail's Program Policies or any applicable email-sending law, including but not limited to the United States CAN-SPAM Act and equivalent regional regimes that apply where you or your recipients are located.\n\nYou must not abuse the automation to harass, deceive, impersonate, or defame any person or entity. You must not attempt to circumvent the safety gates, rate limits, idempotency controls, or audit logging that the service relies on to operate safely. You must not reverse-engineer or attempt to bypass the access controls that separate your account from any other account on the same deployment.",
           "heading": "Acceptable use"
+        },
+        "acceptance": {
+          "body": "By creating a Zero Mail account, connecting your Gmail account, or otherwise using the Zero Mail service, you agree to be bound by these Terms of Service and by the Privacy Policy referenced from them. If you are using Zero Mail on behalf of an organization, you confirm that you have the authority to bind that organization to these terms, and references to you in this document include that organization where appropriate.\n\nIf you do not agree to any part of these terms, please stop using Zero Mail and disconnect your Gmail account from the Settings page.",
+          "heading": "Accepting these terms"
         },
         "autoSendRules": {
           "body": "Zero Mail offers a global Auto-send rules setting in the Settings page. The setting defaults to ON. When it is ON, AI rules MAY take outbound actions on your behalf — sending a reply, forwarding a message, or sending a new message — but only after every applicable runtime safety gate passes for the specific message in question.\n\nThe runtime safety gates include, at a minimum: low-trust sender guards that prevent outbound automation against new or unverified contacts; per-tenant rate caps that limit how many outbound messages your account can produce in a short window; per-tenant daily caps that limit total outbound volume per day; idempotency checks that prevent a single triage decision from sending the same message more than once; and append-only audit logging that records every outbound action for later review.\n\nIf any gate fails, or if the Auto-send rules setting is OFF, the rule automatically downgrades to saving a Gmail draft instead of sending. The draft appears in your Gmail drafts folder and waits for you to review and send it manually.\n\nThe chat assistant always requires explicit user confirmation through a preview card before any outbound message is sent, regardless of the global setting.\n\nYou remain responsible for every outbound action taken under your account, whether triggered automatically by a rule or confirmed manually through the chat assistant. We strongly recommend reviewing your rules and the global setting periodically.",
@@ -1416,8 +1331,8 @@
       },
       "title": "Terms of Service",
       "toc": {
-        "acceptance": "Accepting these terms",
         "acceptableUse": "Acceptable use",
+        "acceptance": "Accepting these terms",
         "autoSendRules": "Auto-send rules",
         "changes": "Changes to these terms",
         "contact": "Contact",
@@ -1524,6 +1439,7 @@
     "sectionManage": "Manage",
     "settings": "Settings",
     "signIn": "Sign in",
+    "subscription": "Subscription",
     "testimonials": "Reviews",
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
@@ -2184,6 +2100,97 @@
       "signOut": "Sign out",
       "vietnamese": "Vietnamese"
     }
+  },
+  "subscription": {
+    "allSotaModels": "All SOTA models",
+    "annual": "Annual",
+    "billedAnnually": "Billed annually",
+    "contactSales": "Contact Sales",
+    "credits": "Credits",
+    "currentPlan": "Current Plan",
+    "feature": {
+      "drafts": {
+        "basic": "Basic AI auto-draft replies",
+        "high": "High-quality auto-draft replies based on rules",
+        "unlimited": "Unlimited rule executions & outbound safety audits"
+      },
+      "limits": {
+        "1gmail": "1 Gmail account integration",
+        "3gmail": "Up to 3 Gmail accounts integrated",
+        "unlimited": "Unlimited Gmail accounts"
+      },
+      "rules": {
+        "advanced": "Advanced rule builder with custom filters",
+        "api": "API access & custom webhook triggers",
+        "basic": "Standard natural-language rule builder"
+      },
+      "support": {
+        "basic": "Community support",
+        "dedicated": "Dedicated 24/7 support & guided onboarding",
+        "priority": "Priority email support"
+      },
+      "triage": {
+        "advanced": "Advanced AI triage & priority instant processing",
+        "basic": "Basic AI triage (auto-archive, label, star)",
+        "enterprise": "Enterprise-grade zero-latency triage pipeline"
+      }
+    },
+    "featureAgents": "Full access to AI Slides, AI Developer, and more agents",
+    "featureAudio": "Audio & Music: ElevenLabs, MiniMax, and more",
+    "featureChat": "Chat: Claude Opus 4.7, GPT-5.5, and more",
+    "featureImage": "Image: GPT Image 2, Nano Banana Pro, and more",
+    "featureStorage": "50GB storage with AI Drive",
+    "featureVideo": "Video: Gemini Veo 3.1, Seedance v2, and more",
+    "free": {
+      "b1": "50 emails processed per day",
+      "b2": "Basic AI triage",
+      "b3": "1 Gmail account",
+      "b4": "Community support",
+      "b5": "Basic email analytics",
+      "description": "For individuals getting started with email automation.",
+      "name": "Free"
+    },
+    "getStarted": "Get Started",
+    "monthly": "Monthly",
+    "perMonth": "/month",
+    "plan": {
+      "plus": "Plus",
+      "pro": "Pro",
+      "starter": "Starter"
+    },
+    "plus": {
+      "b1": "Unlimited emails processed",
+      "b2": "AI auto-draft replies",
+      "b3": "2 Gmail accounts",
+      "b4": "Priority support",
+      "b5": "Advanced analytics",
+      "b6": "Custom rules engine",
+      "description": "For power users who need full inbox automation.",
+      "includesIntro": "Everything in Free, plus:",
+      "name": "Plus"
+    },
+    "popular": "Most Popular",
+    "pro": {
+      "b1": "Team-wide analytics dashboard",
+      "b2": "Unlimited Gmail accounts",
+      "b3": "API access",
+      "b4": "Dedicated onboarding specialist",
+      "b5": "Priority 24/7 support",
+      "description": "For teams and businesses handling high email volume.",
+      "includesIntro": "Everything in Plus, plus:",
+      "name": "Professional"
+    },
+    "professionalWorkspace": "Professional workspace",
+    "savePercent": "SAVE 20%",
+    "section": {
+      "credits": "Credits",
+      "limits": "Limits & Support",
+      "triage": "AI Email Automation"
+    },
+    "subtitle": "Simple pricing, no hidden fees. Upgrade or downgrade anytime.",
+    "title": "Upgrade your subscription",
+    "toStart": "To start",
+    "upgrade": "Upgrade"
   },
   "templates": {
     "calendarInvites": {
