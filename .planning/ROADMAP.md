@@ -160,6 +160,7 @@ Plans:
 5. In `AI Provider`, user fills a single BYOK card with: provider `<Select>` (OpenAI / Anthropic / Google / DeepSeek — never OpenRouter or 9Router), base URL `<Input>` (auto-filled per provider, user-editable for OpenAI-compatible / Anthropic-compatible endpoints), API key (AES-GCM encrypted, no plaintext echo, masked display on re-render), model `<Select>` (populated from the provider's `/v1/models` response returned by Test connection), an Active `<Switch>` (default OFF; disabled until a model is picked AND the last Test result is `OK`), `Kiểm tra kết nối`, and `Lưu`. When the row is `active=true` AND has a tested model, every AI feature (chat, triage, draft, voice-generate) runs through that BYOK row; otherwise the admin-curated catalog default applies. Test connection uses the SAME enum-only response (`OK / INVALID_KEY / RATE_LIMITED / NETWORK_ERROR / TIMEOUT`) as admin MKEY-03 via the shared `ProviderConnectionTester`, plus a `models[]` list on `OK` so the user can pick a model. A single tenant-wide last-7d cost figure renders below the card. BYOK lives on `/ai` because Zero Mail is single-tenant-per-user. **Updated 2026-05-26 during plan-phase round 2** — per-feature picker, per-feature `Platform default ↔ Use my key` toggle, AND the tenant-wide mode card all removed; replaced by a single BYOK card with an Active switch.
 
 **Plans** (7 plans across 4 waves):
+
 - [ ] 09-01-PLAN.md — Wave 0: Liquibase changesets 094..097 + JPA entity scaffolding + 33 Wave-0 test stubs
 - [ ] 09-02-PLAN.md — Wave 1: Voice + Behavior + Knowledge backend (services/controllers/DTOs) + DraftReplyWorker + SensitiveDataRedactor wiring
 - [ ] 09-03-PLAN.md — Wave 1: Safety Net DELETE + DOMAIN pattern + triage audit blocked_by_safety_net_pattern badge
@@ -181,6 +182,32 @@ Plans:
 | 8. Admin Console & Operator Tooling | v1.2 | 6/6 | Complete   | 2026-05-20 |
 | 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 5/6 | In Progress|  |
 | 9. User Settings UI on Curated Catalog | v1.2 | 0/7 | In Progress | — |
+
+### Phase 10: Telegram Messaging Assistant
+
+**Goal:** Ship a Telegram-side companion that lets a tenant connect a single Gmail-paired tenant to their personal Telegram DM, receive per-rule triage notifications with inline-keyboard actions (reply / archive / open / spam / save draft / forward / send), confirm draft sends via a deterministic preview card, and chat free-text with the streaming AI assistant — all without expanding the body-content ban surface and without adding a second Gmail send call site.
+**Requirements**: TG-01 .. TG-19 (19 — see `.planning/phases/10-telegram-messaging-assistant/10-SPEC.md`)
+**Depends on:** Phase 9 (User Settings UI), Phase 8 (queue infra), Phase 7 (chat assistant + assistant_pending_action), Phase 02A (Pub/Sub SecurityFilterChain pattern)
+**Mode:** sequential — Wave 2 plans (05–08) are linearly dependent; see CONTEXT.md `<deferred>` note "Wave 2 plans … sequential, not parallel"
+**Plans:** 11 plans
+
+Plans:
+
+- [ ] 10-00 — foundation (Bucket4j 8.19.0 pin, REQUIREMENTS.md mint TG-01..TG-19, Liquibase 099-103, Modulith package-info.java, 6 ArchUnit skeletons, Playwright + WireMock fixtures scaffolding)  *Wave 0*
+- [ ] 10-01 — TriageDecisionRecorded event + ResponseSurface enum  *Wave 1*
+- [ ] 10-02 — OutboundActionSource enum + OutboundActionAuditWriter + MailActionService boundary  *Wave 1*
+- [ ] 10-03 — TelegramAccount entity + repositories + telegram_notification_log persistence  *Wave 1*
+- [ ] 10-04 — TelegramApiClient + TelegramSendRateLimiter (chatPausedUntil ConcurrentMap per RESEARCH override) + TelegramProperties  *Wave 1*
+- [ ] 10-05 — TelegramWebhookSecurityConfig (@Order 2) + UpdateRouter DM-only enforcement  *Wave 2*
+- [ ] 10-06 — PairingCodeService (HMAC-SHA256 compact code per RESEARCH override, NOT JWT) + REST controllers + SetMyCommandsService bot initializer  *Wave 2*
+- [ ] 10-07 — TelegramNotificationListener (AFTER_COMMIT) + CallbackRouter with cross-actor CAS + inline keyboard wiring  *Wave 2*
+- [ ] 10-08 — Worker outbox drain for MESSAGING_NOTIFICATION + dedup vacuum (ShedLock) + TelegramOutboxDrainArchTest assertion  *Wave 2*
+- [ ] 10-09 — TelegramChatStreamSink (Reactor sample 800ms cadence, D-05..D-08 streaming) + ChatStreamSinkFactory.createTelegramSink + free-text dispatch  *Wave 3*
+- [ ] 10-10 — apps/web/features/telegram-integration FE + /settings/connected-apps sub-route + SettingsClient.tsx nav-link (TG-18) + OpenAPI regen + Playwright e2e + docs/integrations/telegram-setup.md  *Wave 3*
+
+**Threat model:** 15 T-10-XX threats across 6 vectors (webhook public endpoint, bot token secret, pairing code, callback cross-actor, Telegram→Gmail mutate, body-ban regression). All plans carry `threat_refs:` frontmatter or `<threat_model>` block.
+
+**Deferred (see CONTEXT.md `<deferred>` block):** snooze un-snooze worker, `vipOnly`/`enabledRuleIds` filter predicates UI editors (backend always-allow until `TriageDecisionRecorded` carries `ruleId`), quiet hours UI, Zalo OA + Slack/Teams integrations, `/digest` `/unread` `/pause` slash commands, bot-token rotation drill.
 
 ---
 
