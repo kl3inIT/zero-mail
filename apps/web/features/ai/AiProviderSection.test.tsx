@@ -91,7 +91,7 @@ describe('AiProviderSection', () => {
 
     expect(screen.getByText('Saved key: ****abc1')).toBeInTheDocument();
     expect(screen.getByText('gpt-4o-mini')).toBeInTheDocument();
-    expect(screen.getAllByText('OK').length).toBeGreaterThan(0);
+    expect(screen.getByText('Connection OK')).toHaveClass('text-green');
     expect(screen.getByText('AI cost last 7 days: $2.43')).toBeInTheDocument();
   });
 });

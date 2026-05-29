@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyRound, Pencil, Trash2 } from 'lucide-react';
+import { CheckCircle2, KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState, type FormEvent } from 'react';
 
@@ -124,6 +124,7 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
     hasSavedRow && !formDirty && modelId.trim().length > 0 && lastTestResult === 'OK';
   const testDisabled = !hasSavedRow || formDirty || busy;
   const saveDisabled = busy || !provider || !baseUrl.trim() || !apiKey.trim();
+  const modelPlaceholder = hasSavedRow ? t('ai.byok.model.empty') : t('ai.byok.model.saveFirst');
 
   function handleProviderChange(nextProvider: ByokProvider) {
     setProvider(nextProvider);
@@ -225,10 +226,20 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
 
   const statusBadge = lastTestResult ? (
     <div className="flex flex-wrap items-center gap-2" aria-live="polite">
-      <Badge variant={lastTestResult === 'OK' ? 'secondary' : 'destructive'}>
+      <Badge
+        variant={lastTestResult === 'OK' ? 'outline' : 'destructive'}
+        className={
+          lastTestResult === 'OK'
+            ? 'border-green/30 bg-green-soft text-green h-7 px-2.5 text-sm font-semibold'
+            : 'h-7 px-2.5 text-sm font-semibold'
+        }
+      >
+        {lastTestResult === 'OK' ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : null}
         {lastTestResult === 'OK' ? t('ai.byok.status.ok') : t('ai.byok.status.fail')}
       </Badge>
-      <span className="text-muted-foreground text-sm">{lastTestResult}</span>
+      {lastTestResult === 'OK' ? null : (
+        <span className="text-muted-foreground text-sm">{lastTestResult}</span>
+      )}
       {lastTestedAt ? (
         <span className="text-muted-foreground text-sm">{formatTime(locale, lastTestedAt)}</span>
       ) : null}
@@ -347,7 +358,7 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
             }}
           >
             <SelectTrigger id="byok-model" className="w-full" disabled={!canSelectModel || busy}>
-              <SelectValue>{modelId || t('ai.byok.model.empty')}</SelectValue>
+              <SelectValue>{modelId || modelPlaceholder}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {modelOptions.map((modelOption) => (

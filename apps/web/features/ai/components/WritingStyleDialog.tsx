@@ -64,7 +64,7 @@ export function WritingStyleDialog({ value, onSave, disabled }: WritingStyleDial
       <DialogTrigger render={<Button variant="outline" disabled={disabled} />}>
         {value.trim().length > 0 ? t('ai.actions.edit') : t('ai.actions.set')}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-2xl lg:max-w-3xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
             <DialogTitle>{t('ai.voice.writingStyle.title')}</DialogTitle>
@@ -77,7 +77,7 @@ export function WritingStyleDialog({ value, onSave, disabled }: WritingStyleDial
               value={draft}
               onChange={(changeEvent) => setDraft(changeEvent.target.value)}
               placeholder={t('ai.voice.writingStyle.placeholder')}
-              className="min-h-44"
+              className="max-h-[42svh] min-h-44 overflow-y-auto"
               disabled={saving}
             />
             <p className="text-muted-foreground text-xs">

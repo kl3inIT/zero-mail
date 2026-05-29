@@ -93,12 +93,15 @@ public class SpringAiLlmModelClient implements LlmModelClient {
     }
 
     private LlmChatResult callWithClient(ChatClient chatClient, LlmChatRequest request) {
+        ChatClient.ChatClientRequestSpec requestSpecification =
+                chatClient.prompt().system(request.systemPrompt()).user(request.userMessage());
+        if (!request.tools().isEmpty()) {
+            requestSpecification =
+                    requestSpecification.tools(
+                            toolSpec -> toolSpec.callbacks(translateTools(request.tools())));
+        }
         ChatResponse chatResponse =
-                chatClient
-                        .prompt()
-                        .system(request.systemPrompt())
-                        .user(request.userMessage())
-                        .tools(toolSpec -> toolSpec.callbacks(translateTools(request.tools())))
+                requestSpecification
                         .advisors(SpringAiRawToolCallSupport::preserveRawToolCalls)
                         .options(chatOptions(request))
                         .call()

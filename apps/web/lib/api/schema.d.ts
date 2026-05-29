@@ -644,7 +644,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/billing/topup/intent": {
+    "/api/billing/plans/{planCode}/checkout": {
         parameters: {
             query?: never;
             header?: never;
@@ -653,23 +653,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["createIntent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/billing/sepay/webhook": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["receive"];
+        post: operations["checkout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1044,14 +1028,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/billing/packages": {
+    "/api/billing/plans": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["packages"];
+        get: operations["plans"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1524,43 +1508,9 @@ export interface components {
             apiKey: string;
             modelId?: string;
         };
-        TopupIntentRequest: {
-            packageCode: string;
-        };
-        TopupIntentResponse: {
-            orderCode: string;
-            packageCode: string;
-            packageName: string;
-            /** Format: int64 */
-            amountVnd: number;
-            /** Format: int32 */
-            creditAmount: number;
-            /** Format: date-time */
-            expiresAt: string;
-            bankCode: string;
-            bankName: string;
-            accountNumber: string;
-            accountName: string;
-            transferContent: string;
-            qrPayload: string;
-        };
-        SepayWebhookPayload: {
-            /** Format: int64 */
-            id?: number;
-            gateway?: string;
-            transactionDate?: string;
-            accountNumber?: string;
-            code?: string;
-            content?: string;
-            transferType?: string;
-            /** Format: int64 */
-            transferAmount?: number;
-            /** Format: int64 */
-            accumulated?: number;
-            subAccount?: string;
-            referenceCode?: string;
-            description?: string;
-            packageCode?: string;
+        BillingCheckoutResponse: {
+            /** @description Hosted Lemon Squeezy checkout URL for the selected billing plan */
+            checkoutUrl: string;
         };
         RuleEnabledRequest: {
             enabled: boolean;
@@ -1864,18 +1814,50 @@ export interface components {
             /** Format: int32 */
             messageCount: number;
         };
-        BillingPackageResponse: {
-            code: string;
-            name: string;
+        BillingPlanListResponse: {
+            /**
+             * @description Tenant's currently-active plan code. Falls back to FREE when no subscription exists.
+             * @enum {string}
+             */
+            currentPlanCode: "FREE" | "PLUS" | "PRO";
+            plans: components["schemas"]["BillingPlanResponse"][];
+        };
+        BillingPlanResponse: {
+            /** @enum {string} */
+            code: "FREE" | "PLUS" | "PRO";
+            displayName: string;
+            /** Format: int32 */
+            tierRank: number;
+            /** @enum {string} */
+            billingCycle: "NONE" | "MONTH";
+            currency: string;
             /** Format: int64 */
             priceVnd: number;
             /** Format: int32 */
-            creditAmount: number;
-            includedFeatures: string[];
-            featured: boolean;
-            description: string;
+            monthlyCreditAllowance: number;
             /** Format: int32 */
-            displayOrder: number;
+            sortOrder: number;
+            /** @description Enabled features for this plan, sorted by feature catalog sort order */
+            features: components["schemas"]["PlanFeatureSummaryResponse"][];
+        };
+        PlanFeatureSummaryResponse: {
+            code: string;
+            displayName: string;
+            description?: string;
+            /** @enum {string} */
+            category: "TRIAGE" | "COMPOSE" | "RULES" | "CLEANUP" | "INTERNAL";
+            /** Format: int32 */
+            creditCost: number;
+            /**
+             * Format: int32
+             * @description Null = unlimited
+             */
+            dailyInvocationLimit?: number;
+            /**
+             * Format: int32
+             * @description Null = unlimited
+             */
+            monthlyInvocationLimit?: number;
         };
         BillingLedgerEntryResponse: {
             /** Format: uuid */
@@ -6310,18 +6292,16 @@ export interface operations {
             };
         };
     };
-    createIntent: {
+    checkout: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                planCode: string;
+            };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TopupIntentRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -6329,87 +6309,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TopupIntentResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    receive: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SepayWebhookPayload"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": {
-                        [key: string]: unknown;
-                    };
+                    "*/*": components["schemas"]["BillingCheckoutResponse"];
                 };
             };
             /** @description Bad Request */
@@ -8368,7 +8268,7 @@ export interface operations {
             };
         };
     };
-    packages: {
+    plans: {
         parameters: {
             query?: never;
             header?: never;
@@ -8383,7 +8283,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["BillingPackageResponse"][];
+                    "*/*": components["schemas"]["BillingPlanListResponse"];
                 };
             };
             /** @description Bad Request */

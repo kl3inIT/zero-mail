@@ -104,8 +104,8 @@ export const aiMessages = {
     en: 'Delete the BYOK key? Zero Mail will return to the platform key.',
   },
   'ai.byok.empty.body': {
-    vi: 'AI sẽ tính chi phí qua tài khoản Zero Mail. Điền form bên dưới để dùng key cá nhân.',
-    en: 'Cost runs through your Zero Mail account. Fill in the form below to use your own key.',
+    vi: 'Điền key cá nhân, bấm Lưu để mã hóa trên server, rồi Kiểm tra kết nối để tải model.',
+    en: 'Enter your personal key, save it for server-side encryption, then test the connection to load models.',
   },
   'ai.byok.empty.title': {
     vi: 'Đang dùng key nền tảng',
@@ -120,8 +120,12 @@ export const aiMessages = {
     en: 'Saved key: ****{lastFourChars}',
   },
   'ai.byok.model.empty': {
-    vi: 'Kiểm tra kết nối để tải danh sách model',
-    en: 'Test the connection to load models',
+    vi: 'Đã lưu key. Kiểm tra kết nối để tải model',
+    en: 'Saved key. Test the connection to load models',
+  },
+  'ai.byok.model.saveFirst': {
+    vi: 'Lưu key trước khi kiểm tra kết nối',
+    en: 'Save the key before testing the connection',
   },
   'ai.byok.model.label': {
     vi: 'Model',
@@ -152,16 +156,16 @@ export const aiMessages = {
     en: 'Replace {provider} key? The previous key will be overwritten and cannot be recovered. BYOK will stay off until you test again and pick a model.',
   },
   'ai.byok.status.fail': {
-    vi: 'Lỗi',
-    en: 'Error',
+    vi: 'Kiểm tra lỗi',
+    en: 'Test failed',
   },
   'ai.byok.status.ok': {
-    vi: 'OK',
-    en: 'OK',
+    vi: 'Kết nối OK',
+    en: 'Connection OK',
   },
   'ai.byok.test.disabledTooltip': {
-    vi: 'Lưu trước rồi kiểm tra',
-    en: 'Save first, then test',
+    vi: 'Endpoint kiểm tra dùng key đã lưu; hãy lưu key trước.',
+    en: 'The test endpoint uses the saved key; save the key first.',
   },
   'ai.byok.title': {
     vi: 'Key cá nhân (BYOK)',

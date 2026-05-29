@@ -53,7 +53,7 @@
         "confirm": "Xóa key BYOK? Zero Mail sẽ quay lại dùng key nền tảng."
       },
       "empty": {
-        "body": "AI sẽ tính chi phí qua tài khoản Zero Mail. Điền form bên dưới để dùng key cá nhân.",
+        "body": "Điền key cá nhân, bấm Lưu để mã hóa trên server, rồi Kiểm tra kết nối để tải model.",
         "title": "Đang dùng key nền tảng"
       },
       "key": {
@@ -61,8 +61,9 @@
         "masked": "Key đã lưu: ****{lastFourChars}"
       },
       "model": {
-        "empty": "Kiểm tra kết nối để tải danh sách model",
-        "label": "Model"
+        "empty": "Đã lưu key. Kiểm tra kết nối để tải model",
+        "label": "Model",
+        "saveFirst": "Lưu key trước khi kiểm tra kết nối"
       },
       "provider": {
         "anthropic": "Anthropic",
@@ -75,11 +76,11 @@
         "confirm": "Thay key {provider}? Key cũ sẽ bị ghi đè và không khôi phục được. BYOK sẽ tắt đến khi bạn kiểm tra lại và chọn model."
       },
       "status": {
-        "fail": "Lỗi",
-        "ok": "OK"
+        "fail": "Kiểm tra lỗi",
+        "ok": "Kết nối OK"
       },
       "test": {
-        "disabledTooltip": "Lưu trước rồi kiểm tra"
+        "disabledTooltip": "Endpoint kiểm tra dùng key đã lưu; hãy lưu key trước."
       },
       "title": "Key cá nhân (BYOK)",
       "titleDescription": "Bật để dùng key của bạn cho mọi tính năng AI. Khi tắt, hệ thống dùng key mặc định của Zero Mail."

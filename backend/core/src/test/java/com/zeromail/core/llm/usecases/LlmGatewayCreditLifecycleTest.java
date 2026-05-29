@@ -247,7 +247,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
                                         UUID.randomUUID(),
                                         tenantId,
                                         startingCredits,
-                                        "TEST-SEED-" + tenantId)));
+                                        "SEPAY-SEED-" + tenantId)));
         clearInvocations(creditLedger);
         return tenantId;
     }

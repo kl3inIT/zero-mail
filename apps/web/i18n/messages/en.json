@@ -53,7 +53,7 @@
         "confirm": "Delete the BYOK key? Zero Mail will return to the platform key."
       },
       "empty": {
-        "body": "Cost runs through your Zero Mail account. Fill in the form below to use your own key.",
+        "body": "Enter your personal key, save it for server-side encryption, then test the connection to load models.",
         "title": "Using the platform key"
       },
       "key": {
@@ -61,8 +61,9 @@
         "masked": "Saved key: ****{lastFourChars}"
       },
       "model": {
-        "empty": "Test the connection to load models",
-        "label": "Model"
+        "empty": "Saved key. Test the connection to load models",
+        "label": "Model",
+        "saveFirst": "Save the key before testing the connection"
       },
       "provider": {
         "anthropic": "Anthropic",
@@ -75,11 +76,11 @@
         "confirm": "Replace {provider} key? The previous key will be overwritten and cannot be recovered. BYOK will stay off until you test again and pick a model."
       },
       "status": {
-        "fail": "Error",
-        "ok": "OK"
+        "fail": "Test failed",
+        "ok": "Connection OK"
       },
       "test": {
-        "disabledTooltip": "Save first, then test"
+        "disabledTooltip": "The test endpoint uses the saved key; save the key first."
       },
       "title": "Personal key (BYOK)",
       "titleDescription": "Enable your own key for all AI features. When disabled, Zero Mail uses the platform key."

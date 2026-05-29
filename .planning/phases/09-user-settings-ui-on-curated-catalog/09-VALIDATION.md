@@ -1,11 +1,11 @@
 ---
 phase: 09
 slug: user-settings-ui-on-curated-catalog
-status: draft
+status: passed
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-05-26
-revised: 2026-05-26 (planner-checker iteration 1 — added AssistantKnowledgeAppendCallSiteTest per BLOCKER #1; corrected stub count per INFO #8)
+revised: 2026-05-29 (plan 09-07 automated gates passed; manual checkpoint approved)
 ---
 
 # Phase 09 — Validation Strategy
@@ -45,45 +45,45 @@ revised: 2026-05-26 (planner-checker iteration 1 — added AssistantKnowledgeApp
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists | Status |
 |--------|----------|-----------|-------------------|-------------|--------|
-| SET-VOICE-01 | writing_style 200–500 word bounds enforced | unit (validator) | `./gradlew :backend:core:test --tests SettingsVoiceServiceWordBoundsTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-01 | PUT /api/settings/voice returns 200 + persists | mvc slice | `./gradlew :backend:api:test --tests SettingsVoiceControllerTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-02 | sanitizer single-call invariant | ArchUnit | `./gradlew :backend:core:test --tests PersonalizationSanitizerSingleCallSiteTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-02 | sentinel `[SYSTEM]` removed from persisted value | unit | `./gradlew :backend:core:test --tests PersonalizationSanitizerCorpusTest` | ✅ existing | ⬜ pending |
-| SET-VOICE-03 | signature appears verbatim in next draft | integration | `./gradlew :backend:core:test --tests DraftSignatureIntegrationTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-04 | UNIQUE(tenant_id,title) returns 409 | `@DataJpaTest` | `./gradlew :backend:core:test --tests AssistantKnowledgeMemoryUniqueTitleTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-04 | cross-tenant delete returns 404 | mvc slice | `./gradlew :backend:api:test --tests KnowledgeSnippetControllerTenantIsolationTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-04 | only AssistantKnowledgeService writes to AssistantKnowledgeMemoryRepository.save (repo write-site rule) | ArchUnit | `./gradlew :backend:core:test --tests KnowledgeSnippetSingleWriteSiteTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-04 | chat-tool + REST share `AssistantKnowledgeService.append` (append-callers rule, distinct test file per planner-checker BLOCKER #1) | ArchUnit | `./gradlew :backend:core:test --tests AssistantKnowledgeAppendCallSiteTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-05 | tone_preset enum CHECK rejects bad value | `@DataJpaTest` | `./gradlew :backend:core:test --tests AssistantSettingsTonePresetCheckTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-06 | non-`vi`/`en` ai_output_language returns 400 | mvc slice | `./gradlew :backend:api:test --tests SettingsVoiceLanguageValidationTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-07 | sentinel content never reaches DB/log/audit | integration | `./gradlew :backend:core:test --tests VoiceGenerationFromSentLeakTest` | ❌ Wave 0 (critical privacy) | ⬜ pending |
-| SET-VOICE-07 | 4th call/hour returns 429 | unit | `./gradlew :backend:core:test --tests VoiceGenerationRateLimitTest` | ❌ Wave 0 | ⬜ pending |
-| SET-VOICE-07 | Spring AI observation properties disabled (Mechanisms A/B/C per WARNING #6) | mvc slice + integration | `./gradlew :backend:api:test --tests SpringAiObservationDisabledTest` | ❌ Wave 0 | ⬜ pending |
-| SET-BEHV-01 | toggle OFF → draft worker writes no rows | integration | `./gradlew :backend:worker:test --tests DraftAutoToggleIntegrationTest` | ❌ Wave 0 | ⬜ pending |
-| SET-BEHV-02 | draft worker resolves enum → threshold and skips below | integration | `./gradlew :backend:worker:test --tests DraftConfidenceThresholdTest` | ❌ Wave 0 | ⬜ pending |
-| SET-BEHV-03 | reuses existing notification-preferences endpoint (no new column) | smoke | Playwright e2e | ❌ Wave 0 | ⬜ pending |
-| SET-BEHV-04 | LLM-05 redactor toggle-aware | unit | `./gradlew :backend:core:test --tests SensitiveDataRedactionToggleTest` | ❌ Wave 0 | ⬜ pending |
-| SET-BEHV-05 | reuses triage-pause endpoint (UI labeled "Pause triage") | smoke | Playwright e2e | ❌ Wave 0 | ⬜ pending |
-| SET-SAFE-01 | DELETE observation-created entry → 403 | mvc slice | `./gradlew :backend:api:test --tests SenderSafetyNetDeleteAuthorityTest` | ❌ Wave 0 | ⬜ pending |
-| SET-SAFE-01 | `@acme.com` POST persists as DOMAIN | mvc slice | `./gradlew :backend:api:test --tests SenderSafetyNetDomainPatternTest` | ❌ Wave 0 | ⬜ pending |
-| SET-SAFE-01 | DOMAIN entry blocks matching sender in triage worker | integration | `./gradlew :backend:worker:test --tests TriageSafetyNetDomainMatchTest` | ❌ Wave 0 | ⬜ pending |
-| SET-SAFE-04 | `blocked_by_safety_net_pattern` populated when REJECTED_BY_SAFETY_NET | integration | `./gradlew :backend:worker:test --tests TriageAuditSafetyNetBadgeTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-01 | Resolution end-to-end: active+tested+model → calls `{base_url}` with `model_id`; inactive → catalog default | integration | `./gradlew :backend:core:test --tests ByokResolutionIntegrationTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-01 | Activate gate rejects when `model_id IS NULL` | mvc slice | `./gradlew :backend:api:test --tests ByokActivateGateModelMissingTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-01 | Activate gate rejects when `last_test_result <> 'OK'` | mvc slice | `./gradlew :backend:api:test --tests ByokActivateGateNotTestedTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-02 | save BYOK for `OPENROUTER` → 400 `code=ai.byok.provider_not_allowed` | mvc slice | `./gradlew :backend:api:test --tests ByokSaveProviderAllowListTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-02 | base URL: `http://attacker.com` → 400 `code=ai.byok.base_url_not_https` | mvc slice | `./gradlew :backend:api:test --tests ByokSaveBaseUrlValidationTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-02 | saving a row resets `active=false`, `last_test_result=NULL`, `last_tested_at=NULL` | `@DataJpaTest` | `./gradlew :backend:core:test --tests ByokSaveResetsStateTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-02 | plaintext key never echoed in response (regex assertion) | mvc snapshot | `./gradlew :backend:api:test --tests ByokResponseNeverEchoesPlaintextTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-02 | replace-row-on-new-provider (exactly one row per tenant) | `@DataJpaTest` | `./gradlew :backend:core:test --tests UserByokKeySingleRowPerTenantTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-03 | tenant-wide cost SUM returns exactly `{usd}` (no per-feature keys) | `@DataJpaTest` | `./gradlew :backend:core:test --tests AiCostQueryService7DayTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-04 | enum-only response; 401 provider body never leaks; `OK` carries `models[]` capped 100; ALL 4 providers (OPENAI/ANTHROPIC/GOOGLE/DEEPSEEK) covered per BLOCKER #2 | mvc slice | `./gradlew :backend:api:test --tests ByokTestConnectionEnumOnlyTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-04 | 11th test/hour returns 429 | unit | `./gradlew :backend:core:test --tests ByokTestConnectionRateLimitTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-04 | admin MKEY-03 + user `POST /api/byok/test-connection` both reach `ProviderConnectionTester.probeConnection` | ArchUnit | `./gradlew :backend:core:test --tests ProviderConnectionTesterSingleBindingTest` | ❌ Wave 0 | ⬜ pending |
-| SET-AI-04 | sentinel-leak scrub stays green (no provider error body) | unit | `./gradlew :backend:core:test --tests UserByokTestConnectionSentinelLeakTest` | ❌ Wave 0 | ⬜ pending |
-| Whole page | flat-section golden path + DOMAIN safety-net encoding round-trip (per INFO #10) | Playwright e2e | `pnpm --filter web e2e -- ai-settings.spec.ts` | ❌ Wave 0 | ⬜ pending |
-| Whole page | no hardcoded color hex | repo grep gate | apps/web existing lint task | ✅ existing | ⬜ pending |
-| Whole phase | aggregate ArchUnit (5+ rules: sanitizer-single-call, knowledge-append-callers, knowledge-repo-write-site, ProviderConnectionTester-single-binding, user_byok_key-package-confinement) | ArchUnit aggregate | `./gradlew :backend:core:test --tests Phase9ArchitectureTest` | ❌ Wave 3 (plan 09-07) | ⬜ pending |
+| SET-VOICE-01 | writing_style 200–500 word bounds enforced | unit (validator) | `./gradlew :backend:core:test --tests SettingsVoiceServiceWordBoundsTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-01 | PUT /api/settings/voice returns 200 + persists | mvc slice | `./gradlew :backend:api:test --tests SettingsVoiceControllerTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-02 | sanitizer single-call invariant | ArchUnit | `./gradlew :backend:core:test --tests PersonalizationSanitizerSingleCallSiteTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-02 | sentinel `[SYSTEM]` removed from persisted value | unit | `./gradlew :backend:core:test --tests PersonalizationSanitizerCorpusTest` | ✅ existing | ✅ green |
+| SET-VOICE-03 | signature appears verbatim in next draft | integration | `./gradlew :backend:core:test --tests DraftSignatureIntegrationTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-04 | UNIQUE(tenant_id,title) returns 409 | `@DataJpaTest` | `./gradlew :backend:core:test --tests AssistantKnowledgeMemoryUniqueTitleTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-04 | cross-tenant delete returns 404 | mvc slice | `./gradlew :backend:api:test --tests KnowledgeSnippetControllerTenantIsolationTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-04 | only AssistantKnowledgeService writes to AssistantKnowledgeMemoryRepository.save (repo write-site rule) | ArchUnit | `./gradlew :backend:core:test --tests KnowledgeSnippetSingleWriteSiteTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-04 | chat-tool + REST share `AssistantKnowledgeService.append` (append-callers rule, distinct test file per planner-checker BLOCKER #1) | ArchUnit | `./gradlew :backend:core:test --tests AssistantKnowledgeAppendCallSiteTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-05 | tone_preset enum CHECK rejects bad value | `@DataJpaTest` | `./gradlew :backend:core:test --tests AssistantSettingsTonePresetCheckTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-06 | non-`vi`/`en` ai_output_language returns 400 | mvc slice | `./gradlew :backend:api:test --tests SettingsVoiceLanguageValidationTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-07 | sentinel content never reaches DB/log/audit | integration | `./gradlew :backend:core:test --tests VoiceGenerationFromSentLeakTest` | ❌ Wave 0 (critical privacy) | ✅ green |
+| SET-VOICE-07 | 4th call/hour returns 429 | unit | `./gradlew :backend:core:test --tests VoiceGenerationRateLimitTest` | ❌ Wave 0 | ✅ green |
+| SET-VOICE-07 | Spring AI observation properties disabled (Mechanisms A/B/C per WARNING #6) | mvc slice + integration | `./gradlew :backend:api:test --tests SpringAiObservationDisabledTest` | ❌ Wave 0 | ✅ green |
+| SET-BEHV-01 | toggle OFF → draft worker writes no rows | integration | `./gradlew :backend:worker:test --tests DraftAutoToggleIntegrationTest` | ❌ Wave 0 | ✅ green |
+| SET-BEHV-02 | draft worker resolves enum → threshold and skips below | integration | `./gradlew :backend:worker:test --tests DraftConfidenceThresholdTest` | ❌ Wave 0 | ✅ green |
+| SET-BEHV-03 | reuses existing notification-preferences endpoint (no new column) | smoke | Playwright e2e | ❌ Wave 0 | ✅ green |
+| SET-BEHV-04 | LLM-05 redactor toggle-aware | unit | `./gradlew :backend:core:test --tests SensitiveDataRedactionToggleTest` | ❌ Wave 0 | ✅ green |
+| SET-BEHV-05 | reuses triage-pause endpoint (UI labeled "Pause triage") | smoke | Playwright e2e | ❌ Wave 0 | ✅ green |
+| SET-SAFE-01 | DELETE observation-created entry → 403 | mvc slice | `./gradlew :backend:api:test --tests SenderSafetyNetDeleteAuthorityTest` | ❌ Wave 0 | ✅ green |
+| SET-SAFE-01 | `@acme.com` POST persists as DOMAIN | mvc slice | `./gradlew :backend:api:test --tests SenderSafetyNetDomainPatternTest` | ❌ Wave 0 | ✅ green |
+| SET-SAFE-01 | DOMAIN entry blocks matching sender in triage worker | integration | `./gradlew :backend:worker:test --tests TriageSafetyNetDomainMatchTest` | ❌ Wave 0 | ✅ green |
+| SET-SAFE-04 | `blocked_by_safety_net_pattern` populated when REJECTED_BY_SAFETY_NET | integration | `./gradlew :backend:worker:test --tests TriageAuditSafetyNetBadgeTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-01 | Resolution end-to-end: active+tested+model → calls `{base_url}` with `model_id`; inactive → catalog default | integration | `./gradlew :backend:core:test --tests ByokResolutionIntegrationTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-01 | Activate gate rejects when `model_id IS NULL` | mvc slice | `./gradlew :backend:api:test --tests ByokActivateGateModelMissingTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-01 | Activate gate rejects when `last_test_result <> 'OK'` | mvc slice | `./gradlew :backend:api:test --tests ByokActivateGateNotTestedTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-02 | save BYOK for `OPENROUTER` → 400 `code=ai.byok.provider_not_allowed` | mvc slice | `./gradlew :backend:api:test --tests ByokSaveProviderAllowListTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-02 | base URL: `http://attacker.com` → 400 `code=ai.byok.base_url_not_https` | mvc slice | `./gradlew :backend:api:test --tests ByokSaveBaseUrlValidationTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-02 | saving a row resets `active=false`, `last_test_result=NULL`, `last_tested_at=NULL` | `@DataJpaTest` | `./gradlew :backend:core:test --tests ByokSaveResetsStateTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-02 | plaintext key never echoed in response (regex assertion) | mvc snapshot | `./gradlew :backend:api:test --tests ByokResponseNeverEchoesPlaintextTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-02 | replace-row-on-new-provider (exactly one row per tenant) | `@DataJpaTest` | `./gradlew :backend:core:test --tests UserByokKeySingleRowPerTenantTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-03 | tenant-wide cost SUM returns exactly `{usd}` (no per-feature keys) | `@DataJpaTest` | `./gradlew :backend:core:test --tests AiCostQueryService7DayTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-04 | enum-only response; 401 provider body never leaks; `OK` carries `models[]` capped 100; ALL 4 providers (OPENAI/ANTHROPIC/GOOGLE/DEEPSEEK) covered per BLOCKER #2 | mvc slice | `./gradlew :backend:api:test --tests ByokTestConnectionEnumOnlyTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-04 | 11th test/hour returns 429 | unit | `./gradlew :backend:core:test --tests ByokTestConnectionRateLimitTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-04 | admin MKEY-03 + user `POST /api/byok/test-connection` both reach `ProviderConnectionTester.probeConnection` | ArchUnit | `./gradlew :backend:core:test --tests ProviderConnectionTesterSingleBindingTest` | ❌ Wave 0 | ✅ green |
+| SET-AI-04 | sentinel-leak scrub stays green (no provider error body) | unit | `./gradlew :backend:core:test --tests UserByokTestConnectionSentinelLeakTest` | ❌ Wave 0 | ✅ green |
+| Whole page | flat-section golden path + DOMAIN safety-net encoding round-trip (per INFO #10) | Playwright e2e | `pnpm --filter web e2e -- ai-settings.spec.ts` | ❌ Wave 0 | ✅ green |
+| Whole page | no hardcoded color hex | repo grep gate | apps/web existing lint task | ✅ existing | ✅ green |
+| Whole phase | aggregate ArchUnit (5+ rules: sanitizer-single-call, knowledge-append-callers, knowledge-repo-write-site, ProviderConnectionTester-single-binding, user_byok_key-package-confinement) | ArchUnit aggregate | `./gradlew :backend:core:test --tests Phase9ArchitectureTest` | ❌ Wave 3 (plan 09-07) | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -146,11 +146,11 @@ The first plan wave MUST create stub test files for every ❌ Wave 0 row above. 
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all ❌ MISSING references (33 backend test stubs + 1 Playwright spec = 34 stub files listed)
-- [ ] No watch-mode flags (all commands `--run` / `--tests`, no `--watch`)
-- [ ] Feedback latency < 90 seconds for quick run
-- [ ] `nyquist_compliant: true` flipped after planner attaches every test command to a task or Wave-0 stub
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all ❌ MISSING references (33 backend test stubs + 1 Playwright spec = 34 stub files listed)
+- [x] No watch-mode flags (all commands `--run` / `--tests`, no `--watch`)
+- [x] Feedback latency < 90 seconds for quick run
+- [x] `nyquist_compliant: true` flipped after planner attaches every test command to a task or Wave-0 stub
 
-**Approval:** pending
+**Approval:** automated gates passed 2026-05-27 and 2026-05-29; manual-only verification checkpoint approved by developer in chat on 2026-05-29 (`ok pass`).

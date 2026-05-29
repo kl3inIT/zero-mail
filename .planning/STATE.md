@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: executing
-stopped_at: Completed 09-06-PLAN.md
-last_updated: "2026-05-26T23:45:00Z"
-last_activity: 2026-05-27
+stopped_at: Completed 09-07-PLAN.md
+last_updated: "2026-05-29T03:43:44Z"
+last_activity: 2026-05-29
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 28
-  completed_plans: 26
-  percent: 50
+  completed_plans: 27
+  percent: 75
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** Phase 09 — user-settings-ui-on-curated-catalog
+**Current focus:** Phase 08.1 — Inbox Zero-style Rule Actions & Admin-managed Examples Catalog
 
 ## Current Position
 
-Phase: 09 (user-settings-ui-on-curated-catalog) — EXECUTING
-Plan: 7 of 7
-Status: Ready to execute 09-07 verification
-Last activity: 2026-05-27
+Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
+Plan: 6 of 6
+Status: Ready to resume 08.1-06 runtime outbound execution
+Last activity: 2026-05-29
 
 ## Current Milestone Roadmap
 
@@ -36,7 +36,7 @@ Last activity: 2026-05-27
 
 - **Phase 8** — Admin Console & Operator Tooling (WebAuthn admin auth + audit foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 42 requirements (OPS-INFRA-01..03, ADMIN-01..10, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
 - **Phase 08.1** — Inbox Zero-style Rule Actions & Admin-managed Examples Catalog (examples/personas seed, admin-managed examples/actions, user settings for outbound automation, send/reply/forward runtime safety gates, and outbound gateway architecture tests) — 12 requirements (RACT-01..12)
-- **Phase 9** — User Settings UI on Curated Catalog (4-tab Settings: Personalization, Behavior, Safety Net, AI Provider/Model — AI tab consumes curated catalog from Phase 8) — 19 requirements (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04)
+- **Phase 9** — User Settings UI on Curated Catalog (single `/ai` settings surface: voice, behavior, updates, safety net, and AI provider/BYOK) — completed 2026-05-29; 18 shipped requirements (SET-VOICE-01..07, SET-BEHV-01..05, SET-SAFE-01/04, SET-AI-01..04)
 
 See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
 
@@ -174,6 +174,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 09 P04 | multi-session | 4 tasks | 39 files |
 | Phase 09 P05 | multi-session | 2 tasks | 22 files |
 | Phase 09 P06 | multi-session | 5 tasks | 71 files |
+| Phase 09 P07 | multi-session | 3 tasks | 23 app/test/planning files |
 
 ## Accumulated Context
 

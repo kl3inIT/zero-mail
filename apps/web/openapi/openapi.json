@@ -4738,116 +4738,27 @@
         }
       }
     },
-    "/api/billing/topup/intent": {
+    "/api/billing/plans/{planCode}/checkout": {
       "post": {
         "tags": ["billing"],
-        "operationId": "createIntent",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TopupIntentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/TopupIntentResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+        "operationId": "checkout",
+        "parameters": [
+          {
+            "name": "planCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
-        }
-      }
-    },
-    "/api/billing/sepay/webhook": {
-      "post": {
-        "tags": ["billing-webhook"],
-        "operationId": "receive",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SepayWebhookPayload"
-              }
-            }
-          },
-          "required": true
-        },
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "*/*": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
+                  "$ref": "#/components/schemas/BillingCheckoutResponse"
                 }
               }
             }
@@ -7143,20 +7054,17 @@
         }
       }
     },
-    "/api/billing/packages": {
+    "/api/billing/plans": {
       "get": {
         "tags": ["billing"],
-        "operationId": "packages",
+        "operationId": "plans",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "*/*": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/BillingPackageResponse"
-                  }
+                  "$ref": "#/components/schemas/BillingPlanListResponse"
                 }
               }
             }
@@ -8886,120 +8794,15 @@
         },
         "required": ["apiKey", "baseUrl", "provider"]
       },
-      "TopupIntentRequest": {
+      "BillingCheckoutResponse": {
         "type": "object",
         "properties": {
-          "packageCode": {
+          "checkoutUrl": {
             "type": "string",
-            "minLength": 1
+            "description": "Hosted Lemon Squeezy checkout URL for the selected billing plan"
           }
         },
-        "required": ["packageCode"]
-      },
-      "TopupIntentResponse": {
-        "type": "object",
-        "properties": {
-          "orderCode": {
-            "type": "string"
-          },
-          "packageCode": {
-            "type": "string"
-          },
-          "packageName": {
-            "type": "string"
-          },
-          "amountVnd": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "creditAmount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "bankCode": {
-            "type": "string"
-          },
-          "bankName": {
-            "type": "string"
-          },
-          "accountNumber": {
-            "type": "string"
-          },
-          "accountName": {
-            "type": "string"
-          },
-          "transferContent": {
-            "type": "string"
-          },
-          "qrPayload": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "accountName",
-          "accountNumber",
-          "amountVnd",
-          "bankCode",
-          "bankName",
-          "creditAmount",
-          "expiresAt",
-          "orderCode",
-          "packageCode",
-          "packageName",
-          "qrPayload",
-          "transferContent"
-        ]
-      },
-      "SepayWebhookPayload": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "gateway": {
-            "type": "string"
-          },
-          "transactionDate": {
-            "type": "string"
-          },
-          "accountNumber": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "transferType": {
-            "type": "string"
-          },
-          "transferAmount": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "accumulated": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "subAccount": {
-            "type": "string"
-          },
-          "referenceCode": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "packageCode": {
-            "type": "string"
-          }
-        }
+        "required": ["checkoutUrl"]
       },
       "RuleEnabledRequest": {
         "type": "object",
@@ -9922,50 +9725,108 @@
         },
         "required": ["id", "messageCount", "title", "updatedAt"]
       },
-      "BillingPackageResponse": {
+      "BillingPlanListResponse": {
+        "type": "object",
+        "properties": {
+          "currentPlanCode": {
+            "type": "string",
+            "description": "Tenant\u0027s currently-active plan code. Falls back to FREE when no subscription exists.",
+            "enum": ["FREE", "PLUS", "PRO"]
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPlanResponse"
+            }
+          }
+        },
+        "required": ["currentPlanCode", "plans"]
+      },
+      "BillingPlanResponse": {
         "type": "object",
         "properties": {
           "code": {
+            "type": "string",
+            "enum": ["FREE", "PLUS", "PRO"]
+          },
+          "displayName": {
             "type": "string"
           },
-          "name": {
+          "tierRank": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "billingCycle": {
+            "type": "string",
+            "enum": ["NONE", "MONTH"]
+          },
+          "currency": {
             "type": "string"
           },
           "priceVnd": {
             "type": "integer",
             "format": "int64"
           },
-          "creditAmount": {
+          "monthlyCreditAllowance": {
             "type": "integer",
             "format": "int32"
           },
-          "includedFeatures": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
           },
-          "featured": {
-            "type": "boolean"
+          "features": {
+            "type": "array",
+            "description": "Enabled features for this plan, sorted by feature catalog sort order",
+            "items": {
+              "$ref": "#/components/schemas/PlanFeatureSummaryResponse"
+            }
+          }
+        },
+        "required": [
+          "billingCycle",
+          "code",
+          "currency",
+          "displayName",
+          "features",
+          "monthlyCreditAllowance",
+          "priceVnd",
+          "sortOrder",
+          "tierRank"
+        ]
+      },
+      "PlanFeatureSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
           },
           "description": {
             "type": "string"
           },
-          "displayOrder": {
+          "category": {
+            "type": "string",
+            "enum": ["TRIAGE", "COMPOSE", "RULES", "CLEANUP", "INTERNAL"]
+          },
+          "creditCost": {
             "type": "integer",
             "format": "int32"
+          },
+          "dailyInvocationLimit": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Null \u003d unlimited"
+          },
+          "monthlyInvocationLimit": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Null \u003d unlimited"
           }
         },
-        "required": [
-          "code",
-          "creditAmount",
-          "description",
-          "displayOrder",
-          "featured",
-          "includedFeatures",
-          "name",
-          "priceVnd"
-        ]
+        "required": ["category", "code", "creditCost", "displayName"]
       },
       "BillingLedgerEntryResponse": {
         "type": "object",
