@@ -459,12 +459,11 @@
       "label": "Tín dụng hiện có",
       "monthlyGrant": "{credits} tín dụng / tháng",
       "noExpiry": "Không reset theo kỳ beta",
-      "paidCredits": "Tín dụng đã nạp",
+      "paidCredits": "Tín dụng trả phí",
       "refreshLabel": "Tự cập nhật",
       "refreshValue": "Mỗi 45 giây",
       "resetsAt": "Reset lúc",
       "resetUnknown": "Chưa rõ",
-      "topupCta": "Nạp tín dụng",
       "unit": "tín dụng"
     },
     "copy": {
@@ -481,9 +480,9 @@
         "timestamp": "Thời gian",
         "type": "Loại"
       },
-      "description": "Các lượt cấp, nạp, giữ, trừ và hoàn tín dụng gần đây.",
+      "description": "Các lượt cấp, giữ, trừ và hoàn tín dụng gần đây.",
       "empty": {
-        "body": "Các lượt nạp và sử dụng tín dụng sẽ xuất hiện ở đây. Hãy nạp tín dụng để bắt đầu.",
+        "body": "Khi bạn dùng các tác vụ AI của Zero Mail, lịch sử tín dụng sẽ xuất hiện ở đây.",
         "heading": "Chưa có giao dịch"
       },
       "error": {
@@ -499,7 +498,7 @@
         "release": "Hoàn giữ",
         "reserve": "Giữ",
         "settle": "Trừ",
-        "topup": "Nạp"
+        "topup": "Cộng"
       },
       "unavailable": {
         "body": "Zero Mail đã có số dư tín dụng, nhưng danh sách giao dịch chi tiết sẽ được bật trong một bản cập nhật sau.",
@@ -510,93 +509,6 @@
     "page": {
       "description": "Theo dõi tín dụng beta miễn phí, tín dụng đã nạp và lịch sử sử dụng gần đây.",
       "title": "Thanh toán"
-    },
-    "topup": {
-      "accountName": {
-        "label": "Tên tài khoản"
-      },
-      "accountNumber": {
-        "label": "Số tài khoản"
-      },
-      "amount": {
-        "body": "Bạn sẽ nhận một mã VietQR dùng cho đúng số tiền này.",
-        "cta": "Tiếp tục thanh toán",
-        "error": {
-          "generic": "Không tạo được mã nạp. Hãy thử lại.",
-          "invalidPackage": "Chọn đúng một trong các gói nạp hiện có.",
-          "invalidResponse": "Backend chưa trả đủ thông tin VietQR. Hãy thử lại.",
-          "minimum": "Nhập số tiền lớn hơn 0 VND."
-        },
-        "label": "Số tiền nạp",
-        "preview": "Số tiền chuyển khoản: {amount}",
-        "submitting": "Đang tạo mã",
-        "title": "Chọn số tiền nạp"
-      },
-      "amountVnd": {
-        "label": "Số tiền VND"
-      },
-      "bank": {
-        "label": "Ngân hàng nhận"
-      },
-      "emv": {
-        "label": "Nội dung VietQR EMV"
-      },
-      "expired": {
-        "body": "Zero Mail không thấy chuyển khoản đúng hạn, nên mã này không còn được theo dõi. Hãy tạo mã mới.",
-        "cta": "Tạo mã nạp mới",
-        "heading": "Mã nạp này đã hết hạn"
-      },
-      "expiresAt": {
-        "label": "Hết hạn lúc"
-      },
-      "expiresIn": "Hết hạn sau {time}",
-      "package": {
-        "display": "{name} - {credits} tín dụng",
-        "label": "Gói tín dụng"
-      },
-      "packages": {
-        "credits": "{credits} tín dụng",
-        "cta": "Chọn gói này",
-        "defaultDescription": "Gói tín dụng dùng cho các tác vụ AI trong Zero Mail.",
-        "error": {
-          "generic": "Không tạo được mã thanh toán. Hãy thử lại.",
-          "invalidResponse": "Backend chưa trả đủ thông tin thanh toán. Hãy thử lại.",
-          "load": "Không tải được danh sách gói. Hãy thử lại."
-        },
-        "feature": {
-          "expiry": "Giữ mã thanh toán trong thời hạn an toàn",
-          "instant": "Tạo mã chuyển khoản ngay lập tức",
-          "webhook": "Tự động cộng tín dụng khi SePay xác nhận"
-        },
-        "includes": "Bao gồm",
-        "recommended": "Phổ biến",
-        "startsAt": "Thanh toán"
-      },
-      "page": {
-        "description": "Tạo mã chuyển khoản VietQR, quét bằng ứng dụng ngân hàng và Zero Mail sẽ tự cập nhật số dư.",
-        "title": "Nạp tín dụng"
-      },
-      "qr": {
-        "alt": "Mã QR thanh toán SePay",
-        "body": "Quét mã bằng ứng dụng ngân hàng. Vui lòng giữ đúng số tiền và nội dung chuyển khoản.",
-        "heading": "Quét mã QR bằng ứng dụng ngân hàng",
-        "missing": "Chưa đủ thông tin để tạo QR"
-      },
-      "reference": {
-        "label": "Mã tham chiếu"
-      },
-      "success": {
-        "backCta": "Quay lại thanh toán",
-        "body": "Số dư tín dụng đã tăng. Bạn có thể tiếp tục dùng Zero Mail.",
-        "heading": "Đã cộng tín dụng"
-      },
-      "transferContent": {
-        "label": "Nội dung chuyển khoản"
-      },
-      "waiting": {
-        "body": "Zero Mail sẽ tự cập nhật số dư khi webhook ghi nhận giao dịch.",
-        "heading": "Đang chờ ghi nhận chuyển khoản"
-      }
     }
   },
   "chat": {
@@ -978,13 +890,16 @@
       }
     },
     "billing": {
-      "insufficient": "Số dư tín dụng không đủ — vui lòng nạp thêm để tiếp tục.",
+      "checkout": {
+        "unavailable": "Chưa thể mở trang thanh toán. Hãy thử lại sau."
+      },
+      "insufficient": "Số dư tín dụng không đủ. Vui lòng thử lại sau.",
       "ledger": {
         "invalidState": "Lỗi nội bộ trong sổ tín dụng — vui lòng thử lại sau."
       },
-      "sepay": {
-        "auth_invalid": "Yêu cầu webhook không hợp lệ.",
-        "reference_invalid": "Mã tham chiếu giao dịch không hợp lệ."
+      "plan": {
+        "featureDisabled": "Tính năng này chưa khả dụng trong gói hiện tại của bạn.",
+        "notFound": "Không tìm thấy gói thanh toán này. Hãy chọn một gói khác."
       }
     },
     "boundary": {
@@ -1210,10 +1125,8 @@
     "privacy": "Bảo mật",
     "product": "Sản phẩm",
     "security": "Bảo mật",
-    "status": "Hệ thống hoạt động bình thường",
-    "tagline": "Phân loại email tự động bằng AI mà bạn có thể tin tưởng giao cho hộp thư thật. Dành cho Gmail, do nhóm sinh viên FPT xây dựng.",
-    "terms": "Điều khoản",
-    "version": "v1.0 · Gmail"
+    "tagline": "AI phân loại Gmail tự động bạn có thể tin tưởng — gắn nhãn, soạn nháp trả lời và dọn hộp thư theo quy tắc bạn đặt.",
+    "terms": "Điều khoản"
   },
   "how": {
     "audit": {
@@ -1248,6 +1161,7 @@
   },
   "inbox": {
     "action": {
+      "back": "Quay lại hộp thư",
       "forward": "Chuyển tiếp",
       "generate": "Soạn bằng AI",
       "loadingMore": "Đang tải…",
@@ -1327,7 +1241,10 @@
     },
     "detail": {
       "cc": "Cc",
+      "date": "Ngày",
+      "details": "Chi tiết",
       "from": "Từ",
+      "hide": "Ẩn chi tiết",
       "to": "Đến",
       "you": "Bạn"
     },
@@ -1519,7 +1436,7 @@
   "landingTestimonials": {
     "header": {
       "body": "Khách hàng của chúng tôi yêu thích việc tiết kiệm thời gian với Zero Mail.",
-      "title": "Gia nhập cùng 20,000+ người đang tiết kiệm thời gian email"
+      "title": "Tiết kiệm thời gian quản lý email cùng Zero Mail"
     },
     "r1": {
       "role": "CTO",
@@ -1797,6 +1714,7 @@
     "sectionManage": "Quản lý",
     "settings": "Cài đặt",
     "signIn": "Đăng nhập",
+    "subscription": "Gói đăng ký",
     "testimonials": "Đánh giá",
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
@@ -2457,6 +2375,97 @@
       "signOut": "Đăng xuất",
       "vietnamese": "Tiếng Việt"
     }
+  },
+  "subscription": {
+    "allSotaModels": "Tất cả mô hình SOTA",
+    "annual": "Hàng năm",
+    "billedAnnually": "Thanh toán hàng năm",
+    "contactSales": "Liên hệ",
+    "credits": "Tín dụng",
+    "currentPlan": "Gói hiện tại",
+    "feature": {
+      "drafts": {
+        "basic": "Tự động soạn nháp email cơ bản",
+        "high": "Tự động soạn nháp phản hồi chất lượng cao",
+        "unlimited": "Không giới hạn lượt chạy quy tắc & Kiểm tra an toàn"
+      },
+      "limits": {
+        "1gmail": "Kết nối 1 tài khoản Gmail",
+        "3gmail": "Kết nối tối đa 3 tài khoản Gmail",
+        "unlimited": "Không giới hạn tài khoản Gmail"
+      },
+      "rules": {
+        "advanced": "Trình tạo quy tắc nâng cao với bộ lọc tùy chỉnh",
+        "api": "Hỗ trợ API và kích hoạt webhook tùy chỉnh",
+        "basic": "Hệ thống quy tắc ngôn ngữ tự nhiên tiêu chuẩn"
+      },
+      "support": {
+        "basic": "Hỗ trợ qua cộng đồng",
+        "dedicated": "Hỗ trợ chuyên biệt 24/7 & Hướng dẫn cài đặt",
+        "priority": "Hỗ trợ ưu tiên qua email"
+      },
+      "triage": {
+        "advanced": "Phân loại AI nâng cao & Ưu tiên xử lý tức thì",
+        "basic": "Phân loại AI cơ bản (Tự động lưu trữ, nhãn, gắn sao)",
+        "enterprise": "Hệ thống triage doanh nghiệp không độ trễ"
+      }
+    },
+    "featureAgents": "Toàn quyền truy cập AI Slides, AI Developer, và nhiều tác tử khác",
+    "featureAudio": "Âm thanh & Âm nhạc: ElevenLabs, MiniMax, và hơn thế nữa",
+    "featureChat": "Trò chuyện: Claude Opus 4.7, GPT-5.5, và hơn thế nữa",
+    "featureImage": "Hình ảnh: GPT Image 2, Nano Banana Pro, và hơn thế nữa",
+    "featureStorage": "Bộ nhớ 50GB với AI Drive",
+    "featureVideo": "Video: Gemini Veo 3.1, Seedance v2, và hơn thế nữa",
+    "free": {
+      "b1": "50 email xử lý mỗi ngày",
+      "b2": "Phân loại AI cơ bản",
+      "b3": "1 tài khoản Gmail",
+      "b4": "Hỗ trợ cộng đồng",
+      "b5": "Phân tích email cơ bản",
+      "description": "Dành cho cá nhân bắt đầu với tự động hóa email.",
+      "name": "Free"
+    },
+    "getStarted": "Bắt đầu",
+    "monthly": "Hàng tháng",
+    "perMonth": "/tháng",
+    "plan": {
+      "plus": "Plus",
+      "pro": "Pro",
+      "starter": "Starter"
+    },
+    "plus": {
+      "b1": "Email xử lý không giới hạn",
+      "b2": "Tự động soạn nháp trả lời",
+      "b3": "2 tài khoản Gmail",
+      "b4": "Hỗ trợ ưu tiên",
+      "b5": "Phân tích nâng cao",
+      "b6": "Hệ thống quy tắc tùy chỉnh",
+      "description": "Dành cho người dùng chuyên sâu cần tự động hóa toàn diện.",
+      "includesIntro": "Mọi thứ trong gói Free, cộng thêm:",
+      "name": "Plus"
+    },
+    "popular": "Phổ biến nhất",
+    "pro": {
+      "b1": "Bảng phân tích toàn nhóm",
+      "b2": "Tài khoản Gmail không giới hạn",
+      "b3": "Truy cập API",
+      "b4": "Chuyên viên hỗ trợ cài đặt riêng",
+      "b5": "Hỗ trợ khách hàng ưu tiên 24/7",
+      "description": "Dành cho đội ngũ và doanh nghiệp xử lý lượng lớn email.",
+      "includesIntro": "Mọi thứ trong gói Plus, cộng thêm:",
+      "name": "Professional"
+    },
+    "professionalWorkspace": "Không gian làm việc chuyên nghiệp",
+    "savePercent": "TIẾT KIỆM 20%",
+    "section": {
+      "credits": "Tín dụng",
+      "limits": "Giới hạn & Hỗ trợ",
+      "triage": "Tự động hóa email AI"
+    },
+    "subtitle": "Đơn giản, minh bạch. Nâng cấp hoặc hạ cấp bất cứ lúc nào.",
+    "title": "Nâng cấp gói đăng ký của bạn",
+    "toStart": "Bắt đầu",
+    "upgrade": "Nâng cấp"
   },
   "templates": {
     "calendarInvites": {

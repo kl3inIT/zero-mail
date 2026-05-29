@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   Check,
@@ -11,7 +10,6 @@ import {
   Mail,
   Moon,
   Palette,
-  Plus,
   ShieldCheck,
   Sun,
   TriangleAlert,
@@ -54,6 +52,7 @@ import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 import type { AppLocale } from '@/i18n/routing';
 import { getApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
 
@@ -197,7 +196,7 @@ function CreditCardBlock() {
         </CardTitle>
         <CardDescription>{t('settings.credit.helper')}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-wrap items-end justify-between gap-3">
+      <CardContent>
         {balance.isPending ? (
           <Skeleton className="h-9 w-24" />
         ) : (
@@ -205,10 +204,6 @@ function CreditCardBlock() {
             {formatted}
           </span>
         )}
-        <Link href="/billing/top-up" className={buttonVariants({ variant: 'accent', size: 'sm' })}>
-          <Plus className="size-4" aria-hidden="true" />
-          {t('billing.balance.topupCta')}
-        </Link>
       </CardContent>
     </Card>
   );

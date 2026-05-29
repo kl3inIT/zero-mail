@@ -78,7 +78,7 @@ const unauthorizedRedirectMiddleware: Middleware = {
 const zmE2eShortCircuitMiddleware: Middleware = {
   async onRequest({ request }) {
     if (typeof window === 'undefined' && process.env.ZM_E2E === '1') {
-      throw new Error('ZM_E2E: skipping backend fetch in test mode');
+      return e2eServerResponse(request);
     }
     return request;
   },
@@ -121,6 +121,82 @@ export function xsrfHeader(): HeadersInit {
   if (typeof document === 'undefined') return {};
   const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
   return match ? { 'X-XSRF-TOKEN': decodeURIComponent(match[1]) } : {};
+}
+
+function e2eServerResponse(request: Request): Response {
+  const requestUrl = new URL(request.url);
+  const pathname = requestUrl.pathname;
+
+  if (pathname === '/api/me') {
+    return jsonResponse({
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      email: 'founder@example.com',
+      preferredLanguage: 'en',
+      onboardingStep: 'COMPLETE',
+      triagePaused: false,
+      gmailConnectionStatus: {
+        status: 'CONNECTED',
+        ingestionHealth: 'HEALTHY',
+        googleEmail: 'founder@example.com',
+      },
+    });
+  }
+
+  if (pathname === '/api/billing/balance') {
+    return jsonResponse({
+      availableCredits: 12,
+      heldCredits: 0,
+      currency: 'credits',
+      betaCredits: 12,
+      paidCredits: 0,
+      monthlyGrantCredits: 300,
+      resetsAt: '2026-06-01T00:00:00.000Z',
+      freeDuringBeta: true,
+    });
+  }
+
+  if (pathname === '/api/gmail/connection/status') {
+    return jsonResponse({ connectionStatus: 'CONNECTED' });
+  }
+
+  if (pathname === '/api/analytics/summary') {
+    return jsonResponse(e2eAnalyticsSummary(requestUrl.searchParams.get('window') ?? '7d'));
+  }
+
+  if (pathname === '/api/llm/byok') {
+    return jsonResponse(null, 204);
+  }
+
+  return jsonResponse({});
+}
+
+function e2eAnalyticsSummary(window: string) {
+  return {
+    window,
+    volumeObserved: 0,
+    volumeApplied: 0,
+    timeSavedSeconds: 0,
+    topSenders: [],
+    ruleHits: [],
+    dailyLoad: [],
+    actionMix: [],
+    domainLoad: [],
+    categoryLoad: [],
+    replyBuckets: [],
+    automationOpportunities: {
+      noRuleMatched: 0,
+      failedActions: 0,
+      pendingActions: 0,
+    },
+  };
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(status === 204 ? null : JSON.stringify(body), {
+    status,
+    headers: status === 204 ? undefined : { 'content-type': 'application/json' },
+  });
 }
 
 // IMPORTANT: do NOT re-export from ./errors here. errors.ts is "use client"

@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
+@import '@fontsource-variable/geist' layer(base);
+@import '@fontsource-variable/geist-mono' layer(base);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -8,10 +10,11 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'BlinkMacSystemFont', 'Segoe UI', sans-serif;
+    'Geist Variable', 'Geist', ui-sans-serif, system-ui, -apple-system, 'BlinkMacSystemFont',
+    'Segoe UI', sans-serif;
   --font-mono:
-    ui-monospace, 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New',
-    monospace;
+    'Geist Mono Variable', 'Geist Mono', ui-monospace, 'SFMono-Regular', 'Menlo', 'Monaco',
+    'Consolas', 'Liberation Mono', 'Courier New', monospace;
   --font-serif: var(--font-lora), Georgia, serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -371,17 +374,17 @@
 .zm-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   color: var(--ink);
-  font-size: 15.5px;
+  font-size: 19px;
   font-weight: 600;
   letter-spacing: -0.028em;
 }
 
 .zm-brand-mark {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 60px;
+  height: 60px;
   place-items: center;
   overflow: visible;
 }

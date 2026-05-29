@@ -18,7 +18,7 @@ export default async function AnalyticsPage({
 
   // Forward session cookie + Playwright stub headers so the server-side
   // prefetch hits the backend authenticated. Without this the SSR pre-render
-  // of the client component gets 401 → "Switched to client rendering" warning.
+  // of the client component gets 401 â†’ "Switched to client rendering" warning.
   const cookieStore = await cookies();
   const incomingHeaders = await headers();
   const requestHeaders = backendRequestHeaders(cookieStore.toString(), incomingHeaders);

@@ -43,7 +43,7 @@ class CreditLedgerConcurrentReserveTest extends PostgresContainerTest {
                                                 UUID.randomUUID(),
                                                 tenantId,
                                                 STARTING_CREDITS,
-                                                "SEPAY-SEED-" + tenantId)));
+                                                "TEST-SEED-" + tenantId)));
 
         CountDownLatch simultaneousStart = new CountDownLatch(1);
         try (var taskScope = StructuredTaskScope.<ReservationId>open()) {

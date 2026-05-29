@@ -37,6 +37,8 @@ class CreditLedgerService implements CreditLedger {
     private final CreditReservationRepository reservationRepository;
     private final AdvisoryLockJdbcHelper advisoryLockHelper;
     private final ZeroMailCoreProperties coreProperties;
+    private final FeatureCatalogCache featureCatalogCache;
+    private final FeaturePermissionResolver featurePermissionResolver;
 
     CreditLedgerService(
             CreditLedgerEntryRepository entryRepository,
@@ -44,19 +46,26 @@ class CreditLedgerService implements CreditLedger {
             CreditGrantService grantService,
             CreditReservationRepository reservationRepository,
             AdvisoryLockJdbcHelper advisoryLockHelper,
-            ZeroMailCoreProperties coreProperties) {
+            ZeroMailCoreProperties coreProperties,
+            FeatureCatalogCache featureCatalogCache,
+            FeaturePermissionResolver featurePermissionResolver) {
         this.entryRepository = entryRepository;
         this.grantRepository = grantRepository;
         this.grantService = grantService;
         this.reservationRepository = reservationRepository;
         this.advisoryLockHelper = advisoryLockHelper;
         this.coreProperties = coreProperties;
+        this.featureCatalogCache = featureCatalogCache;
+        this.featurePermissionResolver = featurePermissionResolver;
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ReservationId reserve(UUID tenantId, CallSite callSite) {
-        int requiredCredits = callSite.cost();
+        // Throws FeaturePermissionDeniedException (→ HTTP 402) if the tenant's plan does not
+        // enable this feature; otherwise returns the effective cost (override > catalog default).
+        int requiredCredits =
+                featurePermissionResolver.resolve(tenantId, callSite).effectiveCreditCost();
         if (requiredCredits < 0) {
             throw new IllegalLedgerStateException("Call-site cost cannot be negative: " + callSite);
         }
@@ -188,6 +197,11 @@ class CreditLedgerService implements CreditLedger {
                 "event=credit_released tenantId={} reservationId={}",
                 reservation.getTenantId(),
                 reservationUuid);
+    }
+
+    @Override
+    public int defaultCost(CallSite callSite) {
+        return featureCatalogCache.defaultCost(callSite);
     }
 
     @Override

@@ -464,7 +464,6 @@
       "refreshValue": "Every 45 seconds",
       "resetsAt": "Resets at",
       "resetUnknown": "Unknown",
-      "topupCta": "Top up credits",
       "unit": "credits"
     },
     "copy": {
@@ -481,9 +480,9 @@
         "timestamp": "Time",
         "type": "Type"
       },
-      "description": "Recent grants, top-ups, holds, spends, and releases.",
+      "description": "Recent grants, holds, spends, and releases.",
       "empty": {
-        "body": "Your top-ups and credit usage will show up here. Add credits to get started.",
+        "body": "Your credit activity will show up here once you use Zero Mail AI actions.",
         "heading": "No transactions yet"
       },
       "error": {
@@ -499,7 +498,7 @@
         "release": "Release",
         "reserve": "Reserve",
         "settle": "Settle",
-        "topup": "Top-up"
+        "topup": "Credit"
       },
       "unavailable": {
         "body": "Zero Mail can show your credit balance now. Detailed transaction history will arrive in a later update.",
@@ -510,93 +509,6 @@
     "page": {
       "description": "Track free beta credits, paid credits, and recent usage activity.",
       "title": "Billing"
-    },
-    "topup": {
-      "accountName": {
-        "label": "Account name"
-      },
-      "accountNumber": {
-        "label": "Account number"
-      },
-      "amount": {
-        "body": "You will receive a VietQR payload for this exact amount.",
-        "cta": "Continue to payment",
-        "error": {
-          "generic": "Couldn't create the top-up code. Try again.",
-          "invalidPackage": "Choose one of the available top-up package amounts.",
-          "invalidResponse": "The backend did not return complete VietQR details. Try again.",
-          "minimum": "Enter an amount greater than 0 VND."
-        },
-        "label": "Top-up amount",
-        "preview": "Transfer amount: {amount}",
-        "submitting": "Creating code",
-        "title": "Choose a top-up amount"
-      },
-      "amountVnd": {
-        "label": "Amount in VND"
-      },
-      "bank": {
-        "label": "Receiving bank"
-      },
-      "emv": {
-        "label": "VietQR EMV payload"
-      },
-      "expired": {
-        "body": "We didn't see the transfer in time, so this code is no longer being watched. Create a new one.",
-        "cta": "Start a new top-up",
-        "heading": "This top-up expired"
-      },
-      "expiresAt": {
-        "label": "Expires at"
-      },
-      "expiresIn": "Expires in {time}",
-      "package": {
-        "display": "{name} - {credits} credits",
-        "label": "Credit package"
-      },
-      "packages": {
-        "credits": "{credits} credits",
-        "cta": "Choose package",
-        "defaultDescription": "Credits for Zero Mail AI actions.",
-        "error": {
-          "generic": "Couldn't create the payment code. Try again.",
-          "invalidResponse": "The backend did not return complete payment details. Try again.",
-          "load": "Couldn't load billing packages. Try again."
-        },
-        "feature": {
-          "expiry": "Payment code held for a safe expiry window",
-          "instant": "Instant transfer code generation",
-          "webhook": "Automatic crediting after SePay confirmation"
-        },
-        "includes": "Includes",
-        "recommended": "Popular",
-        "startsAt": "Pay"
-      },
-      "page": {
-        "description": "Create a VietQR transfer, scan it with your banking app, and Zero Mail will update your balance automatically.",
-        "title": "Top up credits"
-      },
-      "qr": {
-        "alt": "SePay payment QR code",
-        "body": "Scan this with your banking app. Keep the amount and transfer content unchanged.",
-        "heading": "Scan this QR with your banking app",
-        "missing": "Not enough details to create the QR code"
-      },
-      "reference": {
-        "label": "Transfer reference"
-      },
-      "success": {
-        "backCta": "Back to billing",
-        "body": "Your credit balance increased. You can keep using Zero Mail.",
-        "heading": "Credits added"
-      },
-      "transferContent": {
-        "label": "Transfer content"
-      },
-      "waiting": {
-        "body": "Zero Mail will update your balance when the webhook credits the transfer.",
-        "heading": "Waiting for your transfer"
-      }
     }
   },
   "chat": {
@@ -978,13 +890,16 @@
       }
     },
     "billing": {
-      "insufficient": "Insufficient credits — top up to continue.",
+      "checkout": {
+        "unavailable": "Checkout is temporarily unavailable. Try again later."
+      },
+      "insufficient": "Insufficient credits. Please try again later.",
       "ledger": {
         "invalidState": "Internal billing-state error — please try again later."
       },
-      "sepay": {
-        "auth_invalid": "Invalid webhook request.",
-        "reference_invalid": "Invalid transaction reference code."
+      "plan": {
+        "featureDisabled": "This feature is not available on your current plan.",
+        "notFound": "This billing plan was not found. Choose another plan."
       }
     },
     "boundary": {
@@ -1210,10 +1125,8 @@
     "privacy": "Privacy",
     "product": "Product",
     "security": "Security",
-    "status": "All systems normal",
-    "tagline": "AI auto-triage you can trust with your real inbox. Built for Gmail by a student team at FPT.",
-    "terms": "Terms",
-    "version": "v1.0 · Gmail"
+    "tagline": "AI Gmail auto-triage you can trust — labels, drafts replies, and clears your inbox by the rules you set.",
+    "terms": "Terms"
   },
   "how": {
     "audit": {
@@ -1248,6 +1161,7 @@
   },
   "inbox": {
     "action": {
+      "back": "Back to inbox",
       "forward": "Forward",
       "generate": "Write by AI",
       "loadingMore": "Loading…",
@@ -1327,7 +1241,10 @@
     },
     "detail": {
       "cc": "Cc",
+      "date": "Date",
+      "details": "Details",
       "from": "From",
+      "hide": "Hide details",
       "to": "To",
       "you": "You"
     },
@@ -1519,7 +1436,7 @@
   "landingTestimonials": {
     "header": {
       "body": "Our customers love saving time with Zero Mail.",
-      "title": "Join 20,000+ saving time on email"
+      "title": "Save time on email with Zero Mail"
     },
     "r1": {
       "role": "CTO",
@@ -1797,6 +1714,7 @@
     "sectionManage": "Manage",
     "settings": "Settings",
     "signIn": "Sign in",
+    "subscription": "Subscription",
     "testimonials": "Reviews",
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
@@ -2457,6 +2375,97 @@
       "signOut": "Sign out",
       "vietnamese": "Vietnamese"
     }
+  },
+  "subscription": {
+    "allSotaModels": "All SOTA models",
+    "annual": "Annual",
+    "billedAnnually": "Billed annually",
+    "contactSales": "Contact Sales",
+    "credits": "Credits",
+    "currentPlan": "Current Plan",
+    "feature": {
+      "drafts": {
+        "basic": "Basic AI auto-draft replies",
+        "high": "High-quality auto-draft replies based on rules",
+        "unlimited": "Unlimited rule executions & outbound safety audits"
+      },
+      "limits": {
+        "1gmail": "1 Gmail account integration",
+        "3gmail": "Up to 3 Gmail accounts integrated",
+        "unlimited": "Unlimited Gmail accounts"
+      },
+      "rules": {
+        "advanced": "Advanced rule builder with custom filters",
+        "api": "API access & custom webhook triggers",
+        "basic": "Standard natural-language rule builder"
+      },
+      "support": {
+        "basic": "Community support",
+        "dedicated": "Dedicated 24/7 support & guided onboarding",
+        "priority": "Priority email support"
+      },
+      "triage": {
+        "advanced": "Advanced AI triage & priority instant processing",
+        "basic": "Basic AI triage (auto-archive, label, star)",
+        "enterprise": "Enterprise-grade zero-latency triage pipeline"
+      }
+    },
+    "featureAgents": "Full access to AI Slides, AI Developer, and more agents",
+    "featureAudio": "Audio & Music: ElevenLabs, MiniMax, and more",
+    "featureChat": "Chat: Claude Opus 4.7, GPT-5.5, and more",
+    "featureImage": "Image: GPT Image 2, Nano Banana Pro, and more",
+    "featureStorage": "50GB storage with AI Drive",
+    "featureVideo": "Video: Gemini Veo 3.1, Seedance v2, and more",
+    "free": {
+      "b1": "50 emails processed per day",
+      "b2": "Basic AI triage",
+      "b3": "1 Gmail account",
+      "b4": "Community support",
+      "b5": "Basic email analytics",
+      "description": "For individuals getting started with email automation.",
+      "name": "Free"
+    },
+    "getStarted": "Get Started",
+    "monthly": "Monthly",
+    "perMonth": "/month",
+    "plan": {
+      "plus": "Plus",
+      "pro": "Pro",
+      "starter": "Starter"
+    },
+    "plus": {
+      "b1": "Unlimited emails processed",
+      "b2": "AI auto-draft replies",
+      "b3": "2 Gmail accounts",
+      "b4": "Priority support",
+      "b5": "Advanced analytics",
+      "b6": "Custom rules engine",
+      "description": "For power users who need full inbox automation.",
+      "includesIntro": "Everything in Free, plus:",
+      "name": "Plus"
+    },
+    "popular": "Most Popular",
+    "pro": {
+      "b1": "Team-wide analytics dashboard",
+      "b2": "Unlimited Gmail accounts",
+      "b3": "API access",
+      "b4": "Dedicated onboarding specialist",
+      "b5": "Priority 24/7 support",
+      "description": "For teams and businesses handling high email volume.",
+      "includesIntro": "Everything in Plus, plus:",
+      "name": "Professional"
+    },
+    "professionalWorkspace": "Professional workspace",
+    "savePercent": "SAVE 20%",
+    "section": {
+      "credits": "Credits",
+      "limits": "Limits & Support",
+      "triage": "AI Email Automation"
+    },
+    "subtitle": "Simple pricing, no hidden fees. Upgrade or downgrade anytime.",
+    "title": "Upgrade your subscription",
+    "toStart": "To start",
+    "upgrade": "Upgrade"
   },
   "templates": {
     "calendarInvites": {

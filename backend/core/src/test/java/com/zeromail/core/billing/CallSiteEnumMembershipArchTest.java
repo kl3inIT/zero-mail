@@ -25,11 +25,12 @@ class CallSiteEnumMembershipArchTest {
     }
 
     @Test
-    void callsite_costs_match_spec() {
-        assertThat(CallSite.TRIAGE.cost()).isEqualTo(1);
-        assertThat(CallSite.DRAFT.cost()).isEqualTo(2);
-        assertThat(CallSite.PREVIEW.cost()).isEqualTo(1);
-        assertThat(CallSite.TRIAGE_PLATFORM_LLM.cost()).isEqualTo(1);
-        assertThat(CallSite.TRIAGE_DETERMINISTIC.cost()).isZero();
+    void callsite_id_equals_enum_name_for_every_member() {
+        // The id() value is the FK into feature_catalog(code). Drift between enum name and id()
+        // would break FeatureCatalogConsistencyChecker startup validation and silently route DB
+        // lookups to the wrong rows.
+        for (CallSite callSite : CallSite.values()) {
+            assertThat(callSite.id()).isEqualTo(callSite.name());
+        }
     }
 }

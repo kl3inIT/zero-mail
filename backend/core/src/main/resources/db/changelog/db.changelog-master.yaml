@@ -254,3 +254,21 @@ databaseChangeLog:
   - include:
       file: changes/098-chat-message-composite-fk.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/094-drop-sepay-topup.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/099-billing-plan.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/100-feature-catalog.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/101-plan-feature-permission.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/102-subscription.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/103-subscription-webhook-event.yaml
+      relativeToChangelogFile: true

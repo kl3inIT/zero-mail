@@ -24,7 +24,7 @@ class CreditLedgerEntryUniqueTest extends PostgresContainerTest {
                         () -> {
                             creditLedgerEntryRepository.saveAndFlush(
                                     CreditLedgerEntryEntity.topup(
-                                            UUID.randomUUID(), tenantId, 25, "SEPAY-TX-1"));
+                                            UUID.randomUUID(), tenantId, 25, "TEST-TX-1"));
 
                             assertThatThrownBy(
                                             () ->
@@ -33,7 +33,7 @@ class CreditLedgerEntryUniqueTest extends PostgresContainerTest {
                                                                     UUID.randomUUID(),
                                                                     tenantId,
                                                                     25,
-                                                                    "SEPAY-TX-1")))
+                                                                    "TEST-TX-1")))
                                     .isInstanceOf(DataIntegrityViolationException.class);
                         });
     }

@@ -1,0 +1,246 @@
+databaseChangeLog:
+  - changeSet:
+      id: 094-drop-sepay-topup
+      author: zeromail
+      comment: >-
+        Retire the SePay-backed top-up flow ahead of the Lemon Squeezy subscription rebuild.
+        Drops the top-up intent table and the legacy top-up package catalogue. The credit
+        ledger, credit grants, and credit reservation tables are intentionally kept — the
+        upcoming subscription flow reuses them.
+      changes:
+        - sql:
+            comment: Drop dependent FK from billing_topup_intent to billing_package before either is dropped.
+            sql: >-
+              ALTER TABLE billing_topup_intent DROP CONSTRAINT IF EXISTS fk_billing_topup_intent_package
+        - dropTable:
+            tableName: billing_topup_intent
+            cascadeConstraints: true
+        - dropTable:
+            tableName: billing_package
+            cascadeConstraints: true
+      rollback:
+        # Schema-only rollback — re-creates the original DDL from changesets 016, 038, 093.
+        # Liquibase rollback never restores data; the dropped rows are gone permanently.
+        - createTable:
+            tableName: billing_package
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_billing_package_code
+              - column:
+                  name: name
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price_vnd
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: credit_amount
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: varchar(512)
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_order
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: included_features
+                  type: text[]
+                  defaultValueComputed: "ARRAY[]::text[]"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: featured
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE billing_package ADD CONSTRAINT ck_billing_package_positive_values CHECK (price_vnd > 0 AND credit_amount > 0)
+        - sql:
+            sql: ALTER TABLE billing_package ADD CONSTRAINT ck_billing_package_included_features_non_empty CHECK (cardinality(included_features) > 0)
+        - createIndex:
+            tableName: billing_package
+            indexName: idx_billing_package_active_order
+            columns:
+              - column:
+                  name: active
+              - column:
+                  name: display_order
+              - column:
+                  name: code
+        - createTable:
+            tableName: billing_topup_intent
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_topup_intent_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: code
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_billing_topup_intent_code
+              - column:
+                  name: amount_vnd
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid_at
+                  type: timestamptz
+              - column:
+                  name: sepay_transaction_id
+                  type: varchar(128)
+              - column:
+                  name: package_id
+                  type: uuid
+              - column:
+                  name: package_code_snapshot
+                  type: varchar(64)
+              - column:
+                  name: package_name_snapshot
+                  type: varchar(120)
+              - column:
+                  name: credit_amount_snapshot
+                  type: int
+              - column:
+                  name: bank_code_snapshot
+                  type: varchar(32)
+              - column:
+                  name: bank_name_snapshot
+                  type: varchar(120)
+              - column:
+                  name: account_number_snapshot
+                  type: varchar(64)
+              - column:
+                  name: account_name_snapshot
+                  type: varchar(160)
+              - column:
+                  name: transfer_content_snapshot
+                  type: varchar(160)
+              - column:
+                  name: qr_payload_snapshot
+                  type: text
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_status CHECK (status IN ('PENDING','PAID','EXPIRED'))
+        - sql:
+            sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_amount_positive CHECK (amount_vnd > 0)
+        - sql:
+            sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_credit_snapshot_positive CHECK (credit_amount_snapshot IS NULL OR credit_amount_snapshot > 0)
+        - sql:
+            sql: >-
+              ALTER TABLE billing_topup_intent
+              ADD CONSTRAINT ck_billing_topup_intent_package_snapshot_atomic
+              CHECK (
+                (
+                  package_code_snapshot IS NULL
+                  AND package_name_snapshot IS NULL
+                  AND credit_amount_snapshot IS NULL
+                )
+                OR
+                (
+                  package_code_snapshot IS NOT NULL
+                  AND package_name_snapshot IS NOT NULL
+                  AND credit_amount_snapshot > 0
+                )
+              )
+        - createIndex:
+            tableName: billing_topup_intent
+            indexName: idx_billing_topup_intent_status_expires
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: expires_at
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_billing_topup_intent_sepay_tx ON billing_topup_intent (sepay_transaction_id) WHERE sepay_transaction_id IS NOT NULL
+        - addForeignKeyConstraint:
+            baseTableName: billing_topup_intent
+            baseColumnNames: package_id
+            constraintName: fk_billing_topup_intent_package
+            referencedTableName: billing_package
+            referencedColumnNames: id
+            onDelete: RESTRICT

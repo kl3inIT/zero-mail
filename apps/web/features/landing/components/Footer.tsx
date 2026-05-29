@@ -13,11 +13,11 @@ export default async function Footer() {
           <div className="max-w-72">
             <Link href="/" className="zm-brand mb-4">
               <span className="zm-brand-mark">
-                <ZMLogoMark size={48} />
+                <ZMLogoMark size={64} />
               </span>
               <span className="zm-brand-wordmark">
-                <span>zero</span>
-                <span className="light">mail</span>
+                <span>Zero</span>
+                <span className="light">Mail</span>
               </span>
             </Link>
             <p className="text-sm leading-relaxed">{t('footer.tagline')}</p>
@@ -38,13 +38,6 @@ export default async function Footer() {
         </div>
         <div className="zm-footer-bottom">
           <span>{t('footer.copyright')}</span>
-          <span className="inline-flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-(--green)" />
-              {t('footer.status')}
-            </span>
-            <span>{t('footer.version')}</span>
-          </span>
         </div>
       </div>
     </footer>

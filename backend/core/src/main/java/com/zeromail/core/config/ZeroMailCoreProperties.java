@@ -18,7 +18,7 @@ import org.springframework.validation.annotation.Validated;
 public record ZeroMailCoreProperties(
         @Valid @NotNull CryptoProperties crypto,
         @Valid @DefaultValue GmailProperties gmail,
-        @Valid @NotNull BillingProperties billing,
+        @Valid @DefaultValue BillingProperties billing,
         @Valid @DefaultValue LlmProperties llm,
         @Valid @DefaultValue AdminProperties admin) {
 
@@ -62,35 +62,14 @@ public record ZeroMailCoreProperties(
     }
 
     public record BillingProperties(
-            @Valid @NotNull BillingSepayProperties sepay,
-            @Valid @NotNull BillingPaymentAccountProperties paymentAccount,
             @Valid @NotNull BillingCostProperties cost,
             @Valid @DefaultValue BillingBetaProperties beta,
-            @Min(1) @DefaultValue("1000") long vndPerCredit,
-            @Min(1) @DefaultValue("5") int maxPendingIntentsPerTenant,
-            @DefaultValue("PT24H") Duration intentExpiry) {
+            @Valid @DefaultValue LemonSqueezyProperties lemonSqueezy) {
 
-        /**
-         * Defense-in-depth for accidental Spring placeholder sentinel values. Application yml uses
-         * a bare ${SEPAY_WEBHOOK_API_KEY}; this rejects literal default-looking values if one is
-         * supplied by mistake.
-         */
         public BillingProperties {
             cost = cost == null ? BillingCostProperties.defaults() : cost;
             beta = beta == null ? BillingBetaProperties.defaults() : beta;
-            if (sepay != null && sepay.webhookApiKey() != null) {
-                String webhookApiKey = sepay.webhookApiKey();
-                String lowerCaseWebhookApiKey = webhookApiKey.toLowerCase();
-                if (webhookApiKey.startsWith("?")
-                        || webhookApiKey.startsWith("$")
-                        || lowerCaseWebhookApiKey.contains("must be set")
-                        || lowerCaseWebhookApiKey.contains("must be supplied")) {
-                    throw new IllegalStateException(
-                            "zero-mail.billing.sepay.webhook-api-key looks like an unresolved placeholder default. "
-                                    + "Set SEPAY_WEBHOOK_API_KEY to the real SePay webhook API key from the "
-                                    + "deployment secret source.");
-                }
-            }
+            lemonSqueezy = lemonSqueezy == null ? LemonSqueezyProperties.defaults() : lemonSqueezy;
         }
 
         public record BillingBetaProperties(
@@ -103,15 +82,6 @@ public record ZeroMailCoreProperties(
             }
         }
 
-        public record BillingSepayProperties(@NotBlank String webhookApiKey) {}
-
-        public record BillingPaymentAccountProperties(
-                @NotBlank String bankCode,
-                @NotBlank String bankName,
-                @NotBlank String accountNumber,
-                @NotBlank String accountName,
-                @DefaultValue("") String qrPayload) {}
-
         public record BillingCostProperties(@Min(0) @DefaultValue("0") int triageDeterministic) {
 
             static BillingCostProperties defaults() {
@@ -119,19 +89,40 @@ public record ZeroMailCoreProperties(
             }
         }
 
+        /**
+         * Lemon Squeezy integration config. All fields nullable so the app boots in test/dev
+         * contexts without LS credentials; {@link #isConfigured()} reports readiness and services
+         * that require LS throw a clear error when called against an unconfigured instance.
+         */
+        public record LemonSqueezyProperties(
+                Long storeId, String storeSlug, String apiKey, String webhookSigningSecret) {
+
+            public LemonSqueezyProperties {
+                storeSlug = (storeSlug == null || storeSlug.isBlank()) ? null : storeSlug;
+                apiKey = (apiKey == null || apiKey.isBlank()) ? null : apiKey;
+                webhookSigningSecret =
+                        (webhookSigningSecret == null || webhookSigningSecret.isBlank())
+                                ? null
+                                : webhookSigningSecret;
+            }
+
+            static LemonSqueezyProperties defaults() {
+                return new LemonSqueezyProperties(null, null, null, null);
+            }
+
+            public boolean isConfigured() {
+                return storeId != null && storeSlug != null;
+            }
+        }
+
         @Override
         public @NonNull String toString() {
-            return "BillingProperties[sepay=****, vndPerCredit="
-                    + vndPerCredit
-                    + ", paymentAccount=****"
-                    + ", cost="
+            return "BillingProperties[cost="
                     + cost
                     + ", beta="
                     + beta
-                    + ", maxPendingIntentsPerTenant="
-                    + maxPendingIntentsPerTenant
-                    + ", intentExpiry="
-                    + intentExpiry
+                    + ", lemonSqueezy="
+                    + (lemonSqueezy.isConfigured() ? "configured" : "not_configured")
                     + "]";
         }
     }

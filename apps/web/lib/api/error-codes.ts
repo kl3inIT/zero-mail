@@ -41,8 +41,9 @@ export const ErrorCode = {
   // billing
   BillingInsufficient: 'error.billing.insufficient',
   BillingLedgerInvalidState: 'error.billing.ledger.invalidState',
-  BillingSepayReferenceInvalid: 'error.billing.sepay.reference_invalid',
-  BillingSepayAuthInvalid: 'error.billing.sepay.auth_invalid',
+  BillingPlanFeatureDisabled: 'error.billing.plan.featureDisabled',
+  BillingPlanNotFound: 'error.billing.plan.notFound',
+  BillingCheckoutUnavailable: 'error.billing.checkout.unavailable',
   // llm
   LlmSafetyViolation: 'error.llm.safety_violation',
   LlmSanitizationFailed: 'error.llm.sanitization_failed',

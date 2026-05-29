@@ -73,18 +73,6 @@ zero-mail:
         push-audience-url: https://test.example/internal/pubsub/gmail
         sa-principal-email: pubsub-sa@test-project.iam.gserviceaccount.com
         oidc-certificates-url: https://www.googleapis.com/oauth2/v3/certs
-  billing:
-    sepay:
-      webhook-api-key: test-sepay-key-fixture
-    payment-account:
-      bank-code: VCB
-      bank-name: Vietcombank
-      account-number: "0123456789"
-      account-name: Zero Mail Test
-      qr-payload: ""
-    vnd-per-credit: 1000
-    max-pending-intents-per-tenant: 5
-    intent-expiry: PT24H
   llm:
     platform:
       api-key: test-platform-llm-key

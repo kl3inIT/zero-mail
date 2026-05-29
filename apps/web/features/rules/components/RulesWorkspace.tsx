@@ -276,8 +276,11 @@ export function RulesWorkspace() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = normalizeRulesTab(searchParams.get('tab'));
+  const searchParamsTab = normalizeRulesTab(searchParams.get('tab'));
+  const [activeTab, setActiveTabState] = useState<RulesTab>(searchParamsTab);
+
   const setActiveTab = (nextTab: RulesTab) => {
+    setActiveTabState(nextTab);
     router.replace(`/rules?tab=${nextTab}`, { scroll: false });
   };
 
@@ -484,102 +487,156 @@ export function RulesWorkspace() {
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
   const canPreview = enabledRulesCount > 0;
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(nextValue) => setActiveTab(normalizeRulesTab(nextValue))}
-      className="space-y-6"
-    >
-      <TabsList aria-label={t('rules.tabs.label')}>
-        <TabsTrigger value="list">{t('rules.tabs.list')}</TabsTrigger>
-        <TabsTrigger value="test">{t('rules.tabs.test')}</TabsTrigger>
-        <TabsTrigger value="history">{t('rules.tabs.history')}</TabsTrigger>
-      </TabsList>
+    <div className="space-y-6">
+      <div
+        role="tablist"
+        aria-label={t('rules.tabs.label')}
+        className="bg-muted text-muted-foreground inline-flex w-full rounded-lg p-[3px]"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'list'}
+          aria-controls="rules-tabpanel-list"
+          id="rules-tab-list"
+          onPointerDown={() => setActiveTab('list')}
+          onClick={() => setActiveTab('list')}
+          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
+        >
+          {t('rules.tabs.list')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'test'}
+          aria-controls="rules-tabpanel-test"
+          id="rules-tab-test"
+          onPointerDown={() => setActiveTab('test')}
+          onClick={() => setActiveTab('test')}
+          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
+        >
+          {t('rules.tabs.test')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'history'}
+          aria-controls="rules-tabpanel-history"
+          id="rules-tab-history"
+          onPointerDown={() => setActiveTab('history')}
+          onClick={() => setActiveTab('history')}
+          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
+        >
+          {t('rules.tabs.history')}
+        </button>
+      </div>
 
-      <TabsContent value="list" className="space-y-6">
-        <RuleList
-          rules={rules}
-          selectedRuleId={state.selectedRuleId}
-          isLoading={rulesQuery.isLoading}
-          pendingRuleId={state.pendingRuleId}
-          onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
-          onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
-          onToggleEnabled={handleToggleRule}
-          onDeleteRule={handleDeleteRule}
-          action={
-            <Button
-              type="button"
-              size="sm"
-              className="gap-1.5 rounded-md"
-              onClick={() => dispatch({ type: 'newRuleStarted' })}
-            >
-              <Plus className="size-3.5" />
-              {t('rules.composer.newRuleCta')}
-            </Button>
-          }
-        />
-      </TabsContent>
+      {activeTab === 'list' && (
+        <section
+          id="rules-tabpanel-list"
+          role="tabpanel"
+          aria-labelledby="rules-tab-list"
+          className="space-y-6"
+        >
+          <RuleList
+            rules={rules}
+            selectedRuleId={state.selectedRuleId}
+            isLoading={rulesQuery.isLoading}
+            pendingRuleId={state.pendingRuleId}
+            onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
+            onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
+            onToggleEnabled={handleToggleRule}
+            onDeleteRule={handleDeleteRule}
+            action={
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 rounded-md"
+                onClick={() => dispatch({ type: 'newRuleStarted' })}
+              >
+                <Plus className="size-3.5" />
+                {t('rules.composer.newRuleCta')}
+              </Button>
+            }
+          />
+        </section>
+      )}
 
-      <TabsContent value="test" className="space-y-6">
-        <p className="text-muted-foreground text-sm">
-          {t('rules.tabs.testIntro', { count: enabledRulesCount })}
-        </p>
-        <Tabs defaultValue="custom" className="space-y-4">
-          <TabsList aria-label={t('rules.tabs.testModeLabel')}>
-            <TabsTrigger value="custom" className="gap-2">
-              {t('rules.tabs.testCustom')}
-              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                {t('rules.tabs.freeBadge')}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="gmail" className="gap-2">
-              {t('rules.tabs.testGmail')}
-              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                {t('rules.tabs.creditBadge')}
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
+      {activeTab === 'test' && (
+        <section
+          id="rules-tabpanel-test"
+          role="tabpanel"
+          aria-labelledby="rules-tab-test"
+          className="space-y-6"
+        >
+          <p className="text-muted-foreground text-sm">
+            {t('rules.tabs.testIntro', { count: enabledRulesCount })}
+          </p>
+          <Tabs defaultValue="custom" className="space-y-4">
+            <TabsList aria-label={t('rules.tabs.testModeLabel')}>
+              <TabsTrigger value="custom" className="gap-2">
+                {t('rules.tabs.testCustom')}
+                <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                  {t('rules.tabs.freeBadge')}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="gmail" className="gap-2">
+                {t('rules.tabs.testGmail')}
+                <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                  {t('rules.tabs.creditBadge')}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="custom">
-            <CustomMailTester
-              selectedCount={0}
-              isRunning={previewCustomMailMutation.isPending}
-              result={customMailResult}
-              resultError={customMailError}
-              onClearSelection={() => undefined}
-              onRunTest={handleRunCustomMailTest}
-            />
-          </TabsContent>
+            <TabsContent value="custom">
+              <CustomMailTester
+                selectedCount={0}
+                isRunning={previewCustomMailMutation.isPending}
+                result={customMailResult}
+                resultError={customMailError}
+                onClearSelection={() => undefined}
+                onRunTest={handleRunCustomMailTest}
+              />
+            </TabsContent>
 
-          <TabsContent value="gmail" className="space-y-3">
-            <Alert variant="warning">
-              <AlertTitle>{t('rules.tabs.gmailCreditWarningTitle')}</AlertTitle>
-              <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
-            </Alert>
-            <RulePreviewPanel
-              enabledRulesCount={enabledRulesCount}
-              preview={state.preview}
-              previewError={state.previewError}
-              gmailUnavailableError={state.gmailUnavailableError}
-              isPreviewing={previewAllEnabledMutation.isPending}
-              canPreview={canPreview}
-              sampleSize={state.sampleSize}
-              isEvaluatingSemanticIntents={
-                previewAllEnabledMutation.isPending && Boolean(state.preview)
-              }
-              onSampleSizeChange={(sampleSize) =>
-                dispatch({ type: 'sampleSizeChanged', sampleSize })
-              }
-              onPreview={() => handlePreview()}
-              onEvaluateSemanticIntents={handleEvaluateSemanticIntents}
-            />
-          </TabsContent>
-        </Tabs>
-      </TabsContent>
+            <TabsContent value="gmail" className="space-y-3">
+              <Alert variant="warning">
+                <AlertTitle>{t('rules.tabs.gmailCreditWarningTitle')}</AlertTitle>
+                <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
+              </Alert>
+              <RulePreviewPanel
+                enabledRulesCount={enabledRulesCount}
+                preview={state.preview}
+                previewError={state.previewError}
+                gmailUnavailableError={state.gmailUnavailableError}
+                isPreviewing={previewAllEnabledMutation.isPending}
+                canPreview={canPreview}
+                sampleSize={state.sampleSize}
+                isEvaluatingSemanticIntents={
+                  previewAllEnabledMutation.isPending && Boolean(state.preview)
+                }
+                onSampleSizeChange={(sampleSize) =>
+                  dispatch({ type: 'sampleSizeChanged', sampleSize })
+                }
+                onPreview={() => handlePreview()}
+                onEvaluateSemanticIntents={handleEvaluateSemanticIntents}
+              />
+            </TabsContent>
+          </Tabs>
+        </section>
+      )}
 
-      <TabsContent value="history" className="space-y-4">
-        <p className="text-muted-foreground text-sm">{t('rules.tabs.historyIntro')}</p>
-        <AuditLog />
-      </TabsContent>
+      {activeTab === 'history' && (
+        <section
+          id="rules-tabpanel-history"
+          role="tabpanel"
+          aria-labelledby="rules-tab-history"
+          className="space-y-4"
+        >
+          <p className="text-muted-foreground text-sm">{t('rules.tabs.historyIntro')}</p>
+          <AuditLog />
+        </section>
+      )}
 
       {/* Composer dialog — for creating and editing rules */}
       <Dialog
@@ -624,7 +681,7 @@ export function RulesWorkspace() {
           )}
         </DialogContent>
       </Dialog>
-    </Tabs>
+    </div>
   );
 }
 

@@ -1,0 +1,133 @@
+databaseChangeLog:
+  - changeSet:
+      id: 100-feature-catalog
+      author: zeromail
+      comment: >-
+        DB-driven feature catalog for LLM-calling features. Each row mirrors a value of
+        the CallSite enum (com.zeromail.core.billing.domain.CallSite). The
+        default_credit_cost column replaces the hard-coded cost previously held on the
+        enum constants — the CreditLedgerService will look it up from this table so
+        operators can tune cost without redeploying the application. Seeded values
+        match the prior enum costs verbatim (TRIAGE=1, DRAFT=2, PREVIEW=1,
+        TRIAGE_PLATFORM_LLM=1, TRIAGE_DETERMINISTIC=0) so the migration is behaviour-
+        preserving. A FeatureCatalogConsistencyChecker startup validator (Java code)
+        enforces that every CallSite enum value has a row here.
+      changes:
+        - createTable:
+            tableName: feature_catalog
+            columns:
+              - column:
+                  name: code
+                  type: varchar(64)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: display_name
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: varchar(512)
+              - column:
+                  name: category
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: default_credit_cost
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sort_order
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE feature_catalog ADD CONSTRAINT ck_feature_catalog_cost_non_negative CHECK (default_credit_cost >= 0)
+        - sql:
+            sql: ALTER TABLE feature_catalog ADD CONSTRAINT ck_feature_catalog_category CHECK (category IN ('TRIAGE','COMPOSE','RULES','CLEANUP','INTERNAL'))
+        - createIndex:
+            tableName: feature_catalog
+            indexName: idx_feature_catalog_category_active
+            columns:
+              - column:
+                  name: category
+              - column:
+                  name: active
+        - insert:
+            tableName: feature_catalog
+            columns:
+              - column: { name: code, value: TRIAGE }
+              - column: { name: display_name, value: Inbox Triage }
+              - column: { name: description, value: "Public LLM call site for non-orchestrator triage paths." }
+              - column: { name: category, value: TRIAGE }
+              - column: { name: default_credit_cost, valueNumeric: 1 }
+              - column: { name: sort_order, valueNumeric: 10 }
+        - insert:
+            tableName: feature_catalog
+            columns:
+              - column: { name: code, value: DRAFT }
+              - column: { name: display_name, value: Draft Reply }
+              - column: { name: description, value: "AI-generated draft body for replies and outbound messages." }
+              - column: { name: category, value: COMPOSE }
+              - column: { name: default_credit_cost, valueNumeric: 2 }
+              - column: { name: sort_order, valueNumeric: 20 }
+        - insert:
+            tableName: feature_catalog
+            columns:
+              - column: { name: code, value: PREVIEW }
+              - column: { name: display_name, value: Rule Preview }
+              - column: { name: description, value: "Rule-builder preview path (compile a candidate rule against a sample email)." }
+              - column: { name: category, value: RULES }
+              - column: { name: default_credit_cost, valueNumeric: 1 }
+              - column: { name: sort_order, valueNumeric: 30 }
+        - insert:
+            tableName: feature_catalog
+            columns:
+              - column: { name: code, value: TRIAGE_PLATFORM_LLM }
+              - column: { name: display_name, value: Triage (Platform LLM) }
+              - column: { name: description, value: "Semantic-matching sub-step inside the triage orchestrator." }
+              - column: { name: category, value: TRIAGE }
+              - column: { name: default_credit_cost, valueNumeric: 1 }
+              - column: { name: sort_order, valueNumeric: 40 }
+        - insert:
+            tableName: feature_catalog
+            columns:
+              - column: { name: code, value: TRIAGE_DETERMINISTIC }
+              - column: { name: display_name, value: Triage (Deterministic) }
+              - column: { name: description, value: "Deterministic-only triage sub-step; no LLM call." }
+              - column: { name: category, value: TRIAGE }
+              - column: { name: default_credit_cost, valueNumeric: 0 }
+              - column: { name: sort_order, valueNumeric: 50 }
+      rollback:
+        - dropTable:
+            tableName: feature_catalog
+            cascadeConstraints: true

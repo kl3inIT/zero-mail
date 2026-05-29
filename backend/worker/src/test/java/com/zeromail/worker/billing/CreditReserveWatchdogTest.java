@@ -34,7 +34,6 @@ class CreditReserveWatchdogTest extends PostgresContainerTest {
     void resetBillingTables() {
         jdbcTemplate.execute("DELETE FROM credit_ledger_entry");
         jdbcTemplate.execute("DELETE FROM credit_reservation");
-        jdbcTemplate.execute("DELETE FROM billing_topup_intent");
         jdbcTemplate.execute("DELETE FROM tenants");
     }
 
@@ -101,7 +100,7 @@ class CreditReserveWatchdogTest extends PostgresContainerTest {
                                             UUID.randomUUID(),
                                             tenantId,
                                             10,
-                                            "SEPAY-WATCHDOG-" + tenantId));
+                                            "TEST-WATCHDOG-" + tenantId));
                             creditReservationRepository.saveAndFlush(
                                     new CreditReservationEntity(
                                             reservationId,

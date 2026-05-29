@@ -100,7 +100,7 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
                                                 UUID.randomUUID(),
                                                 tenantId,
                                                 startingCredits,
-                                                "SEPAY-SEED-" + tenantId)));
+                                                "TEST-SEED-" + tenantId)));
         return tenantId;
     }
 

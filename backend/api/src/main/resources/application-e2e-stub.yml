@@ -12,18 +12,6 @@ zero-mail:
         push-audience-url: https://e2e-stub.invalid/internal/pubsub/gmail
         sa-principal-email: e2e-stub-sa@e2e-stub.invalid
         oidc-certificates-url: https://www.googleapis.com/oauth2/v3/certs
-  billing:
-    sepay:
-      webhook-api-key: e2e-stub-sepay-key
-    payment-account:
-      bank-code: e2e-stub-bank
-      bank-name: e2e-stub
-      account-number: "0000"
-      account-name: e2e-stub-account
-      qr-payload: ""
-    vnd-per-credit: 1000
-    max-pending-intents-per-tenant: 5
-    intent-expiry: PT24H
   llm:
     platform:
       api-key: e2e-stub-llm-key
