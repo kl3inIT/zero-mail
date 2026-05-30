@@ -29,6 +29,7 @@
       },
       "draftConfidence": {
         "description": "Only draft when confidence reaches your chosen threshold.",
+        "fieldLabel": "Select threshold",
         "high": "HIGH - only when the AI is very confident",
         "low": "LOW - draft more often, you review",
         "medium": "MEDIUM - balance speed and caution",
@@ -217,11 +218,13 @@
       },
       "personalInstructions": {
         "description": "What the AI should know about you before drafting.",
+        "fieldLabel": "Personal instructions",
         "placeholder": "Example: keep replies concise, courteous, and explicit about next steps...",
         "title": "About me (personal instructions)"
       },
       "signature": {
         "description": "A signature the AI can include in drafts when appropriate.",
+        "fieldLabel": "Signature content",
         "placeholder": "Name, title, phone number...",
         "title": "Email signature"
       },
@@ -237,6 +240,7 @@
       "wordCount": "{count} words",
       "writingStyle": {
         "description": "Describe how you usually write so the AI can mirror you more safely.",
+        "fieldLabel": "Style content",
         "placeholder": "Write 200-500 words about how you greet, explain, decline, and close emails...",
         "title": "Writing style"
       }
@@ -1751,8 +1755,9 @@
     "pricing": "Pricing",
     "privacy": "Privacy",
     "rules": "Rules",
-    "sectionMail": "Mail",
-    "sectionManage": "Manage",
+    "sectionAutomation": "Automation",
+    "sectionDaily": "Daily",
+    "sectionTools": "Tools",
     "settings": "Settings",
     "signIn": "Sign in",
     "subscription": "Subscription",

@@ -29,6 +29,7 @@
       },
       "draftConfidence": {
         "description": "Chỉ tạo nháp khi độ tin cậy đạt ngưỡng bạn chọn.",
+        "fieldLabel": "Chọn ngưỡng",
         "high": "HIGH - chỉ khi AI rất chắc chắn",
         "low": "LOW - tạo nháp rộng hơn, bạn kiểm tra lại",
         "medium": "MEDIUM - cân bằng giữa tốc độ và an toàn",
@@ -217,11 +218,13 @@
       },
       "personalInstructions": {
         "description": "Những điều AI cần biết về bạn trước khi soạn thư.",
+        "fieldLabel": "Hướng dẫn cá nhân",
         "placeholder": "Ví dụ: ưu tiên trả lời ngắn, lịch sự, nêu rõ bước tiếp theo...",
         "title": "Về tôi (hướng dẫn cá nhân)"
       },
       "signature": {
         "description": "Chữ ký AI có thể chèn vào bản nháp khi phù hợp.",
+        "fieldLabel": "Nội dung chữ ký",
         "placeholder": "Tên, chức danh, số điện thoại...",
         "title": "Chữ ký email"
       },
@@ -237,6 +240,7 @@
       "wordCount": "{count} từ",
       "writingStyle": {
         "description": "Mô tả cách bạn thường viết để AI bắt chước an toàn hơn.",
+        "fieldLabel": "Nội dung phong cách",
         "placeholder": "Viết 200-500 từ về cách bạn chào hỏi, giải thích, từ chối, và kết thúc email...",
         "title": "Phong cách viết"
       }
@@ -1751,8 +1755,9 @@
     "pricing": "Bảng giá",
     "privacy": "Quyền riêng tư",
     "rules": "Quy tắc",
-    "sectionMail": "Thư",
-    "sectionManage": "Quản lý",
+    "sectionAutomation": "Tự động hóa",
+    "sectionDaily": "Hằng ngày",
+    "sectionTools": "Công cụ",
     "settings": "Cài đặt",
     "signIn": "Đăng nhập",
     "subscription": "Gói đăng ký",
