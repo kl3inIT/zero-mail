@@ -8,7 +8,7 @@ import java.util.List;
 public record BillingPlanListResponse(
         @Schema(
                         description =
-                                "Tenant's currently-active plan code. Falls back to FREE when no subscription exists.",
+                                "Tenant's currently-active plan code. Falls back to FREE when no active paid plan period exists.",
                         allowableValues = {"FREE", "PLUS", "PRO"})
                 String currentPlanCode,
         List<BillingPlanResponse> plans) {

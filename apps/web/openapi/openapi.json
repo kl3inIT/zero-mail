@@ -2085,6 +2085,184 @@
         }
       }
     },
+    "/api/plan-upgrades/webhooks/lemon-squeezy": {
+      "post": {
+        "tags": ["plan-upgrade-webhook-controller"],
+        "operationId": "lemonSqueezy",
+        "parameters": [
+          {
+            "name": "headers",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HttpHeaders"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plan-upgrades/plans/{planCode}/checkout": {
+      "post": {
+        "tags": ["plan-upgrades"],
+        "operationId": "checkout",
+        "parameters": [
+          {
+            "name": "planCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCheckoutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/onboarding/select-template": {
       "post": {
         "tags": ["onboarding-controller"],
@@ -2953,183 +3131,6 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ConfirmActionResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/billing/topup/intent": {
-      "post": {
-        "tags": ["billing"],
-        "operationId": "createIntent",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TopupIntentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/TopupIntentResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/billing/sepay/webhook": {
-      "post": {
-        "tags": ["billing-webhook"],
-        "operationId": "receive",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SepayWebhookPayload"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
                 }
               }
             }
@@ -4636,6 +4637,84 @@
         }
       }
     },
+    "/api/plan-upgrades/plans": {
+      "get": {
+        "tags": ["plan-upgrades"],
+        "operationId": "plans",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlanListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me": {
       "get": {
         "tags": ["me-controller"],
@@ -4978,6 +5057,182 @@
         }
       }
     },
+    "/api/credits/ledger": {
+      "get": {
+        "tags": ["credits"],
+        "operationId": "ledger",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingLedgerHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/credits/balance": {
+      "get": {
+        "tags": ["credits"],
+        "operationId": "balance",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingBalanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/chat/{chatId}": {
       "get": {
         "tags": ["Chat"],
@@ -5180,255 +5435,6 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ChatHistoryListResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/billing/packages": {
-      "get": {
-        "tags": ["billing"],
-        "operationId": "packages",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/BillingPackageResponse"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/billing/ledger": {
-      "get": {
-        "tags": ["billing"],
-        "operationId": "ledger",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 50
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/BillingLedgerHistoryResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/billing/balance": {
-      "get": {
-        "tags": ["billing"],
-        "operationId": "balance",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/BillingBalanceResponse"
                 }
               }
             }
@@ -6544,6 +6550,334 @@
         },
         "required": ["status"]
       },
+      "ContentDisposition": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "charset": {
+            "type": "string"
+          },
+          "inline": {
+            "type": "boolean"
+          },
+          "formData": {
+            "type": "boolean"
+          },
+          "attachment": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HttpHeaders": {
+        "type": "object",
+        "properties": {
+          "empty": {
+            "type": "boolean"
+          },
+          "location": {
+            "type": "string",
+            "format": "uri"
+          },
+          "host": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "format": "byte"
+                  },
+                  "hostAddress": {
+                    "type": "string"
+                  },
+                  "linkLocalAddress": {
+                    "type": "boolean"
+                  },
+                  "hostName": {
+                    "type": "string"
+                  },
+                  "multicastAddress": {
+                    "type": "boolean"
+                  },
+                  "anyLocalAddress": {
+                    "type": "boolean"
+                  },
+                  "loopbackAddress": {
+                    "type": "boolean"
+                  },
+                  "siteLocalAddress": {
+                    "type": "boolean"
+                  },
+                  "mcglobal": {
+                    "type": "boolean"
+                  },
+                  "mcnodeLocal": {
+                    "type": "boolean"
+                  },
+                  "mclinkLocal": {
+                    "type": "boolean"
+                  },
+                  "mcsiteLocal": {
+                    "type": "boolean"
+                  },
+                  "mcorgLocal": {
+                    "type": "boolean"
+                  },
+                  "canonicalHostName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "port": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "hostName": {
+                "type": "string"
+              },
+              "hostString": {
+                "type": "string"
+              },
+              "unresolved": {
+                "type": "boolean"
+              }
+            }
+          },
+          "all": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "writeOnly": true
+          },
+          "lastModified": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "date": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentLength": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "connection": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifModifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/MediaType"
+          },
+          "ifNoneMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cacheControl": {
+            "type": "string"
+          },
+          "contentLanguage": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpRange"
+            }
+          },
+          "allow": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            },
+            "uniqueItems": true
+          },
+          "acceptCharset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contentDisposition": {
+            "$ref": "#/components/schemas/ContentDisposition"
+          },
+          "ifMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "etag": {
+            "type": "string"
+          },
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "accept": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "vary": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pragma": {
+            "type": "string"
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "upgrade": {
+            "type": "string"
+          },
+          "acceptPatch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "acceptLanguage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "range": {
+                  "type": "string"
+                },
+                "weight": {
+                  "type": "number",
+                  "format": "double"
+                }
+              }
+            }
+          },
+          "basicAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "acceptLanguageAsLocales": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlMaxAge": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "accessControlAllowMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            }
+          },
+          "accessControlAllowOrigin": {
+            "type": "string"
+          },
+          "accessControlRequestMethod": {
+            "$ref": "#/components/schemas/HttpMethod"
+          },
+          "accessControlRequestHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlAllowHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlExposeHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlAllowCredentials": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HttpMethod": {},
+      "HttpRange": {},
+      "MediaType": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "subtype": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "qualityValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "charset": {
+            "type": "string"
+          },
+          "wildcardSubtype": {
+            "type": "boolean"
+          },
+          "wildcardType": {
+            "type": "boolean"
+          },
+          "subtypeSuffix": {
+            "type": "string"
+          },
+          "concrete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BillingCheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "checkoutUrl": {
+            "type": "string",
+            "description": "Hosted Lemon Squeezy checkout URL for the selected billing plan"
+          }
+        },
+        "required": ["checkoutUrl"]
+      },
       "SelectTemplateRequest": {
         "type": "object",
         "properties": {
@@ -6727,121 +7061,6 @@
           }
         },
         "required": ["state"]
-      },
-      "TopupIntentRequest": {
-        "type": "object",
-        "properties": {
-          "packageCode": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": ["packageCode"]
-      },
-      "TopupIntentResponse": {
-        "type": "object",
-        "properties": {
-          "orderCode": {
-            "type": "string"
-          },
-          "packageCode": {
-            "type": "string"
-          },
-          "packageName": {
-            "type": "string"
-          },
-          "amountVnd": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "creditAmount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "bankCode": {
-            "type": "string"
-          },
-          "bankName": {
-            "type": "string"
-          },
-          "accountNumber": {
-            "type": "string"
-          },
-          "accountName": {
-            "type": "string"
-          },
-          "transferContent": {
-            "type": "string"
-          },
-          "qrPayload": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "accountName",
-          "accountNumber",
-          "amountVnd",
-          "bankCode",
-          "bankName",
-          "creditAmount",
-          "expiresAt",
-          "orderCode",
-          "packageCode",
-          "packageName",
-          "qrPayload",
-          "transferContent"
-        ]
-      },
-      "SepayWebhookPayload": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "gateway": {
-            "type": "string"
-          },
-          "transactionDate": {
-            "type": "string"
-          },
-          "accountNumber": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "transferType": {
-            "type": "string"
-          },
-          "transferAmount": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "accumulated": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "subAccount": {
-            "type": "string"
-          },
-          "referenceCode": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "packageCode": {
-            "type": "string"
-          }
-        }
       },
       "RuleEnabledRequest": {
         "type": "object",
@@ -7454,6 +7673,109 @@
         },
         "required": ["actions"]
       },
+      "BillingPlanListResponse": {
+        "type": "object",
+        "properties": {
+          "currentPlanCode": {
+            "type": "string",
+            "description": "Tenant\u0027s currently-active plan code. Falls back to FREE when no active paid plan period exists.",
+            "enum": ["FREE", "PLUS", "PRO"]
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPlanResponse"
+            }
+          }
+        },
+        "required": ["currentPlanCode", "plans"]
+      },
+      "BillingPlanResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["FREE", "PLUS", "PRO"]
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "tierRank": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "billingCycle": {
+            "type": "string",
+            "enum": ["NONE", "MONTH"]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "priceVnd": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "monthlyCreditAllowance": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "features": {
+            "type": "array",
+            "description": "Enabled features for this plan, sorted by feature catalog sort order",
+            "items": {
+              "$ref": "#/components/schemas/PlanFeatureSummaryResponse"
+            }
+          }
+        },
+        "required": [
+          "billingCycle",
+          "code",
+          "currency",
+          "displayName",
+          "features",
+          "monthlyCreditAllowance",
+          "priceVnd",
+          "sortOrder",
+          "tierRank"
+        ]
+      },
+      "PlanFeatureSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["TRIAGE", "COMPOSE", "RULES", "CLEANUP", "INTERNAL"]
+          },
+          "creditCost": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dailyInvocationLimit": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Null \u003d unlimited"
+          },
+          "monthlyInvocationLimit": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Null \u003d unlimited"
+          }
+        },
+        "required": ["category", "code", "creditCost", "displayName"]
+      },
       "ByokCurrentResponse": {
         "type": "object",
         "properties": {
@@ -7609,6 +7931,100 @@
           }
         },
         "required": ["connectionStatus", "googleEmail"]
+      },
+      "BillingLedgerEntryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "amountCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "balanceAfterCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reference": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amountCredits",
+          "balanceAfterCredits",
+          "description",
+          "id",
+          "timestamp",
+          "type"
+        ]
+      },
+      "BillingLedgerHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingLedgerEntryResponse"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": ["entries"]
+      },
+      "BillingBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "availableCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "heldCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "monthlyCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "additionalCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "monthlyCreditAllowance": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resetsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "additionalCredits",
+          "availableCredits",
+          "currency",
+          "heldCredits",
+          "monthlyCreditAllowance",
+          "monthlyCredits",
+          "resetsAt"
+        ]
       },
       "SuppressionListResponse": {
         "type": "object",
@@ -7771,149 +8187,6 @@
           }
         },
         "required": ["id", "messageCount", "title", "updatedAt"]
-      },
-      "BillingPackageResponse": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "priceVnd": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "creditAmount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "includedFeatures": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "featured": {
-            "type": "boolean"
-          },
-          "description": {
-            "type": "string"
-          },
-          "displayOrder": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "required": [
-          "code",
-          "creditAmount",
-          "description",
-          "displayOrder",
-          "featured",
-          "includedFeatures",
-          "name",
-          "priceVnd"
-        ]
-      },
-      "BillingLedgerEntryResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "type": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "amountCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "balanceAfterCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "reference": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "amountCredits",
-          "balanceAfterCredits",
-          "description",
-          "id",
-          "timestamp",
-          "type"
-        ]
-      },
-      "BillingLedgerHistoryResponse": {
-        "type": "object",
-        "properties": {
-          "entries": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BillingLedgerEntryResponse"
-            }
-          },
-          "nextCursor": {
-            "type": "string"
-          }
-        },
-        "required": ["entries"]
-      },
-      "BillingBalanceResponse": {
-        "type": "object",
-        "properties": {
-          "availableCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "heldCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "betaCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "paidCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "monthlyGrantCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "resetsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "freeDuringBeta": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "availableCredits",
-          "betaCredits",
-          "currency",
-          "freeDuringBeta",
-          "heldCredits",
-          "monthlyGrantCredits",
-          "paidCredits",
-          "resetsAt"
-        ]
       },
       "ActionMixResponse": {
         "type": "object",

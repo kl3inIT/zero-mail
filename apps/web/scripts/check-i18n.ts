@@ -53,8 +53,8 @@ const EN_SCAN_FILES = [
   'app/(protected)/(app)/rules/page.tsx',
   'app/(protected)/(app)/triage/page.tsx',
   'app/(protected)/(app)/needs-reply/page.tsx',
-  'app/(protected)/(app)/billing/page.tsx',
-  'app/(protected)/(app)/billing/top-up/page.tsx',
+  'app/(protected)/(app)/credits/page.tsx',
+  'app/(protected)/(app)/upgrade-plan/page.tsx',
   // Public surface (Phase 1.3 Plan 05 + Plan 06)
   'app/(public)/page.tsx',
   'app/(public)/layout.tsx',

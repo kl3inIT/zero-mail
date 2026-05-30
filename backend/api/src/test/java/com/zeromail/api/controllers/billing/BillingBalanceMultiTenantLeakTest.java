@@ -57,10 +57,10 @@ class BillingBalanceMultiTenantLeakTest extends ApiPostgresTestBase {
                         .isEqualTo(seeds.get(seedIndex).expectedCredits() + 300);
                 assertThat(observedResponse.heldCredits()).isZero();
                 assertThat(observedResponse.currency()).isEqualTo("credits");
-                assertThat(observedResponse.betaCredits()).isEqualTo(300);
-                assertThat(observedResponse.paidCredits())
+                assertThat(observedResponse.monthlyCredits()).isEqualTo(300);
+                assertThat(observedResponse.additionalCredits())
                         .isEqualTo(seeds.get(seedIndex).expectedCredits());
-                assertThat(observedResponse.freeDuringBeta()).isTrue();
+                assertThat(observedResponse.monthlyCreditAllowance()).isEqualTo(300);
             }
         }
     }
@@ -89,7 +89,7 @@ class BillingBalanceMultiTenantLeakTest extends ApiPostgresTestBase {
 
     private BillingBalanceResponse fetchBalance(RestClient client, Seed seed) {
         return client.get()
-                .uri("/api/billing/balance")
+                .uri("/api/credits/balance")
                 .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
                 .header(TestSessionSupport.HEADER_EMAIL, seed.email())
                 .retrieve()

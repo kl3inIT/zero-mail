@@ -139,7 +139,7 @@ public class E2eStubResetController {
         if (creditLedger.balance(tenantId).availableCredits() >= MINIMUM_LAUNCH_SMOKE_CREDITS) {
             return;
         }
-        creditGrantService.grantCurrentBetaCredits(tenantId);
+        creditGrantService.resetCurrentPlanAllowanceCredits(tenantId);
         int availableCredits = creditLedger.balance(tenantId).availableCredits();
         if (availableCredits < MINIMUM_LAUNCH_SMOKE_CREDITS) {
             throw new ResponseStatusException(

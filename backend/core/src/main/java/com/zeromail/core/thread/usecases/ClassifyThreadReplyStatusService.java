@@ -29,6 +29,7 @@ public class ClassifyThreadReplyStatusService {
     private final ThreadReplyStatusRepository threadReplyStatusRepository;
     private final Clock clock;
     private final TransactionTemplate classificationTransaction;
+    private final TransactionTemplate listenerClassificationTransaction;
 
     @Autowired
     public ClassifyThreadReplyStatusService(
@@ -37,24 +38,29 @@ public class ClassifyThreadReplyStatusService {
         this(
                 threadReplyStatusRepository,
                 Clock.systemUTC(),
-                classificationTransaction(transactionManager));
+                classificationTransaction(
+                        transactionManager, TransactionDefinition.PROPAGATION_REQUIRED),
+                classificationTransaction(
+                        transactionManager, TransactionDefinition.PROPAGATION_REQUIRES_NEW));
     }
 
     public ClassifyThreadReplyStatusService(
             ThreadReplyStatusRepository threadReplyStatusRepository, Clock clock) {
-        this(threadReplyStatusRepository, clock, null);
+        this(threadReplyStatusRepository, clock, null, null);
     }
 
     private ClassifyThreadReplyStatusService(
             ThreadReplyStatusRepository threadReplyStatusRepository,
             Clock clock,
-            TransactionTemplate classificationTransaction) {
+            TransactionTemplate classificationTransaction,
+            TransactionTemplate listenerClassificationTransaction) {
         this.threadReplyStatusRepository =
                 Objects.requireNonNull(
                         threadReplyStatusRepository,
                         "threadReplyStatusRepository must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.classificationTransaction = classificationTransaction;
+        this.listenerClassificationTransaction = listenerClassificationTransaction;
     }
 
     public ThreadReplyStatus classify(ThreadReplyClassificationInput classificationInput) {
@@ -70,8 +76,8 @@ public class ClassifyThreadReplyStatusService {
     }
 
     @ApplicationModuleListener
-    void on(MailOutboundObserved event) {
-        classify(
+    public void on(MailOutboundObserved event) {
+        ThreadReplyClassificationInput classificationInput =
                 new ThreadReplyClassificationInput(
                         event.tenantId(),
                         event.gmailThreadId(),
@@ -80,7 +86,9 @@ public class ClassifyThreadReplyStatusService {
                         true,
                         false,
                         null,
-                        false));
+                        false);
+        TenantContext.runWith(
+                event.tenantId(), () -> classifyListenerEventInTransaction(classificationInput));
     }
 
     private ThreadReplyStatus classifyWithTenantBound(
@@ -139,10 +147,20 @@ public class ClassifyThreadReplyStatusService {
         return Objects.requireNonNull(classifiedStatus, "classifiedStatus must not be null");
     }
 
+    private void classifyListenerEventInTransaction(
+            ThreadReplyClassificationInput classificationInput) {
+        if (listenerClassificationTransaction == null) {
+            classifyWithTenantBound(classificationInput);
+            return;
+        }
+        listenerClassificationTransaction.executeWithoutResult(
+                _ -> classifyWithTenantBound(classificationInput));
+    }
+
     private static TransactionTemplate classificationTransaction(
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, int propagationBehavior) {
         TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        transactionTemplate.setPropagationBehavior(propagationBehavior);
         return transactionTemplate;
     }
 

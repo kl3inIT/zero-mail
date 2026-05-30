@@ -225,8 +225,8 @@
   },
   "billing": {
     "balance": {
-      "betaCredits": "Beta credits",
-      "betaNotice": "Free during beta. We'll notify you before paid plans are required.",
+      "additionalCreditDetail": "Outside the monthly plan reset",
+      "additionalCredits": "Additional credits",
       "description": "Balance available for Zero Mail AI actions.",
       "error": {
         "body": "Something went wrong fetching your credit balance. Try again.",
@@ -236,9 +236,8 @@
       "held": "Held credits",
       "heldDetail": "Reserved by in-flight actions",
       "label": "Available credits",
+      "monthlyCredits": "Monthly credits",
       "monthlyGrant": "{credits} credits / month",
-      "noExpiry": "Does not reset with beta",
-      "paidCredits": "Paid credits",
       "refreshLabel": "Refreshes",
       "refreshValue": "Every 45 seconds",
       "resetsAt": "Resets at",
@@ -269,6 +268,11 @@
         "retry": "Try again",
         "title": "Couldn't load transaction history"
       },
+      "pagination": {
+        "end": "End reached",
+        "loaded": "{count} transactions loaded",
+        "loadMore": "Load more"
+      },
       "title": "Transaction history",
       "type": {
         "adjustment": "Adjustment",
@@ -286,8 +290,43 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Track free beta credits, paid credits, and recent usage activity.",
-      "title": "Billing"
+      "description": "Track your balance, monthly reset, and credit usage history.",
+      "title": "Credits & usage history"
+    },
+    "plans": {
+      "checkoutCta": "Pay now",
+      "checkoutError": "Couldn't open checkout. Try again later.",
+      "checkoutPending": "Opening checkout",
+      "currentPlan": "Current plan",
+      "description": {
+        "free": "For starting with Zero Mail on the base allowance.",
+        "plus": "For individual users who run AI workflows more often.",
+        "pro": "For advanced users and small teams."
+      },
+      "empty": "No plans to show.",
+      "error": "Couldn't load plans.",
+      "freeIncluded": "Included",
+      "includedCredits": "{credits} credits each month",
+      "lowerTierUnavailable": "Already covered",
+      "monthly": "Monthly",
+      "perInvocation": "/ run",
+      "perMonth": "/month",
+      "plan": {
+        "free": "Free",
+        "plus": "Plus",
+        "pro": "Pro"
+      },
+      "planDescription": {
+        "free": "For starting with Zero Mail on the base allowance.",
+        "plus": "For individual users who run AI workflows more often.",
+        "pro": "For advanced users and small teams."
+      },
+      "subtitle": "Pay once for the current monthly period. Plans below your active tier are disabled.",
+      "title": "Monthly credit plans"
+    },
+    "upgrade": {
+      "description": "Choose the monthly credit plan that fits your AI usage.",
+      "title": "Upgrade plan"
     }
   },
   "chat": {
@@ -651,6 +690,7 @@
         "invalidState": "Internal billing-state error — please try again later."
       },
       "plan": {
+        "downgradeNotAllowed": "Your active plan is higher than the selected plan.",
         "featureDisabled": "This feature is not available on your current plan.",
         "notFound": "This billing plan was not found. Choose another plan."
       }
@@ -1416,7 +1456,7 @@
     "ai": "AI configuration",
     "analytics": "Analytics",
     "beta": "v1",
-    "billing": "Billing",
+    "billing": "Credits",
     "chat": "Assistant",
     "cleanupGroup": "Unsubscribe",
     "cleanupSuppression": "Safe list",
@@ -1444,6 +1484,7 @@
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
     "trust": "Trust & safety",
+    "upgradePlan": "Upgrade plan",
     "waitlist": "Register to experience Zero Mail"
   },
   "needsReply": {
@@ -1991,6 +2032,7 @@
       "confirmPhrase": "delete my data",
       "cta": "Delete account and data"
     },
+    "description": "Manage your account, connection, credits, and Zero Mail operating settings.",
     "display": {
       "dialogBody": "Change the interface language and light/dark display mode here.",
       "heading": "Display",
@@ -2009,6 +2051,13 @@
       "label": "Language",
       "saveCta": "Update language preference",
       "vi": "Tiếng Việt"
+    },
+    "navigation": {
+      "account": "Account",
+      "ai": "AI configuration",
+      "credits": "Credits",
+      "privacy": "Privacy",
+      "upgradePlan": "Upgrade plan"
     },
     "notifications": {
       "description": "Manage your daily summary email.",
@@ -2062,6 +2111,10 @@
     }
   },
   "shell": {
+    "accounts": {
+      "addManage": "Add or manage accounts",
+      "title": "Accounts"
+    },
     "balance": {
       "label": "Credits"
     },
@@ -2096,6 +2149,7 @@
       "english": "English",
       "label": "Account",
       "language": "Language",
+      "planLoading": "Loading plan",
       "settings": "Settings",
       "signOut": "Sign out",
       "vietnamese": "Vietnamese"

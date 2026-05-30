@@ -1,0 +1,250 @@
+databaseChangeLog:
+  - changeSet:
+      id: 105-one-time-plan-period
+      author: zeromail
+      comment: >-
+        Replace subscription-based paid plan access with one-time monthly plan
+        periods. Paid Lemon Squeezy order webhooks create billing_plan_period
+        rows; credit grants reference those periods. The old subscription table
+        is removed, and webhook audit is renamed away from subscription terms.
+      changes:
+        - update:
+            tableName: billing_plan
+            columns:
+              - column: { name: monthly_credit_allowance, valueNumeric: 2000 }
+            where: code = 'PLUS'
+        - update:
+            tableName: billing_plan
+            columns:
+              - column: { name: price_vnd, valueNumeric: 399000 }
+              - column: { name: monthly_credit_allowance, valueNumeric: 8000 }
+            where: code = 'PRO'
+        - createTable:
+            tableName: billing_plan_period
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_plan_period_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: plan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_plan_period_plan
+                    references: billing_plan(id)
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: provider_order_id
+                  type: varchar(255)
+              - column:
+                  name: provider_checkout_id
+                  type: varchar(255)
+              - column:
+                  name: provider_event_id
+                  type: varchar(255)
+              - column:
+                  name: effective_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount_vnd
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: VND
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lemon_squeezy_customer_id
+                  type: bigint
+              - column:
+                  name: lemon_squeezy_product_id
+                  type: bigint
+              - column:
+                  name: lemon_squeezy_variant_id
+                  type: bigint
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE billing_plan_period ADD CONSTRAINT ck_billing_plan_period_status CHECK (status IN ('ACTIVE','EXPIRED','VOIDED'))
+        - sql:
+            sql: ALTER TABLE billing_plan_period ADD CONSTRAINT ck_billing_plan_period_provider CHECK (provider IN ('LEMON_SQUEEZY','ADMIN'))
+        - sql:
+            sql: ALTER TABLE billing_plan_period ADD CONSTRAINT ck_billing_plan_period_bounds CHECK (expires_at > effective_at AND paid_at <= effective_at + INTERVAL '5 minutes')
+        - sql:
+            sql: ALTER TABLE billing_plan_period ADD CONSTRAINT ck_billing_plan_period_amount_non_negative CHECK (amount_vnd >= 0)
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_billing_plan_period_provider_order ON billing_plan_period(provider, provider_order_id) WHERE provider_order_id IS NOT NULL
+        - createIndex:
+            tableName: billing_plan_period
+            indexName: idx_billing_plan_period_tenant_current
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: status
+              - column:
+                  name: effective_at
+              - column:
+                  name: expires_at
+        - createTable:
+            tableName: billing_webhook_event
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: provider_event_id
+                  type: varchar(255)
+              - column:
+                  name: dedupe_key
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_name
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+              - column:
+                  name: lemon_squeezy_order_id
+                  type: bigint
+              - column:
+                  name: signature_verified
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processing_status
+                  type: varchar(32)
+                  defaultValue: RECEIVED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: timestamptz
+              - column:
+                  name: processing_error
+                  type: text
+              - column:
+                  name: payload_sha256
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_jsonb
+                  type: jsonb
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >-
+              INSERT INTO billing_webhook_event(
+                  id, provider_event_id, dedupe_key, event_name, tenant_id,
+                  lemon_squeezy_order_id, signature_verified, processing_status,
+                  received_at, processed_at, processing_error, payload_sha256, payload_jsonb)
+              SELECT id, provider_event_id, dedupe_key, event_name, tenant_id,
+                     NULL::bigint, signature_verified, processing_status,
+                     received_at, processed_at, processing_error, payload_sha256, payload_jsonb
+                FROM subscription_webhook_event
+        - addUniqueConstraint:
+            tableName: billing_webhook_event
+            constraintName: uq_billing_webhook_event_dedupe_key
+            columnNames: dedupe_key
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_billing_webhook_event_provider_event_id ON billing_webhook_event(provider_event_id) WHERE provider_event_id IS NOT NULL
+        - sql:
+            sql: ALTER TABLE billing_webhook_event ADD CONSTRAINT ck_billing_webhook_event_processing_status CHECK (processing_status IN ('RECEIVED','PROCESSING','PROCESSED','FAILED','SKIPPED'))
+        - sql:
+            sql: ALTER TABLE billing_webhook_event ADD CONSTRAINT ck_billing_webhook_event_sha256_length CHECK (length(payload_sha256) = 64)
+        - createIndex:
+            tableName: billing_webhook_event
+            indexName: idx_billing_webhook_event_order
+            columns:
+              - column:
+                  name: lemon_squeezy_order_id
+        - createIndex:
+            tableName: billing_webhook_event
+            indexName: idx_billing_webhook_event_status_received
+            columns:
+              - column:
+                  name: processing_status
+              - column:
+                  name: received_at
+        - dropTable:
+            tableName: subscription_webhook_event
+            cascadeConstraints: true
+        - dropTable:
+            tableName: subscription
+            cascadeConstraints: true
+      rollback:
+        - dropTable:
+            tableName: billing_plan_period
+            cascadeConstraints: true
+        - dropTable:
+            tableName: billing_webhook_event
+            cascadeConstraints: true

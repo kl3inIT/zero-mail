@@ -2,15 +2,13 @@ package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.domain.CreditGrantCategory;
 import com.zeromail.core.billing.domain.CreditGrantStatus;
+import com.zeromail.core.billing.persistence.BillingPlanEntity;
 import com.zeromail.core.billing.persistence.CreditGrantEntity;
 import com.zeromail.core.billing.persistence.CreditGrantRepository;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.persistence.lowlevel.AdvisoryLockJdbcHelper;
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.tenant.persistence.TenantEntity;
 import java.time.Instant;
-import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -18,97 +16,126 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CreditGrantService {
 
-    public static final ZoneId BETA_CREDIT_ZONE = ZoneId.of(TenantEntity.DEFAULT_TIME_ZONE);
+    public static final ZoneId PLAN_ALLOWANCE_RESET_ZONE =
+            CurrentBillingPlanResolver.PLAN_ALLOWANCE_RESET_ZONE;
 
     private static final Logger log = LoggerFactory.getLogger(CreditGrantService.class);
-    private static final String BETA_PERIOD_REF_TYPE = "BETA_PERIOD";
-    private static final int BETA_GRANT_PRIORITY = 10;
+    private static final String PLAN_PERIOD_REF_TYPE = "PLAN_PERIOD";
+    private static final int MONTHLY_ALLOWANCE_GRANT_PRIORITY = 20;
 
-    private final ZeroMailCoreProperties coreProperties;
     private final CreditGrantRepository grantRepository;
     private final CreditLedgerEntryRepository entryRepository;
     private final AdvisoryLockJdbcHelper advisoryLockHelper;
+    private final CurrentBillingPlanResolver currentBillingPlanResolver;
 
     public CreditGrantService(
-            ZeroMailCoreProperties coreProperties,
             CreditGrantRepository grantRepository,
             CreditLedgerEntryRepository entryRepository,
-            AdvisoryLockJdbcHelper advisoryLockHelper) {
-        this.coreProperties = coreProperties;
+            AdvisoryLockJdbcHelper advisoryLockHelper,
+            CurrentBillingPlanResolver currentBillingPlanResolver) {
         this.grantRepository = grantRepository;
         this.entryRepository = entryRepository;
         this.advisoryLockHelper = advisoryLockHelper;
+        this.currentBillingPlanResolver = currentBillingPlanResolver;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Optional<CreditGrantResult> grantCurrentBetaCredits(UUID tenantId) {
-        ZeroMailCoreProperties.BillingProperties.BillingBetaProperties betaProperties =
-                coreProperties.billing().beta();
-        if (!betaProperties.enabled() || betaProperties.monthlyCredits() <= 0) {
+    @Transactional
+    public Optional<CreditGrantResult> resetCurrentPlanAllowanceCredits(UUID tenantId) {
+        Instant now = Instant.now();
+        CurrentBillingPlanResolver.CurrentPlanAllowancePeriod allowancePeriod =
+                currentBillingPlanResolver.resolveCurrentPlanAllowancePeriod(tenantId, now);
+        BillingPlanEntity billingPlan = allowancePeriod.plan();
+
+        advisoryLockHelper.acquireTenantLock(tenantId);
+        expireActiveGrantsPastExpiry(tenantId, now);
+        expireActiveAllowanceGrants(
+                tenantId, CreditGrantCategory.BETA, "legacy_beta_credit_superseded");
+        if (billingPlan.getMonthlyCreditAllowance() <= 0) {
+            expireActiveAllowanceGrants(
+                    tenantId,
+                    CreditGrantCategory.MONTHLY_ALLOWANCE,
+                    "plan_allowance_credit_superseded");
             return Optional.empty();
         }
 
-        advisoryLockHelper.acquireTenantLock(tenantId);
-        Instant now = Instant.now();
-        expireActiveGrantsPastExpiry(tenantId, now);
-        YearMonth period = YearMonth.now(BETA_CREDIT_ZONE);
-        return Optional.of(grantBetaCreditsForPeriod(tenantId, betaProperties, period));
-    }
-
-    public Instant currentBetaResetAt() {
-        YearMonth nextPeriod = YearMonth.now(BETA_CREDIT_ZONE).plusMonths(1);
-        return nextPeriod.atDay(1).atStartOfDay(BETA_CREDIT_ZONE).toInstant();
-    }
-
-    private CreditGrantResult grantBetaCreditsForPeriod(
-            UUID tenantId,
-            ZeroMailCoreProperties.BillingProperties.BillingBetaProperties betaProperties,
-            YearMonth period) {
-        String periodKey = period.toString();
-        String ledgerReferenceId = tenantId + ":" + periodKey;
         Optional<CreditGrantEntity> existingGrant =
-                grantRepository.findByTenantIdAndCategoryAndRefTypeAndRefId(
-                        tenantId, CreditGrantCategory.BETA, BETA_PERIOD_REF_TYPE, periodKey);
+                grantRepository.findTenantGrantByReference(
+                        tenantId,
+                        CreditGrantCategory.MONTHLY_ALLOWANCE,
+                        PLAN_PERIOD_REF_TYPE,
+                        allowancePeriod.referenceId());
         if (existingGrant.isPresent()) {
-            return new CreditGrantResult(existingGrant.get().getId(), false);
+            return Optional.of(new CreditGrantResult(existingGrant.get().getId(), false));
         }
 
+        expireActiveAllowanceGrants(
+                tenantId,
+                CreditGrantCategory.MONTHLY_ALLOWANCE,
+                "plan_allowance_credit_superseded");
+        String ledgerReferenceId = tenantId + ":" + allowancePeriod.referenceId();
+        CreditGrantResult creditGrantResult =
+                createGrant(
+                        tenantId,
+                        CreditGrantCategory.MONTHLY_ALLOWANCE,
+                        billingPlan.getMonthlyCreditAllowance(),
+                        allowancePeriod.effectiveAt(),
+                        allowancePeriod.expiresAt(),
+                        MONTHLY_ALLOWANCE_GRANT_PRIORITY,
+                        PLAN_PERIOD_REF_TYPE,
+                        allowancePeriod.referenceId(),
+                        ledgerReferenceId);
+        log.info(
+                "event=plan_allowance_credit_reset tenantId={} planCode={} period={} credits={}",
+                tenantId,
+                billingPlan.getCode(),
+                allowancePeriod.allowanceMonth(),
+                billingPlan.getMonthlyCreditAllowance());
+        return Optional.of(creditGrantResult);
+    }
+
+    public Instant currentPlanResetAt(UUID tenantId) {
+        return currentBillingPlanResolver
+                .resolveCurrentPlanAllowancePeriod(tenantId, Instant.now())
+                .expiresAt();
+    }
+
+    private CreditGrantResult createGrant(
+            UUID tenantId,
+            CreditGrantCategory category,
+            int amountCredits,
+            Instant effectiveAt,
+            Instant expiresAt,
+            int priority,
+            String grantReferenceType,
+            String grantReferenceId,
+            String ledgerReferenceId) {
         UUID grantId = UUID.randomUUID();
-        Instant effectiveAt = period.atDay(1).atStartOfDay(BETA_CREDIT_ZONE).toInstant();
-        Instant expiresAt =
-                period.plusMonths(1).atDay(1).atStartOfDay(BETA_CREDIT_ZONE).toInstant();
         CreditGrantEntity grant =
                 new CreditGrantEntity(
                         grantId,
                         tenantId,
-                        CreditGrantCategory.BETA,
+                        category,
                         CreditGrantStatus.ACTIVE,
-                        betaProperties.monthlyCredits(),
+                        amountCredits,
                         effectiveAt,
                         expiresAt,
-                        BETA_GRANT_PRIORITY,
-                        BETA_PERIOD_REF_TYPE,
-                        periodKey);
+                        priority,
+                        grantReferenceType,
+                        grantReferenceId);
         grantRepository.saveAndFlush(grant);
         entryRepository.saveAndFlush(
                 CreditLedgerEntryEntity.grant(
                         UUID.randomUUID(),
                         tenantId,
-                        betaProperties.monthlyCredits(),
+                        amountCredits,
                         grantId,
-                        BETA_PERIOD_REF_TYPE,
+                        grantReferenceType,
                         ledgerReferenceId));
-        log.info(
-                "event=beta_credit_granted tenantId={} period={} credits={}",
-                tenantId,
-                periodKey,
-                betaProperties.monthlyCredits());
         return new CreditGrantResult(grantId, true);
     }
 
@@ -117,19 +144,7 @@ public class CreditGrantService {
                 grantRepository.findByTenantIdAndStatusAndExpiresAtBefore(
                         tenantId, CreditGrantStatus.ACTIVE, now);
         for (CreditGrantEntity expiredActiveGrant : expiredActiveGrants) {
-            int availableCredits =
-                    Math.toIntExact(
-                            entryRepository.sumAvailableCreditsForGrant(
-                                    tenantId, expiredActiveGrant.getId()));
-            if (availableCredits > 0) {
-                entryRepository.saveAndFlush(
-                        CreditLedgerEntryEntity.expire(
-                                UUID.randomUUID(),
-                                tenantId,
-                                availableCredits,
-                                expiredActiveGrant.getId(),
-                                expiredActiveGrant.getId().toString()));
-            }
+            expireGrantAvailableBalance(tenantId, expiredActiveGrant);
             expiredActiveGrant.markExpired();
             grantRepository.save(expiredActiveGrant);
             log.info(
@@ -137,5 +152,38 @@ public class CreditGrantService {
                     tenantId,
                     expiredActiveGrant.getId());
         }
+    }
+
+    private void expireActiveAllowanceGrants(
+            UUID tenantId, CreditGrantCategory category, String eventName) {
+        List<CreditGrantEntity> activeAllowanceGrants =
+                grantRepository.findTenantGrantsByCategoryAndStatus(
+                        tenantId, category, CreditGrantStatus.ACTIVE);
+        for (CreditGrantEntity activeAllowanceGrant : activeAllowanceGrants) {
+            expireGrantAvailableBalance(tenantId, activeAllowanceGrant);
+            activeAllowanceGrant.markExpired();
+            grantRepository.save(activeAllowanceGrant);
+            log.info(
+                    "event={} tenantId={} grantId={}",
+                    eventName,
+                    tenantId,
+                    activeAllowanceGrant.getId());
+        }
+    }
+
+    private void expireGrantAvailableBalance(UUID tenantId, CreditGrantEntity creditGrant) {
+        int availableCredits =
+                Math.toIntExact(
+                        entryRepository.sumAvailableCreditsForGrant(tenantId, creditGrant.getId()));
+        if (availableCredits <= 0) {
+            return;
+        }
+        entryRepository.saveAndFlush(
+                CreditLedgerEntryEntity.expire(
+                        UUID.randomUUID(),
+                        tenantId,
+                        availableCredits,
+                        creditGrant.getId(),
+                        creditGrant.getId().toString()));
     }
 }

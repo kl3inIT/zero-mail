@@ -45,8 +45,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -56,11 +56,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @ActiveProfiles("test")
-// Beta auto-grant (300 credits/tenant/month) is on by default in application.yml. The
-// `insufficient_credits_still_returns_402` test pins the no-balance failure path, which the
-// auto-grant would mask. Disable it at the class level — no other test in this file asserts
-// beta-grant behaviour, so disabling is safe.
-@TestPropertySource(properties = "zero-mail.billing.beta.enabled=false")
 @Import({
     TestSessionSupport.class,
     ByokControllerIntegrationTest.ByokExceptionProbeController.class,
@@ -83,6 +78,8 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
     @Autowired RefreshTokenCipher refreshTokenCipher;
 
     @Autowired TenantByokCredentialsRepository tenantByokCredentialsRepository;
+
+    @Autowired JdbcTemplate jdbcTemplate;
 
     @MockitoSpyBean ByokService byokService;
 
@@ -306,6 +303,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
     private Seed seedUser(String label) {
         UUID tenantId = UUID.randomUUID();
         tenantRepository.save(new TenantEntity(tenantId, label));
+        attachZeroAllowancePlan(tenantId);
         String googleSubject = "sub-" + label;
         String email = label + "@example.test";
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
@@ -319,6 +317,43 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
                                                 email)));
         testSessionMinter.mint(googleSubject, email);
         return new Seed(tenantId, googleSubject, email);
+    }
+
+    private void attachZeroAllowancePlan(UUID tenantId) {
+        UUID planId = UUID.randomUUID();
+        String planCode = "TEST_ZERO_" + tenantId.toString().replace("-", "").substring(0, 16);
+        jdbcTemplate.update(
+                """
+                INSERT INTO billing_plan(
+                    id, code, display_name, tier_rank, billing_cycle, currency,
+                    price_vnd, monthly_credit_allowance, active, sort_order)
+                VALUES (?, ?, ?, 0, 'NONE', 'VND', 0, 0, true, 0)
+                """,
+                planId,
+                planCode,
+                "Test Zero");
+        jdbcTemplate.update(
+                """
+                INSERT INTO plan_feature_permission(id, plan_id, feature_code, enabled)
+                SELECT gen_random_uuid(), ?, code, true
+                  FROM feature_catalog
+                """,
+                planId);
+        jdbcTemplate.update(
+                """
+                INSERT INTO billing_plan_period(
+                    id, tenant_id, plan_id, status, provider,
+                    effective_at, expires_at, paid_at, amount_vnd, currency)
+                VALUES (
+                    ?, ?, ?, 'ACTIVE', 'ADMIN',
+                    CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    CURRENT_TIMESTAMP + INTERVAL '30 days',
+                    CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    0, 'VND')
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                planId);
     }
 
     private record Seed(UUID tenantId, String googleSubject, String email) {}

@@ -44,6 +44,7 @@ export const ErrorCode = {
   BillingPlanFeatureDisabled: 'error.billing.plan.featureDisabled',
   BillingPlanNotFound: 'error.billing.plan.notFound',
   BillingCheckoutUnavailable: 'error.billing.checkout.unavailable',
+  BillingPlanDowngradeNotAllowed: 'error.billing.plan.downgradeNotAllowed',
   // llm
   LlmSafetyViolation: 'error.llm.safety_violation',
   LlmSanitizationFailed: 'error.llm.sanitization_failed',

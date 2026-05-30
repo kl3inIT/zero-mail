@@ -9,21 +9,10 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Append-only audit + idempotency row for a single Lemon Squeezy webhook delivery.
- *
- * <p>{@code providerEventId} stores the X-Event-Id header when present; {@code dedupeKey} is an
- * application-computed dedupe primitive so handlers stay idempotent even when the header is
- * missing. {@code payloadJsonb} MUST be redacted by {@code LemonSqueezyWebhookPayloadRedactor}
- * before persistence — never store {@code customer.email}, {@code billing_address}, or any {@code
- * card_*} field. {@code payloadSha256} is computed over the raw payload for forensic integrity.
- * {@code processingStatus} drives the retry/reaper worker.
- *
- * <p>No audit/version columns — events are append-only with domain timestamps.
- */
+/** Append-only audit + idempotency row for a single Lemon Squeezy webhook delivery. */
 @Entity
-@Table(name = "subscription_webhook_event")
-public class SubscriptionWebhookEventEntity extends AbstractEntity {
+@Table(name = "billing_webhook_event")
+public class BillingWebhookEventEntity extends AbstractEntity {
 
     @Column(name = "provider_event_id", length = 255)
     private String providerEventId;
@@ -37,8 +26,8 @@ public class SubscriptionWebhookEventEntity extends AbstractEntity {
     @Column(name = "tenant_id")
     private UUID tenantId;
 
-    @Column(name = "lemon_squeezy_subscription_id")
-    private Long lemonSqueezySubscriptionId;
+    @Column(name = "lemon_squeezy_order_id")
+    private Long lemonSqueezyOrderId;
 
     @Column(name = "signature_verified", nullable = false, updatable = false)
     private boolean signatureVerified;
@@ -62,17 +51,17 @@ public class SubscriptionWebhookEventEntity extends AbstractEntity {
     @Column(name = "payload_jsonb", nullable = false, updatable = false, columnDefinition = "jsonb")
     private String payloadJsonb;
 
-    protected SubscriptionWebhookEventEntity() {
+    protected BillingWebhookEventEntity() {
         // Hibernate
     }
 
-    public SubscriptionWebhookEventEntity(
+    public BillingWebhookEventEntity(
             UUID id,
             String providerEventId,
             String dedupeKey,
             String eventName,
             UUID tenantId,
-            Long lemonSqueezySubscriptionId,
+            Long lemonSqueezyOrderId,
             boolean signatureVerified,
             String processingStatus,
             Instant receivedAt,
@@ -83,7 +72,7 @@ public class SubscriptionWebhookEventEntity extends AbstractEntity {
         this.dedupeKey = dedupeKey;
         this.eventName = eventName;
         this.tenantId = tenantId;
-        this.lemonSqueezySubscriptionId = lemonSqueezySubscriptionId;
+        this.lemonSqueezyOrderId = lemonSqueezyOrderId;
         this.signatureVerified = signatureVerified;
         this.processingStatus = processingStatus;
         this.receivedAt = receivedAt;
@@ -107,8 +96,8 @@ public class SubscriptionWebhookEventEntity extends AbstractEntity {
         return tenantId;
     }
 
-    public Long getLemonSqueezySubscriptionId() {
-        return lemonSqueezySubscriptionId;
+    public Long getLemonSqueezyOrderId() {
+        return lemonSqueezyOrderId;
     }
 
     public boolean isSignatureVerified() {

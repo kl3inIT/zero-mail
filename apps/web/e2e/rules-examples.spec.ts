@@ -112,16 +112,15 @@ async function openWithRulesExamplesMock(
       return;
     }
 
-    if (url.pathname === '/api/billing/balance' && request.method() === 'GET') {
+    if (url.pathname === '/api/credits/balance' && request.method() === 'GET') {
       await fulfillJson(route, {
         availableCredits: 12,
         heldCredits: 0,
         currency: 'credits',
-        betaCredits: 12,
-        paidCredits: 0,
-        monthlyGrantCredits: 300,
+        monthlyCredits: 12,
+        additionalCredits: 0,
+        monthlyCreditAllowance: 300,
         resetsAt: '2026-06-01T00:00:00.000Z',
-        freeDuringBeta: true,
       });
       return;
     }

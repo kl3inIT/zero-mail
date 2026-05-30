@@ -1,10 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   Check,
   CreditCard,
+  Crown,
   Inbox,
   Mail,
   Moon,
@@ -56,12 +58,51 @@ import Link from 'next/link';
 
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
 
+const SETTINGS_NAVIGATION_ITEMS = [
+  { href: '/settings', labelKey: 'settings.navigation.account', icon: UserCircle },
+  { href: '/credits', labelKey: 'settings.navigation.credits', icon: CreditCard },
+  { href: '/upgrade-plan', labelKey: 'settings.navigation.upgradePlan', icon: Crown },
+  { href: '/settings/privacy', labelKey: 'settings.navigation.privacy', icon: ShieldCheck },
+] as const;
+
 function isGmailConnectionStatus(value: string | undefined): value is GmailConnectionStatus {
   return (
     value === 'CONNECTED' ||
     value === 'DISCONNECTED' ||
     value === 'NOT_CONNECTED' ||
     value === 'PENDING'
+  );
+}
+
+function SettingsNavigationStrip() {
+  const t = useTranslations();
+  const pathname = usePathname();
+
+  return (
+    <nav
+      className="border-border bg-muted/30 flex gap-1 overflow-x-auto rounded-lg border p-1"
+      aria-label={t('settings.title')}
+    >
+      {SETTINGS_NAVIGATION_ITEMS.map((item) => {
+        const Icon = item.icon;
+        const active = pathname === item.href;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? 'page' : undefined}
+            className={buttonVariants({
+              variant: active ? 'secondary' : 'ghost',
+              size: 'sm',
+              className: 'shrink-0 justify-start gap-2',
+            })}
+          >
+            <Icon className="size-4" aria-hidden="true" />
+            {t(item.labelKey)}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -241,6 +282,14 @@ export function SettingsClient({
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-4 overflow-auto p-3 sm:p-4">
+        <header className="space-y-1">
+          <h1 className="text-foreground text-2xl font-semibold tracking-normal">
+            {t('settings.title')}
+          </h1>
+          <p className="text-muted-foreground text-sm">{t('settings.description')}</p>
+        </header>
+        <SettingsNavigationStrip />
+
         {/* Row 1: Account + Credit + Display preferences */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card>

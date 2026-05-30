@@ -89,7 +89,7 @@ export function DashboardPageClient() {
               {billingBalance.isPending ? (
                 <Skeleton className="h-7 w-16" />
               ) : (
-                <Link href="/billing" className="flex items-baseline gap-1.5 hover:underline">
+                <Link href="/credits" className="flex items-baseline gap-1.5 hover:underline">
                   <span className="text-foreground font-mono text-2xl font-bold tabular-nums">
                     {formatCredits(credits)}
                   </span>

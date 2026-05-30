@@ -63,23 +63,11 @@ public record ZeroMailCoreProperties(
 
     public record BillingProperties(
             @Valid @NotNull BillingCostProperties cost,
-            @Valid @DefaultValue BillingBetaProperties beta,
             @Valid @DefaultValue LemonSqueezyProperties lemonSqueezy) {
 
         public BillingProperties {
             cost = cost == null ? BillingCostProperties.defaults() : cost;
-            beta = beta == null ? BillingBetaProperties.defaults() : beta;
             lemonSqueezy = lemonSqueezy == null ? LemonSqueezyProperties.defaults() : lemonSqueezy;
-        }
-
-        public record BillingBetaProperties(
-                @DefaultValue("true") boolean enabled,
-                @Min(0) @DefaultValue("300") int monthlyCredits,
-                @Min(0) @DefaultValue("100") int dailyHardCap) {
-
-            static BillingBetaProperties defaults() {
-                return new BillingBetaProperties(true, 300, 100);
-            }
         }
 
         public record BillingCostProperties(@Min(0) @DefaultValue("0") int triageDeterministic) {
@@ -95,7 +83,13 @@ public record ZeroMailCoreProperties(
          * that require LS throw a clear error when called against an unconfigured instance.
          */
         public record LemonSqueezyProperties(
-                Long storeId, String storeSlug, String apiKey, String webhookSigningSecret) {
+                Long storeId,
+                String storeSlug,
+                String apiKey,
+                String webhookSigningSecret,
+                @DefaultValue("false") boolean testMode,
+                URI apiBaseUrl,
+                Duration checkoutReuseWindow) {
 
             public LemonSqueezyProperties {
                 storeSlug = (storeSlug == null || storeSlug.isBlank()) ? null : storeSlug;
@@ -104,14 +98,27 @@ public record ZeroMailCoreProperties(
                         (webhookSigningSecret == null || webhookSigningSecret.isBlank())
                                 ? null
                                 : webhookSigningSecret;
+                apiBaseUrl =
+                        apiBaseUrl == null
+                                ? URI.create("https://api.lemonsqueezy.com/v1")
+                                : apiBaseUrl;
+                checkoutReuseWindow =
+                        checkoutReuseWindow == null ? Duration.ofMinutes(15) : checkoutReuseWindow;
             }
 
             static LemonSqueezyProperties defaults() {
-                return new LemonSqueezyProperties(null, null, null, null);
+                return new LemonSqueezyProperties(
+                        null,
+                        null,
+                        null,
+                        null,
+                        false,
+                        URI.create("https://api.lemonsqueezy.com/v1"),
+                        Duration.ofMinutes(15));
             }
 
             public boolean isConfigured() {
-                return storeId != null && storeSlug != null;
+                return storeId != null && apiKey != null;
             }
         }
 
@@ -119,8 +126,6 @@ public record ZeroMailCoreProperties(
         public @NonNull String toString() {
             return "BillingProperties[cost="
                     + cost
-                    + ", beta="
-                    + beta
                     + ", lemonSqueezy="
                     + (lemonSqueezy.isConfigured() ? "configured" : "not_configured")
                     + "]";
