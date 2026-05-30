@@ -1,9 +1,8 @@
 # Activated by SPRING_PROFILES_ACTIVE=e2e-stub. Used by Playwright launch-golden-path.spec.ts only.
 # HIGH-4: self-sufficient. Every override below is a literal placeholder.
-zeromail:
+zero-mail:
   e2e-stub:
     enabled: true
-zero-mail:
   crypto:
     refresh-token-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
   api:

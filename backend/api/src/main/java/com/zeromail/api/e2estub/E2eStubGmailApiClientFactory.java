@@ -55,7 +55,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("e2e-stub")
 @Primary
-@ConditionalOnProperty(name = "zeromail.e2e-stub.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "zero-mail.e2e-stub.enabled", havingValue = "true")
 public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
 
     private static final String USER_ID = "me";

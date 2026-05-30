@@ -27,7 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @Profile("e2e-stub")
-@ConditionalOnProperty(name = "zeromail.e2e-stub.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "zero-mail.e2e-stub.enabled", havingValue = "true")
 public class E2eStubResetController {
 
     private static final Logger log = LoggerFactory.getLogger(E2eStubResetController.class);

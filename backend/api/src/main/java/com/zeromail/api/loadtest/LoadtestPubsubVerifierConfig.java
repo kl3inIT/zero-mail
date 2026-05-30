@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Profile;
 
 @Configuration
 @Profile("loadtest")
-@ConditionalOnProperty(name = "zeromail.loadtest.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "zero-mail.loadtest.enabled", havingValue = "true")
 public class LoadtestPubsubVerifierConfig {
 
     @Bean
