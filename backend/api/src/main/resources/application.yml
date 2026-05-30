@@ -1,13 +1,8 @@
 spring:
   application:
     name: zeromail-api
-  autoconfigure:
-    exclude:
-      # Spring AI M7 imports Google GenAI embedding connection auto-config even
-      # when Zero Mail disables embedding models. Exclude it until embeddings are
-      # explicitly introduced.
-      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration
-      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration
+  # GenAI embedding auto-config exclusion lives on @SpringBootApplication(excludeName=...)
+  # in ZeroMailApiApplication (timing-safe; Boot #26858). Do not re-add a yml exclude block.
   threads:
     virtual:
       enabled: true
@@ -139,15 +134,8 @@ zero-mail:
       checkout-reuse-window: ${LEMON_SQUEEZY_CHECKOUT_REUSE_WINDOW:PT15M}
   llm:
     platform:
-      provider: openai
-      base-url: https://openrouter.ai/api/v1
+      # provider/base-url/models/timeouts default in LlmProperties; only api-key is deployment-supplied
       api-key: ${ZEROMAIL_LLM_PLATFORM_API_KEY:?ZEROMAIL_LLM_PLATFORM_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
-      compile-model: openai/gpt-5.4-nano
-      drift-model: openai/gpt-5.4-nano
-      triage-model: openai/gpt-5.4-nano
-      draft-model: openai/gpt-5.4-nano
-      connect-timeout: 5s
-      read-timeout: 30s
     byok:
       allow-non-vendor-endpoints: false
       allowed-extra-hosts: []
