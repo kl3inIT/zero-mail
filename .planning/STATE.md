@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
 Plan: 6 of 6
 Status: Ready to resume 08.1-06 runtime outbound execution
-Last activity: 2026-05-29
+Last activity: 2026-05-30 - Completed quick task 260530-vmp: reorganize sidebar nav into 3 groups
 
 ## Current Milestone Roadmap
 
@@ -407,6 +407,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260530-vmp | Reorganize sidebar nav into 3 frequency/intent groups (Daily / Automation / Tools); move Rules + AI config into one Automation group | 2026-05-30 | aa0b7f05 | Verified | [260530-vmp-reorganize-sidebar-nav-into-3-frequency-](./quick/260530-vmp-reorganize-sidebar-nav-into-3-frequency-/) |
 | 260526-so3 | Tighten app shell content gutter near sidebar so protected content sits closer to the menu | 2026-05-26 | pending | Verified | [260526-so3-tighten-app-shell-content-gutter-near-si](./quick/260526-so3-tighten-app-shell-content-gutter-near-si/) |
 | 260526-s41 | Remove protected app page-level title/description headers while preserving local toolbars and content controls | 2026-05-26 | pending | Verified | [260526-s41-remove-protected-app-page-headers](./quick/260526-s41-remove-protected-app-page-headers/) |
 | 260526-rz0 | Tighten inbox row spacing and move unread/active dot beside sender name | 2026-05-26 | pending | Verified | [260526-rz0-tighten-inbox-row-spacing-and-move-activ](./quick/260526-rz0-tighten-inbox-row-spacing-and-move-activ/) |
