@@ -3,26 +3,20 @@ package com.zeromail.core.billing.usecases;
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.exception.FeaturePermissionDeniedException;
 import com.zeromail.core.billing.persistence.BillingPlanEntity;
-import com.zeromail.core.billing.persistence.BillingPlanRepository;
 import com.zeromail.core.billing.persistence.PlanFeaturePermissionEntity;
 import com.zeromail.core.billing.persistence.PlanFeaturePermissionRepository;
-import com.zeromail.core.billing.persistence.SubscriptionEntity;
-import com.zeromail.core.billing.persistence.SubscriptionRepository;
 import com.zeromail.core.billing.projection.EffectiveFeaturePermission;
-import jakarta.annotation.PostConstruct;
+import java.time.Instant;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Resolves the effective {@link CallSite} permission for a tenant by joining {@code subscription} →
+ * Resolves the effective {@link CallSite} permission for a tenant by joining active plan period →
  * {@code billing_plan} → {@code plan_feature_permission} → {@code feature_catalog}.
  *
  * <h3>Plan fallback</h3>
  *
- * A tenant with no {@code subscription} row is treated as being on the FREE plan. The FREE plan
- * UUID is cached at startup so the fallback path needs no extra DB roundtrip.
+ * A tenant with no active paid plan period is treated as being on the FREE plan.
  *
  * <h3>Cost resolution</h3>
  *
@@ -43,44 +37,24 @@ import org.springframework.stereotype.Service;
 @Service
 public class FeaturePermissionResolver {
 
-    private static final Logger log = LoggerFactory.getLogger(FeaturePermissionResolver.class);
-    private static final String FREE_PLAN_CODE = "FREE";
-
-    private final SubscriptionRepository subscriptionRepository;
-    private final BillingPlanRepository billingPlanRepository;
+    private final CurrentBillingPlanResolver currentBillingPlanResolver;
     private final PlanFeaturePermissionRepository planFeaturePermissionRepository;
     private final FeatureCatalogCache featureCatalogCache;
 
-    private volatile UUID freePlanId;
-
     public FeaturePermissionResolver(
-            SubscriptionRepository subscriptionRepository,
-            BillingPlanRepository billingPlanRepository,
+            CurrentBillingPlanResolver currentBillingPlanResolver,
             PlanFeaturePermissionRepository planFeaturePermissionRepository,
             FeatureCatalogCache featureCatalogCache) {
-        this.subscriptionRepository = subscriptionRepository;
-        this.billingPlanRepository = billingPlanRepository;
+        this.currentBillingPlanResolver = currentBillingPlanResolver;
         this.planFeaturePermissionRepository = planFeaturePermissionRepository;
         this.featureCatalogCache = featureCatalogCache;
     }
 
-    @PostConstruct
-    void initialize() {
-        BillingPlanEntity freePlan =
-                billingPlanRepository
-                        .findByCode(FREE_PLAN_CODE)
-                        .orElseThrow(
-                                () ->
-                                        new IllegalStateException(
-                                                "billing_plan row missing for FREE — seed via"
-                                                        + " Liquibase 099"));
-        this.freePlanId = freePlan.getId();
-        log.info("event=feature_permission_resolver_initialized free_plan_id={}", freePlanId);
-    }
-
     public EffectiveFeaturePermission resolve(UUID tenantId, CallSite callSite) {
-        UUID planId = resolvePlanId(tenantId);
-        String planCode = resolvePlanCode(planId);
+        BillingPlanEntity billingPlan =
+                currentBillingPlanResolver.resolveCurrentPlan(tenantId, Instant.now());
+        UUID planId = billingPlan.getId();
+        String planCode = billingPlan.getCode();
         PlanFeaturePermissionEntity permission =
                 planFeaturePermissionRepository
                         .findByPlanIdAndFeatureCode(planId, callSite.id())
@@ -102,22 +76,5 @@ public class FeaturePermissionResolver {
                 effectiveCost,
                 permission.getDailyInvocationLimit(),
                 permission.getMonthlyInvocationLimit());
-    }
-
-    private UUID resolvePlanId(UUID tenantId) {
-        return subscriptionRepository
-                .findByTenantId(tenantId)
-                .map(SubscriptionEntity::getPlanId)
-                .orElse(freePlanId);
-    }
-
-    private String resolvePlanCode(UUID planId) {
-        if (planId.equals(freePlanId)) {
-            return FREE_PLAN_CODE;
-        }
-        return billingPlanRepository
-                .findById(planId)
-                .map(BillingPlanEntity::getCode)
-                .orElse("UNKNOWN");
     }
 }

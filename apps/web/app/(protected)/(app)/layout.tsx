@@ -4,7 +4,7 @@ import { cookies, headers } from 'next/headers';
 import { AppShell } from '@/components/shell/AppShell';
 import { getCurrentUser } from '@/features/account/api/account-api';
 import { accountQueryKeys } from '@/features/account/query-keys';
-import { getBillingBalance } from '@/features/billing/api/billing-api';
+import { getBillingBalance, getBillingPlans } from '@/features/billing/api/billing-api';
 import { billingKeys } from '@/features/billing/query-keys';
 import { getTenantStatus } from '@/features/gmail/api/gmail-api';
 import { gmailQueryKeys } from '@/features/gmail/query-keys';
@@ -27,6 +27,10 @@ export default async function ProtectedAppLayout({ children }: { children: React
     queryClient.prefetchQuery({
       queryKey: billingKeys.balance(),
       queryFn: () => getBillingBalance({ headers: requestHeaders }),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: billingKeys.plans(),
+      queryFn: () => getBillingPlans({ headers: requestHeaders }),
     }),
     queryClient.prefetchQuery({
       queryKey: gmailQueryKeys.status(),

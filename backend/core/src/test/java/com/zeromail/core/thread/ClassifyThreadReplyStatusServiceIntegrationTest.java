@@ -2,16 +2,22 @@ package com.zeromail.core.thread;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.gmail.event.MailOutboundObserved;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
 import com.zeromail.core.thread.domain.ThreadReplyStatus;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
 import com.zeromail.core.thread.usecases.ThreadReplyClassificationInput;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.AopTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @SuppressWarnings("SqlResolve")
@@ -22,6 +28,8 @@ class ClassifyThreadReplyStatusServiceIntegrationTest extends PostgresContainerT
     @Autowired ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
 
     @Autowired JdbcTemplate jdbcTemplate;
+
+    @PersistenceContext EntityManager entityManager;
 
     @Autowired PlatformTransactionManager transactionManager;
 
@@ -61,25 +69,33 @@ class ClassifyThreadReplyStatusServiceIntegrationTest extends PostgresContainerT
     }
 
     @Test
-    void classify_opens_tenant_bound_transaction_inside_unbound_async_listener_transaction() {
+    void classify_opens_tenant_bound_transaction_when_outer_listener_transaction_exists() {
+        UUID listenerTenantId = UUID.fromString("00000000-0000-0000-0000-0000000005c3");
+        String gmailThreadId = "gmail-thread-listener-transaction";
+        ClassifyThreadReplyStatusService classifierTarget =
+                AopTestUtils.getTargetObject(classifyThreadReplyStatusService);
         jdbcTemplate.update(
                 "insert into tenants(id, display_name) values (?, ?) on conflict (id) do nothing",
-                TENANT_ID,
-                "thread-reply-classifier-listener");
+                listenerTenantId,
+                "thread-reply-listener");
 
-        new TransactionTemplate(transactionManager)
-                .executeWithoutResult(
-                        _ ->
-                                classifyThreadReplyStatusService.classify(
-                                        new ThreadReplyClassificationInput(
-                                                TENANT_ID,
-                                                "gmail-thread-listener",
-                                                "gmail-message-listener",
-                                                true,
-                                                true,
-                                                false,
-                                                null,
-                                                false)));
+        TransactionTemplate listenerTransaction = new TransactionTemplate(transactionManager);
+        listenerTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        listenerTransaction.executeWithoutResult(
+                _ -> {
+                    entityManager
+                            .createQuery(
+                                    "select count(status) from ThreadReplyStatusEntity status",
+                                    Long.class)
+                            .getSingleResult();
+                    classifierTarget.on(
+                            new MailOutboundObserved(
+                                    listenerTenantId,
+                                    gmailThreadId,
+                                    "gmail-message-listener-transaction",
+                                    Instant.parse("2026-05-30T00:00:00Z")));
+                });
 
         String storedBucket =
                 jdbcTemplate.queryForObject(
@@ -89,10 +105,10 @@ class ClassifyThreadReplyStatusServiceIntegrationTest extends PostgresContainerT
                         where tenant_id = ? and gmail_thread_id = ?
                         """,
                         String.class,
-                        TENANT_ID,
-                        "gmail-thread-listener");
+                        listenerTenantId,
+                        gmailThreadId);
         assertThat(storedBucket).isEqualTo("AWAITING_THEIR_REPLY");
 
-        jdbcTemplate.update("delete from tenants where id = ?", TENANT_ID);
+        jdbcTemplate.update("delete from tenants where id = ?", listenerTenantId);
     }
 }

@@ -18,8 +18,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
@@ -27,10 +27,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @ActiveProfiles("test")
-// Beta auto-grant (300 credits/tenant/month) is on by default in application.yml and would
-// satisfy the reserve call, masking the insufficient-credit path this test pins. Disable it
-// at the class level so the seeded tenant truly starts with zero credits.
-@TestPropertySource(properties = "zero-mail.billing.beta.enabled=false")
 @Import({
     TestSessionSupport.class,
     BillingInsufficientCreditsTest.BillingReserveProbeController.class
@@ -42,6 +38,7 @@ class BillingInsufficientCreditsTest extends ApiPostgresTestBase {
     @Autowired UserRepository userRepository;
     @Autowired TestSessionSupport.TestSessionMinter testSessionMinter;
     @Autowired ObjectMapper objectMapper;
+    @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
     void insufficient_balance_returns_402_no_balance_leak() throws Exception {
@@ -69,6 +66,7 @@ class BillingInsufficientCreditsTest extends ApiPostgresTestBase {
     private Seed seedUser(String label) {
         UUID tenantId = UUID.randomUUID();
         tenantRepository.save(new TenantEntity(tenantId, label));
+        attachZeroAllowancePlan(tenantId);
         String googleSubject = "sub-" + label;
         String email = label + "@example.test";
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
@@ -82,6 +80,43 @@ class BillingInsufficientCreditsTest extends ApiPostgresTestBase {
                                                 email)));
         testSessionMinter.mint(googleSubject, email);
         return new Seed(tenantId, googleSubject, email);
+    }
+
+    private void attachZeroAllowancePlan(UUID tenantId) {
+        UUID planId = UUID.randomUUID();
+        String planCode = "TEST_ZERO_" + tenantId.toString().replace("-", "").substring(0, 16);
+        jdbcTemplate.update(
+                """
+                INSERT INTO billing_plan(
+                    id, code, display_name, tier_rank, billing_cycle, currency,
+                    price_vnd, monthly_credit_allowance, active, sort_order)
+                VALUES (?, ?, ?, 0, 'NONE', 'VND', 0, 0, true, 0)
+                """,
+                planId,
+                planCode,
+                "Test Zero");
+        jdbcTemplate.update(
+                """
+                INSERT INTO plan_feature_permission(id, plan_id, feature_code, enabled)
+                SELECT gen_random_uuid(), ?, code, true
+                  FROM feature_catalog
+                """,
+                planId);
+        jdbcTemplate.update(
+                """
+                INSERT INTO billing_plan_period(
+                    id, tenant_id, plan_id, status, provider,
+                    effective_at, expires_at, paid_at, amount_vnd, currency)
+                VALUES (
+                    ?, ?, ?, 'ACTIVE', 'ADMIN',
+                    CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    CURRENT_TIMESTAMP + INTERVAL '30 days',
+                    CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    0, 'VND')
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                planId);
     }
 
     private record Seed(UUID tenantId, String googleSubject, String email) {}

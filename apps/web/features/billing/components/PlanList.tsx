@@ -17,6 +17,7 @@ function formatVnd(value: number): string {
 }
 
 export function PlanList() {
+  const t = useTranslations();
   const plansQuery = useBillingPlans();
   const checkoutMutation = useStartBillingCheckout();
   const [pendingPlanCode, setPendingPlanCode] = useState<BillingPlanResponse['code'] | null>(null);
@@ -32,19 +33,20 @@ export function PlanList() {
   if (plansQuery.isError || !plansQuery.data) {
     return (
       <div className="text-muted-foreground rounded-md border p-6 text-center text-sm">
-        {plansQuery.error instanceof Error ? plansQuery.error.message : 'Failed to load plans.'}
+        {plansQuery.error instanceof Error ? plansQuery.error.message : t('billing.plans.error')}
       </div>
     );
   }
 
   const currentPlanCode = plansQuery.data.currentPlanCode;
   const plans = [...plansQuery.data.plans].sort((a, b) => a.tierRank - b.tierRank);
+  const currentPlanTier = plans.find((plan) => plan.code === currentPlanCode)?.tierRank ?? 0;
 
   function startCheckout(plan: BillingPlanResponse): void {
     setPendingPlanCode(plan.code);
     checkoutMutation.mutate(plan.code, {
       onSuccess: (response) => window.location.assign(response.checkoutUrl),
-      onError: () => toast.error('Không thể mở trang thanh toán. Vui lòng thử lại sau.'),
+      onError: () => toast.error(t('billing.plans.checkoutError')),
       onSettled: () => setPendingPlanCode(null),
     });
   }
@@ -52,7 +54,7 @@ export function PlanList() {
   if (plans.length === 0) {
     return (
       <div className="text-muted-foreground rounded-md border p-6 text-center text-sm">
-        Không có gói nào để hiển thị.
+        {t('billing.plans.empty')}
       </div>
     );
   }
@@ -64,6 +66,7 @@ export function PlanList() {
           key={plan.code}
           plan={plan}
           isCurrent={plan.code === currentPlanCode}
+          isLowerThanCurrent={plan.tierRank < currentPlanTier}
           isCheckoutPending={pendingPlanCode === plan.code && checkoutMutation.isPending}
           onStartCheckout={startCheckout}
         />
@@ -75,11 +78,18 @@ export function PlanList() {
 interface PlanCardProps {
   plan: BillingPlanResponse;
   isCurrent: boolean;
+  isLowerThanCurrent: boolean;
   isCheckoutPending: boolean;
   onStartCheckout: (plan: BillingPlanResponse) => void;
 }
 
-function PlanCard({ plan, isCurrent, isCheckoutPending, onStartCheckout }: PlanCardProps) {
+function PlanCard({
+  plan,
+  isCurrent,
+  isLowerThanCurrent,
+  isCheckoutPending,
+  onStartCheckout,
+}: PlanCardProps) {
   const t = useTranslations();
   const isFree = plan.code === 'FREE';
   const isFeatured = plan.code === 'PLUS';
@@ -87,11 +97,11 @@ function PlanCard({ plan, isCurrent, isCheckoutPending, onStartCheckout }: PlanC
   const displayName = (() => {
     switch (plan.code) {
       case 'FREE':
-        return t('subscription.free.name');
+        return t('billing.plans.plan.free');
       case 'PLUS':
-        return t('subscription.plan.plus');
+        return t('billing.plans.plan.plus');
       case 'PRO':
-        return t('subscription.plan.pro');
+        return t('billing.plans.plan.pro');
       default:
         return plan.displayName;
     }
@@ -100,22 +110,24 @@ function PlanCard({ plan, isCurrent, isCheckoutPending, onStartCheckout }: PlanC
   const description = (() => {
     switch (plan.code) {
       case 'FREE':
-        return t('subscription.free.description');
+        return t('billing.plans.planDescription.free');
       case 'PLUS':
-        return 'Cho người dùng cá nhân muốn dùng AI thường xuyên hơn.';
+        return t('billing.plans.planDescription.plus');
       case 'PRO':
-        return 'Cho người dùng nâng cao và team nhỏ.';
+        return t('billing.plans.planDescription.pro');
       default:
         return null;
     }
   })();
 
   const ctaLabel = (() => {
-    if (isCurrent) return t('subscription.currentPlan');
-    if (isCheckoutPending) return 'Đang mở checkout';
-    if (isFree) return t('subscription.getStarted');
-    return 'Nâng cấp ngay';
+    if (isCurrent) return t('billing.plans.currentPlan');
+    if (isLowerThanCurrent) return t('billing.plans.lowerTierUnavailable');
+    if (isCheckoutPending) return t('billing.plans.checkoutPending');
+    if (isFree) return t('billing.plans.freeIncluded');
+    return t('billing.plans.checkoutCta');
   })();
+  const isCheckoutDisabled = isCurrent || isFree || isLowerThanCurrent || isCheckoutPending;
 
   return (
     <Card
@@ -127,7 +139,7 @@ function PlanCard({ plan, isCurrent, isCheckoutPending, onStartCheckout }: PlanC
     >
       {isCurrent && (
         <div className="bg-primary text-primary-foreground absolute top-4 right-4 rounded-full px-3 py-1 text-xs font-semibold">
-          {t('subscription.currentPlan')}
+          {t('billing.plans.currentPlan')}
         </div>
       )}
       <CardHeader className={isCurrent ? 'pr-28' : undefined}>
@@ -141,12 +153,12 @@ function PlanCard({ plan, isCurrent, isCheckoutPending, onStartCheckout }: PlanC
               {isFree ? '0₫' : `${formatVnd(plan.priceVnd)}₫`}
             </span>
             {!isFree && (
-              <span className="text-muted-foreground text-sm">{t('subscription.perMonth')}</span>
+              <span className="text-muted-foreground text-sm">{t('billing.plans.perMonth')}</span>
             )}
           </div>
           <p className="text-muted-foreground mt-2 text-sm">
             {plan.monthlyCreditAllowance.toLocaleString('vi-VN')} {t('billing.balance.unit')} /{' '}
-            {t('subscription.monthly').toLowerCase()}
+            {t('billing.plans.monthly').toLowerCase()}
           </p>
         </div>
 
@@ -154,8 +166,9 @@ function PlanCard({ plan, isCurrent, isCheckoutPending, onStartCheckout }: PlanC
           <li className="flex items-start gap-2">
             <Check className="text-primary mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              {plan.monthlyCreditAllowance.toLocaleString('vi-VN')} {t('billing.balance.unit')} mỗi
-              tháng
+              {t('billing.plans.includedCredits', {
+                credits: plan.monthlyCreditAllowance.toLocaleString('vi-VN'),
+              })}
             </span>
           </li>
           {plan.features.map((feature) => (
@@ -165,7 +178,8 @@ function PlanCard({ plan, isCurrent, isCheckoutPending, onStartCheckout }: PlanC
                 <span>{feature.displayName}</span>
                 {feature.creditCost > 0 && (
                   <span className="text-muted-foreground text-xs">
-                    {feature.creditCost} {t('billing.balance.unit')} / lượt
+                    {feature.creditCost} {t('billing.balance.unit')}{' '}
+                    {t('billing.plans.perInvocation')}
                   </span>
                 )}
               </div>
@@ -176,9 +190,11 @@ function PlanCard({ plan, isCurrent, isCheckoutPending, onStartCheckout }: PlanC
         <div className="mt-auto">
           <Button
             type="button"
-            variant={isCurrent ? 'outline' : isFeatured ? 'default' : 'outline'}
+            variant={
+              isCurrent || isLowerThanCurrent ? 'outline' : isFeatured ? 'default' : 'outline'
+            }
             className="w-full"
-            disabled={isCurrent || isFree || isCheckoutPending}
+            disabled={isCheckoutDisabled}
             onClick={() => onStartCheckout(plan)}
           >
             {isCheckoutPending && <Loader2 className="h-4 w-4 animate-spin" />}

@@ -8,7 +8,7 @@ import java.util.List;
  * second roundtrip.
  *
  * @param currentPlanCode the tenant's active plan code (e.g. "FREE", "PLUS"); never null — falls
- *     back to "FREE" when the tenant has no {@code subscription} row
+ *     back to "FREE" when the tenant has no active paid plan period
  * @param plans every active plan in the catalog, sorted by {@code tierRank}
  */
 public record BillingPlanCatalogView(String currentPlanCode, List<BillingPlanView> plans) {}

@@ -143,17 +143,24 @@ function e2eServerResponse(request: Request): Response {
     });
   }
 
-  if (pathname === '/api/billing/balance') {
+  if (pathname === '/api/credits/balance') {
     return jsonResponse({
       availableCredits: 12,
       heldCredits: 0,
       currency: 'credits',
-      betaCredits: 12,
-      paidCredits: 0,
-      monthlyGrantCredits: 300,
+      monthlyCredits: 12,
+      additionalCredits: 0,
+      monthlyCreditAllowance: 300,
       resetsAt: '2026-06-01T00:00:00.000Z',
-      freeDuringBeta: true,
     });
+  }
+
+  if (pathname === '/api/plan-upgrades/plans') {
+    return jsonResponse(e2eBillingPlans('PLUS'));
+  }
+
+  if (pathname === '/api/credits/ledger') {
+    return jsonResponse(e2eBillingLedgerPage(requestUrl.searchParams));
   }
 
   if (pathname === '/api/gmail/connection/status') {
@@ -190,6 +197,56 @@ function e2eAnalyticsSummary(window: string) {
       pendingActions: 0,
     },
   };
+}
+
+function e2eBillingPlans(currentPlanCode: 'FREE' | 'PLUS' | 'PRO') {
+  return {
+    currentPlanCode,
+    plans: [
+      e2eBillingPlan('FREE', 'Free', 0, 0, 300),
+      e2eBillingPlan('PLUS', 'Plus', 1, 199000, 2000),
+      e2eBillingPlan('PRO', 'Pro', 2, 399000, 8000),
+    ],
+  };
+}
+
+function e2eBillingPlan(
+  code: 'FREE' | 'PLUS' | 'PRO',
+  displayName: string,
+  tierRank: number,
+  priceVnd: number,
+  monthlyCreditAllowance: number,
+) {
+  return {
+    code,
+    displayName,
+    tierRank,
+    billingCycle: code === 'FREE' ? 'NONE' : 'MONTH',
+    currency: 'VND',
+    priceVnd,
+    monthlyCreditAllowance,
+    sortOrder: tierRank * 10,
+    features: [],
+  };
+}
+
+function e2eBillingLedgerPage(searchParams: URLSearchParams) {
+  const cursor = searchParams.get('cursor');
+  const limit = Number(searchParams.get('limit') ?? '10');
+  const allEntries = Array.from({ length: 12 }, (_, index) => ({
+    id: `00000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+    timestamp: `2026-05-${String(28 - index).padStart(2, '0')}T08:00:00.000Z`,
+    type: index % 3 === 0 ? 'grant' : index % 3 === 1 ? 'settle' : 'release',
+    description:
+      index % 3 === 0 ? 'Credit grant' : index % 3 === 1 ? 'Credit spent' : 'Credit released',
+    amountCredits: index % 3 === 0 ? 300 : index % 3 === 1 ? -5 : 5,
+    balanceAfterCredits: 300 - index * 5,
+    reference: 'E2E',
+  }));
+  const start = cursor === 'page-2' ? 10 : 0;
+  const entries = allEntries.slice(start, start + limit);
+  const nextCursor = start + limit < allEntries.length ? 'page-2' : null;
+  return { entries, nextCursor };
 }
 
 function jsonResponse(body: unknown, status = 200): Response {

@@ -7,8 +7,8 @@ import jakarta.persistence.Table;
 import java.util.UUID;
 
 /**
- * Catalog row for a billing plan (FREE, PLUS, PRO). Global — not tenant-scoped. A tenant points at
- * one plan via {@link SubscriptionEntity}; missing subscription row implies the tenant is on FREE.
+ * Catalog row for a billing plan (FREE, PLUS, PRO). Global — not tenant-scoped. A tenant gets paid
+ * plan access through active {@link BillingPlanPeriodEntity} rows; no active period means FREE.
  *
  * <p>{@code lemonSqueezyProductId} and {@code lemonSqueezyVariantId} are nullable because the FREE
  * plan has no Lemon Squeezy counterpart and because seeded paid rows are populated by operators

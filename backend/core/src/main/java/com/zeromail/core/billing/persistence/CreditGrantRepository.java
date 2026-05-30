@@ -12,8 +12,33 @@ import org.springframework.data.repository.query.Param;
 
 public interface CreditGrantRepository extends JpaRepository<CreditGrantEntity, UUID> {
 
-    Optional<CreditGrantEntity> findByTenantIdAndCategoryAndRefTypeAndRefId(
-            UUID tenantId, CreditGrantCategory category, String refType, String refId);
+    @Query(
+            """
+            SELECT creditGrant
+              FROM CreditGrantEntity creditGrant
+             WHERE creditGrant.tenantId = :tenantId
+               AND creditGrant.category = :category
+               AND creditGrant.refType = :refType
+               AND creditGrant.refId = :refId
+            """)
+    Optional<CreditGrantEntity> findTenantGrantByReference(
+            @Param("tenantId") UUID tenantId,
+            @Param("category") CreditGrantCategory category,
+            @Param("refType") String refType,
+            @Param("refId") String refId);
+
+    @Query(
+            """
+            SELECT creditGrant
+              FROM CreditGrantEntity creditGrant
+             WHERE creditGrant.tenantId = :tenantId
+               AND creditGrant.category = :category
+               AND creditGrant.status = :status
+            """)
+    List<CreditGrantEntity> findTenantGrantsByCategoryAndStatus(
+            @Param("tenantId") UUID tenantId,
+            @Param("category") CreditGrantCategory category,
+            @Param("status") CreditGrantStatus status);
 
     List<CreditGrantEntity> findByTenantIdAndStatusAndExpiresAtBefore(
             UUID tenantId, CreditGrantStatus status, Instant now);

@@ -34,20 +34,19 @@ const PROTECTED_USER = {
 export const handlers = [
   http.get('*/api/me', () => HttpResponse.json(PROTECTED_USER)),
 
-  http.get('*/api/billing/balance', () =>
+  http.get('*/api/credits/balance', () =>
     HttpResponse.json({
       availableCredits: 12,
       heldCredits: 0,
       currency: 'credits',
-      betaCredits: 12,
-      paidCredits: 0,
-      monthlyGrantCredits: 300,
+      monthlyCredits: 12,
+      additionalCredits: 0,
+      monthlyCreditAllowance: 300,
       resetsAt: '2026-06-01T00:00:00.000Z',
-      freeDuringBeta: true,
     }),
   ),
 
-  http.get('*/api/billing/ledger', () =>
+  http.get('*/api/credits/ledger', () =>
     HttpResponse.json({
       entries: [],
       nextCursor: null,

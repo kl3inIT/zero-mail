@@ -1,6 +1,7 @@
 package com.zeromail.api.security;
 
 import com.zeromail.core.admin.auth.usecases.AdminUserDetailsService;
+import com.zeromail.core.config.ZeroMailCoreProperties;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -113,6 +114,27 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(2)
+    SecurityFilterChain lemonSqueezyWebhookChain(
+            HttpSecurity http, ZeroMailCoreProperties coreProperties) throws Exception {
+        http.securityMatcher("/api/plan-upgrades/webhooks/lemon-squeezy")
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(
+                        authorizationRequests ->
+                                authorizationRequests
+                                        .requestMatchers(
+                                                HttpMethod.POST,
+                                                "/api/plan-upgrades/webhooks/lemon-squeezy")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .denyAll())
+                .addFilterBefore(
+                        new LemonSqueezyWebhookSignatureFilter(coreProperties),
+                        AuthorizationFilter.class);
+        return http.build();
+    }
+
+    @Bean
     @Order(3)
     SecurityFilterChain chain(
             HttpSecurity http,
@@ -122,7 +144,8 @@ public class SecurityConfig {
             GoogleAuthorizationRequestResolver authRequestResolver) {
         // Default catch-all for user-session traffic. Explicit securityMatcher excluding
         // chains owned by earlier @Order beans (PubSub @Order(1), AdminChain @Order(1),
-        // Billing @Order(2)) so Spring Security 7's WebSecurityFilterChainValidator does not
+        // plan-upgrade webhook @Order(2)) so Spring Security 7's WebSecurityFilterChainValidator
+        // does not
         // flag this chain as shadowing a more-specific matcher.
         RequestMatcher userChainMatcher =
                 request -> {

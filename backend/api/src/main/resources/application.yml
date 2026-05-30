@@ -125,10 +125,6 @@ zero-mail:
     # systemd credential, or locked-down env file on the VPS.
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
   billing:
-    beta:
-      enabled: ${ZEROMAIL_BILLING_BETA_ENABLED:true}
-      monthly-credits: ${ZEROMAIL_BILLING_BETA_MONTHLY_CREDITS:300}
-      daily-hard-cap: ${ZEROMAIL_BILLING_BETA_DAILY_HARD_CAP:100}
     lemon-squeezy:
       # Optional in dev/test (record is fully-nullable). Required in prod for
       # Required by checkout creation and the webhook controller to verify HMAC.
@@ -137,7 +133,10 @@ zero-mail:
       store-id: ${LEMON_SQUEEZY_STORE_ID:}
       store-slug: ${LEMON_SQUEEZY_STORE_SLUG:}
       api-key: ${LEMON_SQUEEZY_API_KEY:}
-      webhook-signing-secret: ${LEMON_SQUEEZY_WEBHOOK_SECRET:}
+      webhook-signing-secret: ${LEMON_SQUEEZY_WEBHOOK_SIGNING_SECRET:${LEMON_SQUEEZY_WEBHOOK_SECRET:}}
+      test-mode: ${LEMON_SQUEEZY_TEST_MODE:false}
+      api-base-url: ${LEMON_SQUEEZY_API_BASE_URL:https://api.lemonsqueezy.com/v1}
+      checkout-reuse-window: ${LEMON_SQUEEZY_CHECKOUT_REUSE_WINDOW:PT15M}
   llm:
     platform:
       provider: openai

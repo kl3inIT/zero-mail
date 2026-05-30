@@ -19,9 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(properties = "zero-mail.billing.beta.enabled=false")
 class CreditReserveWatchdogTest extends PostgresContainerTest {
 
     @Autowired CreditReserveWatchdog watchdog;
@@ -87,7 +85,45 @@ class CreditReserveWatchdogTest extends PostgresContainerTest {
                 "INSERT INTO tenants(id, display_name) VALUES (?, ?)",
                 tenantId,
                 "billing-watchdog-" + tenantId);
+        attachZeroAllowancePlan(tenantId);
         return tenantId;
+    }
+
+    private void attachZeroAllowancePlan(UUID tenantId) {
+        UUID planId = UUID.randomUUID();
+        String planCode = "TEST_ZERO_" + tenantId.toString().replace("-", "").substring(0, 16);
+        jdbcTemplate.update(
+                """
+                INSERT INTO billing_plan(
+                    id, code, display_name, tier_rank, billing_cycle, currency,
+                    price_vnd, monthly_credit_allowance, active, sort_order)
+                VALUES (?, ?, ?, 0, 'NONE', 'VND', 0, 0, true, 0)
+                """,
+                planId,
+                planCode,
+                "Test Zero");
+        jdbcTemplate.update(
+                """
+                INSERT INTO plan_feature_permission(id, plan_id, feature_code, enabled)
+                SELECT gen_random_uuid(), ?, code, true
+                  FROM feature_catalog
+                """,
+                planId);
+        jdbcTemplate.update(
+                """
+                INSERT INTO billing_plan_period(
+                    id, tenant_id, plan_id, status, provider,
+                    effective_at, expires_at, paid_at, amount_vnd, currency)
+                VALUES (
+                    ?, ?, ?, 'ACTIVE', 'ADMIN',
+                    CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    CURRENT_TIMESTAMP + INTERVAL '30 days',
+                    CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    0, 'VND')
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                planId);
     }
 
     private UUID seedPendingReservation(UUID tenantId, int amountCredits, Instant createdAt) {

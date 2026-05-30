@@ -1,17 +1,21 @@
 package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.exception.BillingCheckoutUnavailableException;
+import com.zeromail.core.billing.exception.BillingPlanDowngradeNotAllowedException;
 import com.zeromail.core.billing.exception.BillingPlanNotFoundException;
+import com.zeromail.core.billing.persistence.BillingCheckoutSessionEntity;
+import com.zeromail.core.billing.persistence.BillingCheckoutSessionRepository;
 import com.zeromail.core.billing.persistence.BillingPlanEntity;
 import com.zeromail.core.billing.persistence.BillingPlanRepository;
 import com.zeromail.core.billing.persistence.FeatureCatalogEntity;
 import com.zeromail.core.billing.persistence.PlanFeaturePermissionEntity;
 import com.zeromail.core.billing.persistence.PlanFeaturePermissionRepository;
-import com.zeromail.core.billing.persistence.SubscriptionEntity;
-import com.zeromail.core.billing.persistence.SubscriptionRepository;
 import com.zeromail.core.billing.projection.BillingPlanCatalogView;
 import com.zeromail.core.billing.projection.BillingPlanView;
 import com.zeromail.core.billing.projection.PlanFeatureSummary;
+import com.zeromail.core.config.ZeroMailCoreProperties;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -22,25 +26,32 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BillingPlanQueryService {
 
-    private static final String FREE_PLAN_CODE = "FREE";
+    private static final String CHECKOUT_STATUS_CREATED = "CREATED";
+    private static final String CHECKOUT_STATUS_FAILED = "FAILED";
 
+    private final BillingCheckoutSessionRepository billingCheckoutSessionRepository;
     private final BillingPlanRepository billingPlanRepository;
-    private final LemonSqueezyCheckoutUrlBuilder checkoutUrlBuilder;
+    private final LemonSqueezyCheckoutClient checkoutClient;
+    private final Duration checkoutReuseWindow;
     private final PlanFeaturePermissionRepository planFeaturePermissionRepository;
     private final FeatureCatalogCache featureCatalogCache;
-    private final SubscriptionRepository subscriptionRepository;
+    private final CurrentBillingPlanResolver currentBillingPlanResolver;
 
     public BillingPlanQueryService(
+            BillingCheckoutSessionRepository billingCheckoutSessionRepository,
             BillingPlanRepository billingPlanRepository,
-            LemonSqueezyCheckoutUrlBuilder checkoutUrlBuilder,
+            LemonSqueezyCheckoutClient checkoutClient,
+            ZeroMailCoreProperties coreProperties,
             PlanFeaturePermissionRepository planFeaturePermissionRepository,
             FeatureCatalogCache featureCatalogCache,
-            SubscriptionRepository subscriptionRepository) {
+            CurrentBillingPlanResolver currentBillingPlanResolver) {
+        this.billingCheckoutSessionRepository = billingCheckoutSessionRepository;
         this.billingPlanRepository = billingPlanRepository;
-        this.checkoutUrlBuilder = checkoutUrlBuilder;
+        this.checkoutClient = checkoutClient;
+        this.checkoutReuseWindow = coreProperties.billing().lemonSqueezy().checkoutReuseWindow();
         this.planFeaturePermissionRepository = planFeaturePermissionRepository;
         this.featureCatalogCache = featureCatalogCache;
-        this.subscriptionRepository = subscriptionRepository;
+        this.currentBillingPlanResolver = currentBillingPlanResolver;
     }
 
     /**
@@ -49,7 +60,7 @@ public class BillingPlanQueryService {
      */
     @Transactional(readOnly = true)
     public BillingPlanCatalogView listCatalog(UUID tenantId) {
-        String currentPlanCode = resolveCurrentPlanCode(tenantId);
+        String currentPlanCode = currentBillingPlanResolver.resolveCurrentPlanCode(tenantId);
         List<BillingPlanView> plans =
                 billingPlanRepository.findByActiveTrueOrderBySortOrderAscCodeAsc().stream()
                         .map(this::toView)
@@ -57,27 +68,67 @@ public class BillingPlanQueryService {
         return new BillingPlanCatalogView(currentPlanCode, plans);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public String createCheckout(UUID tenantId, String planCode, String userEmail) {
         BillingPlanEntity plan =
                 billingPlanRepository
                         .findByCode(planCode)
                         .filter(BillingPlanEntity::isActive)
                         .orElseThrow(BillingPlanNotFoundException::new);
-        String checkoutUrl = checkoutUrlBuilder.build(plan, tenantId, userEmail);
-        if (checkoutUrl == null) {
+        String normalizedUserEmail = normalizeEmail(userEmail);
+        Instant now = Instant.now();
+        ensureCheckoutAllowed(tenantId, plan, now);
+        Optional<BillingCheckoutSessionEntity> reusableCheckoutSession =
+                billingCheckoutSessionRepository.findReusableCheckoutSession(
+                        tenantId,
+                        plan.getCode(),
+                        normalizedUserEmail,
+                        CHECKOUT_STATUS_CREATED,
+                        now);
+        if (reusableCheckoutSession.isPresent()) {
+            return reusableCheckoutSession.get().getCheckoutUrl();
+        }
+        LemonSqueezyCheckoutCreation checkoutCreation =
+                checkoutClient.createCheckout(plan, tenantId, normalizedUserEmail);
+        billingCheckoutSessionRepository.save(
+                checkoutSession(tenantId, normalizedUserEmail, plan, checkoutCreation, now));
+        if (!checkoutCreation.created()) {
             throw new BillingCheckoutUnavailableException();
         }
-        return checkoutUrl;
+        return checkoutCreation.checkoutUrl();
     }
 
-    private String resolveCurrentPlanCode(UUID tenantId) {
-        return subscriptionRepository
-                .findByTenantId(tenantId)
-                .map(SubscriptionEntity::getPlanId)
-                .flatMap(billingPlanRepository::findById)
-                .map(BillingPlanEntity::getCode)
-                .orElse(FREE_PLAN_CODE);
+    private void ensureCheckoutAllowed(UUID tenantId, BillingPlanEntity selectedPlan, Instant now) {
+        BillingPlanEntity currentPlan =
+                currentBillingPlanResolver.resolveCurrentPlan(tenantId, now);
+        if (currentPlan.getTierRank() > selectedPlan.getTierRank()) {
+            throw new BillingPlanDowngradeNotAllowedException();
+        }
+    }
+
+    private BillingCheckoutSessionEntity checkoutSession(
+            UUID tenantId,
+            String userEmail,
+            BillingPlanEntity plan,
+            LemonSqueezyCheckoutCreation checkoutCreation,
+            Instant createdAt) {
+        return new BillingCheckoutSessionEntity(
+                UUID.randomUUID(),
+                tenantId,
+                plan.getCode(),
+                userEmail,
+                checkoutCreation.providerCheckoutId(),
+                checkoutCreation.checkoutUrl(),
+                checkoutCreation.created() ? CHECKOUT_STATUS_CREATED : CHECKOUT_STATUS_FAILED,
+                checkoutCreation.failureReason(),
+                createdAt,
+                checkoutCreation.created() ? createdAt.plus(checkoutReuseWindow) : createdAt,
+                checkoutCreation.requestJsonb(),
+                checkoutCreation.responseJsonb());
+    }
+
+    private String normalizeEmail(String userEmail) {
+        return userEmail == null || userEmail.isBlank() ? null : userEmail.trim().toLowerCase();
     }
 
     private BillingPlanView toView(BillingPlanEntity plan) {

@@ -447,8 +447,8 @@
   },
   "billing": {
     "balance": {
-      "betaCredits": "Tín dụng beta",
-      "betaNotice": "Miễn phí trong giai đoạn beta. Zero Mail sẽ báo trước khi cần chuyển sang gói trả phí.",
+      "additionalCreditDetail": "Không bị reset theo gói hàng tháng",
+      "additionalCredits": "Tín dụng thêm",
       "description": "Số dư dùng cho các tác vụ AI của Zero Mail.",
       "error": {
         "body": "Có lỗi khi lấy số dư tín dụng. Hãy thử lại.",
@@ -458,9 +458,8 @@
       "held": "Đang giữ",
       "heldDetail": "Đã reserve cho tác vụ đang chạy",
       "label": "Tín dụng hiện có",
+      "monthlyCredits": "Tín dụng hàng tháng",
       "monthlyGrant": "{credits} tín dụng / tháng",
-      "noExpiry": "Không reset theo kỳ beta",
-      "paidCredits": "Tín dụng trả phí",
       "refreshLabel": "Tự cập nhật",
       "refreshValue": "Mỗi 45 giây",
       "resetsAt": "Reset lúc",
@@ -491,6 +490,11 @@
         "retry": "Thử lại",
         "title": "Không tải được lịch sử giao dịch"
       },
+      "pagination": {
+        "end": "Đã hết",
+        "loaded": "Đã tải {count} giao dịch",
+        "loadMore": "Tải thêm"
+      },
       "title": "Lịch sử giao dịch",
       "type": {
         "adjustment": "Điều chỉnh",
@@ -508,8 +512,43 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Theo dõi tín dụng beta miễn phí, tín dụng đã nạp và lịch sử sử dụng gần đây.",
-      "title": "Thanh toán"
+      "description": "Theo dõi số dư, lịch reset hàng tháng và lịch sử dùng tín dụng.",
+      "title": "Tín dụng & lịch sử sử dụng"
+    },
+    "plans": {
+      "checkoutCta": "Thanh toán ngay",
+      "checkoutError": "Không thể mở trang thanh toán. Vui lòng thử lại sau.",
+      "checkoutPending": "Đang mở checkout",
+      "currentPlan": "Gói hiện tại",
+      "description": {
+        "free": "Dành cho bắt đầu dùng Zero Mail với hạn mức cơ bản.",
+        "plus": "Cho người dùng cá nhân muốn dùng AI thường xuyên hơn.",
+        "pro": "Cho người dùng nâng cao và team nhỏ."
+      },
+      "empty": "Không có gói nào để hiển thị.",
+      "error": "Không tải được danh sách gói.",
+      "freeIncluded": "Đã bao gồm",
+      "includedCredits": "{credits} tín dụng mỗi tháng",
+      "lowerTierUnavailable": "Bạn đã có toàn quyền",
+      "monthly": "Hàng tháng",
+      "perInvocation": "/ lượt",
+      "perMonth": "/tháng",
+      "plan": {
+        "free": "Free",
+        "plus": "Plus",
+        "pro": "Pro"
+      },
+      "planDescription": {
+        "free": "Dành cho bắt đầu dùng Zero Mail với hạn mức cơ bản.",
+        "plus": "Cho người dùng cá nhân muốn dùng AI thường xuyên hơn.",
+        "pro": "Cho người dùng nâng cao và team nhỏ."
+      },
+      "subtitle": "Thanh toán một lần cho chu kỳ tháng hiện tại. Các gói thấp hơn gói đang active sẽ không thể chọn.",
+      "title": "Gói tín dụng hàng tháng"
+    },
+    "upgrade": {
+      "description": "Chọn gói tín dụng hàng tháng phù hợp với mức sử dụng AI của bạn.",
+      "title": "Nâng cấp gói"
     }
   },
   "chat": {
@@ -899,6 +938,7 @@
         "invalidState": "Lỗi nội bộ trong sổ tín dụng — vui lòng thử lại sau."
       },
       "plan": {
+        "downgradeNotAllowed": "Gói hiện tại của bạn đang cao hơn gói đã chọn.",
         "featureDisabled": "Tính năng này chưa khả dụng trong gói hiện tại của bạn.",
         "notFound": "Không tìm thấy gói thanh toán này. Hãy chọn một gói khác."
       }
@@ -1692,7 +1732,7 @@
     "ai": "Cấu hình AI",
     "analytics": "Phân tích",
     "beta": "v1",
-    "billing": "Thanh toán",
+    "billing": "Tín dụng",
     "chat": "Trợ lý",
     "cleanupGroup": "Hủy đăng ký",
     "cleanupSuppression": "Danh sách an toàn",
@@ -1720,6 +1760,7 @@
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
     "trust": "Tin cậy & an toàn",
+    "upgradePlan": "Nâng cấp gói",
     "waitlist": "Đăng ký trải nghiệm Zero Mail"
   },
   "needsReply": {
@@ -2267,6 +2308,7 @@
       "confirmPhrase": "delete my data",
       "cta": "Xóa tài khoản và dữ liệu"
     },
+    "description": "Quản lý tài khoản, kết nối, tín dụng và các cấu hình vận hành của Zero Mail.",
     "display": {
       "dialogBody": "Đổi ngôn ngữ giao diện và chế độ hiển thị sáng/tối tại đây.",
       "heading": "Hiển thị",
@@ -2285,6 +2327,13 @@
       "label": "Ngôn ngữ",
       "saveCta": "Cập nhật ngôn ngữ",
       "vi": "Tiếng Việt"
+    },
+    "navigation": {
+      "account": "Tài khoản",
+      "ai": "Cấu hình AI",
+      "credits": "Tín dụng",
+      "privacy": "Quyền riêng tư",
+      "upgradePlan": "Nâng cấp gói"
     },
     "notifications": {
       "description": "Quản lý email tóm tắt hàng ngày của bạn.",
@@ -2338,6 +2387,10 @@
     }
   },
   "shell": {
+    "accounts": {
+      "addManage": "Thêm hoặc quản lý tài khoản",
+      "title": "Tài khoản Gmail"
+    },
     "balance": {
       "label": "Tín dụng"
     },
@@ -2372,6 +2425,7 @@
       "english": "Tiếng Anh",
       "label": "Tài khoản",
       "language": "Ngôn ngữ",
+      "planLoading": "Đang tải gói",
       "settings": "Cài đặt",
       "signOut": "Đăng xuất",
       "vietnamese": "Tiếng Việt"
