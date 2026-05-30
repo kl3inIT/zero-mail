@@ -16,12 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChatHistoryService {
 
     private final ChatHistoryProjector chatHistoryProjector;
-    private final ZeroMailChatProperties chatProperties;
+    private final ChatProperties chatProperties;
     private final ChatHistoryRepository chatHistoryRepository;
 
     public ChatHistoryService(
             ChatHistoryProjector chatHistoryProjector,
-            ZeroMailChatProperties chatProperties,
+            ChatProperties chatProperties,
             ChatHistoryRepository chatHistoryRepository) {
         this.chatHistoryProjector =
                 Objects.requireNonNull(

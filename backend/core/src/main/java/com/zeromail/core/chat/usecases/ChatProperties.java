@@ -8,7 +8,7 @@ import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "zero-mail.chat")
 @Validated
-public record ZeroMailChatProperties(
+public record ChatProperties(
         @Min(1) @DefaultValue("15") int heartbeatIntervalSeconds,
         @Min(1) @DefaultValue("30") int sseTimeoutMinutes,
         @DefaultValue("openai/gpt-5.4-nano") String defaultModel,
@@ -19,7 +19,7 @@ public record ZeroMailChatProperties(
         @Valid HistoryProperties history,
         @Valid TokenizerProperties tokenizer) {
 
-    public ZeroMailChatProperties {
+    public ChatProperties {
         defaultModel =
                 defaultModel == null || defaultModel.isBlank()
                         ? "openai/gpt-5.4-nano"

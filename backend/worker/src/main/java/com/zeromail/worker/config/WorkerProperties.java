@@ -8,7 +8,7 @@ import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "zero-mail.worker")
 @Validated
-public record ZeroMailWorkerProperties(@Valid @NotNull GmailProperties gmail) {
+public record WorkerProperties(@Valid @NotNull GmailProperties gmail) {
 
     public record GmailProperties(@Valid @NotNull PubSubProperties pubsub) {}
 

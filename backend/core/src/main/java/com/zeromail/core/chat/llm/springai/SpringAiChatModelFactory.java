@@ -3,7 +3,7 @@ package com.zeromail.core.chat.llm.springai;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
-import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
+import com.zeromail.core.chat.usecases.ChatProperties;
 import com.zeromail.core.llm.byok.ByokProviderResolver;
 import com.zeromail.core.llm.gateway.springai.SpringAiProviderChatClientFactory;
 import com.zeromail.core.llm.routing.LlmRuntimeTask;
@@ -25,7 +25,7 @@ public class SpringAiChatModelFactory {
 
     private static final String PLATFORM_PROVIDER_ID = "platform";
 
-    private final ZeroMailChatProperties chatProperties;
+    private final ChatProperties chatProperties;
     private final AssistantSettingsJpaRepository assistantSettingsRepository;
     private final PlatformLlmRuntimeRouter platformRuntimeRouter;
     private final ByokProviderResolver byokProviderResolver;
@@ -34,7 +34,7 @@ public class SpringAiChatModelFactory {
             new ConcurrentHashMap<>();
 
     public SpringAiChatModelFactory(
-            ZeroMailChatProperties chatProperties,
+            ChatProperties chatProperties,
             AssistantSettingsJpaRepository assistantSettingsRepository,
             PlatformLlmRuntimeRouter platformRuntimeRouter,
             ByokProviderResolver byokProviderResolver,

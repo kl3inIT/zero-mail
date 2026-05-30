@@ -16,7 +16,7 @@ public class LlmTokenizer {
     private final int charsPerToken;
 
     @Autowired
-    public LlmTokenizer(ZeroMailChatProperties chatProperties) {
+    public LlmTokenizer(ChatProperties chatProperties) {
         this(chatProperties.tokenizer().charsPerToken());
     }
 

@@ -1,6 +1,6 @@
 package com.zeromail.api.security;
 
-import com.zeromail.api.config.ZeroMailApiProperties;
+import com.zeromail.api.config.ApiProperties;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -46,11 +46,10 @@ public class LoginRedirectAuthenticationFailureHandler
             LoggerFactory.getLogger(LoginRedirectAuthenticationFailureHandler.class);
 
     private final OAuth2AuthorizedClientService authorizedClientService;
-    private final ZeroMailApiProperties properties;
+    private final ApiProperties properties;
 
     public LoginRedirectAuthenticationFailureHandler(
-            OAuth2AuthorizedClientService authorizedClientService,
-            ZeroMailApiProperties properties) {
+            OAuth2AuthorizedClientService authorizedClientService, ApiProperties properties) {
         this.authorizedClientService = authorizedClientService;
         this.properties = properties;
     }

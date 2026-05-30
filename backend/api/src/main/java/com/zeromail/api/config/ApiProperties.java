@@ -12,10 +12,10 @@ import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "zero-mail.api")
 @Validated
-public record ZeroMailApiProperties(
+public record ApiProperties(
         @Valid WebProperties web, @Valid CorsProperties cors, @Valid GmailProperties gmail) {
 
-    public ZeroMailApiProperties {
+    public ApiProperties {
         web = web == null ? WebProperties.defaults() : web;
         cors = cors == null ? CorsProperties.defaults() : cors;
         gmail = gmail == null ? GmailProperties.defaults() : gmail;

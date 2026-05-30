@@ -10,7 +10,7 @@ import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.worker.config.ZeroMailWorkerProperties;
+import com.zeromail.worker.config.WorkerProperties;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -38,7 +38,7 @@ public class GmailWatchScheduler {
             GmailConnectionService connectionService,
             GmailApiClientFactory gmailApiClientFactory,
             RefreshTokenCipher refreshTokenCipher,
-            ZeroMailWorkerProperties properties) {
+            WorkerProperties properties) {
         this.connectionRepository = connectionRepository;
         this.connectionService = connectionService;
         this.gmailApiClientFactory = gmailApiClientFactory;

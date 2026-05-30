@@ -2,7 +2,7 @@ package com.zeromail.api.security;
 
 import com.google.api.client.json.webtoken.JsonWebSignature;
 import com.google.auth.oauth2.TokenVerifier;
-import com.zeromail.api.config.ZeroMailApiProperties;
+import com.zeromail.api.config.ApiProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,8 +17,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class PubSubSecurityConfig {
 
     @Bean
-    public TokenVerifier pubsubOidcTokenVerifier(ZeroMailApiProperties properties) {
-        ZeroMailApiProperties.PubSubProperties pubsubProperties = properties.gmail().pubsub();
+    public TokenVerifier pubsubOidcTokenVerifier(ApiProperties properties) {
+        ApiProperties.PubSubProperties pubsubProperties = properties.gmail().pubsub();
         return TokenVerifier.newBuilder()
                 .setAudience(pubsubProperties.pushAudienceUrl())
                 .setIssuer("https://accounts.google.com")
@@ -39,8 +39,8 @@ public class PubSubSecurityConfig {
 
     @Bean
     PubSubOidcAuthFilter pubSubOidcAuthFilter(
-            ZeroMailApiProperties properties, PubSubTokenVerifier tokenVerifier) {
-        ZeroMailApiProperties.PubSubProperties pubsubProperties = properties.gmail().pubsub();
+            ApiProperties properties, PubSubTokenVerifier tokenVerifier) {
+        ApiProperties.PubSubProperties pubsubProperties = properties.gmail().pubsub();
         return new PubSubOidcAuthFilter(pubsubProperties.saPrincipalEmail(), tokenVerifier);
     }
 

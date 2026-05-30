@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
-import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
+import com.zeromail.core.chat.usecases.ChatProperties;
 import com.zeromail.core.llm.byok.ByokProviderResolver;
 import com.zeromail.core.llm.gateway.springai.SpringAiProviderChatClientFactory;
 import com.zeromail.core.llm.usecases.LlmCredentialSource;
@@ -90,7 +90,7 @@ class SpringAiChatModelFactoryTest {
 
         SpringAiChatModelFactory factory =
                 new SpringAiChatModelFactory(
-                        new ZeroMailChatProperties(
+                        new ChatProperties(
                                 15,
                                 30,
                                 modelId,
@@ -98,8 +98,8 @@ class SpringAiChatModelFactoryTest {
                                 1024,
                                 4,
                                 1,
-                                new ZeroMailChatProperties.HistoryProperties(50),
-                                new ZeroMailChatProperties.TokenizerProperties(4)),
+                                new ChatProperties.HistoryProperties(50),
+                                new ChatProperties.TokenizerProperties(4)),
                         settingsRepository,
                         platformRuntimeRouter,
                         mock(ByokProviderResolver.class),

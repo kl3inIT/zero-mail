@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.ToolCallResult;
-import com.zeromail.worker.config.ZeroMailLlmDriftProperties;
+import com.zeromail.worker.config.DriftProperties;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
@@ -46,10 +46,7 @@ class DriftDetectionJobDriftDetectedTest {
 
     private DriftDetectionJob enabledJob(LlmGateway llmGateway) {
         return new DriftDetectionJob(
-                llmGateway,
-                loader,
-                objectMapper,
-                new ZeroMailLlmDriftProperties(true, FIXED_TENANT_ID, 20));
+                llmGateway, loader, objectMapper, new DriftProperties(true, FIXED_TENANT_ID, 20));
     }
 
     private void answerWithActionMismatch(LlmGateway llmGateway) {

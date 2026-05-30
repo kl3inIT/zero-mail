@@ -9,7 +9,7 @@ import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "zero-mail.llm.drift")
 @Validated
-public record ZeroMailLlmDriftProperties(
+public record DriftProperties(
         @DefaultValue("false") boolean enabled,
         @DefaultValue("00000000-0000-0000-0000-000000000000") @NotBlank String fixedTenantId,
         @DefaultValue("20") @Min(1) @Max(100) int thresholdPercent) {}
