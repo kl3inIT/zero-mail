@@ -1,7 +1,7 @@
 package com.zeromail.core.llm.byok;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.ByokProperties;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,17 +26,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class PinnedHttpClientFactory {
 
-    private final ZeroMailLlmByokProperties byokProperties;
+    private final ByokProperties byokProperties;
     private final PinnedResolutionObserver pinnedResolutionObserver;
 
     @Autowired
-    public PinnedHttpClientFactory(ZeroMailCoreProperties zeroMailCoreProperties) {
-        this(zeroMailCoreProperties.llm().byok(), PinnedResolutionObserver.noop());
+    public PinnedHttpClientFactory(LlmProperties llmProperties) {
+        this(llmProperties.byok(), PinnedResolutionObserver.noop());
     }
 
     PinnedHttpClientFactory(
-            ZeroMailLlmByokProperties byokProperties,
-            PinnedResolutionObserver pinnedResolutionObserver) {
+            ByokProperties byokProperties, PinnedResolutionObserver pinnedResolutionObserver) {
         this.byokProperties = Objects.requireNonNull(byokProperties, "byokProperties");
         this.pinnedResolutionObserver =
                 Objects.requireNonNull(pinnedResolutionObserver, "pinnedResolutionObserver");
@@ -49,12 +48,12 @@ public class PinnedHttpClientFactory {
     public static final class PinnedHttpClient {
 
         private final BaseUrlValidator.ValidatedTarget validatedTarget;
-        private final ZeroMailLlmByokProperties byokProperties;
+        private final ByokProperties byokProperties;
         private final PinnedResolutionObserver pinnedResolutionObserver;
 
         private PinnedHttpClient(
                 BaseUrlValidator.ValidatedTarget validatedTarget,
-                ZeroMailLlmByokProperties byokProperties,
+                ByokProperties byokProperties,
                 PinnedResolutionObserver pinnedResolutionObserver) {
             this.validatedTarget = Objects.requireNonNull(validatedTarget, "validatedTarget");
             this.byokProperties = Objects.requireNonNull(byokProperties, "byokProperties");

@@ -1,6 +1,6 @@
 package com.zeromail.core.llm.byok;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.llm.config.LlmProperties;
 import com.zeromail.core.shared.exception.BusinessException;
 import com.zeromail.core.shared.exception.ErrorClass;
 import java.net.Inet4Address;
@@ -36,12 +36,10 @@ public class BaseUrlValidator {
 
     @Autowired
     public BaseUrlValidator(
-            HostResolver hostResolver,
-            ZeroMailCoreProperties zeroMailCoreProperties,
-            Environment environment) {
+            HostResolver hostResolver, LlmProperties llmProperties, Environment environment) {
         this(
                 hostResolver,
-                zeroMailCoreProperties.llm().byok().allowedExtraPorts(),
+                llmProperties.byok().allowedExtraPorts(),
                 Arrays.asList(environment.getActiveProfiles()).contains("dev"));
     }
 

@@ -3,7 +3,7 @@ package com.zeromail.core.llm.usecases;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import com.zeromail.core.llm.domain.ActionValidator;
 import com.zeromail.core.llm.domain.AllowListedTools;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
@@ -259,8 +259,8 @@ class LlmGatewayRuntimeRoutingTest {
         return ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString()).call(supplier::get);
     }
 
-    private static ZeroMailLlmProperties llmProperties() {
-        return new ZeroMailLlmProperties(
+    private static PlatformProperties llmProperties() {
+        return new PlatformProperties(
                 "openai",
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",

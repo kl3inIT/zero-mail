@@ -1,7 +1,6 @@
 package com.zeromail.core.llm.usecases;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.config.LlmProperties;
 import com.zeromail.core.llm.routing.LlmRouteResolver;
 import com.zeromail.core.llm.routing.LlmRuntimeTask;
 import com.zeromail.core.llm.routing.PlatformLlmRouteCredentialResolver;
@@ -21,15 +20,15 @@ public class PlatformLlmRuntimeRouter {
     private static final String ANTHROPIC_FORMAT = "ANTHROPIC_FORMAT";
     private static final String GOOGLE_FORMAT = "GOOGLE_FORMAT";
 
-    private final ZeroMailLlmProperties llmProperties;
+    private final LlmProperties.PlatformProperties llmProperties;
     private final LlmRouteResolver routeResolver;
     private final PlatformLlmRouteCredentialResolver routeCredentialResolver;
 
     public PlatformLlmRuntimeRouter(
-            ZeroMailCoreProperties zeroMailCoreProperties,
+            LlmProperties llmConfiguration,
             ObjectProvider<LlmRouteResolver> routeResolverProvider,
             ObjectProvider<PlatformLlmRouteCredentialResolver> routeCredentialResolverProvider) {
-        this.llmProperties = zeroMailCoreProperties.llm().platform();
+        this.llmProperties = llmConfiguration.platform();
         this.routeResolver = routeResolverProvider.getIfAvailable();
         this.routeCredentialResolver = routeCredentialResolverProvider.getIfAvailable();
     }

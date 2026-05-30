@@ -2,8 +2,8 @@ package com.zeromail.core.llm.byok;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.ByokProperties;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
@@ -34,11 +34,8 @@ class ZeroMailLlmByokPropertiesBindingTest {
                         "zero-mail.llm.byok.read-timeout=21s")
                 .run(
                         applicationContext -> {
-                            ZeroMailLlmByokProperties byokProperties =
-                                    applicationContext
-                                            .getBean(ZeroMailCoreProperties.class)
-                                            .llm()
-                                            .byok();
+                            ByokProperties byokProperties =
+                                    applicationContext.getBean(LlmProperties.class).byok();
 
                             assertThat(byokProperties.allowNonVendorEndpoints()).isTrue();
                             assertThat(byokProperties.allowedExtraHosts())
@@ -57,11 +54,8 @@ class ZeroMailLlmByokPropertiesBindingTest {
                 .withUserConfiguration(ZeroMailLlmByokPropertiesBindingConfiguration.class)
                 .run(
                         applicationContext -> {
-                            ZeroMailLlmByokProperties byokProperties =
-                                    applicationContext
-                                            .getBean(ZeroMailCoreProperties.class)
-                                            .llm()
-                                            .byok();
+                            ByokProperties byokProperties =
+                                    applicationContext.getBean(LlmProperties.class).byok();
 
                             assertThat(byokProperties.allowNonVendorEndpoints()).isFalse();
                             assertThat(byokProperties.allowedExtraHosts()).isEmpty();
@@ -74,6 +68,6 @@ class ZeroMailLlmByokPropertiesBindingTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(ZeroMailCoreProperties.class)
+    @EnableConfigurationProperties(LlmProperties.class)
     static class ZeroMailLlmByokPropertiesBindingConfiguration {}
 }

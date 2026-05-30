@@ -4,9 +4,9 @@ import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.exception.InsufficientCreditsException;
 import com.zeromail.core.billing.usecases.CreditLedger;
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.llm.byok.ByokProviderResolver;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.domain.ActionValidator;
 import com.zeromail.core.llm.domain.AllowListedTools;
@@ -61,7 +61,7 @@ class LlmGatewayImpl implements LlmGateway {
     private final LlmModelClient platformLlmModelClient;
     private final SemanticIntentEvaluator semanticIntentEvaluator;
     private final SanitizationPipeline sanitizationPipeline;
-    private final ZeroMailLlmProperties llmProperties;
+    private final PlatformProperties llmProperties;
     private final AllowListedTools allowListedTools;
     private final ActionValidator actionValidator;
     private final RuleCompileToolValidator ruleCompileToolValidator;
@@ -77,7 +77,7 @@ class LlmGatewayImpl implements LlmGateway {
     LlmGatewayImpl(
             LlmModelClient platformLlmModelClient,
             SanitizationPipeline sanitizationPipeline,
-            ZeroMailLlmProperties llmProperties,
+            PlatformProperties llmProperties,
             AllowListedTools allowListedTools,
             ActionValidator actionValidator) {
         this(
@@ -103,7 +103,7 @@ class LlmGatewayImpl implements LlmGateway {
             LlmModelClient platformLlmModelClient,
             ObjectProvider<SemanticIntentEvaluator> semanticIntentEvaluatorProvider,
             SanitizationPipeline sanitizationPipeline,
-            ZeroMailCoreProperties zeroMailCoreProperties,
+            LlmProperties llmConfiguration,
             ObjectProvider<ObservationRegistry> observationRegistryProvider,
             CreditLedger creditLedger,
             ObjectProvider<MeterRegistry> meterRegistryProvider,
@@ -117,7 +117,7 @@ class LlmGatewayImpl implements LlmGateway {
                 semanticIntentEvaluatorProvider.getIfAvailable(
                         () -> UNAVAILABLE_SEMANTIC_INTENT_EVALUATOR),
                 sanitizationPipeline,
-                zeroMailCoreProperties.llm().platform(),
+                llmConfiguration.platform(),
                 new AllowListedTools(),
                 new ActionValidator(),
                 new RuleCompileToolValidator(),
@@ -134,7 +134,7 @@ class LlmGatewayImpl implements LlmGateway {
     LlmGatewayImpl(
             LlmModelClient platformLlmModelClient,
             SanitizationPipeline sanitizationPipeline,
-            ZeroMailLlmProperties llmProperties,
+            PlatformProperties llmProperties,
             AllowListedTools allowListedTools,
             ActionValidator actionValidator,
             ObservationRegistry observationRegistry) {
@@ -159,7 +159,7 @@ class LlmGatewayImpl implements LlmGateway {
     LlmGatewayImpl(
             LlmModelClient platformLlmModelClient,
             SanitizationPipeline sanitizationPipeline,
-            ZeroMailLlmProperties llmProperties,
+            PlatformProperties llmProperties,
             AllowListedTools allowListedTools,
             ActionValidator actionValidator,
             ObservationRegistry observationRegistry,
@@ -186,7 +186,7 @@ class LlmGatewayImpl implements LlmGateway {
             LlmModelClient platformLlmModelClient,
             SemanticIntentEvaluator semanticIntentEvaluator,
             SanitizationPipeline sanitizationPipeline,
-            ZeroMailLlmProperties llmProperties,
+            PlatformProperties llmProperties,
             AllowListedTools allowListedTools,
             ActionValidator actionValidator,
             ObservationRegistry observationRegistry,
@@ -213,7 +213,7 @@ class LlmGatewayImpl implements LlmGateway {
             LlmModelClient platformLlmModelClient,
             SemanticIntentEvaluator semanticIntentEvaluator,
             SanitizationPipeline sanitizationPipeline,
-            ZeroMailLlmProperties llmProperties,
+            PlatformProperties llmProperties,
             AllowListedTools allowListedTools,
             ActionValidator actionValidator,
             ObservationRegistry observationRegistry,
@@ -241,7 +241,7 @@ class LlmGatewayImpl implements LlmGateway {
             LlmModelClient platformLlmModelClient,
             SemanticIntentEvaluator semanticIntentEvaluator,
             SanitizationPipeline sanitizationPipeline,
-            ZeroMailLlmProperties llmProperties,
+            PlatformProperties llmProperties,
             AllowListedTools allowListedTools,
             ActionValidator actionValidator,
             RuleCompileToolValidator ruleCompileToolValidator,

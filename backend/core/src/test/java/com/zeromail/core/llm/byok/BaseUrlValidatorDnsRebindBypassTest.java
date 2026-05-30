@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.sun.net.httpserver.HttpServer;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
+import com.zeromail.core.llm.config.LlmProperties.ByokProperties;
 import com.zeromail.core.llm.gateway.springai.ConnectionTestResult;
 import com.zeromail.core.llm.gateway.springai.ModelsProbeClient;
 import com.zeromail.core.llm.gateway.springai.ProviderConnectionTester;
@@ -49,7 +49,7 @@ class BaseUrlValidatorDnsRebindBypassTest {
             InetAddress validatedAddress = InetAddress.getLoopbackAddress();
             PinnedHttpClientFactory pinnedHttpClientFactory =
                     new PinnedHttpClientFactory(
-                            new ZeroMailLlmByokProperties(
+                            new ByokProperties(
                                     false,
                                     List.of(),
                                     List.of(),

@@ -3,9 +3,9 @@ package com.zeromail.core.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.net.httpserver.HttpServer;
-import com.zeromail.core.config.ZeroMailCoreProperties.LlmProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.ByokProperties;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -43,7 +43,7 @@ class RestClientConfigTest {
         try {
             HttpStatusCode statusCode =
                     new RestClientConfig()
-                            .restClientBuilder(properties())
+                            .restClientBuilder(llmProperties())
                             .build()
                             .get()
                             .uri("http://127.0.0.1:" + server.getAddress().getPort() + "/redirect")
@@ -60,24 +60,23 @@ class RestClientConfigTest {
         }
     }
 
-    private static ZeroMailCoreProperties properties() {
-        return new ZeroMailCoreProperties(
-                new LlmProperties(
-                        new ZeroMailLlmProperties(
-                                null,
-                                null,
-                                "test-platform-key",
-                                null,
-                                null,
-                                null,
-                                null,
-                                Duration.ofSeconds(5),
-                                Duration.ofSeconds(30)),
-                        new ZeroMailLlmByokProperties(
-                                false,
-                                List.of(),
-                                List.of(),
-                                Duration.ofSeconds(5),
-                                Duration.ofSeconds(15))));
+    private static LlmProperties llmProperties() {
+        return new LlmProperties(
+                new PlatformProperties(
+                        null,
+                        null,
+                        "test-platform-key",
+                        null,
+                        null,
+                        null,
+                        null,
+                        Duration.ofSeconds(5),
+                        Duration.ofSeconds(30)),
+                new ByokProperties(
+                        false,
+                        List.of(),
+                        List.of(),
+                        Duration.ofSeconds(5),
+                        Duration.ofSeconds(15)));
     }
 }

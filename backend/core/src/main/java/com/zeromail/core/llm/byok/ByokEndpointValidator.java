@@ -1,7 +1,7 @@
 package com.zeromail.core.llm.byok;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.ByokProperties;
 import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.exception.InvalidByokException;
 import com.zeromail.core.shared.net.OutboundHostGuard;
@@ -39,22 +39,21 @@ public class ByokEndpointValidator {
             "https://generativelanguage.googleapis.com/v1beta";
     private static final String OPENAI_DEFAULT_ENDPOINT = "https://api.openai.com/v1";
 
-    private final ZeroMailLlmByokProperties byokProperties;
+    private final ByokProperties byokProperties;
     private final Set<String> allowedExtraHosts;
     private final OutboundHostGuard outboundHostGuard;
 
     @Autowired
-    public ByokEndpointValidator(
-            ZeroMailCoreProperties zeroMailCoreProperties, OutboundHostGuard outboundHostGuard) {
-        this(zeroMailCoreProperties.llm().byok(), outboundHostGuard);
+    public ByokEndpointValidator(LlmProperties llmProperties, OutboundHostGuard outboundHostGuard) {
+        this(llmProperties.byok(), outboundHostGuard);
     }
 
-    public ByokEndpointValidator(ZeroMailLlmByokProperties byokProperties) {
+    public ByokEndpointValidator(ByokProperties byokProperties) {
         this(byokProperties, new OutboundHostGuard());
     }
 
     public ByokEndpointValidator(
-            ZeroMailLlmByokProperties byokProperties, OutboundHostGuard outboundHostGuard) {
+            ByokProperties byokProperties, OutboundHostGuard outboundHostGuard) {
         this.byokProperties = byokProperties;
         this.outboundHostGuard = outboundHostGuard;
         this.allowedExtraHosts =

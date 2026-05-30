@@ -3,7 +3,7 @@ package com.zeromail.core.llm.byok;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
+import com.zeromail.core.llm.config.LlmProperties.ByokProperties;
 import com.zeromail.core.llm.exception.InvalidByokException;
 import java.time.Duration;
 import java.util.List;
@@ -70,7 +70,7 @@ class ByokEndpointValidatorTest {
     void openai_compat_accepts_operator_allowed_host() {
         ByokEndpointValidator validator =
                 new ByokEndpointValidator(
-                        new ZeroMailLlmByokProperties(
+                        new ByokProperties(
                                 true,
                                 List.of("together.xyz"),
                                 List.of(),
@@ -85,7 +85,7 @@ class ByokEndpointValidatorTest {
     void openai_compat_rejects_non_allowlisted_host_even_when_custom_endpoints_enabled() {
         ByokEndpointValidator validator =
                 new ByokEndpointValidator(
-                        new ZeroMailLlmByokProperties(
+                        new ByokProperties(
                                 true,
                                 List.of("operator.example"),
                                 List.of(),
@@ -116,7 +116,7 @@ class ByokEndpointValidatorTest {
     void anthropic_compat_accepts_operator_allowed_host() {
         ByokEndpointValidator validator =
                 new ByokEndpointValidator(
-                        new ZeroMailLlmByokProperties(
+                        new ByokProperties(
                                 true,
                                 List.of("example.com"),
                                 List.of(),
@@ -129,7 +129,7 @@ class ByokEndpointValidatorTest {
 
     private static ByokEndpointValidator defaultValidator() {
         return new ByokEndpointValidator(
-                new ZeroMailLlmByokProperties(
+                new ByokProperties(
                         false,
                         List.of(),
                         List.of(),

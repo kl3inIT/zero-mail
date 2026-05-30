@@ -3,8 +3,8 @@ package com.zeromail.core.llm.gateway.springai;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.billing.config.BillingProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -35,11 +35,8 @@ class ZeroMailLlmPropertiesTest {
                         "zero-mail.llm.platform.draft-model=anthropic/claude-3-haiku")
                 .run(
                         applicationContext -> {
-                            ZeroMailLlmProperties llmProperties =
-                                    applicationContext
-                                            .getBean(ZeroMailCoreProperties.class)
-                                            .llm()
-                                            .platform();
+                            PlatformProperties llmProperties =
+                                    applicationContext.getBean(LlmProperties.class).platform();
 
                             assertThat(llmProperties.provider()).isEqualTo("openai");
                             assertThat(llmProperties.baseUrl())
@@ -62,6 +59,6 @@ class ZeroMailLlmPropertiesTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties({ZeroMailCoreProperties.class, BillingProperties.class})
+    @EnableConfigurationProperties({LlmProperties.class, BillingProperties.class})
     static class ZeroMailLlmPropertiesBindingConfiguration {}
 }
