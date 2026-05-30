@@ -1,0 +1,35 @@
+# Single source of truth for the correctness-locked Spring-AI privacy/suppression block.
+#
+# Imported by BOTH backend/api and backend/worker via:
+#   spring.config.import: optional:classpath:zero-mail-shared.yml
+# (core is a compile dependency of both, so this file is on both classpaths.)
+#
+# Boot 4 precedence: values from an imported file WIN over the importing application.yml,
+# so this block locks the privacy invariant — neither module can silently override it.
+#
+# Do NOT add spring.autoconfigure.exclude here (late-resolution / profile edge case, Boot #26858);
+# the GenAI embedding exclusion lives on @SpringBootApplication(excludeName=...) in each module.
+# Do NOT add app-specific keys or profile-specific (---/on-profile) documents here.
+spring:
+  ai:
+    model:
+      # Zero Mail builds provider-specific Spring AI ChatModel instances inside
+      # core.llm.gateway.springai so BYOK can vary apiKey/baseUrl/model safely.
+      # Disable starter auto-model beans for unused modalities; otherwise M7
+      # eagerly creates OpenAI audio/image/embedding clients and requires extra credentials.
+      chat: none
+      embedding: none
+      embedding.text: none
+      embedding.multimodal: none
+      image: none
+      audio.speech: none
+      audio.transcription: none
+      moderation: none
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false

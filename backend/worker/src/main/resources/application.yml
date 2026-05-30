@@ -1,6 +1,10 @@
 spring:
   application:
     name: zeromail-worker
+  config:
+    # Correctness-locked Spring-AI privacy/suppression block lives in backend/core
+    # (single source of truth, imported by api + worker). Imported values WIN over this file.
+    import: optional:classpath:zero-mail-shared.yml
   # GenAI embedding auto-config exclusion lives on @SpringBootApplication(excludeName=...)
   # in ZeroMailWorkerApplication (timing-safe; Boot #26858). Do not re-add a yml exclude block.
   main:
@@ -34,27 +38,8 @@ spring:
       hibernate:
         format_sql: false
   ai:
-    model:
-      # Zero Mail builds provider-specific Spring AI ChatModel instances inside
-      # core.llm.gateway.springai so BYOK can vary apiKey/baseUrl/model safely.
-      # Disable starter auto-model beans for unused modalities; otherwise M7
-      # eagerly creates OpenAI audio/image/embedding clients and requires extra credentials.
-      chat: none
-      embedding: none
-      embedding.text: none
-      embedding.multimodal: none
-      image: none
-      audio.speech: none
-      audio.transcription: none
-      moderation: none
-    chat:
-      client:
-        observations:
-          log-prompt: false
-          log-completion: false
-      observations:
-        log-prompt: false
-        log-completion: false
+    # spring.ai.model.*=none + chat[.client].observations.log-prompt/completion=false are
+    # centralized in zero-mail-shared.yml (imported above). Only worker-specific keys remain here.
     retry:
       max-attempts: 2
 zero-mail:
