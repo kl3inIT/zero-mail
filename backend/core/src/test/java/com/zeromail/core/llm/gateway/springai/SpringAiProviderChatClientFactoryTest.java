@@ -99,9 +99,6 @@ class SpringAiProviderChatClientFactoryTest {
 
     private static ZeroMailCoreProperties coreProperties() {
         return new ZeroMailCoreProperties(
-                null,
-                null,
-                null,
                 new LlmProperties(
                         new ZeroMailLlmProperties(
                                 "openai",
@@ -113,7 +110,6 @@ class SpringAiProviderChatClientFactoryTest {
                                 "openai/gpt-5.4-nano",
                                 null,
                                 null),
-                        null),
-                null);
+                        null));
     }
 }

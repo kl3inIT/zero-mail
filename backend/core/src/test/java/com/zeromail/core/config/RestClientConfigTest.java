@@ -3,9 +3,6 @@ package com.zeromail.core.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.net.httpserver.HttpServer;
-import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties.BillingCostProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.CryptoProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.LlmProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
@@ -65,9 +62,6 @@ class RestClientConfigTest {
 
     private static ZeroMailCoreProperties properties() {
         return new ZeroMailCoreProperties(
-                new CryptoProperties("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
-                null,
-                new BillingProperties(new BillingCostProperties(0), null),
                 new LlmProperties(
                         new ZeroMailLlmProperties(
                                 null,
@@ -84,7 +78,6 @@ class RestClientConfigTest {
                                 List.of(),
                                 List.of(),
                                 Duration.ofSeconds(5),
-                                Duration.ofSeconds(15))),
-                null);
+                                Duration.ofSeconds(15))));
     }
 }

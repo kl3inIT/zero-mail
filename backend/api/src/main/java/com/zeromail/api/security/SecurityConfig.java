@@ -1,7 +1,7 @@
 package com.zeromail.api.security;
 
 import com.zeromail.core.admin.auth.usecases.AdminUserDetailsService;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.billing.config.BillingProperties;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -116,7 +116,7 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     SecurityFilterChain lemonSqueezyWebhookChain(
-            HttpSecurity http, ZeroMailCoreProperties coreProperties) throws Exception {
+            HttpSecurity http, BillingProperties billingProperties) throws Exception {
         http.securityMatcher("/api/plan-upgrades/webhooks/lemon-squeezy")
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(
@@ -129,7 +129,7 @@ public class SecurityConfig {
                                         .anyRequest()
                                         .denyAll())
                 .addFilterBefore(
-                        new LemonSqueezyWebhookSignatureFilter(coreProperties),
+                        new LemonSqueezyWebhookSignatureFilter(billingProperties),
                         AuthorizationFilter.class);
         return http.build();
     }

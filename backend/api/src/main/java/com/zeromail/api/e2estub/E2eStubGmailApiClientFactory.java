@@ -19,7 +19,7 @@ import com.google.api.services.gmail.model.MessagePartHeader;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
 import com.google.api.services.gmail.model.WatchRequest;
 import com.google.api.services.gmail.model.WatchResponse;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.gmail.config.GmailProperties;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
@@ -77,10 +77,15 @@ public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
                     String clientId,
             @Value("${spring.security.oauth2.client.registration.google.client-secret}")
                     String clientSecret,
-            ZeroMailCoreProperties properties,
+            GmailProperties gmailProperties,
             GmailConnectionRepository gmailConnectionRepository,
             RefreshTokenCipher refreshTokenCipher) {
-        super(clientId, clientSecret, properties, gmailConnectionRepository, refreshTokenCipher);
+        super(
+                clientId,
+                clientSecret,
+                gmailProperties,
+                gmailConnectionRepository,
+                refreshTokenCipher);
         seedSystemLabels();
     }
 

@@ -2,7 +2,7 @@ package com.zeromail.api.security;
 
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.billing.config.BillingProperties;
 import com.zeromail.core.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -139,7 +139,7 @@ public class TestSessionSupport {
     @Bean
     @Order(2)
     SecurityFilterChain testLemonSqueezyWebhookChain(
-            HttpSecurity http, ZeroMailCoreProperties coreProperties) throws Exception {
+            HttpSecurity http, BillingProperties billingProperties) throws Exception {
         return http.securityMatcher("/api/plan-upgrades/webhooks/lemon-squeezy")
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
@@ -151,7 +151,7 @@ public class TestSessionSupport {
                                         .anyRequest()
                                         .denyAll())
                 .addFilterBefore(
-                        new LemonSqueezyWebhookSignatureFilter(coreProperties),
+                        new LemonSqueezyWebhookSignatureFilter(billingProperties),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

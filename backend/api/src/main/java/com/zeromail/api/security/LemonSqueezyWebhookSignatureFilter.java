@@ -1,6 +1,6 @@
 package com.zeromail.api.security;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.billing.config.BillingProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
@@ -29,10 +29,10 @@ public class LemonSqueezyWebhookSignatureFilter extends OncePerRequestFilter {
     private static final String SIGNATURE_HEADER = "X-Signature";
     private static final String WEBHOOK_PATH = "/api/plan-upgrades/webhooks/lemon-squeezy";
 
-    private final ZeroMailCoreProperties.BillingProperties.LemonSqueezyProperties lemonSqueezy;
+    private final BillingProperties.LemonSqueezyProperties lemonSqueezy;
 
-    public LemonSqueezyWebhookSignatureFilter(ZeroMailCoreProperties coreProperties) {
-        this.lemonSqueezy = coreProperties.billing().lemonSqueezy();
+    public LemonSqueezyWebhookSignatureFilter(BillingProperties billingProperties) {
+        this.lemonSqueezy = billingProperties.lemonSqueezy();
     }
 
     @Override

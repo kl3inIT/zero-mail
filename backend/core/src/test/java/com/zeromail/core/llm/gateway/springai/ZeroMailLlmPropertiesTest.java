@@ -2,6 +2,7 @@ package com.zeromail.core.llm.gateway.springai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.billing.config.BillingProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import org.junit.jupiter.api.Test;
@@ -53,8 +54,7 @@ class ZeroMailLlmPropertiesTest {
                                     .isEqualTo("anthropic/claude-3-haiku");
                             assertThat(
                                             applicationContext
-                                                    .getBean(ZeroMailCoreProperties.class)
-                                                    .billing()
+                                                    .getBean(BillingProperties.class)
                                                     .cost()
                                                     .triageDeterministic())
                                     .isZero();
@@ -62,6 +62,6 @@ class ZeroMailLlmPropertiesTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(ZeroMailCoreProperties.class)
+    @EnableConfigurationProperties({ZeroMailCoreProperties.class, BillingProperties.class})
     static class ZeroMailLlmPropertiesBindingConfiguration {}
 }
