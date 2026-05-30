@@ -1,6 +1,6 @@
 package com.zeromail.core.gmail.persistence.crypto;
 
-import com.zeromail.core.crypto.config.CryptoProperties;
+import com.zeromail.core.shared.crypto.CryptoProperties;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
 import java.util.Base64;
 import java.util.Map;
