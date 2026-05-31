@@ -1,6 +1,6 @@
 package com.zeromail.core.admin.mkey.persistence;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
+import com.zeromail.core.llm.domain.KeyFormat;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 

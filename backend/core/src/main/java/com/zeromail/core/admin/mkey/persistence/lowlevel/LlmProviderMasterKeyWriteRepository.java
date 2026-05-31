@@ -1,8 +1,8 @@
 package com.zeromail.core.admin.mkey.persistence.lowlevel;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Objects;

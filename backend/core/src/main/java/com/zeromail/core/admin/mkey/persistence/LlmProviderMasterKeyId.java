@@ -1,6 +1,6 @@
 package com.zeromail.core.admin.mkey.persistence;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;

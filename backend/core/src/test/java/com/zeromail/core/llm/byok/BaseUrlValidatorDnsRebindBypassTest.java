@@ -3,9 +3,9 @@ package com.zeromail.core.llm.byok;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.net.httpserver.HttpServer;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import com.zeromail.core.llm.config.LlmProperties.ByokProperties;
+import com.zeromail.core.llm.domain.LlmProvider;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import com.zeromail.core.llm.gateway.springai.ConnectionTestResult;
 import com.zeromail.core.llm.gateway.springai.ModelsProbeClient;
 import com.zeromail.core.llm.gateway.springai.ProviderConnectionTester;

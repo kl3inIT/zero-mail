@@ -152,7 +152,7 @@ class SpendAggregateQueryServiceTest extends PostgresContainerTest {
                         now.plus(Duration.ofMinutes(1)),
                         Optional.of(
                                 java.util.Set.of(
-                                        com.zeromail.core.admin.mkey.domain.LlmProvider.ANTHROPIC)),
+                                        com.zeromail.core.llm.domain.LlmProvider.ANTHROPIC)),
                         Optional.empty());
         SpendDashboardSnapshot snapshot = spendAggregateQueryService.snapshot(anthropicOnly);
 

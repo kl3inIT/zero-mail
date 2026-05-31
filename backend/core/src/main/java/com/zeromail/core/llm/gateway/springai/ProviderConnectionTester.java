@@ -1,12 +1,12 @@
 package com.zeromail.core.llm.gateway.springai;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import com.zeromail.core.llm.byok.BaseUrlValidator;
 import com.zeromail.core.llm.byok.PinnedHttpClientFactory;
 import com.zeromail.core.llm.byok.PinnedHttpClientFactory.PinnedHttpClient;
 import com.zeromail.core.llm.byok.PinnedHttpClientFactory.PinnedHttpResponse;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;

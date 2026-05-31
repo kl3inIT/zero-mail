@@ -1,7 +1,7 @@
 package com.zeromail.core.admin.mkey.projection;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.time.Instant;
 
 public record MasterKeyMaskedRow(

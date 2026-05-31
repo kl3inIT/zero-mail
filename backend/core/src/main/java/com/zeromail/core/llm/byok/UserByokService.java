@@ -1,8 +1,8 @@
 package com.zeromail.core.llm.byok;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.llm.domain.LlmProvider;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import com.zeromail.core.llm.gateway.springai.ConnectionTestResult;
 import com.zeromail.core.llm.gateway.springai.ProviderConnectionTester;
 import com.zeromail.core.shared.exception.BusinessException;

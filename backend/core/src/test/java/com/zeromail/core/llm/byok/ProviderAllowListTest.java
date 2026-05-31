@@ -3,7 +3,7 @@ package com.zeromail.core.llm.byok;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;

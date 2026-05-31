@@ -7,9 +7,9 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

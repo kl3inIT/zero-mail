@@ -1,6 +1,6 @@
 package com.zeromail.core.admin.cat.persistence;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

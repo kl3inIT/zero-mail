@@ -1,6 +1,6 @@
 package com.zeromail.core.llm.byok;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.shared.exception.BusinessException;
 import com.zeromail.core.shared.exception.ErrorClass;
 import java.util.Set;

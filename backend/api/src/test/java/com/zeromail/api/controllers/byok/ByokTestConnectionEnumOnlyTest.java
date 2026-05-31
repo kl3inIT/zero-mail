@@ -5,9 +5,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import com.zeromail.core.llm.byok.BaseUrlValidator;
+import com.zeromail.core.llm.domain.LlmProvider;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import com.zeromail.core.llm.gateway.springai.ConnectionTestResult;
 import java.util.List;
 import java.util.Map;

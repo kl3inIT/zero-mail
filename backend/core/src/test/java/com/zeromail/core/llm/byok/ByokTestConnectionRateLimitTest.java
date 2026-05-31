@@ -6,8 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import com.zeromail.core.llm.gateway.springai.ConnectionTestResult;
 import com.zeromail.core.llm.gateway.springai.ProviderConnectionTester;
 import java.net.InetAddress;

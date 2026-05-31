@@ -1,6 +1,6 @@
 package com.zeromail.core.admin.cat.persistence.lowlevel;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;

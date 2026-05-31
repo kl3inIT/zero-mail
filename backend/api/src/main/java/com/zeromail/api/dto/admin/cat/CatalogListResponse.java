@@ -2,7 +2,7 @@ package com.zeromail.api.dto.admin.cat;
 
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.projection.PerFeatureCatalog;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.LinkedHashMap;
 import java.util.Map;

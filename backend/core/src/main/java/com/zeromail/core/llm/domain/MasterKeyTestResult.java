@@ -1,4 +1,4 @@
-package com.zeromail.core.admin.mkey.usecases;
+package com.zeromail.core.llm.domain;
 
 public enum MasterKeyTestResult {
     OK,

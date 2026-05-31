@@ -18,7 +18,7 @@ import com.zeromail.core.admin.cat.usecases.CatalogAdminService;
 import com.zeromail.core.admin.cat.usecases.CatalogSyncOrchestrator;
 import com.zeromail.core.admin.cat.usecases.FeatureDefaultTierService;
 import com.zeromail.core.admin.cat.usecases.ModelVerificationService;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;

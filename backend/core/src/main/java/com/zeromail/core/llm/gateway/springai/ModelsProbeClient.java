@@ -1,8 +1,8 @@
 package com.zeromail.core.llm.gateway.springai;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;

@@ -1,8 +1,8 @@
 package com.zeromail.core.llm.byok;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.llm.usecases.LlmCredentialSource;
 import com.zeromail.core.llm.usecases.LlmProviderCredential;
 import com.zeromail.core.llm.usecases.ResolvedLlmProviderCredential;

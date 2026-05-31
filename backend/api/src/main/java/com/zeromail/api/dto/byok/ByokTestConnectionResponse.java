@@ -1,7 +1,7 @@
 package com.zeromail.api.dto.byok;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import com.zeromail.core.llm.gateway.springai.ConnectionTestResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;

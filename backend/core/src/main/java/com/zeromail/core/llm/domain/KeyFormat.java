@@ -1,4 +1,4 @@
-package com.zeromail.core.admin.mkey.domain;
+package com.zeromail.core.llm.domain;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

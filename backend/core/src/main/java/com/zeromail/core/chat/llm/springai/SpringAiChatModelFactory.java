@@ -1,10 +1,10 @@
 package com.zeromail.core.chat.llm.springai;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
 import com.zeromail.core.chat.usecases.ChatProperties;
 import com.zeromail.core.llm.byok.ByokProviderResolver;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.llm.gateway.springai.SpringAiProviderChatClientFactory;
 import com.zeromail.core.llm.routing.LlmRuntimeTask;
 import com.zeromail.core.llm.usecases.LlmCredentialSource;

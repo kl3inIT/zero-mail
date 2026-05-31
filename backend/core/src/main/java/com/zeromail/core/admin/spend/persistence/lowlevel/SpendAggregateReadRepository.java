@@ -1,13 +1,13 @@
 package com.zeromail.core.admin.spend.persistence.lowlevel;
 
 import com.zeromail.core.admin.cat.domain.Feature;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.spend.projection.FeatureSpendBucket;
 import com.zeromail.core.admin.spend.projection.ProviderStackBarRow;
 import com.zeromail.core.admin.spend.projection.SpendCsvRow;
 import com.zeromail.core.admin.spend.projection.SpendKpis;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import com.zeromail.core.admin.spend.projection.TenantSpendBucket;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;

@@ -4,13 +4,13 @@ import static com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLo
 
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository;
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository.ProviderMetadata;
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyId;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
 import java.time.Clock;
 import java.time.Duration;

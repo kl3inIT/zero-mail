@@ -21,10 +21,12 @@
         displayName = "Chat (assistant streaming + confirmation)",
         allowedDependencies = {
             "llm",
+            "llm :: byok",
             "llm :: domain",
             "llm :: gateway.springai",
             "llm :: routing",
             "llm :: usecases",
+            "billing :: domain",
             "admin",
             "admin :: cat.events",
             "admin :: cat.usecases",

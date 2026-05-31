@@ -6,8 +6,8 @@ import com.zeromail.core.admin.cat.persistence.lowlevel.ModelCatalogWriteReposit
 import com.zeromail.core.admin.cat.projection.CatalogDiff;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.CatalogSyncJob;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.usecases.ProviderMasterKeyResolver;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.llm.gateway.springai.ModelsProbeClient;
 import java.time.Duration;
 import java.util.Comparator;
