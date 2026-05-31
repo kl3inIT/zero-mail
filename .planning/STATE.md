@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.2
-milestone_name: Admin Console Foundation + Settings UI
-status: executing
-stopped_at: Completed 09-07-PLAN.md
-last_updated: "2026-05-29T03:43:44Z"
-last_activity: 2026-05-29
+milestone_name: — Admin Console + User Settings UI
+status: "Phase 9 shipped — PR #74"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-05-31T09:13:25.539Z"
+last_activity: 2026-05-31
 progress:
   total_phases: 4
   completed_phases: 3
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
 Plan: 6 of 6
-Status: Ready to resume 08.1-06 runtime outbound execution
-Last activity: 2026-05-31 - Completed quick task 260531-lpx: flatten /settings to /ai-style layout + remove duplicated settings + delete /settings/privacy
+Status: Phase 9 shipped — PR #74
+Last activity: 2026-05-31
 
 ## Current Milestone Roadmap
 
