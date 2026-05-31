@@ -141,7 +141,7 @@ public class RulePreviewService {
                         tenantId, ruleId, requestedSampleSize, evaluateSemanticIntents));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             MatcherNode matcherNode,
@@ -150,7 +150,7 @@ public class RulePreviewService {
         return previewDraft(tenantId, matcherNode, actionIntents, requestedSampleSize, false);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             MatcherNode matcherNode,
@@ -166,7 +166,7 @@ public class RulePreviewService {
                         evaluateSemanticIntents));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId, String matcherAst, String actionIntents, Integer requestedSampleSize) {
         return previewDraft(tenantId, matcherAst, actionIntents, requestedSampleSize, false);
@@ -176,8 +176,14 @@ public class RulePreviewService {
      * Preview against every currently-enabled rule for a tenant, with no per-rule focus and no
      * markPreviewSucceeded bookkeeping. Used by the rules /test tab where the user wants to see how
      * their current rule set behaves on real Gmail without first picking a rule.
+     *
+     * <p>Read-write (not {@code readOnly = true}) on purpose: when {@code evaluateSemanticIntents}
+     * is set, the LLM gateway records credit-ledger consumption ({@code settle}/{@code release} run
+     * with {@code Propagation.REQUIRED}, joining this transaction). A read-only transaction would
+     * reject those INSERTs with "cannot execute INSERT in a read-only transaction". This matches
+     * the read-write {@link #previewSavedRule} entry points.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewAllEnabled(
             UUID tenantId, Integer requestedSampleSize, boolean evaluateSemanticIntents) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -211,7 +217,7 @@ public class RulePreviewService {
                 sampleSize, previewCandidates, previewInputs, false, semanticOverridesByMessage);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             String matcherAst,
@@ -226,7 +232,7 @@ public class RulePreviewService {
                 evaluateSemanticIntents);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RuleCustomPreviewResult previewCustomMail(
             UUID tenantId, String subject, String body, List<UUID> requestedRuleIds) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
