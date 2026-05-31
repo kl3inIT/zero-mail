@@ -74,7 +74,8 @@ class SpringAiObservationDisabledTest extends ApiPostgresTestBase {
     private static Path sharedPrivacyYaml() {
         Path current = Path.of("").toAbsolutePath();
         while (current != null) {
-            Path candidate = current.resolve("backend/core/src/main/resources/zero-mail-shared.yml");
+            Path candidate =
+                    current.resolve("backend/core/src/main/resources/zero-mail-shared.yml");
             if (Files.exists(candidate)) {
                 return candidate;
             }
