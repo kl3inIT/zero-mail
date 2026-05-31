@@ -422,14 +422,16 @@ export function RulesWorkspace() {
     });
   }
 
-  async function handlePreview(options: { evaluateSemanticIntents?: boolean } = {}) {
-    const evaluateSemanticIntents = options.evaluateSemanticIntents ?? false;
+  async function handlePreview() {
     dispatch({ type: 'previewStarted' });
 
     try {
+      // Always evaluate semantic intents: the preview runs the deterministic
+      // matchers and the LLM semantic check in a single pass. Rules with
+      // natural-language conditions resolve here instead of staying "deferred".
       const result = await previewAllEnabledMutation.mutateAsync({
         sampleSize: state.sampleSize,
-        evaluateSemanticIntents,
+        evaluateSemanticIntents: true,
       });
       dispatch({ type: 'previewSucceeded', preview: result });
     } catch (error) {
@@ -440,12 +442,12 @@ export function RulesWorkspace() {
         });
         return;
       }
+      if (isInsufficientCredit(error)) {
+        dispatch({ type: 'previewFailed', message: t('errors.rules.insufficientCredits') });
+        return;
+      }
       dispatch({ type: 'previewFailed', message: t('errors.rules.preview.generic') });
     }
-  }
-
-  function handleEvaluateSemanticIntents() {
-    void handlePreview({ evaluateSemanticIntents: true });
   }
 
   async function handleToggleRule(rule: RuleResponse) {
@@ -479,7 +481,11 @@ export function RulesWorkspace() {
         body: input.body,
       });
       setCustomMailResult(response);
-    } catch {
+    } catch (error) {
+      if (isInsufficientCredit(error)) {
+        setCustomMailError(t('errors.rules.insufficientCredits'));
+        return;
+      }
       setCustomMailError(t('errors.rules.testCustom.generic'));
     }
   }
@@ -577,7 +583,7 @@ export function RulesWorkspace() {
               <TabsTrigger value="custom" className="gap-2">
                 {t('rules.tabs.testCustom')}
                 <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                  {t('rules.tabs.freeBadge')}
+                  {t('rules.tabs.creditBadge')}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="gmail" className="gap-2">
@@ -612,14 +618,10 @@ export function RulesWorkspace() {
                 isPreviewing={previewAllEnabledMutation.isPending}
                 canPreview={canPreview}
                 sampleSize={state.sampleSize}
-                isEvaluatingSemanticIntents={
-                  previewAllEnabledMutation.isPending && Boolean(state.preview)
-                }
                 onSampleSizeChange={(sampleSize) =>
                   dispatch({ type: 'sampleSizeChanged', sampleSize })
                 }
                 onPreview={() => handlePreview()}
-                onEvaluateSemanticIntents={handleEvaluateSemanticIntents}
               />
             </TabsContent>
           </Tabs>

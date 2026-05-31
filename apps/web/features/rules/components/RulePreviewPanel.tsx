@@ -1,21 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Sparkles } from 'lucide-react';
+import { AlertTriangle, Archive, CheckCircle2, Loader2, Play } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/states/EmptyState';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { RulePreviewResponse } from '@/features/rules/api/rules-api';
 import { cn } from '@/lib/utils';
 
@@ -29,10 +21,8 @@ type Props = {
   isPreviewing: boolean;
   canPreview: boolean;
   sampleSize: SampleSize;
-  isEvaluatingSemanticIntents: boolean;
   onSampleSizeChange: (sampleSize: SampleSize) => void;
   onPreview: () => void;
-  onEvaluateSemanticIntents: () => void;
 };
 
 const SAMPLE_SIZES = [10, 20] as const;
@@ -45,10 +35,8 @@ export function RulePreviewPanel({
   isPreviewing,
   canPreview,
   sampleSize,
-  isEvaluatingSemanticIntents,
   onSampleSizeChange,
   onPreview,
-  onEvaluateSemanticIntents,
 }: Props) {
   const t = useTranslations();
   const rows = preview?.rows ?? [];
@@ -61,7 +49,9 @@ export function RulePreviewPanel({
     <Card>
       <CardHeader>
         <CardTitle>{t('rules.preview.title')}</CardTitle>
-        <CardDescription>{t('rules.preview.empty.body')}</CardDescription>
+        <CardDescription>
+          {t('rules.preview.testingEnabledCount', { count: enabledRulesCount })}
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -125,7 +115,7 @@ export function RulePreviewPanel({
         ) : (
           <div className="space-y-4">
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-3 gap-2">
                 <StatCard
                   value={summary?.sampledMessageCount ?? rows.length}
                   label={t('rules.preview.stat.sampled')}
@@ -134,10 +124,6 @@ export function RulePreviewPanel({
                   value={summary?.matchedCount ?? 0}
                   label={t('rules.preview.stat.matched')}
                   variant="primary"
-                />
-                <StatCard
-                  value={summary?.deferredCount ?? 0}
-                  label={t('rules.preview.stat.deferred')}
                 />
                 <StatCard
                   value={summary?.conflictCount ?? 0}
@@ -167,154 +153,98 @@ export function RulePreviewPanel({
               </Alert>
             )}
 
-            {(summary?.deferredCount ?? 0) > 0 && (
-              <Alert variant="warning" className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                <div className="flex-1 space-y-1">
-                  <AlertTitle>
-                    {t('rules.preview.llmCtaTitle', { count: summary?.deferredCount ?? 0 })}
-                  </AlertTitle>
-                  <AlertDescription>
-                    {t('rules.preview.llmCtaBody', {
-                      credits: summary?.sampledMessageCount ?? rows.length,
-                    })}
-                  </AlertDescription>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={isEvaluatingSemanticIntents}
-                  onClick={onEvaluateSemanticIntents}
-                  data-testid="rules-preview-evaluate-semantic"
-                >
-                  {isEvaluatingSemanticIntents ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Sparkles className="size-4" aria-hidden="true" />
-                  )}
-                  {isEvaluatingSemanticIntents
-                    ? t('rules.preview.llmRunning')
-                    : t('rules.preview.llmCta', {
-                        credits: summary?.sampledMessageCount ?? rows.length,
-                      })}
-                </Button>
-              </Alert>
-            )}
+            <div className="overflow-hidden rounded-lg border">
+              {rows.map((row) => {
+                const visibleLabels = (row.gmailLabelIds ?? []).filter(isVisibleLabel);
+                const proposedActions = (row.proposedActionChips ?? [])
+                  .map((chip) => {
+                    const label = chip.safeLabel ?? chip.actionTypeId ?? '';
+                    return label.startsWith('label:') ? label.replace('label:', '') : label;
+                  })
+                  .filter(Boolean);
+                const evidenceChips = (row.matchedEvidenceChips ?? [])
+                  .map((chip) => chip.reasonKey ?? chip.matcherNodeId ?? '')
+                  .filter(Boolean);
+                const hasSecondaryInfo =
+                  proposedActions.length > 0 ||
+                  evidenceChips.length > 0 ||
+                  (row.conflictChips ?? []).length > 0;
 
-            <TooltipProvider>
-              <div className="overflow-hidden rounded-lg border">
-                {rows.map((row) => {
-                  const visibleLabels = (row.gmailLabelIds ?? []).filter(isVisibleLabel);
-                  const proposedActions = (row.proposedActionChips ?? [])
-                    .map((chip) => {
-                      const label = chip.safeLabel ?? chip.actionTypeId ?? '';
-                      return label.startsWith('label:') ? label.replace('label:', '') : label;
-                    })
-                    .filter(Boolean);
-                  const evidenceChips = (row.matchedEvidenceChips ?? [])
-                    .map((chip) => chip.reasonKey ?? chip.matcherNodeId ?? '')
-                    .filter(Boolean);
-                  const hasSecondaryInfo =
-                    proposedActions.length > 0 ||
-                    evidenceChips.length > 0 ||
-                    (row.deferredEvidenceChips ?? []).length > 0 ||
-                    (row.conflictChips ?? []).length > 0;
-
-                  return (
-                    <article
-                      key={row.gmailMessageId ?? row.gmailThreadId}
+                return (
+                  <article
+                    key={row.gmailMessageId ?? row.gmailThreadId}
+                    className={cn(
+                      'hover:bg-muted/30 flex items-start gap-3 border-b px-3 py-2.5 text-sm transition-colors last:border-b-0',
+                      !row.matched && 'opacity-50',
+                    )}
+                  >
+                    <div
                       className={cn(
-                        'hover:bg-muted/30 flex items-start gap-3 border-b px-3 py-2.5 text-sm transition-colors last:border-b-0',
-                        !row.matched && 'opacity-50',
+                        'mt-1.5 size-1.5 shrink-0 rounded-full',
+                        row.matched ? 'bg-green' : 'bg-muted-foreground/20',
                       )}
-                    >
-                      <div
-                        className={cn(
-                          'mt-1.5 size-1.5 shrink-0 rounded-full',
-                          row.matched ? 'bg-green' : 'bg-muted-foreground/20',
-                        )}
-                        aria-hidden="true"
-                      />
-                      <div className="w-36 shrink-0">
-                        <p className="truncate font-medium">
-                          {senderDisplayName(row.sanitizedSenderEmail ?? row.sanitizedSenderDomain)}
-                        </p>
-                        <p className="text-muted-foreground truncate text-xs">
-                          {row.sanitizedSenderDomain}
-                        </p>
+                      aria-hidden="true"
+                    />
+                    <div className="w-36 shrink-0">
+                      <p className="truncate font-medium">
+                        {senderDisplayName(row.sanitizedSenderEmail ?? row.sanitizedSenderDomain)}
+                      </p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {row.sanitizedSenderDomain}
+                      </p>
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex min-w-0 flex-wrap items-center gap-1">
+                        {visibleLabels.map((labelId) => (
+                          <GmailLabelChip key={labelId} labelId={labelId} />
+                        ))}
+                        <span className="min-w-0 flex-1 truncate">
+                          {row.sanitizedSubjectExcerpt}
+                        </span>
                       </div>
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        <div className="flex min-w-0 flex-wrap items-center gap-1">
-                          {visibleLabels.map((labelId) => (
-                            <GmailLabelChip key={labelId} labelId={labelId} />
+                      {hasSecondaryInfo && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          {proposedActions.map((action) => (
+                            <span
+                              key={action}
+                              className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            >
+                              <Archive className="size-2.5 shrink-0" aria-hidden="true" />
+                              {action}
+                            </span>
                           ))}
-                          <span className="min-w-0 flex-1 truncate">
-                            {row.sanitizedSubjectExcerpt}
-                          </span>
+                          {evidenceChips.map((evidence) => (
+                            <span
+                              key={evidence}
+                              className="bg-muted text-muted-foreground rounded-sm px-1.5 py-0.5 text-[10px]"
+                            >
+                              {evidence}
+                            </span>
+                          ))}
+                          {row.conflictChips?.map((chip) => (
+                            <span
+                              key={chip.conflictTypeId}
+                              className="bg-warning/10 text-warning rounded-sm px-1.5 py-0.5 text-[10px]"
+                            >
+                              {chip.conflictTypeId}
+                            </span>
+                          ))}
                         </div>
-                        {hasSecondaryInfo && (
-                          <div className="flex flex-wrap items-center gap-1">
-                            {proposedActions.map((action) => (
-                              <span
-                                key={action}
-                                className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                              >
-                                <Archive className="size-2.5 shrink-0" aria-hidden="true" />
-                                {action}
-                              </span>
-                            ))}
-                            {evidenceChips.map((evidence) => (
-                              <span
-                                key={evidence}
-                                className="bg-muted text-muted-foreground rounded-sm px-1.5 py-0.5 text-[10px]"
-                              >
-                                {evidence}
-                              </span>
-                            ))}
-                            {row.deferredEvidenceChips?.map((chip) => (
-                              <Tooltip key={chip.matcherNodeId ?? chip.reasonKey}>
-                                <TooltipTrigger
-                                  render={
-                                    <span className="cursor-help rounded-sm bg-violet-50 px-1.5 py-0.5 text-[10px] text-violet-600 dark:bg-violet-900/20 dark:text-violet-400" />
-                                  }
-                                >
-                                  {t('rules.preview.deferredSemantic')}
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {t('rules.preview.deferredTooltip')}
-                                </TooltipContent>
-                              </Tooltip>
-                            ))}
-                            {row.conflictChips?.map((chip) => (
-                              <span
-                                key={chip.conflictTypeId}
-                                className="bg-warning/10 text-warning rounded-sm px-1.5 py-0.5 text-[10px]"
-                              >
-                                {chip.conflictTypeId}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <time
-                        className="text-muted-foreground w-12 shrink-0 pt-0.5 text-right text-xs"
-                        dateTime={row.internalDate}
-                      >
-                        {formatDate(row.internalDate)}
-                      </time>
-                    </article>
-                  );
-                })}
-              </div>
-            </TooltipProvider>
+                      )}
+                    </div>
+                    <time
+                      className="text-muted-foreground w-12 shrink-0 pt-0.5 text-right text-xs"
+                      dateTime={row.internalDate}
+                    >
+                      {formatDate(row.internalDate)}
+                    </time>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         )}
       </CardContent>
-
-      <CardFooter>
-        <p className="text-muted-foreground min-w-0 truncate text-xs">
-          {t('rules.preview.testingEnabledCount', { count: enabledRulesCount })}
-        </p>
-      </CardFooter>
     </Card>
   );
 }

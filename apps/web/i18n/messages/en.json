@@ -1024,7 +1024,7 @@
       "not_found": "This rule could not be found. Reload the rules list.",
       "notFound": "This rule could not be found. Reload the rules list.",
       "preview": {
-        "generic": "Preview could not finish. Check Gmail connection and credits, then preview the rule again.",
+        "generic": "Preview could not finish due to a server error. Please try again in a moment.",
         "invalid_sample_size": "Preview sample size must be 10, 20, 50, or 100.",
         "required": "Preview the current rule version before enabling it."
       },
@@ -2254,7 +2254,7 @@
       "creditBadge": "Uses credits",
       "customer": "Customer escalations",
       "freeBadge": "Free",
-      "gmailCreditWarningBody": "When a rule uses semantic LLM matchers, each test consumes platform credits. The Custom email tab tests rule logic for free.",
+      "gmailCreditWarningBody": "Each run samples your recent Gmail and calls the LLM for semantic matchers, so it consumes platform credits. Your Gmail is not modified.",
       "gmailCreditWarningTitle": "Real Gmail test uses credits",
       "history": "History",
       "historyIntro": "Every AI action applied to your Gmail, with the matching rule, reason, and a 30-day undo window.",
@@ -2277,7 +2277,7 @@
         "body": "Enter a subject and body, then click \"Test\" to see which rules would match.",
         "heading": "No results yet"
       },
-      "intro": "Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed.",
+      "intro": "Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed, but rules with semantic matchers call the LLM, so each run uses credits.",
       "noSelectedHint": "No rules selected — all enabled rules will be tested.",
       "openCta": "Test with custom email",
       "result": {
