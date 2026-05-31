@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
 Plan: 6 of 6
 Status: Ready to resume 08.1-06 runtime outbound execution
-Last activity: 2026-05-31 - Completed quick task 260530-w9t: backend config/properties redesign (prefix unify, god-object split, shared AI block, crypto relocation)
+Last activity: 2026-05-31 - Completed quick task 260531-lpx: flatten /settings to /ai-style layout + remove duplicated settings + delete /settings/privacy
 
 ## Current Milestone Roadmap
 
@@ -407,6 +407,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260531-lpx | Flatten /settings to /ai-style section layout (no tabs), inline language+theme segmented controls, consolidate daily digest into /ai, remove duplicated cards (credit/pause/provider/notifications), delete /settings/privacy route + features/privacy + sidebar item | 2026-05-31 | 676e36b9 | Verified | [260531-lpx-flatten-settings-page](./quick/260531-lpx-flatten-settings-page/) |
 | 260530-w9t | Redesign backend config/properties to Spring Boot 4 best practices: unify zeromail→zero-mail prefix, split god-object into per-feature records, centralize Spring-AI privacy block via zero-mail-shared.yml, relocate CryptoProperties to shared.crypto | 2026-05-31 | 2bc7cd88 | Verified | [260530-w9t-redesign-backend-config-properties-to-20](./quick/260530-w9t-redesign-backend-config-properties-to-20/) |
 | 260530-vmp | Reorganize sidebar nav into 3 frequency/intent groups (Daily / Automation / Tools); move Rules + AI config into one Automation group | 2026-05-30 | aa0b7f05 | Verified | [260530-vmp-reorganize-sidebar-nav-into-3-frequency-](./quick/260530-vmp-reorganize-sidebar-nav-into-3-frequency-/) |
 | 260526-so3 | Tighten app shell content gutter near sidebar so protected content sits closer to the menu | 2026-05-26 | pending | Verified | [260526-so3-tighten-app-shell-content-gutter-near-si](./quick/260526-so3-tighten-app-shell-content-gutter-near-si/) |
