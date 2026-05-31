@@ -205,6 +205,24 @@ export async function applyRuleTestLabels(
   return unwrap(result, `/api/rules/test/apply-labels failed: ${result.response.status}`);
 }
 
+export type RuleTestMessagesResponse = components['schemas']['RuleTestMessagesResponse'];
+export type RuleTestMessage = RuleTestMessagesResponse['messages'][number];
+export type RuleTestMessageRequest = components['schemas']['RuleTestMessageRequest'];
+
+export async function listTestMessages(sampleSize: number): Promise<RuleTestMessagesResponse> {
+  const result = await api.GET('/api/rules/test/messages', {
+    params: { query: { sampleSize } },
+  });
+  return unwrap(result, `/api/rules/test/messages failed: ${result.response.status}`);
+}
+
+export async function testSingleMessage(
+  payload: RuleTestMessageRequest,
+): Promise<RulePreviewResponse> {
+  const result = await api.POST('/api/rules/test/message', { body: payload });
+  return unwrap(result, `/api/rules/test/message failed: ${result.response.status}`);
+}
+
 export type RuleCustomPreviewRequest = components['schemas']['RuleCustomPreviewRequest'];
 export type RuleCustomPreviewEntry =
   components['schemas']['RuleCustomPreviewResponse']['entries'][number];

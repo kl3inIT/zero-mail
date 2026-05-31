@@ -1041,6 +1041,9 @@
         "generic": "Could not run the custom-mail test. Please try again.",
         "subjectOrBodyRequired": "Enter at least a subject or a body."
       },
+      "testGmail": {
+        "generic": "Could not test this email right now. Please try again in a moment."
+      },
       "unsafe_action": "This rule asks for an action that is not allowed in v1.",
       "version_mismatch": "The rule changed before the action finished. Reload and try again.",
       "versionMismatch": "The rule changed before the action finished. Reload and try again."
@@ -2297,6 +2300,17 @@
       "subjectLabel": "Subject",
       "subjectPlaceholder": "Example: Stripe receipt May — $49",
       "title": "Test with a custom email"
+    },
+    "testGmail": {
+      "empty": {
+        "body": "Could not load recent Gmail emails. Click \"Reload\" to try again.",
+        "heading": "No recent emails"
+      },
+      "reload": "Reload",
+      "retestRow": "Retest",
+      "stop": "Stop",
+      "testAll": "Test all",
+      "testRow": "Test"
     },
     "title": "Sentences, not filters."
   },

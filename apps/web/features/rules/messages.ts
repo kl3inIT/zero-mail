@@ -55,6 +55,34 @@ export const rulesMessages = {
     vi: 'Tốn credit',
     en: 'Uses credits',
   },
+  'rules.testGmail.reload': {
+    vi: 'Tải lại',
+    en: 'Reload',
+  },
+  'rules.testGmail.testAll': {
+    vi: 'Test tất cả',
+    en: 'Test all',
+  },
+  'rules.testGmail.stop': {
+    vi: 'Dừng',
+    en: 'Stop',
+  },
+  'rules.testGmail.testRow': {
+    vi: 'Test',
+    en: 'Test',
+  },
+  'rules.testGmail.retestRow': {
+    vi: 'Test lại',
+    en: 'Retest',
+  },
+  'rules.testGmail.empty.heading': {
+    vi: 'Không có email gần đây',
+    en: 'No recent emails',
+  },
+  'rules.testGmail.empty.body': {
+    vi: 'Không tải được email Gmail gần đây. Bấm "Tải lại" để thử lại.',
+    en: 'Could not load recent Gmail emails. Click "Reload" to try again.',
+  },
   'rules.tabs.gmailCreditWarningTitle': {
     vi: 'Test trên Gmail thật sẽ tốn credit',
     en: 'Real Gmail test uses credits',
@@ -882,6 +910,10 @@ export const rulesMessages = {
   'errors.rules.preview.generic': {
     vi: 'Không thể chạy thử do lỗi máy chủ. Vui lòng thử lại sau giây lát.',
     en: 'Preview could not finish due to a server error. Please try again in a moment.',
+  },
+  'errors.rules.testGmail.generic': {
+    vi: 'Không thể test email này lúc này. Vui lòng thử lại sau giây lát.',
+    en: 'Could not test this email right now. Please try again in a moment.',
   },
   'errors.rules.applyLabels.generic': {
     vi: 'Không thể gắn nhãn lên Gmail lúc này. Kiểm tra kết nối Gmail rồi thử lại.',

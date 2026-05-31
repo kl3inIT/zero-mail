@@ -1041,6 +1041,9 @@
         "generic": "Không thể chạy thử lúc này. Hãy thử lại.",
         "subjectOrBodyRequired": "Hãy nhập ít nhất tiêu đề hoặc nội dung email."
       },
+      "testGmail": {
+        "generic": "Không thể test email này lúc này. Vui lòng thử lại sau giây lát."
+      },
       "unsafe_action": "Quy tắc này yêu cầu hành động không được phép trong v1.",
       "version_mismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại.",
       "versionMismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại."
@@ -2297,6 +2300,17 @@
       "subjectLabel": "Tiêu đề",
       "subjectPlaceholder": "Ví dụ: Hóa đơn Stripe tháng 5 — $49",
       "title": "Thử với email tùy chỉnh"
+    },
+    "testGmail": {
+      "empty": {
+        "body": "Không tải được email Gmail gần đây. Bấm \"Tải lại\" để thử lại.",
+        "heading": "Không có email gần đây"
+      },
+      "reload": "Tải lại",
+      "retestRow": "Test lại",
+      "stop": "Dừng",
+      "testAll": "Test tất cả",
+      "testRow": "Test"
     },
     "title": "Câu văn, không phải bộ lọc."
   },

@@ -6,4 +6,5 @@ export const rulesKeys = {
   catalogExamples: (locale: string) => [...rulesKeys.catalog(), 'examples', locale] as const,
   catalogActions: (locale: string) => [...rulesKeys.catalog(), 'actions', locale] as const,
   automationSettings: () => [...rulesKeys.all, 'automation-settings'] as const,
+  testMessages: (sampleSize: number) => [...rulesKeys.all, 'test-messages', sampleSize] as const,
 } as const;

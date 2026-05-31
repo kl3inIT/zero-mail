@@ -2743,6 +2743,94 @@
         }
       }
     },
+    "/api/rules/test/message": {
+      "post": {
+        "tags": ["rules"],
+        "operationId": "testSingleMessage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleTestMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/rules/templates/{templateKey}/materialize": {
       "post": {
         "tags": ["rules"],
@@ -6274,6 +6362,95 @@
         }
       }
     },
+    "/api/rules/test/messages": {
+      "get": {
+        "tags": ["rules"],
+        "operationId": "listTestMessages",
+        "parameters": [
+          {
+            "name": "sampleSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleTestMessagesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/rules/templates": {
       "get": {
         "tags": ["rules"],
@@ -8475,6 +8652,20 @@
         },
         "required": ["impactSummary", "rows", "savedRuleMarkedPreviewed"]
       },
+      "RuleTestMessageRequest": {
+        "type": "object",
+        "properties": {
+          "gmailMessageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "gmailThreadId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["gmailMessageId", "gmailThreadId"]
+      },
       "RuleTemplateMaterializationResponse": {
         "type": "object",
         "properties": {
@@ -8755,10 +8946,10 @@
           "inline": {
             "type": "boolean"
           },
-          "formData": {
+          "attachment": {
             "type": "boolean"
           },
-          "attachment": {
+          "formData": {
             "type": "boolean"
           }
         }
@@ -8871,6 +9062,15 @@
           "contentType": {
             "$ref": "#/components/schemas/MediaType"
           },
+          "origin": {
+            "type": "string"
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpRange"
+            }
+          },
           "acceptLanguage": {
             "type": "array",
             "items": {
@@ -8896,9 +9096,28 @@
             "type": "string",
             "writeOnly": true
           },
+          "acceptLanguageAsLocales": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "accessControlMaxAge": {
             "type": "integer",
             "format": "int64"
+          },
+          "contentDisposition": {
+            "$ref": "#/components/schemas/ContentDisposition"
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "acceptCharset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "ifNoneMatch": {
             "type": "array",
@@ -8909,41 +9128,13 @@
           "contentLanguage": {
             "type": "string"
           },
-          "acceptCharset": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "acceptLanguageAsLocales": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "contentDisposition": {
-            "$ref": "#/components/schemas/ContentDisposition"
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
           "cacheControl": {
             "type": "string"
           },
-          "origin": {
-            "type": "string"
-          },
-          "range": {
+          "accept": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/HttpRange"
-            }
-          },
-          "ifMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/MediaType"
             }
           },
           "allow": {
@@ -8953,35 +9144,29 @@
             },
             "uniqueItems": true
           },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ifMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "etag": {
             "type": "string"
           },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
-          "accessControlRequestMethod": {
-            "$ref": "#/components/schemas/HttpMethod"
+          "accessControlRequestHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "accessControlAllowCredentials": {
             "type": "boolean"
           },
-          "accessControlAllowOrigin": {
-            "type": "string"
-          },
           "accessControlExposeHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlAllowHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlRequestHeaders": {
             "type": "array",
             "items": {
               "type": "string"
@@ -8993,15 +9178,17 @@
               "$ref": "#/components/schemas/HttpMethod"
             }
           },
-          "accept": {
+          "accessControlAllowOrigin": {
+            "type": "string"
+          },
+          "accessControlAllowHeaders": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MediaType"
+              "type": "string"
             }
           },
-          "expires": {
-            "type": "integer",
-            "format": "int64"
+          "accessControlRequestMethod": {
+            "$ref": "#/components/schemas/HttpMethod"
           },
           "pragma": {
             "type": "string"
@@ -9014,6 +9201,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
           }
         }
       },
@@ -9044,11 +9235,11 @@
           "concrete": {
             "type": "boolean"
           },
-          "subtypeSuffix": {
-            "type": "string"
-          },
           "wildcardSubtype": {
             "type": "boolean"
+          },
+          "subtypeSuffix": {
+            "type": "string"
           },
           "wildcardType": {
             "type": "boolean"
@@ -9713,6 +9904,57 @@
           }
         },
         "required": ["materialization", "rules", "templates"]
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "gmailMessageId": {
+            "type": "string"
+          },
+          "gmailThreadId": {
+            "type": "string"
+          },
+          "sanitizedSenderEmail": {
+            "type": "string"
+          },
+          "sanitizedSenderDomain": {
+            "type": "string"
+          },
+          "sanitizedSubjectExcerpt": {
+            "type": "string"
+          },
+          "internalDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "gmailLabelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "gmailLabelIds",
+          "gmailMessageId",
+          "gmailThreadId",
+          "internalDate",
+          "sanitizedSenderDomain",
+          "sanitizedSenderEmail",
+          "sanitizedSubjectExcerpt"
+        ]
+      },
+      "RuleTestMessagesResponse": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          }
+        },
+        "required": ["messages"]
       },
       "RuleCatalogExampleResponse": {
         "type": "object",

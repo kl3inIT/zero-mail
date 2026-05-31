@@ -7,7 +7,6 @@ import { Plus } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +20,7 @@ import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
-import { RulePreviewPanel } from '@/features/rules/components/RulePreviewPanel';
+import { GmailRuleTester } from '@/features/rules/components/GmailRuleTester';
 import { AuditLog } from '@/features/triage/components/AuditLog';
 import {
   compiledResponseToRequest,
@@ -36,7 +35,6 @@ import {
   useCompileRule,
   useCreateRule,
   useDeleteRule,
-  usePreviewAllEnabledRules,
   usePreviewCustomMail,
   useRules,
   useUpdateRule,
@@ -266,7 +264,6 @@ export function RulesWorkspace() {
   const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
   const deleteRuleMutation = useDeleteRule();
-  const previewAllEnabledMutation = usePreviewAllEnabledRules();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const previewCustomMailMutation = usePreviewCustomMail();
 
@@ -422,34 +419,6 @@ export function RulesWorkspace() {
     });
   }
 
-  async function handlePreview() {
-    dispatch({ type: 'previewStarted' });
-
-    try {
-      // Always evaluate semantic intents: the preview runs the deterministic
-      // matchers and the LLM semantic check in a single pass. Rules with
-      // natural-language conditions resolve here instead of staying "deferred".
-      const result = await previewAllEnabledMutation.mutateAsync({
-        sampleSize: state.sampleSize,
-        evaluateSemanticIntents: true,
-      });
-      dispatch({ type: 'previewSucceeded', preview: result });
-    } catch (error) {
-      if (isGmailUnavailable(error)) {
-        dispatch({
-          type: 'previewGmailUnavailable',
-          message: t('errors.rules.gmail.unavailable'),
-        });
-        return;
-      }
-      if (isInsufficientCredit(error)) {
-        dispatch({ type: 'previewFailed', message: t('errors.rules.insufficientCredits') });
-        return;
-      }
-      dispatch({ type: 'previewFailed', message: t('errors.rules.preview.generic') });
-    }
-  }
-
   async function handleToggleRule(rule: RuleResponse) {
     if (!rule.ruleId) return;
     dispatch({ type: 'ruleTogglePending', ruleId: rule.ruleId });
@@ -491,7 +460,6 @@ export function RulesWorkspace() {
   }
 
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
-  const canPreview = enabledRulesCount > 0;
   return (
     <div className="space-y-6">
       <div
@@ -600,19 +568,7 @@ export function RulesWorkspace() {
                 <AlertTitle>{t('rules.tabs.gmailCreditWarningTitle')}</AlertTitle>
                 <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
               </Alert>
-              <RulePreviewPanel
-                enabledRulesCount={enabledRulesCount}
-                preview={state.preview}
-                previewError={state.previewError}
-                gmailUnavailableError={state.gmailUnavailableError}
-                isPreviewing={previewAllEnabledMutation.isPending}
-                canPreview={canPreview}
-                sampleSize={state.sampleSize}
-                onSampleSizeChange={(sampleSize) =>
-                  dispatch({ type: 'sampleSizeChanged', sampleSize })
-                }
-                onPreview={() => handlePreview()}
-              />
+              <GmailRuleTester enabledRulesCount={enabledRulesCount} />
             </TabsContent>
           </Tabs>
         </section>
@@ -736,10 +692,6 @@ function apiErrorCode(error: unknown): string | undefined {
 
 function isInsufficientCredit(error: unknown): boolean {
   return apiErrorCode(error) === ErrorCode.BillingInsufficient;
-}
-
-function isGmailUnavailable(error: unknown): boolean {
-  return apiErrorCode(error) === ErrorCode.RulesGmailUnavailable;
 }
 
 function maybeApiError(error: unknown): ApiError | undefined {
