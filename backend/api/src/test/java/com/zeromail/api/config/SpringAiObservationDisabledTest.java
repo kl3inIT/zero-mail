@@ -45,10 +45,14 @@ class SpringAiObservationDisabledTest extends ApiPostgresTestBase {
                 .noneMatch(
                         className -> className.endsWith("ChatClientCompletionObservationHandler"));
 
-        Properties workerProperties = yamlProperties(workerApplicationYaml());
-        assertThat(workerProperties.getProperty(SpringAiObservationProperties.LOG_PROMPT_KEY))
+        // The prompt/completion suppression keys are centralized in backend/core's
+        // zero-mail-shared.yml, imported by both the api and worker runtimes. Assert the
+        // shared file declares them false so every runtime inherits the privacy invariant
+        // statically, not only via runtime property injection.
+        Properties sharedProperties = yamlProperties(sharedPrivacyYaml());
+        assertThat(sharedProperties.getProperty(SpringAiObservationProperties.LOG_PROMPT_KEY))
                 .isEqualTo("false");
-        assertThat(workerProperties.getProperty(SpringAiObservationProperties.LOG_COMPLETION_KEY))
+        assertThat(sharedProperties.getProperty(SpringAiObservationProperties.LOG_COMPLETION_KEY))
                 .isEqualTo("false");
     }
 
@@ -67,15 +71,15 @@ class SpringAiObservationDisabledTest extends ApiPostgresTestBase {
                 .toList();
     }
 
-    private static Path workerApplicationYaml() {
+    private static Path sharedPrivacyYaml() {
         Path current = Path.of("").toAbsolutePath();
         while (current != null) {
-            Path candidate = current.resolve("backend/worker/src/main/resources/application.yml");
+            Path candidate = current.resolve("backend/core/src/main/resources/zero-mail-shared.yml");
             if (Files.exists(candidate)) {
                 return candidate;
             }
             current = current.getParent();
         }
-        throw new IllegalStateException("Unable to locate worker application.yml");
+        throw new IllegalStateException("Unable to locate zero-mail-shared.yml");
     }
 }
