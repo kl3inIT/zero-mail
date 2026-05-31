@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
 Plan: 6 of 6
 Status: Phase 9 shipped — PR #74
-Last activity: 2026-05-31
+Last activity: 2026-05-31 - Completed quick task 260531-tkb: rules test-tab fixes + Inbox-Zero-style Gmail tester
 
 ## Current Milestone Roadmap
 
@@ -407,6 +407,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260531-tkb | Fix rules test tabs (read-only-tx crash, LLM nodeMatches parse, always-semantic collapse, credit/Gmail/server error split) + Inbox-Zero-style Gmail tester: GET/POST /api/rules/test/{messages,message}, load 10/20 recent emails, test-all + per-row test/retest with inline verdict | 2026-05-31 | b3357a1f | Static-verified (live needs backend+web restart) | [260531-tkb-fix-rules-preview-test-tabs-read-only-tx](./quick/260531-tkb-fix-rules-preview-test-tabs-read-only-tx/) |
 | 260531-lpx | Flatten /settings to /ai-style section layout (no tabs), inline language+theme segmented controls, consolidate daily digest into /ai, remove duplicated cards (credit/pause/provider/notifications), delete /settings/privacy route + features/privacy + sidebar item | 2026-05-31 | 676e36b9 | Verified | [260531-lpx-flatten-settings-page](./quick/260531-lpx-flatten-settings-page/) |
 | 260530-w9t | Redesign backend config/properties to Spring Boot 4 best practices: unify zeromail→zero-mail prefix, split god-object into per-feature records, centralize Spring-AI privacy block via zero-mail-shared.yml, relocate CryptoProperties to shared.crypto | 2026-05-31 | 2bc7cd88 | Verified | [260530-w9t-redesign-backend-config-properties-to-20](./quick/260530-w9t-redesign-backend-config-properties-to-20/) |
 | 260530-vmp | Reorganize sidebar nav into 3 frequency/intent groups (Daily / Automation / Tools); move Rules + AI config into one Automation group | 2026-05-30 | aa0b7f05 | Verified | [260530-vmp-reorganize-sidebar-nav-into-3-frequency-](./quick/260530-vmp-reorganize-sidebar-nav-into-3-frequency-/) |
