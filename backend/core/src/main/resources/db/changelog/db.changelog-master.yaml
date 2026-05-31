@@ -278,3 +278,6 @@ databaseChangeLog:
   - include:
       file: changes/105-one-time-plan-period.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/106-merge-assistant-memory-into-knowledge.yaml
+      relativeToChangelogFile: true

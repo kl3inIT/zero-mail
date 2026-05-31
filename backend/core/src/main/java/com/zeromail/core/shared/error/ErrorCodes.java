@@ -73,7 +73,6 @@ public final class ErrorCodes {
     public static final String VOICE_WRITING_STYLE_TOO_LONG = "voice.writing_style.too_long";
     public static final String VOICE_PERSONAL_INSTRUCTIONS_TOO_LONG =
             "voice.personal_instructions.too_long";
-    public static final String VOICE_TONE_PRESET_INVALID = "voice.tone_preset.invalid";
     public static final String BEHAVIOR_DRAFT_CONFIDENCE_INVALID =
             "behavior.draft_confidence.invalid";
     public static final String KNOWLEDGE_TITLE_DUPLICATE = "knowledge.title.duplicate";

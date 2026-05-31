@@ -19,7 +19,6 @@ public class TenantDeletionRegistry {
                                 new TenantOwnedTable("chat", "tenant_id", 40),
                                 new TenantOwnedTable(
                                         "assistant_knowledge_snippet", "tenant_id", 50),
-                                new TenantOwnedTable("assistant_memory", "tenant_id", 60),
                                 new TenantOwnedTable("assistant_settings", "tenant_id", 70),
                                 new TenantOwnedTable("tenant_byok_credentials", "tenant_id", 80),
                                 new TenantOwnedTable("credit_reservation", "tenant_id", 90),

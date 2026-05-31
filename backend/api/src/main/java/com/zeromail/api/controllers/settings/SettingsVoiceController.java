@@ -44,7 +44,6 @@ public class SettingsVoiceController {
                                 request.writingStyle(),
                                 request.personalInstructions(),
                                 request.emailSignature(),
-                                request.tonePreset(),
                                 request.aiOutputLanguage())));
     }
 }

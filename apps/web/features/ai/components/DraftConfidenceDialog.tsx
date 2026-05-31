@@ -85,7 +85,7 @@ export function DraftConfidenceDialog({ value, onSave, disabled }: DraftConfiden
             <DialogDescription>{t('ai.behavior.draftConfidence.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="draft-confidence">{t('ai.behavior.draftConfidence.title')}</Label>
+            <Label htmlFor="draft-confidence">{t('ai.behavior.draftConfidence.fieldLabel')}</Label>
             <Select
               value={draft}
               onValueChange={(nextValue) => setDraft(nextValue as DraftConfidence)}

@@ -20,8 +20,8 @@ import com.zeromail.core.chat.domain.ChatMessage;
 import com.zeromail.core.chat.domain.ChatRole;
 import com.zeromail.core.chat.domain.parts.ChatMessageParts;
 import com.zeromail.core.chat.domain.parts.ToolOutputPart;
-import com.zeromail.core.chat.persistence.AssistantMemoryEntity;
-import com.zeromail.core.chat.persistence.AssistantMemoryJpaRepository;
+import com.zeromail.core.chat.persistence.AssistantKnowledgeMemoryEntity;
+import com.zeromail.core.chat.persistence.AssistantKnowledgeMemoryJpaRepository;
 import com.zeromail.core.chat.persistence.ChatEntity;
 import com.zeromail.core.chat.persistence.ChatJpaRepository;
 import com.zeromail.core.chat.persistence.ChatMessageJdbcRepository;
@@ -65,7 +65,7 @@ class ReadToolsIT extends PostgresContainerTest {
     @Autowired GetSenderSafetyEntryToolHandler getSenderSafetyEntryToolHandler;
     @Autowired SearchMemoriesToolHandler searchMemoriesToolHandler;
     @Autowired RuleRepository ruleRepository;
-    @Autowired AssistantMemoryJpaRepository assistantMemoryRepository;
+    @Autowired AssistantKnowledgeMemoryJpaRepository assistantKnowledgeMemoryRepository;
     @Autowired ChatJpaRepository chatRepository;
     @Autowired ChatMessageJdbcRepository chatMessageJdbcRepository;
     @Autowired ToolOutputSanitizer toolOutputSanitizer;
@@ -209,33 +209,33 @@ class ReadToolsIT extends PostgresContainerTest {
         withTenant(
                 tenantAId,
                 () ->
-                        assistantMemoryRepository.saveAllAndFlush(
+                        assistantKnowledgeMemoryRepository.saveAllAndFlush(
                                 List.of(
-                                        new AssistantMemoryEntity(
+                                        new AssistantKnowledgeMemoryEntity(
                                                 UUID.randomUUID(),
                                                 tenantAId,
-                                                "Tenant A Acme context for quarterly vendor updates",
-                                                "chat"),
-                                        new AssistantMemoryEntity(
+                                                "Tenant A Acme",
+                                                "Tenant A Acme context for quarterly vendor updates"),
+                                        new AssistantKnowledgeMemoryEntity(
                                                 UUID.randomUUID(),
                                                 tenantAId,
-                                                "Tenant A nonmatching context",
-                                                "chat"))));
+                                                "Tenant A other",
+                                                "Tenant A nonmatching context"))));
         withTenant(
                 tenantBId,
                 () ->
-                        assistantMemoryRepository.saveAllAndFlush(
+                        assistantKnowledgeMemoryRepository.saveAllAndFlush(
                                 List.of(
-                                        new AssistantMemoryEntity(
+                                        new AssistantKnowledgeMemoryEntity(
                                                 UUID.randomUUID(),
                                                 tenantBId,
-                                                "Tenant B Acme context must not leak",
-                                                "chat"),
-                                        new AssistantMemoryEntity(
+                                                "Tenant B Acme",
+                                                "Tenant B Acme context must not leak"),
+                                        new AssistantKnowledgeMemoryEntity(
                                                 UUID.randomUUID(),
                                                 tenantBId,
-                                                "Tenant B unrelated memory",
-                                                "chat"))));
+                                                "Tenant B unrelated",
+                                                "Tenant B unrelated memory"))));
     }
 
     private void seedProtectedSender(UUID tenantId) {

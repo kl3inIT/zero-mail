@@ -58,7 +58,7 @@ export function EmailSignatureDialog({ value, onSave, disabled }: EmailSignature
             <DialogDescription>{t('ai.voice.signature.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="email-signature">{t('ai.voice.signature.title')}</Label>
+            <Label htmlFor="email-signature">{t('ai.voice.signature.fieldLabel')}</Label>
             <Textarea
               id="email-signature"
               value={draft}

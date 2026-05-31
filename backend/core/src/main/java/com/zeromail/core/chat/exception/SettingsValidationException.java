@@ -44,14 +44,6 @@ public class SettingsValidationException extends BusinessException {
                 "The personal instructions exceed the maximum length.");
     }
 
-    public static SettingsValidationException invalidTonePreset() {
-        return new SettingsValidationException(
-                ErrorCodes.VOICE_TONE_PRESET_INVALID,
-                "settings_voice_tone_preset_invalid",
-                "Invalid tone preset",
-                "The tone preset is not supported.");
-    }
-
     public static SettingsValidationException invalidDraftConfidence() {
         return new SettingsValidationException(
                 ErrorCodes.BEHAVIOR_DRAFT_CONFIDENCE_INVALID,

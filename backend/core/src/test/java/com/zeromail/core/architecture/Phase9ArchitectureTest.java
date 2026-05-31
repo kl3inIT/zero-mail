@@ -16,7 +16,7 @@ import com.zeromail.core.chat.sanitize.XmlFencedPersonalizationRenderer;
 import com.zeromail.core.chat.usecases.AssistantKnowledgeService;
 import com.zeromail.core.chat.usecases.settings.GmailSentMessagesReader;
 import com.zeromail.core.chat.usecases.settings.SettingsVoiceService;
-import com.zeromail.core.chat.usecases.tools.WriteReversibleToolHandlers;
+import com.zeromail.core.chat.usecases.tools.ConfirmRequiredToolHandlers;
 import com.zeromail.core.llm.byok.UserByokKeyEntity;
 import com.zeromail.core.llm.byok.UserByokKeyRepository;
 import com.zeromail.core.llm.gateway.springai.ProviderConnectionTester;
@@ -60,11 +60,18 @@ class Phase9ArchitectureTest {
                                         methodCall
                                                 .getTargetOwner()
                                                 .isEquivalentTo(AssistantKnowledgeService.class))
-                        .filter(methodCall -> methodCall.getName().equals("append"))
+                        .filter(
+                                methodCall ->
+                                        methodCall.getName().equals("append")
+                                                || methodCall.getName().equals("appendChatMemory"))
                         .map(methodCall -> methodCall.getOriginOwner().getName())
+                        .filter(
+                                callerClassName ->
+                                        !callerClassName.equals(
+                                                AssistantKnowledgeService.class.getName()))
                         .collect(Collectors.toSet());
 
-        assertThat(coreAppendCallers).containsExactly(WriteReversibleToolHandlers.class.getName());
+        assertThat(coreAppendCallers).containsExactly(ConfirmRequiredToolHandlers.class.getName());
         assertThat(apiAppendCallerFiles())
                 .containsExactly(
                         repositoryRoot()

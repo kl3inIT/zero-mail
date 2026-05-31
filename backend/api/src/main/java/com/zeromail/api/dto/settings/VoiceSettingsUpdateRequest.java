@@ -10,15 +10,5 @@ public record VoiceSettingsUpdateRequest(
         @Size(min = 1, max = 4000) String writingStyle,
         @Size(max = 2000) String personalInstructions,
         @Size(max = 500) String emailSignature,
-        @Pattern(regexp = "^(PROFESSIONAL|FRIENDLY|CASUAL|FORMAL|CUSTOM)$")
-                @Schema(
-                        allowableValues = {
-                            "PROFESSIONAL",
-                            "FRIENDLY",
-                            "CASUAL",
-                            "FORMAL",
-                            "CUSTOM"
-                        })
-                String tonePreset,
         @Pattern(regexp = "^(vi|en)$") @Schema(allowableValues = {"vi", "en"})
                 String aiOutputLanguage) {}

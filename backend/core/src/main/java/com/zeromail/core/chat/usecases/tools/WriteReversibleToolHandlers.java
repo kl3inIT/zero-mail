@@ -4,7 +4,6 @@ import com.zeromail.core.chat.confirm.send.AssistantWriteCommand;
 import com.zeromail.core.chat.confirm.send.AssistantWriteExecutor.WriteToolHandler;
 import com.zeromail.core.chat.confirm.send.AssistantWriteExecutor.WriteToolResult;
 import com.zeromail.core.chat.domain.ChatToolName;
-import com.zeromail.core.chat.usecases.AssistantKnowledgeService;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
@@ -26,9 +25,7 @@ public class WriteReversibleToolHandlers {
     private final Map<ChatToolName, WriteToolHandler> handlers;
 
     public WriteReversibleToolHandlers(
-            TriageGmailWriter triageGmailWriter,
-            RuleManagementService ruleManagementService,
-            AssistantKnowledgeService assistantKnowledgeService) {
+            TriageGmailWriter triageGmailWriter, RuleManagementService ruleManagementService) {
         EnumMap<ChatToolName, WriteToolHandler> handlerMap = new EnumMap<>(ChatToolName.class);
         handlerMap.put(ChatToolName.APPLY_LABEL, command -> applyLabel(triageGmailWriter, command));
         handlerMap.put(
@@ -40,9 +37,6 @@ public class WriteReversibleToolHandlers {
         handlerMap.put(
                 ChatToolName.DISABLE_RULE, command -> disableRule(ruleManagementService, command));
         handlerMap.put(ChatToolName.SAVE_DRAFT, command -> saveDraft(triageGmailWriter, command));
-        handlerMap.put(
-                ChatToolName.ADD_TO_KNOWLEDGE_BASE,
-                command -> addToKnowledgeBase(assistantKnowledgeService, command));
         this.handlers = Map.copyOf(handlerMap);
     }
 
@@ -129,15 +123,6 @@ public class WriteReversibleToolHandlers {
         } catch (IOException gmailWriteFailure) {
             throw new IllegalStateException("Gmail draft save failed", gmailWriteFailure);
         }
-    }
-
-    private static WriteToolResult addToKnowledgeBase(
-            AssistantKnowledgeService assistantKnowledgeService, AssistantWriteCommand command) {
-        String title = WriteToolArguments.text(command.inputJson(), "title");
-        String content = WriteToolArguments.text(command.inputJson(), "content");
-        java.util.UUID snippetId =
-                assistantKnowledgeService.append(command.tenantId(), title, content);
-        return result("knowledge_snippet_id", snippetId.toString());
     }
 
     static RuleCompileResult ruleCompileResult(AssistantWriteCommand command) {

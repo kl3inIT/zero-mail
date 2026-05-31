@@ -8,10 +8,12 @@ import {
   type ConfirmActionRequest,
 } from '@/features/chat/api/chat-api';
 import { chatKeys } from '@/features/chat/query-keys';
+import { knowledgeKeys } from '@/features/knowledge/query-keys';
 
 type ConfirmVariables = {
   chatId: string;
   body: ConfirmActionRequest;
+  invalidatesKnowledge?: boolean;
 };
 
 export function useConfirmAction() {
@@ -22,6 +24,9 @@ export function useConfirmAction() {
     onSuccess: async (_response, variables) => {
       await queryClient.invalidateQueries({ queryKey: chatKeys.detail(variables.chatId) });
       await queryClient.invalidateQueries({ queryKey: chatKeys.list() });
+      if (variables.invalidatesKnowledge) {
+        await queryClient.invalidateQueries({ queryKey: knowledgeKeys.list() });
+      }
     },
   });
 }

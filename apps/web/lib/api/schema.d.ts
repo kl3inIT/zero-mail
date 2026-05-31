@@ -1171,16 +1171,12 @@ export interface components {
             personalInstructions?: string;
             emailSignature?: string;
             /** @enum {string} */
-            tonePreset?: "PROFESSIONAL" | "FRIENDLY" | "CASUAL" | "FORMAL" | "CUSTOM";
-            /** @enum {string} */
             aiOutputLanguage?: "vi" | "en";
         };
         VoiceSettingsResponse: {
             writingStyle: string;
             personalInstructions: string;
             emailSignature: string;
-            /** @enum {string} */
-            tonePreset: "PROFESSIONAL" | "FRIENDLY" | "CASUAL" | "FORMAL" | "CUSTOM";
             /** @enum {string} */
             aiOutputLanguage: "vi" | "en";
         };
@@ -1482,8 +1478,8 @@ export interface components {
             filename?: string;
             charset?: string;
             inline?: boolean;
-            attachment?: boolean;
             formData?: boolean;
+            attachment?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -1522,46 +1518,46 @@ export interface components {
             date?: number;
             /** Format: int64 */
             contentLength?: number;
+            connection?: string[];
+            /** Format: int64 */
+            ifModifiedSince?: number;
+            contentType?: components["schemas"]["MediaType"];
+            acceptLanguage?: {
+                range?: string;
+                /** Format: double */
+                weight?: number;
+            }[];
+            acceptPatch?: components["schemas"]["MediaType"][];
+            basicAuth?: string;
+            /** Format: int64 */
+            accessControlMaxAge?: number;
+            ifNoneMatch?: string[];
+            contentLanguage?: string;
+            acceptCharset?: string[];
+            acceptLanguageAsLocales?: string[];
+            contentDisposition?: components["schemas"]["ContentDisposition"];
+            /** Format: int64 */
+            ifUnmodifiedSince?: number;
             cacheControl?: string;
             origin?: string;
             range?: components["schemas"]["HttpRange"][];
-            contentDisposition?: components["schemas"]["ContentDisposition"];
-            acceptCharset?: string[];
-            allow?: components["schemas"]["HttpMethod"][];
             ifMatch?: string[];
-            connection?: string[];
+            allow?: components["schemas"]["HttpMethod"][];
+            etag?: string;
             bearerAuth?: string;
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
             accessControlAllowCredentials?: boolean;
-            accessControlAllowHeaders?: string[];
             accessControlAllowOrigin?: string;
+            accessControlExposeHeaders?: string[];
+            accessControlAllowHeaders?: string[];
             accessControlRequestHeaders?: string[];
             accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
-            accessControlExposeHeaders?: string[];
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
             accept?: components["schemas"]["MediaType"][];
             /** Format: int64 */
             expires?: number;
             pragma?: string;
             upgrade?: string;
             vary?: string[];
-            etag?: string;
-            acceptLanguage?: {
-                range?: string;
-                /** Format: double */
-                weight?: number;
-            }[];
-            basicAuth?: string;
-            acceptPatch?: components["schemas"]["MediaType"][];
-            ifNoneMatch?: string[];
-            /** Format: int64 */
-            accessControlMaxAge?: number;
-            contentLanguage?: string;
-            acceptLanguageAsLocales?: string[];
-            /** Format: int64 */
-            ifUnmodifiedSince?: number;
-            /** Format: int64 */
-            ifModifiedSince?: number;
-            contentType?: components["schemas"]["MediaType"];
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -1575,9 +1571,9 @@ export interface components {
             qualityValue?: number;
             charset?: string;
             concrete?: boolean;
+            subtypeSuffix?: string;
             wildcardSubtype?: boolean;
             wildcardType?: boolean;
-            subtypeSuffix?: string;
         };
         BillingCheckoutResponse: {
             /** @description Hosted Lemon Squeezy checkout URL for the selected billing plan */

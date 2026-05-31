@@ -42,9 +42,6 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
     @Column(name = "email_signature", length = 500)
     private String emailSignature;
 
-    @Column(name = "tone_preset", length = 16)
-    private String tonePreset;
-
     @Column(name = "auto_draft_replies", nullable = false)
     private boolean autoDraftReplies = true;
 
@@ -108,14 +105,6 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
         return emailSignature;
     }
 
-    public String getTonePresetId() {
-        return tonePreset;
-    }
-
-    public TonePreset getTonePreset() {
-        return tonePreset == null ? null : TonePreset.fromId(tonePreset);
-    }
-
     public boolean isAutoDraftReplies() {
         return autoDraftReplies;
     }
@@ -136,12 +125,10 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
             String writingStyle,
             String personalInstructions,
             String emailSignature,
-            TonePreset tonePreset,
             String aiOutputLanguage) {
         this.writingStyle = writingStyle;
         this.personalInstructions = personalInstructions;
         this.emailSignature = emailSignature;
-        this.tonePreset = tonePreset == null ? null : tonePreset.id();
         this.aiOutputLanguage = aiOutputLanguage;
     }
 
@@ -159,25 +146,6 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
             throw new IllegalArgumentException("draftConfidence must not be null");
         }
         return draftConfidence;
-    }
-
-    public enum TonePreset {
-        PROFESSIONAL,
-        FRIENDLY,
-        CASUAL,
-        FORMAL,
-        CUSTOM;
-
-        public String id() {
-            return name();
-        }
-
-        public static TonePreset fromId(String id) {
-            return Stream.of(values())
-                    .filter(tonePreset -> tonePreset.id().equals(id))
-                    .findFirst()
-                    .orElseThrow(() -> new NoSuchElementException("Unknown TonePreset id: " + id));
-        }
     }
 
     public enum DraftConfidence {

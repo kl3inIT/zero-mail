@@ -1,0 +1,107 @@
+databaseChangeLog:
+  - changeSet:
+      id: 106-merge-assistant-memory-into-knowledge
+      author: zeromail
+      comment: Migrate legacy chat memories into knowledge snippets, remove the separate assistant_memory store, and retire the user-facing tone preset.
+      preConditions:
+        - onFail: HALT
+        - tableExists:
+            tableName: assistant_memory
+        - tableExists:
+            tableName: assistant_knowledge_snippet
+        - columnExists:
+            tableName: assistant_settings
+            columnName: tone_preset
+      changes:
+        - sql:
+            comment: Preserve existing chat memories as knowledge snippets before dropping the old store.
+            sql: |
+              INSERT INTO assistant_knowledge_snippet (id, tenant_id, title, content, created_at, updated_at, version)
+              SELECT gen_random_uuid(),
+                     tenant_id,
+                     left(coalesce(nullif(trim(regexp_replace(split_part(content, E'\n', 1), '\s+', ' ', 'g')), ''), 'Chat memory'), 109)
+                         || ' (' || substr(id::text, 1, 8) || ')',
+                     content,
+                     created_at,
+                     updated_at,
+                     version
+                FROM assistant_memory legacy_memory
+               WHERE NOT EXISTS (
+                     SELECT 1
+                       FROM assistant_knowledge_snippet knowledge_snippet
+                      WHERE knowledge_snippet.tenant_id = legacy_memory.tenant_id
+                        AND knowledge_snippet.content = legacy_memory.content
+               )
+              ON CONFLICT (tenant_id, title) DO NOTHING
+        - dropTable:
+            tableName: assistant_memory
+        - sql:
+            sql: ALTER TABLE assistant_settings DROP CONSTRAINT IF EXISTS ck_assistant_settings_tone_preset
+        - dropColumn:
+            tableName: assistant_settings
+            columnName: tone_preset
+      rollback:
+        - addColumn:
+            tableName: assistant_settings
+            columns:
+              - column:
+                  name: tone_preset
+                  type: varchar(16)
+        - sql:
+            sql: ALTER TABLE assistant_settings ADD CONSTRAINT ck_assistant_settings_tone_preset CHECK (tone_preset IS NULL OR tone_preset IN ('PROFESSIONAL','FRIENDLY','CASUAL','FORMAL','CUSTOM'))
+        - createTable:
+            tableName: assistant_memory
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_assistant_memory_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: content
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source
+                  type: varchar(32)
+                  defaultValue: chat
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: assistant_memory
+            indexName: idx_assistant_memory_tenant_created
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: created_at
+                  descending: true

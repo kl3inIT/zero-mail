@@ -8,7 +8,6 @@ import { EmailSignatureDialog } from '@/features/ai/components/EmailSignatureDia
 import { PersonalInstructionsDialog } from '@/features/ai/components/PersonalInstructionsDialog';
 import { SectionHeader } from '@/features/ai/components/SectionHeader';
 import { SettingCard } from '@/features/ai/components/SettingCard';
-import { TonePresetDialog } from '@/features/ai/components/TonePresetDialog';
 import { WritingStyleDialog } from '@/features/ai/components/WritingStyleDialog';
 import { useUpdateVoiceSettings } from '@/features/ai/hooks/useUpdateVoiceSettings';
 import { useVoiceSettings } from '@/features/ai/hooks/useVoiceSettings';
@@ -68,18 +67,6 @@ export function YourVoiceSection() {
               value={settings?.emailSignature ?? ''}
               disabled={controlsDisabled}
               onSave={(emailSignature) => updateVoiceSettings.mutateAsync({ emailSignature })}
-            />
-          }
-        />
-        <SettingCard
-          title={t('ai.voice.tone.title')}
-          description={t('ai.voice.tone.description')}
-          icon={SlidersHorizontal}
-          rightSlot={
-            <TonePresetDialog
-              value={settings?.tonePreset ?? 'PROFESSIONAL'}
-              disabled={controlsDisabled}
-              onSave={(tonePreset) => updateVoiceSettings.mutateAsync({ tonePreset })}
             />
           }
         />

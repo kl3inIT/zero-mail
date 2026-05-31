@@ -20,7 +20,6 @@ export const CHAT_TOOL_PARTITIONS = {
     'updateRule',
     'disableRule',
     'saveDraft',
-    'addToKnowledgeBase',
   ],
   confirmRequired: [
     'createRule',

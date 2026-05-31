@@ -71,7 +71,7 @@ export function WritingStyleDialog({ value, onSave, disabled }: WritingStyleDial
             <DialogDescription>{t('ai.voice.writingStyle.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="writing-style">{t('ai.voice.writingStyle.title')}</Label>
+            <Label htmlFor="writing-style">{t('ai.voice.writingStyle.fieldLabel')}</Label>
             <Textarea
               id="writing-style"
               value={draft}

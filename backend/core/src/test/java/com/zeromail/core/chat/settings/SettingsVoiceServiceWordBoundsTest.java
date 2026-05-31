@@ -30,7 +30,7 @@ class SettingsVoiceServiceWordBoundsTest {
                                 settingsVoiceService.update(
                                         UUID.randomUUID(),
                                         new SettingsVoiceCommand(
-                                                words(wordCount), null, null, null, null)))
+                                                words(wordCount), null, null, null)))
                 .isInstanceOf(SettingsValidationException.class)
                 .extracting(exception -> ((SettingsValidationException) exception).errorCode())
                 .isEqualTo(
@@ -49,7 +49,7 @@ class SettingsVoiceServiceWordBoundsTest {
                                 .update(
                                         UUID.randomUUID(),
                                         new SettingsVoiceCommand(
-                                                words(wordCount), null, null, null, null))
+                                                words(wordCount), null, null, null))
                                 .writingStyle())
                 .isEqualTo(words(wordCount));
     }

@@ -6,7 +6,7 @@ import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.zeromail.core.chat.usecases.AssistantKnowledgeService;
-import com.zeromail.core.chat.usecases.tools.WriteReversibleToolHandlers;
+import com.zeromail.core.chat.usecases.tools.ConfirmRequiredToolHandlers;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,11 +31,18 @@ class AssistantKnowledgeAppendCallSiteTest {
                                         methodCall
                                                 .getTargetOwner()
                                                 .isEquivalentTo(AssistantKnowledgeService.class))
-                        .filter(methodCall -> methodCall.getName().equals("append"))
+                        .filter(
+                                methodCall ->
+                                        methodCall.getName().equals("append")
+                                                || methodCall.getName().equals("appendChatMemory"))
                         .map(methodCall -> methodCall.getOriginOwner().getName())
+                        .filter(
+                                callerClassName ->
+                                        !callerClassName.equals(
+                                                AssistantKnowledgeService.class.getName()))
                         .collect(Collectors.toSet());
 
-        assertThat(coreAppendCallers).containsExactly(WriteReversibleToolHandlers.class.getName());
+        assertThat(coreAppendCallers).containsExactly(ConfirmRequiredToolHandlers.class.getName());
         assertThat(apiAppendCallerFiles())
                 .containsExactly(
                         repositoryRoot()

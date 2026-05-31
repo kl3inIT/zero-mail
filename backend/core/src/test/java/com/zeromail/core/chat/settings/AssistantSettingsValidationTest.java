@@ -8,32 +8,13 @@ import static org.mockito.Mockito.when;
 import com.zeromail.core.chat.exception.SettingsValidationException;
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
-import com.zeromail.core.chat.sanitize.PersonalizationSanitizer;
 import com.zeromail.core.chat.usecases.settings.SettingsBehaviorCommand;
 import com.zeromail.core.chat.usecases.settings.SettingsBehaviorService;
-import com.zeromail.core.chat.usecases.settings.SettingsVoiceCommand;
-import com.zeromail.core.chat.usecases.settings.SettingsVoiceService;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-class AssistantSettingsTonePresetCheckTest {
-
-    @Test
-    void voiceSettingsRejectUnknownTonePreset() {
-        SettingsVoiceService settingsVoiceService =
-                new SettingsVoiceService(repositoryWithDefaults(), new PersonalizationSanitizer());
-
-        assertThatThrownBy(
-                        () ->
-                                settingsVoiceService.update(
-                                        UUID.randomUUID(),
-                                        new SettingsVoiceCommand(
-                                                null, null, null, "YELLING", null)))
-                .isInstanceOf(SettingsValidationException.class)
-                .extracting(exception -> ((SettingsValidationException) exception).errorCode())
-                .isEqualTo("voice.tone_preset.invalid");
-    }
+class AssistantSettingsValidationTest {
 
     @Test
     void behaviorSettingsRejectUnknownDraftConfidence() {

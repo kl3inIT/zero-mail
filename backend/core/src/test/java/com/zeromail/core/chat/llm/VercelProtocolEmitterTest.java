@@ -28,7 +28,8 @@ class VercelProtocolEmitterTest {
     @Test
     void emits_ordered_json_frames_for_text_and_tools() {
         List<String> frames = new ArrayList<>();
-        VercelProtocolEmitter emitter = new VercelProtocolEmitter(frames::add, testMapper());
+        VercelProtocolEmitter emitter =
+                new VercelProtocolEmitter(frames::add, testMapper(), "assistant-message-1");
 
         emitter.emitTextStart("part-1");
         emitter.emitTextDelta("part-1", "Xin");
@@ -40,7 +41,7 @@ class VercelProtocolEmitterTest {
 
         assertThat(frames)
                 .containsExactly(
-                        "{\"type\":\"start\"}",
+                        "{\"type\":\"start\",\"messageId\":\"assistant-message-1\"}",
                         "{\"type\":\"text-start\",\"id\":\"part-1\"}",
                         "{\"type\":\"text-delta\",\"id\":\"part-1\",\"delta\":\"Xin\"}",
                         "{\"type\":\"text-end\",\"id\":\"part-1\"}",
@@ -53,7 +54,8 @@ class VercelProtocolEmitterTest {
     @Test
     void emits_ai_sdk_v6_compatible_data_and_finish_frames() {
         List<String> frames = new ArrayList<>();
-        VercelProtocolEmitter emitter = new VercelProtocolEmitter(frames::add, testMapper());
+        VercelProtocolEmitter emitter =
+                new VercelProtocolEmitter(frames::add, testMapper(), "assistant-message-2");
         UUID chatMessageId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
         emitter.emitDataPersistence(chatMessageId, "assistant-message-saved");
@@ -62,7 +64,7 @@ class VercelProtocolEmitterTest {
 
         assertThat(frames)
                 .containsExactly(
-                        "{\"type\":\"start\"}",
+                        "{\"type\":\"start\",\"messageId\":\"assistant-message-2\"}",
                         "{\"type\":\"data-persistence\",\"id\":\"11111111-1111-1111-1111-111111111111\",\"data\":{\"chatMessageId\":\"11111111-1111-1111-1111-111111111111\",\"state\":\"assistant-message-saved\"}}",
                         "{\"type\":\"finish\",\"finishReason\":\"tool-calls\"}",
                         "{\"type\":\"error\",\"errorText\":\"The assistant stream failed.\"}");

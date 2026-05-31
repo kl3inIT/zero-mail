@@ -4,7 +4,6 @@ import com.zeromail.core.chat.exception.SettingsValidationException;
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
 import com.zeromail.core.chat.sanitize.PersonalizationSanitizer;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -67,17 +66,13 @@ public class SettingsVoiceService {
                 command.emailSignature() == null
                         ? assistantSettings.getEmailSignature()
                         : command.emailSignature();
-        AssistantSettingsEntity.TonePreset tonePreset =
-                command.tonePreset() == null
-                        ? assistantSettings.getTonePreset()
-                        : parseTonePreset(command.tonePreset());
         String aiOutputLanguage =
                 command.aiOutputLanguage() == null
                         ? assistantSettings.getAiOutputLanguage()
                         : requireSupportedLanguage(command.aiOutputLanguage());
 
         assistantSettings.applyVoiceSettings(
-                writingStyle, personalInstructions, emailSignature, tonePreset, aiOutputLanguage);
+                writingStyle, personalInstructions, emailSignature, aiOutputLanguage);
     }
 
     private static String validateWritingStyle(String writingStyle) {
@@ -100,14 +95,6 @@ public class SettingsVoiceService {
         return sanitizedPersonalInstructions;
     }
 
-    private static AssistantSettingsEntity.TonePreset parseTonePreset(String tonePreset) {
-        try {
-            return AssistantSettingsEntity.TonePreset.fromId(tonePreset);
-        } catch (NoSuchElementException unknownTonePreset) {
-            throw SettingsValidationException.invalidTonePreset();
-        }
-    }
-
     private static String requireSupportedLanguage(String aiOutputLanguage) {
         if (!"vi".equals(aiOutputLanguage) && !"en".equals(aiOutputLanguage)) {
             throw new IllegalArgumentException("aiOutputLanguage must be vi or en");
@@ -127,7 +114,6 @@ public class SettingsVoiceService {
                 assistantSettings.getWritingStyle(),
                 assistantSettings.getPersonalInstructions(),
                 assistantSettings.getEmailSignature(),
-                assistantSettings.getTonePresetId(),
                 assistantSettings.getAiOutputLanguage());
     }
 }

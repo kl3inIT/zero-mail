@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit",
     "e2e": "pnpm test:e2e",
     "test:e2e": "node ../../node_modules/@playwright/test/cli.js test",
-    "test:e2e:golden": "playwright test --config=playwright.golden.config.ts launch-golden-path.spec.ts"
+    "test:e2e:golden": "playwright test --config=playwright.golden.config.ts launch-golden-path.spec.ts",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.192",

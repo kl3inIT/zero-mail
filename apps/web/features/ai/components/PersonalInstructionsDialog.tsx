@@ -63,7 +63,7 @@ export function PersonalInstructionsDialog({
           </DialogHeader>
           <div className="space-y-2">
             <Label htmlFor="personal-instructions">
-              {t('ai.voice.personalInstructions.title')}
+              {t('ai.voice.personalInstructions.fieldLabel')}
             </Label>
             <Textarea
               id="personal-instructions"

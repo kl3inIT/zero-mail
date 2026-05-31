@@ -10,15 +10,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
             "writingStyle",
             "personalInstructions",
             "emailSignature",
-            "tonePreset",
             "aiOutputLanguage"
         })
 public record VoiceSettingsResponse(
         String writingStyle,
         String personalInstructions,
         String emailSignature,
-        @Schema(allowableValues = {"PROFESSIONAL", "FRIENDLY", "CASUAL", "FORMAL", "CUSTOM"})
-                String tonePreset,
         @Schema(allowableValues = {"vi", "en"}) String aiOutputLanguage) {
 
     public static VoiceSettingsResponse from(SettingsVoiceResult settingsVoiceResult) {
@@ -26,7 +23,6 @@ public record VoiceSettingsResponse(
                 settingsVoiceResult.writingStyle(),
                 settingsVoiceResult.personalInstructions(),
                 settingsVoiceResult.emailSignature(),
-                settingsVoiceResult.tonePreset(),
                 settingsVoiceResult.aiOutputLanguage());
     }
 }

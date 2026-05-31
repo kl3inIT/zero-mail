@@ -77,7 +77,6 @@ const phaseNineErrorCodeMap: Record<string, string> = {
   'voice.generate.gmail_read_failed': 'voice.generate.gmail_read_failed',
   'voice.generate.rate_limited': 'voice.generate.rate_limited',
   'voice.personal_instructions.too_long': 'voice.personal_instructions.too_long',
-  'voice.tone_preset.invalid': 'voice.tone_preset.invalid',
   'voice.writing_style.too_long': 'voice.writing_style.too_long',
   'voice.writing_style.too_short': 'voice.writing_style.too_short',
 };

@@ -15,6 +15,7 @@ public class AssistantKnowledgeService {
 
     private static final int MAX_TITLE_LENGTH = 120;
     private static final int MAX_CONTENT_LENGTH = 8_000;
+    private static final int MAX_CHAT_MEMORY_CONTENT_LENGTH = 4_000;
 
     private final AssistantKnowledgeMemoryJpaRepository assistantKnowledgeMemoryRepository;
 
@@ -43,9 +44,9 @@ public class AssistantKnowledgeService {
     @Transactional
     public UUID append(UUID tenantId, String title, String content) {
         String normalizedTitle =
-                AssistantMemoryService.requireBoundedText(title, "title", MAX_TITLE_LENGTH);
+                AssistantTextNormalizer.requireBoundedText(title, "title", MAX_TITLE_LENGTH);
         String normalizedContent =
-                AssistantMemoryService.requireBoundedText(content, "content", MAX_CONTENT_LENGTH);
+                AssistantTextNormalizer.requireBoundedText(content, "content", MAX_CONTENT_LENGTH);
         try {
             AssistantKnowledgeMemoryEntity knowledgeMemory =
                     assistantKnowledgeMemoryRepository.saveAndFlush(
@@ -61,14 +62,22 @@ public class AssistantKnowledgeService {
     }
 
     @Transactional
+    public UUID appendChatMemory(UUID tenantId, String content) {
+        String normalizedContent =
+                AssistantTextNormalizer.requireBoundedText(
+                        content, "content", MAX_CHAT_MEMORY_CONTENT_LENGTH);
+        return append(tenantId, titleFromChatMemory(normalizedContent), normalizedContent);
+    }
+
+    @Transactional
     public KnowledgeSnippet update(UUID tenantId, UUID snippetId, String title, String content) {
         AssistantKnowledgeMemoryEntity knowledgeMemory =
                 assistantKnowledgeMemoryRepository
                         .findByIdAndTenantId(snippetId, tenantId)
                         .orElseThrow(KnowledgeSnippetException::notFound);
         knowledgeMemory.update(
-                AssistantMemoryService.requireBoundedText(title, "title", MAX_TITLE_LENGTH),
-                AssistantMemoryService.requireBoundedText(content, "content", MAX_CONTENT_LENGTH));
+                AssistantTextNormalizer.requireBoundedText(title, "title", MAX_TITLE_LENGTH),
+                AssistantTextNormalizer.requireBoundedText(content, "content", MAX_CONTENT_LENGTH));
         try {
             return toSnippet(assistantKnowledgeMemoryRepository.saveAndFlush(knowledgeMemory));
         } catch (DataIntegrityViolationException duplicateTitleFailure) {
@@ -91,6 +100,18 @@ public class AssistantKnowledgeService {
                 knowledgeMemory.getTitle(),
                 knowledgeMemory.getContent(),
                 knowledgeMemory.getUpdatedAt());
+    }
+
+    private static String titleFromChatMemory(String content) {
+        String normalizedFirstLine =
+                content.lines().findFirst().orElse("Chat memory").replaceAll("\\s+", " ").trim();
+        String baseTitle = normalizedFirstLine.isBlank() ? "Chat memory" : normalizedFirstLine;
+        String uniqueSuffix = " (" + UUID.randomUUID().toString().substring(0, 8) + ")";
+        int maximumBaseLength = MAX_TITLE_LENGTH - uniqueSuffix.length();
+        if (baseTitle.length() > maximumBaseLength) {
+            baseTitle = baseTitle.substring(0, maximumBaseLength).trim();
+        }
+        return baseTitle + uniqueSuffix;
     }
 
     public record KnowledgeSnippet(UUID id, String title, String content, Instant updatedAt) {}

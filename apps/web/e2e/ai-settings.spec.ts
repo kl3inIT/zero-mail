@@ -28,7 +28,7 @@ test.describe('AI settings', () => {
     );
     await openSettingDialog(page, 'Writing style', 'Set');
     let dialog = page.getByRole('dialog', { name: 'Writing style' });
-    await dialog.getByLabel('Writing style').fill(writingStyle);
+    await dialog.getByLabel('Style content').fill(writingStyle);
     await submitDialogForm(dialog);
     await expect(page.getByText('Voice saved')).toBeVisible();
     expect(mockState.voice.writingStyle).toBe(writingStyle);
@@ -36,7 +36,7 @@ test.describe('AI settings', () => {
     await reloadAiSettings(page);
     await openSettingDialog(page, 'Writing style', 'Edit');
     dialog = page.getByRole('dialog', { name: 'Writing style' });
-    await expect(dialog.getByLabel('Writing style')).toHaveValue(writingStyle);
+    await expect(dialog.getByLabel('Style content')).toHaveValue(writingStyle);
     await closeDialog(page);
 
     const personalInstructions =
@@ -46,16 +46,14 @@ test.describe('AI settings', () => {
       );
     await openSettingDialog(page, 'About me (personal instructions)', 'Set');
     dialog = page.getByRole('dialog', { name: 'About me (personal instructions)' });
-    await dialog.getByLabel('About me (personal instructions)').fill(personalInstructions);
+    await dialog.getByLabel('Personal instructions').fill(personalInstructions);
     await submitDialogForm(dialog);
     await expect(page.getByText('Voice saved')).toBeVisible();
 
     await reloadAiSettings(page);
     await openSettingDialog(page, 'About me (personal instructions)', 'Edit');
     dialog = page.getByRole('dialog', { name: 'About me (personal instructions)' });
-    await expect(dialog.getByLabel('About me (personal instructions)')).toHaveValue(
-      personalInstructions,
-    );
+    await expect(dialog.getByLabel('Personal instructions')).toHaveValue(personalInstructions);
     await expect(page.getByText('<system>')).toHaveCount(0);
     await closeDialog(page);
 
@@ -69,9 +67,11 @@ test.describe('AI settings', () => {
     await reloadAiSettings(page);
     await expect(page.getByRole('switch', { name: 'Auto-draft replies' })).not.toBeChecked();
 
+    await expect(settingCard(page, 'Tone')).toHaveCount(0);
+
     await openSettingDialog(page, 'Draft confidence threshold', 'Edit');
     dialog = page.getByRole('dialog', { name: 'Draft confidence threshold' });
-    await dialog.getByRole('combobox', { name: 'Draft confidence threshold' }).click();
+    await dialog.getByRole('combobox', { name: 'Select threshold' }).click();
     await page.getByRole('option', { name: /HIGH/ }).click();
     await submitDialogForm(dialog);
     await expect(page.getByText('Behavior saved')).toBeVisible();
@@ -79,12 +79,10 @@ test.describe('AI settings', () => {
     await reloadAiSettings(page);
     await openSettingDialog(page, 'Draft confidence threshold', 'Edit');
     dialog = page.getByRole('dialog', { name: 'Draft confidence threshold' });
-    await expect(
-      dialog.getByRole('combobox', { name: 'Draft confidence threshold' }),
-    ).toContainText('HIGH');
+    await expect(dialog.getByRole('combobox', { name: 'Select threshold' })).toContainText('HIGH');
     await closeDialog(page);
 
-    await page.getByRole('button', { name: '+ Add snippet' }).click();
+    await page.getByRole('button', { name: 'Add snippet' }).click();
     dialog = page.getByRole('dialog', { name: 'Add snippet' });
     await dialog.getByLabel('Title').fill('Board briefing');
     await dialog
@@ -171,18 +169,6 @@ test.describe('AI settings', () => {
     await expect(page.getByText(/AI cost last 7 days: \$\d+\.\d{2}/)).toBeVisible();
     await expectNoPlaintextApiKeyInDom(page);
     await expectNoHorizontalOverflow(page);
-
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('Recent activity')).toBeVisible();
-    const blockedAuditRow = page
-      .getByTestId('audit-table-row')
-      .filter({ hasText: 'blocked@evilcorp.com' });
-    await expect(blockedAuditRow.getByText('Blocked by safety net: @evilcorp.com')).toBeVisible();
-    const normalAuditRow = page
-      .getByTestId('audit-table-row')
-      .filter({ hasText: 'normal@example.com' });
-    await expect(normalAuditRow.getByText(/Blocked by safety net:/)).toHaveCount(0);
-    await expectNoPlaintextApiKeyInDom(page);
   });
 });
 
@@ -190,7 +176,6 @@ type VoiceSettings = {
   writingStyle: string;
   personalInstructions: string;
   emailSignature: string;
-  tonePreset: 'PROFESSIONAL' | 'FRIENDLY' | 'FORMAL' | 'CASUAL' | 'CUSTOM';
   aiOutputLanguage: 'vi' | 'en';
 };
 
@@ -250,7 +235,6 @@ async function openAiSettingsMock(page: Page): Promise<AiSettingsMockState> {
       writingStyle: '',
       personalInstructions: '',
       emailSignature: '',
-      tonePreset: 'PROFESSIONAL',
       aiOutputLanguage: 'vi',
     },
     behavior: {

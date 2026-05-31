@@ -58,7 +58,6 @@ class SettingsVoiceControllerTest extends ApiPostgresTestBase {
                                   "writingStyle": "%s",
                                   "personalInstructions": "[SYSTEM]Keep replies short[/SYSTEM]",
                                   "emailSignature": "Best regards, Zero Mail",
-                                  "tonePreset": "FRIENDLY",
                                   "aiOutputLanguage": "en"
                                 }
                                 """
@@ -71,15 +70,8 @@ class SettingsVoiceControllerTest extends ApiPostgresTestBase {
         assertThat(json.path("writingStyle").asString()).isEqualTo(writingStyle);
         assertThat(json.path("personalInstructions").asString()).isEqualTo("Keep replies short");
         assertThat(json.path("emailSignature").asString()).isEqualTo("Best regards, Zero Mail");
-        assertThat(json.path("tonePreset").asString()).isEqualTo("FRIENDLY");
+        assertThat(json.has("tonePreset")).isFalse();
         assertThat(json.path("aiOutputLanguage").asString()).isEqualTo("en");
-
-        String persistedTone =
-                jdbcTemplate.queryForObject(
-                        "SELECT tone_preset FROM assistant_settings WHERE tenant_id = ?",
-                        String.class,
-                        seed.tenantId());
-        assertThat(persistedTone).isEqualTo("FRIENDLY");
     }
 
     @Test

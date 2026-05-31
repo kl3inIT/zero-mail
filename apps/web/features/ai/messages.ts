@@ -1,11 +1,11 @@
 export const aiMessages = {
   'ai.actions.addSender': {
-    vi: '+ Thêm người gửi',
-    en: '+ Add sender',
+    vi: 'Thêm người gửi',
+    en: 'Add sender',
   },
   'ai.actions.addSnippet': {
-    vi: '+ Thêm đoạn kiến thức',
-    en: '+ Add snippet',
+    vi: 'Thêm đoạn kiến thức',
+    en: 'Add snippet',
   },
   'ai.actions.cancel': {
     vi: 'Hủy',
@@ -54,6 +54,10 @@ export const aiMessages = {
   'ai.behavior.draftConfidence.description': {
     vi: 'Chỉ tạo nháp khi độ tin cậy đạt ngưỡng bạn chọn.',
     en: 'Only draft when confidence reaches your chosen threshold.',
+  },
+  'ai.behavior.draftConfidence.fieldLabel': {
+    vi: 'Chọn ngưỡng',
+    en: 'Select threshold',
   },
   'ai.behavior.draftConfidence.high': {
     vi: 'HIGH - chỉ khi AI rất chắc chắn',
@@ -260,12 +264,12 @@ export const aiMessages = {
     en: 'ceo@acme.com or @acme.com',
   },
   'ai.safetyNet.autoSend.description': {
-    vi: 'Cho phép rule tự gửi khi vượt qua toàn bộ cổng an toàn.',
-    en: 'Allow rules to send automatically after all safety gates pass.',
+    vi: 'Khi bật, rule có thể tự gửi, trả lời hoặc chuyển tiếp email mà không cần bạn xác nhận. Email không an toàn sẽ được lưu thành nháp Gmail thay vì gửi đi.',
+    en: 'When on, rules can send, reply, or forward email without asking you first. Anything unsafe is saved as a Gmail draft instead of being sent.',
   },
   'ai.safetyNet.autoSend.title': {
-    vi: 'Tự động gửi theo rule',
-    en: 'Auto-send rules',
+    vi: 'Cho rule tự gửi email',
+    en: 'Let rules send email',
   },
   'ai.safetyNet.createdBy.system': {
     vi: 'Hệ thống',
@@ -463,6 +467,10 @@ export const aiMessages = {
     vi: 'Những điều AI cần biết về bạn trước khi soạn thư.',
     en: 'What the AI should know about you before drafting.',
   },
+  'ai.voice.personalInstructions.fieldLabel': {
+    vi: 'Hướng dẫn cá nhân',
+    en: 'Personal instructions',
+  },
   'ai.voice.personalInstructions.placeholder': {
     vi: 'Ví dụ: ưu tiên trả lời ngắn, lịch sự, nêu rõ bước tiếp theo...',
     en: 'Example: keep replies concise, courteous, and explicit about next steps...',
@@ -475,6 +483,10 @@ export const aiMessages = {
     vi: 'Chữ ký AI có thể chèn vào bản nháp khi phù hợp.',
     en: 'A signature the AI can include in drafts when appropriate.',
   },
+  'ai.voice.signature.fieldLabel': {
+    vi: 'Nội dung chữ ký',
+    en: 'Signature content',
+  },
   'ai.voice.signature.placeholder': {
     vi: 'Tên, chức danh, số điện thoại...',
     en: 'Name, title, phone number...',
@@ -483,37 +495,13 @@ export const aiMessages = {
     vi: 'Chữ ký email',
     en: 'Email signature',
   },
-  'ai.voice.tone.casual': {
-    vi: 'Casual',
-    en: 'Casual',
-  },
-  'ai.voice.tone.custom': {
-    vi: 'Custom',
-    en: 'Custom',
-  },
-  'ai.voice.tone.description': {
-    vi: 'Tone mặc định khi AI tạo bản nháp.',
-    en: 'Default tone for AI drafts.',
-  },
-  'ai.voice.tone.formal': {
-    vi: 'Formal',
-    en: 'Formal',
-  },
-  'ai.voice.tone.friendly': {
-    vi: 'Friendly',
-    en: 'Friendly',
-  },
-  'ai.voice.tone.professional': {
-    vi: 'Professional',
-    en: 'Professional',
-  },
-  'ai.voice.tone.title': {
-    vi: 'Tone giọng văn',
-    en: 'Tone',
-  },
   'ai.voice.writingStyle.description': {
     vi: 'Mô tả cách bạn thường viết để AI bắt chước an toàn hơn.',
     en: 'Describe how you usually write so the AI can mirror you more safely.',
+  },
+  'ai.voice.writingStyle.fieldLabel': {
+    vi: 'Nội dung phong cách',
+    en: 'Style content',
   },
   'ai.voice.writingStyle.placeholder': {
     vi: 'Viết 200-500 từ về cách bạn chào hỏi, giải thích, từ chối, và kết thúc email...',
@@ -622,10 +610,6 @@ export const aiMessages = {
   'errors.voice.personal_instructions.too_long': {
     vi: 'Hướng dẫn cá nhân không được vượt 2000 ký tự.',
     en: 'Personal instructions cannot exceed 2000 characters.',
-  },
-  'errors.voice.tone_preset.invalid': {
-    vi: 'Tone không hợp lệ.',
-    en: 'Invalid tone preset.',
   },
   'errors.voice.writing_style.too_long': {
     vi: 'Mô tả giọng văn không được vượt 500 từ.',

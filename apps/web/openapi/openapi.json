@@ -7760,11 +7760,6 @@
             "maxLength": 500,
             "minLength": 0
           },
-          "tonePreset": {
-            "type": "string",
-            "enum": ["PROFESSIONAL", "FRIENDLY", "CASUAL", "FORMAL", "CUSTOM"],
-            "pattern": "^(PROFESSIONAL|FRIENDLY|CASUAL|FORMAL|CUSTOM)$"
-          },
           "aiOutputLanguage": {
             "type": "string",
             "enum": ["vi", "en"],
@@ -7784,22 +7779,12 @@
           "emailSignature": {
             "type": "string"
           },
-          "tonePreset": {
-            "type": "string",
-            "enum": ["PROFESSIONAL", "FRIENDLY", "CASUAL", "FORMAL", "CUSTOM"]
-          },
           "aiOutputLanguage": {
             "type": "string",
             "enum": ["vi", "en"]
           }
         },
-        "required": [
-          "aiOutputLanguage",
-          "emailSignature",
-          "personalInstructions",
-          "tonePreset",
-          "writingStyle"
-        ]
+        "required": ["aiOutputLanguage", "emailSignature", "personalInstructions", "writingStyle"]
       },
       "BehaviorSettingsUpdateRequest": {
         "type": "object",
@@ -8770,10 +8755,10 @@
           "inline": {
             "type": "boolean"
           },
-          "attachment": {
+          "formData": {
             "type": "boolean"
           },
-          "formData": {
+          "attachment": {
             "type": "boolean"
           }
         }
@@ -8873,6 +8858,76 @@
             "type": "integer",
             "format": "int64"
           },
+          "connection": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifModifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/MediaType"
+          },
+          "acceptLanguage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "range": {
+                  "type": "string"
+                },
+                "weight": {
+                  "type": "number",
+                  "format": "double"
+                }
+              }
+            }
+          },
+          "acceptPatch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "basicAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "accessControlMaxAge": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ifNoneMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contentLanguage": {
+            "type": "string"
+          },
+          "acceptCharset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "acceptLanguageAsLocales": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contentDisposition": {
+            "$ref": "#/components/schemas/ContentDisposition"
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
           "cacheControl": {
             "type": "string"
           },
@@ -8885,10 +8940,7 @@
               "$ref": "#/components/schemas/HttpRange"
             }
           },
-          "contentDisposition": {
-            "$ref": "#/components/schemas/ContentDisposition"
-          },
-          "acceptCharset": {
+          "ifMatch": {
             "type": "array",
             "items": {
               "type": "string"
@@ -8901,33 +8953,33 @@
             },
             "uniqueItems": true
           },
-          "ifMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "connection": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "etag": {
+            "type": "string"
           },
           "bearerAuth": {
             "type": "string",
             "writeOnly": true
           },
+          "accessControlRequestMethod": {
+            "$ref": "#/components/schemas/HttpMethod"
+          },
           "accessControlAllowCredentials": {
             "type": "boolean"
+          },
+          "accessControlAllowOrigin": {
+            "type": "string"
+          },
+          "accessControlExposeHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "accessControlAllowHeaders": {
             "type": "array",
             "items": {
               "type": "string"
             }
-          },
-          "accessControlAllowOrigin": {
-            "type": "string"
           },
           "accessControlRequestHeaders": {
             "type": "array",
@@ -8940,15 +8992,6 @@
             "items": {
               "$ref": "#/components/schemas/HttpMethod"
             }
-          },
-          "accessControlExposeHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlRequestMethod": {
-            "$ref": "#/components/schemas/HttpMethod"
           },
           "accept": {
             "type": "array",
@@ -8971,64 +9014,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "etag": {
-            "type": "string"
-          },
-          "acceptLanguage": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "range": {
-                  "type": "string"
-                },
-                "weight": {
-                  "type": "number",
-                  "format": "double"
-                }
-              }
-            }
-          },
-          "basicAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
-          "acceptPatch": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
-          },
-          "ifNoneMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlMaxAge": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "contentLanguage": {
-            "type": "string"
-          },
-          "acceptLanguageAsLocales": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "ifModifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "contentType": {
-            "$ref": "#/components/schemas/MediaType"
           }
         }
       },
@@ -9059,14 +9044,14 @@
           "concrete": {
             "type": "boolean"
           },
+          "subtypeSuffix": {
+            "type": "string"
+          },
           "wildcardSubtype": {
             "type": "boolean"
           },
           "wildcardType": {
             "type": "boolean"
-          },
-          "subtypeSuffix": {
-            "type": "string"
           }
         }
       },

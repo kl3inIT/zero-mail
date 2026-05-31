@@ -306,7 +306,7 @@ function SearchMemoriesResult({ input, output }: { input: unknown; output: unkno
     [];
   return (
     <SubtleToolCollapsible
-      title={`Tìm ký ức · ${memories.length}`}
+      title={`Tìm kiến thức · ${memories.length}`}
       defaultOpen={memories.length > 0}
     >
       {query && (
@@ -316,7 +316,7 @@ function SearchMemoriesResult({ input, output }: { input: unknown; output: unkno
         />
       )}
       {memories.length === 0 ? (
-        <EmptyHint>Không tìm thấy ký ức nào khớp.</EmptyHint>
+        <EmptyHint>Không tìm thấy kiến thức nào khớp.</EmptyHint>
       ) : (
         <ul className="divide-border divide-y">
           {memories.map((memory, index) => (
@@ -438,17 +438,6 @@ function SaveDraftResult({ input, output }: { input: unknown; output: unknown })
   );
 }
 
-function AddToKnowledgeBaseResult({ input }: { input: unknown }) {
-  const title = asString(getField(input, 'title'));
-  const content = asString(getField(input, 'content'));
-  return (
-    <SubtleToolCollapsible title="Đã thêm vào kho kiến thức" defaultOpen>
-      {title && <ToolDetailRow label="Tiêu đề" value={title} />}
-      {content && <div className="text-foreground text-xs whitespace-pre-wrap">{content}</div>}
-    </SubtleToolCollapsible>
-  );
-}
-
 // --- DISPATCHER --------------------------------------------------------------
 
 const READ_RENDERERS: Record<
@@ -475,7 +464,6 @@ const WRITE_REVERSIBLE_RENDERERS: Record<
   updateRule: UpdateRuleResult,
   disableRule: ({ input }) => <DisableRuleResult input={input} />,
   saveDraft: SaveDraftResult,
-  addToKnowledgeBase: ({ input }) => <AddToKnowledgeBaseResult input={input} />,
 };
 
 export function renderToolResult({

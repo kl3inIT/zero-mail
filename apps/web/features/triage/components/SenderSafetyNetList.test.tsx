@@ -60,7 +60,7 @@ describe('SenderSafetyNetList', () => {
     fireEvent.change(screen.getByPlaceholderText('ceo@acme.com or @acme.com'), {
       target: { value: '@example.com' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '+ Add sender' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add sender' }));
 
     expect(mocks.mutate).toHaveBeenCalledWith('@example.com', expect.any(Object));
     await waitFor(() =>
