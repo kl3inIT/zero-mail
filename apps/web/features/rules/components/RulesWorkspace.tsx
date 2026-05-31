@@ -580,18 +580,8 @@ export function RulesWorkspace() {
           </p>
           <Tabs defaultValue="custom" className="space-y-4">
             <TabsList aria-label={t('rules.tabs.testModeLabel')}>
-              <TabsTrigger value="custom" className="gap-2">
-                {t('rules.tabs.testCustom')}
-                <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                  {t('rules.tabs.creditBadge')}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="gmail" className="gap-2">
-                {t('rules.tabs.testGmail')}
-                <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                  {t('rules.tabs.creditBadge')}
-                </Badge>
-              </TabsTrigger>
+              <TabsTrigger value="custom">{t('rules.tabs.testCustom')}</TabsTrigger>
+              <TabsTrigger value="gmail">{t('rules.tabs.testGmail')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="custom">
