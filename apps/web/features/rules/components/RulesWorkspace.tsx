@@ -7,7 +7,6 @@ import { Plus } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +20,7 @@ import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
-import { RulePreviewPanel } from '@/features/rules/components/RulePreviewPanel';
+import { GmailRuleTester } from '@/features/rules/components/GmailRuleTester';
 import { AuditLog } from '@/features/triage/components/AuditLog';
 import {
   compiledResponseToRequest,
@@ -36,7 +35,6 @@ import {
   useCompileRule,
   useCreateRule,
   useDeleteRule,
-  usePreviewAllEnabledRules,
   usePreviewCustomMail,
   useRules,
   useUpdateRule,
@@ -266,7 +264,6 @@ export function RulesWorkspace() {
   const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
   const deleteRuleMutation = useDeleteRule();
-  const previewAllEnabledMutation = usePreviewAllEnabledRules();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const previewCustomMailMutation = usePreviewCustomMail();
 
@@ -422,32 +419,6 @@ export function RulesWorkspace() {
     });
   }
 
-  async function handlePreview(options: { evaluateSemanticIntents?: boolean } = {}) {
-    const evaluateSemanticIntents = options.evaluateSemanticIntents ?? false;
-    dispatch({ type: 'previewStarted' });
-
-    try {
-      const result = await previewAllEnabledMutation.mutateAsync({
-        sampleSize: state.sampleSize,
-        evaluateSemanticIntents,
-      });
-      dispatch({ type: 'previewSucceeded', preview: result });
-    } catch (error) {
-      if (isGmailUnavailable(error)) {
-        dispatch({
-          type: 'previewGmailUnavailable',
-          message: t('errors.rules.gmail.unavailable'),
-        });
-        return;
-      }
-      dispatch({ type: 'previewFailed', message: t('errors.rules.preview.generic') });
-    }
-  }
-
-  function handleEvaluateSemanticIntents() {
-    void handlePreview({ evaluateSemanticIntents: true });
-  }
-
   async function handleToggleRule(rule: RuleResponse) {
     if (!rule.ruleId) return;
     dispatch({ type: 'ruleTogglePending', ruleId: rule.ruleId });
@@ -479,13 +450,16 @@ export function RulesWorkspace() {
         body: input.body,
       });
       setCustomMailResult(response);
-    } catch {
+    } catch (error) {
+      if (isInsufficientCredit(error)) {
+        setCustomMailError(t('errors.rules.insufficientCredits'));
+        return;
+      }
       setCustomMailError(t('errors.rules.testCustom.generic'));
     }
   }
 
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
-  const canPreview = enabledRulesCount > 0;
   return (
     <div className="space-y-6">
       <div
@@ -574,18 +548,8 @@ export function RulesWorkspace() {
           </p>
           <Tabs defaultValue="custom" className="space-y-4">
             <TabsList aria-label={t('rules.tabs.testModeLabel')}>
-              <TabsTrigger value="custom" className="gap-2">
-                {t('rules.tabs.testCustom')}
-                <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                  {t('rules.tabs.freeBadge')}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="gmail" className="gap-2">
-                {t('rules.tabs.testGmail')}
-                <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                  {t('rules.tabs.creditBadge')}
-                </Badge>
-              </TabsTrigger>
+              <TabsTrigger value="custom">{t('rules.tabs.testCustom')}</TabsTrigger>
+              <TabsTrigger value="gmail">{t('rules.tabs.testGmail')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="custom">
@@ -604,23 +568,7 @@ export function RulesWorkspace() {
                 <AlertTitle>{t('rules.tabs.gmailCreditWarningTitle')}</AlertTitle>
                 <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
               </Alert>
-              <RulePreviewPanel
-                enabledRulesCount={enabledRulesCount}
-                preview={state.preview}
-                previewError={state.previewError}
-                gmailUnavailableError={state.gmailUnavailableError}
-                isPreviewing={previewAllEnabledMutation.isPending}
-                canPreview={canPreview}
-                sampleSize={state.sampleSize}
-                isEvaluatingSemanticIntents={
-                  previewAllEnabledMutation.isPending && Boolean(state.preview)
-                }
-                onSampleSizeChange={(sampleSize) =>
-                  dispatch({ type: 'sampleSizeChanged', sampleSize })
-                }
-                onPreview={() => handlePreview()}
-                onEvaluateSemanticIntents={handleEvaluateSemanticIntents}
-              />
+              <GmailRuleTester enabledRulesCount={enabledRulesCount} />
             </TabsContent>
           </Tabs>
         </section>
@@ -744,10 +692,6 @@ function apiErrorCode(error: unknown): string | undefined {
 
 function isInsufficientCredit(error: unknown): boolean {
   return apiErrorCode(error) === ErrorCode.BillingInsufficient;
-}
-
-function isGmailUnavailable(error: unknown): boolean {
-  return apiErrorCode(error) === ErrorCode.RulesGmailUnavailable;
 }
 
 function maybeApiError(error: unknown): ApiError | undefined {

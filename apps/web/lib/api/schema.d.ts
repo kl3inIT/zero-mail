@@ -372,6 +372,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rules/test/message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["testSingleMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rules/templates/{templateKey}/materialize": {
         parameters: {
             query?: never;
@@ -900,6 +916,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rules/test/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listTestMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rules/templates": {
         parameters: {
             query?: never;
@@ -1400,6 +1432,10 @@ export interface components {
             rows: components["schemas"]["PreviewRowResponse"][];
             savedRuleMarkedPreviewed: boolean;
         };
+        RuleTestMessageRequest: {
+            gmailMessageId: string;
+            gmailThreadId: string;
+        };
         RuleTemplateMaterializationResponse: {
             /** Format: int32 */
             createdCount: number;
@@ -1478,8 +1514,8 @@ export interface components {
             filename?: string;
             charset?: string;
             inline?: boolean;
-            formData?: boolean;
             attachment?: boolean;
+            formData?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -1522,6 +1558,8 @@ export interface components {
             /** Format: int64 */
             ifModifiedSince?: number;
             contentType?: components["schemas"]["MediaType"];
+            origin?: string;
+            range?: components["schemas"]["HttpRange"][];
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
@@ -1529,35 +1567,33 @@ export interface components {
             }[];
             acceptPatch?: components["schemas"]["MediaType"][];
             basicAuth?: string;
+            acceptLanguageAsLocales?: string[];
             /** Format: int64 */
             accessControlMaxAge?: number;
-            ifNoneMatch?: string[];
-            contentLanguage?: string;
-            acceptCharset?: string[];
-            acceptLanguageAsLocales?: string[];
             contentDisposition?: components["schemas"]["ContentDisposition"];
             /** Format: int64 */
             ifUnmodifiedSince?: number;
+            acceptCharset?: string[];
+            ifNoneMatch?: string[];
+            contentLanguage?: string;
             cacheControl?: string;
-            origin?: string;
-            range?: components["schemas"]["HttpRange"][];
-            ifMatch?: string[];
-            allow?: components["schemas"]["HttpMethod"][];
-            etag?: string;
-            bearerAuth?: string;
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
-            accessControlAllowCredentials?: boolean;
-            accessControlAllowOrigin?: string;
-            accessControlExposeHeaders?: string[];
-            accessControlAllowHeaders?: string[];
-            accessControlRequestHeaders?: string[];
-            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
             accept?: components["schemas"]["MediaType"][];
+            allow?: components["schemas"]["HttpMethod"][];
             /** Format: int64 */
             expires?: number;
+            ifMatch?: string[];
+            etag?: string;
+            accessControlRequestHeaders?: string[];
+            accessControlAllowCredentials?: boolean;
+            accessControlExposeHeaders?: string[];
+            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
+            accessControlAllowOrigin?: string;
+            accessControlAllowHeaders?: string[];
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
             pragma?: string;
             upgrade?: string;
             vary?: string[];
+            bearerAuth?: string;
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -1571,8 +1607,8 @@ export interface components {
             qualityValue?: number;
             charset?: string;
             concrete?: boolean;
-            subtypeSuffix?: string;
             wildcardSubtype?: boolean;
+            subtypeSuffix?: string;
             wildcardType?: boolean;
         };
         BillingCheckoutResponse: {
@@ -1790,6 +1826,19 @@ export interface components {
             rules: components["schemas"]["RuleResponse"][];
             templates: components["schemas"]["RuleTemplateResponse"][];
             materialization: components["schemas"]["RuleTemplateMaterializationResponse"];
+        };
+        Message: {
+            gmailMessageId: string;
+            gmailThreadId: string;
+            sanitizedSenderEmail: string;
+            sanitizedSenderDomain: string;
+            sanitizedSubjectExcerpt: string;
+            /** Format: date-time */
+            internalDate: string;
+            gmailLabelIds: string[];
+        };
+        RuleTestMessagesResponse: {
+            messages: components["schemas"]["Message"][];
         };
         RuleCatalogExampleResponse: {
             /** Format: uuid */
@@ -4512,6 +4561,84 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RulePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RulePreviewResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    testSingleMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleTestMessageRequest"];
             };
         };
         responses: {
@@ -7648,6 +7775,82 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AiCostResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    listTestMessages: {
+        parameters: {
+            query?: {
+                sampleSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleTestMessagesResponse"];
                 };
             };
             /** @description Bad Request */

@@ -15,6 +15,8 @@ import com.zeromail.api.dto.rules.RulePreviewResponse;
 import com.zeromail.api.dto.rules.RuleResponse;
 import com.zeromail.api.dto.rules.RuleTemplateMaterializationResponse;
 import com.zeromail.api.dto.rules.RuleTemplateResponse;
+import com.zeromail.api.dto.rules.RuleTestMessageRequest;
+import com.zeromail.api.dto.rules.RuleTestMessagesResponse;
 import com.zeromail.api.dto.rules.RuleUpdateRequest;
 import com.zeromail.api.dto.rules.RulesListResponse;
 import com.zeromail.api.error.RuleApiException;
@@ -46,6 +48,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -194,6 +197,28 @@ public class RulesController {
         } catch (IllegalArgumentException invalidSampleSize) {
             throw RuleApiException.invalidSampleSize();
         }
+    }
+
+    @GetMapping("/test/messages")
+    public RuleTestMessagesResponse listTestMessages(
+            @RequestParam(name = "sampleSize", required = false) Integer sampleSize) {
+        try {
+            return RuleTestMessagesResponse.from(
+                    rulePreviewService.listRecentTestMessages(
+                            TenantContext.currentTenantUuid(), sampleSize));
+        } catch (IllegalArgumentException invalidSampleSize) {
+            throw RuleApiException.invalidSampleSize();
+        }
+    }
+
+    @PostMapping("/test/message")
+    public RulePreviewResponse testSingleMessage(
+            @Valid @RequestBody RuleTestMessageRequest request) {
+        return RulePreviewResponse.from(
+                rulePreviewService.previewSingleMessage(
+                        TenantContext.currentTenantUuid(),
+                        request.gmailMessageId(),
+                        request.gmailThreadId()));
     }
 
     @PostMapping("/preview-custom")

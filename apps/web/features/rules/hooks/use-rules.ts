@@ -8,10 +8,12 @@ import {
   deleteRule,
   getRule,
   listRules,
+  listTestMessages,
   previewAllEnabledRules,
   previewCustomMail,
   previewDraftRule,
   previewSavedRule,
+  testSingleMessage,
   updateRule,
   updateRuleEnabled,
   type RuleCreateRequest,
@@ -20,6 +22,7 @@ import {
   type RuleEnabledPreviewRequest,
   type RuleListResponse,
   type RulePreviewRequest,
+  type RuleTestMessageRequest,
   type RuleUpdateRequest,
 } from '@/features/rules/api/rules-api';
 import { rulesKeys } from '@/features/rules/query-keys';
@@ -160,5 +163,28 @@ export function usePreviewCustomMail() {
 export function usePreviewAllEnabledRules() {
   return useMutation({
     mutationFn: (payload: RuleEnabledPreviewRequest) => previewAllEnabledRules(payload),
+  });
+}
+
+// Lists recent Gmail messages for the test tab (free, no eval). The component
+// owns error UX, so opt out of the global toast. Don't retry: a Gmail-unavailable
+// or auth failure should surface immediately, not hammer the Gmail API.
+export function useTestMessages(sampleSize: number, enabled: boolean) {
+  return useQuery({
+    queryKey: rulesKeys.testMessages(sampleSize),
+    queryFn: () => listTestMessages(sampleSize),
+    enabled,
+    retry: false,
+    staleTime: 30_000,
+    meta: { silent: true },
+  });
+}
+
+// Per-message test (1 credit). The component renders the result inline and
+// handles insufficient-credit / Gmail errors itself, so stay silent.
+export function useTestSingleMessage() {
+  return useMutation({
+    mutationFn: (payload: RuleTestMessageRequest) => testSingleMessage(payload),
+    meta: { silent: true },
   });
 }
