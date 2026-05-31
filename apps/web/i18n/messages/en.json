@@ -10,8 +10,8 @@
   },
   "ai": {
     "actions": {
-      "addSender": "+ Add sender",
-      "addSnippet": "+ Add snippet",
+      "addSender": "Add sender",
+      "addSnippet": "Add snippet",
       "cancel": "Cancel",
       "delete": "Delete",
       "edit": "Edit",
@@ -133,8 +133,8 @@
         "placeholder": "ceo@acme.com or @acme.com"
       },
       "autoSend": {
-        "description": "Allow rules to send automatically after all safety gates pass.",
-        "title": "Auto-send rules"
+        "description": "When on, rules can send, reply, or forward email without asking you first. Anything unsafe is saved as a Gmail draft instead of being sent.",
+        "title": "Let rules send email"
       },
       "createdBy": {
         "system": "System",
@@ -591,12 +591,13 @@
       "failed": "Action failed",
       "instructionsAfter": "After",
       "instructionsBefore": "Before",
-      "memoryContent": "Will save",
+      "memoryContent": "Knowledge content to save",
+      "memoryDestination": "After saving, this item appears in AI settings -> Knowledge.",
       "outsideSourceThread": "Added by AI · verify",
       "overwriteNotice": "Will overwrite current instructions",
       "removeSender": "Remove from safety net",
       "ruleName": "Rule name",
-      "saveMemory": "Save memory",
+      "saveMemory": "Save to knowledge",
       "saving": "Saving...",
       "send": "Send via Gmail",
       "sender": "Sender",
@@ -621,7 +622,7 @@
     },
     "suggestion": {
       "draft": "Draft a polite decline",
-      "memory": "Save note: I am working on project X",
+      "memory": "Save to knowledge: I am working on project X",
       "rules": "List enabled rules",
       "search": "Find email from Acme this week"
     },

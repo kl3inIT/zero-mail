@@ -10,8 +10,8 @@
   },
   "ai": {
     "actions": {
-      "addSender": "+ Thêm người gửi",
-      "addSnippet": "+ Thêm đoạn kiến thức",
+      "addSender": "Thêm người gửi",
+      "addSnippet": "Thêm đoạn kiến thức",
       "cancel": "Hủy",
       "delete": "Xóa",
       "edit": "Sửa",
@@ -133,8 +133,8 @@
         "placeholder": "ceo@acme.com hoặc @acme.com"
       },
       "autoSend": {
-        "description": "Cho phép rule tự gửi khi vượt qua toàn bộ cổng an toàn.",
-        "title": "Tự động gửi theo rule"
+        "description": "Khi bật, rule có thể tự gửi, trả lời hoặc chuyển tiếp email mà không cần bạn xác nhận. Email không an toàn sẽ được lưu thành nháp Gmail thay vì gửi đi.",
+        "title": "Cho rule tự gửi email"
       },
       "createdBy": {
         "system": "Hệ thống",
@@ -591,12 +591,13 @@
       "failed": "Thao tác lỗi",
       "instructionsAfter": "Sau",
       "instructionsBefore": "Trước",
-      "memoryContent": "Nội dung sẽ lưu",
+      "memoryContent": "Nội dung kiến thức sẽ lưu",
+      "memoryDestination": "Sau khi lưu, mục này sẽ xuất hiện trong Cài đặt AI -> Kho kiến thức.",
       "outsideSourceThread": "Thêm bởi AI · xác minh",
       "overwriteNotice": "Sẽ ghi đè hướng dẫn hiện tại",
       "removeSender": "Bỏ khỏi danh sách an toàn",
       "ruleName": "Tên quy tắc",
-      "saveMemory": "Lưu trí nhớ",
+      "saveMemory": "Lưu vào kho kiến thức",
       "saving": "Đang lưu...",
       "send": "Gửi qua Gmail",
       "sender": "Người gửi",
@@ -621,7 +622,7 @@
     },
     "suggestion": {
       "draft": "Soạn email từ chối lịch sự",
-      "memory": "Lưu ghi chú: tôi đang làm dự án X",
+      "memory": "Lưu vào kho kiến thức: tôi đang làm dự án X",
       "rules": "Liệt kê quy tắc đang bật",
       "search": "Tìm email từ Acme tuần này"
     },

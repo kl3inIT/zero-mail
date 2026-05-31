@@ -47,7 +47,6 @@ const EN_SCAN_FILES = [
   'app/(auth)/login/page.tsx',
   'app/(protected)/onboarding/page.tsx',
   'app/(protected)/(app)/settings/page.tsx',
-  'app/(protected)/(app)/settings/privacy/page.tsx',
   'app/(protected)/(app)/analytics/page.tsx',
   'app/(protected)/(app)/analytics/loading.tsx',
   'app/(protected)/(app)/rules/page.tsx',
@@ -83,7 +82,6 @@ const EN_SCAN_FILES = [
   'components/shell/AppShell.tsx',
   'components/shell/AppSidebar.tsx',
   'features/ai/components/AiConfigPage.tsx',
-  'features/triage/components/PauseBanner.tsx',
   'features/triage/components/AuditLog.tsx',
   'features/triage/components/AuditTable.tsx',
   'features/triage/components/AuditCardList.tsx',
@@ -98,7 +96,6 @@ const EN_SCAN_FILES = [
   'features/analytics/components/RuleHitsPanel.tsx',
   'features/analytics/components/WindowChips.tsx',
   'features/analytics/components/AnalyticsSkeleton.tsx',
-  'features/notifications/components/NotificationsSection.tsx',
   // Needs-reply surface. Paths listed before implementation so future visible
   // copy is scanned as files land.
   'features/needs-reply/components/NeedsReplyPageClient.tsx',
@@ -110,7 +107,6 @@ const EN_SCAN_FILES = [
   'features/billing/components/LedgerHistory.tsx',
   'features/billing/components/LedgerTable.tsx',
   'features/billing/components/CopyableField.tsx',
-  'features/privacy/components/PrivacySections.tsx',
   'features/account/components/DeleteAccountDialog.tsx',
   'i18n/components/LanguageSwitcher.tsx',
   // Landing + auth chrome + onboarding split + legal stubs.

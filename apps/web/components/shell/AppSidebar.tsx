@@ -19,7 +19,6 @@ import {
   Plus,
   RefreshCw,
   Settings,
-  ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 
@@ -71,7 +70,7 @@ type NavItem = {
 
 type AccountNavItem = {
   href: Route;
-  labelKey: 'nav.settings' | 'nav.billing' | 'nav.upgradePlan' | 'nav.privacy';
+  labelKey: 'nav.settings' | 'nav.billing' | 'nav.upgradePlan';
   icon: typeof Settings;
 };
 
@@ -94,7 +93,6 @@ const ACCOUNT_NAV: AccountNavItem[] = [
   { href: '/settings' as Route, labelKey: 'nav.settings', icon: Settings },
   { href: '/credits' as Route, labelKey: 'nav.billing', icon: CreditCard },
   { href: '/upgrade-plan' as Route, labelKey: 'nav.upgradePlan', icon: Crown },
-  { href: '/settings/privacy' as Route, labelKey: 'nav.privacy', icon: ShieldCheck },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
