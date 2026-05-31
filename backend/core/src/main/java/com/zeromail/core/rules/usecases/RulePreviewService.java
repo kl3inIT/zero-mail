@@ -218,6 +218,81 @@ public class RulePreviewService {
                 sampleSize, previewCandidates, previewInputs, false, semanticOverridesByMessage);
     }
 
+    /**
+     * List recent Gmail messages for the test tab without evaluating any rule. No LLM call and no
+     * credit cost — the user picks rows (or "test all") to run the billable per-message evaluation.
+     */
+    @Transactional(readOnly = true)
+    public RuleTestMessageList listRecentTestMessages(UUID tenantId, Integer requestedSampleSize) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        PreviewSampleSize sampleSize = PreviewSampleSize.normalize(requestedSampleSize);
+        List<RulePreviewDataService.PreviewInput> previewInputs =
+                rulePreviewDataService.fetchPreviewInputs(tenantId, false, sampleSize);
+        List<RuleTestMessageList.Message> messages =
+                previewInputs.stream()
+                        .map(
+                                previewInput ->
+                                        new RuleTestMessageList.Message(
+                                                previewInput.gmailMessageId(),
+                                                previewInput.gmailThreadId(),
+                                                previewInput.summary().sanitizedSenderEmail(),
+                                                previewInput.summary().sanitizedSenderDomain(),
+                                                previewInput.summary().sanitizedSubjectExcerpt(),
+                                                previewInput.summary().internalDate(),
+                                                previewInput.summary().gmailLabelIds()))
+                        .toList();
+        return new RuleTestMessageList(messages);
+    }
+
+    /**
+     * Evaluate every enabled rule against a single recent message, always resolving semantic
+     * intents through the LLM. This is the billable per-row "Test" action of the test tab.
+     * Read-write because the LLM gateway records credit-ledger consumption (see {@link
+     * #previewAllEnabled}).
+     */
+    @Transactional
+    public RulePreviewResult previewSingleMessage(
+            UUID tenantId, String gmailMessageId, String gmailThreadId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+        Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
+        PreviewSampleSize singleMessageSize = PreviewSampleSize.normalize(null);
+        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        ArrayList<PreviewCandidate> previewCandidates = new ArrayList<>();
+        for (RuleEntity ruleEntity : orderedRules) {
+            if (!ruleEntity.isEnabled()) {
+                continue;
+            }
+            previewCandidates.add(toPreviewCandidate(ruleEntity, false));
+        }
+        if (previewCandidates.isEmpty()) {
+            return new RulePreviewResult(
+                    new RulePreviewResult.ImpactSummary(
+                            singleMessageSize.value(),
+                            0,
+                            0,
+                            Map.of(),
+                            0,
+                            0,
+                            true,
+                            NO_WRITE_NOTICE_KEY),
+                    List.of(),
+                    false);
+        }
+        List<RulePreviewDataService.PreviewInput> previewInputs =
+                List.of(
+                        rulePreviewDataService.fetchPreviewInputById(
+                                tenantId, gmailMessageId, gmailThreadId));
+        Map<String, Map<String, Boolean>> semanticOverridesByMessage =
+                resolveSemanticOverrides(previewCandidates, previewInputs);
+        return buildResult(
+                singleMessageSize,
+                previewCandidates,
+                previewInputs,
+                false,
+                semanticOverridesByMessage);
+    }
+
     @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,

@@ -72,6 +72,46 @@ public class RulePreviewDataService {
         }
     }
 
+    /**
+     * Fetch a single recent message by id for the per-message test flow. Reuses the triage-input
+     * read path (Gmail messages.get by id) so the rules test tab can evaluate one email at a time.
+     * Throws {@link GmailPreviewUnavailableException} when the connection is unusable or the
+     * message is gone, matching the sample-fetch contract.
+     */
+    public PreviewInput fetchPreviewInputById(
+            UUID tenantId, String gmailMessageId, String gmailThreadId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+        Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
+        GmailConnectionStatus connectionStatus =
+                GmailConnectionStatus.fromId(
+                        gmailConnectionService.currentStatus(tenantId).status());
+        if (connectionStatus == GmailConnectionStatus.NOT_CONNECTED) {
+            throw new GmailPreviewUnavailableException(
+                    GmailPreviewUnavailableException.Reason.NOT_CONNECTED);
+        }
+        if (connectionStatus != GmailConnectionStatus.CONNECTED) {
+            throw new GmailPreviewUnavailableException(
+                    GmailPreviewUnavailableException.Reason.DISCONNECTED);
+        }
+        try {
+            return gmailPreviewReadService
+                    .fetchTriageInput(
+                            tenantId, gmailMessageId, gmailThreadId, java.time.Instant.now())
+                    .map(RulePreviewDataService::toPreviewInput)
+                    .orElseThrow(
+                            () ->
+                                    new GmailPreviewUnavailableException(
+                                            GmailPreviewUnavailableException.Reason
+                                                    .GMAIL_UNAVAILABLE));
+        } catch (
+                GmailPreviewReadService.GmailPreviewReadUnavailableException
+                        readUnavailableException) {
+            throw new GmailPreviewUnavailableException(
+                    mapReason(readUnavailableException.reason()));
+        }
+    }
+
     private static PreviewInput toPreviewInput(
             GmailPreviewReadService.GmailPreviewMessage gmailPreviewMessage) {
         RuleEvaluationInput ruleEvaluationInput =
