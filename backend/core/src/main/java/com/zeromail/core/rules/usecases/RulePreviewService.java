@@ -22,6 +22,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -254,12 +255,21 @@ public class RulePreviewService {
         }
 
         RuleEvaluationInput evaluationInput = buildCustomEvaluationInput(subject, body);
+        LinkedHashMap<UUID, MatcherNode> matcherNodesByRuleId = new LinkedHashMap<>();
+        for (RuleEntity ruleEntity : targetRules) {
+            matcherNodesByRuleId.put(ruleEntity.getId(), parseMatcher(ruleEntity.getMatcherAst()));
+        }
+        // Always resolve semantic intents through the LLM so natural-language
+        // conditions are decided here instead of being left "deferred" forever.
+        Map<String, Boolean> semanticOverrides =
+                resolveCustomSemanticOverrides(matcherNodesByRuleId.values(), subject, body);
+
         ArrayList<RuleCustomPreviewResult.Entry> entries = new ArrayList<>(targetRules.size());
         for (RuleEntity ruleEntity : targetRules) {
-            MatcherNode matcherNode = parseMatcher(ruleEntity.getMatcherAst());
+            MatcherNode matcherNode = matcherNodesByRuleId.get(ruleEntity.getId());
             List<ActionIntent> actionIntents = parseActionIntents(ruleEntity.getActionIntents());
             RuleEvaluationResult evaluationResult =
-                    ruleEvaluator.evaluate(matcherNode, evaluationInput);
+                    ruleEvaluator.evaluate(matcherNode, evaluationInput, semanticOverrides);
             boolean matched = evaluationResult.status() == MatcherEvaluationState.MATCHED;
             boolean deferred = evaluationResult.status() == MatcherEvaluationState.DEFERRED;
             entries.add(
@@ -292,6 +302,42 @@ public class RulePreviewService {
                                     : List.of()));
         }
         return new RuleCustomPreviewResult(List.copyOf(entries));
+    }
+
+    private Map<String, Boolean> resolveCustomSemanticOverrides(
+            Collection<MatcherNode> matcherNodes, String subject, String body) {
+        if (llmGateway == null) {
+            // No LLM gateway wired (test/lite profile): leave semantic nodes
+            // deferred rather than failing the deterministic preview.
+            return Map.of();
+        }
+        LinkedHashMap<String, SemanticIntentMatcher> semanticIntentsByNodeId =
+                new LinkedHashMap<>();
+        for (MatcherNode matcherNode : matcherNodes) {
+            collectSemanticIntentMatchers(matcherNode, semanticIntentsByNodeId);
+        }
+        if (semanticIntentsByNodeId.isEmpty()) {
+            return Map.of();
+        }
+        List<SemanticIntentRequest> intents =
+                semanticIntentsByNodeId.entrySet().stream()
+                        .map(
+                                entry ->
+                                        new SemanticIntentRequest(
+                                                entry.getKey(), entry.getValue().intent()))
+                        .toList();
+        // The custom-tester body is user-authored test input (not mail received
+        // from Gmail), so it may be sent to the LLM. The gateway still sanitizes,
+        // truncates, and injection-hardens the content, and never logs/stores it.
+        return llmGateway.evaluateSemanticIntents(
+                CallSite.PREVIEW, buildCustomSemanticContent(subject, body), intents);
+    }
+
+    private static String buildCustomSemanticContent(String subject, String body) {
+        StringBuilder content = new StringBuilder();
+        content.append("subject: ").append(subject == null ? "" : subject);
+        content.append("\nbody: ").append(body == null ? "" : body);
+        return content.toString();
     }
 
     private RuleEvaluationInput buildCustomEvaluationInput(String subject, String body) {
