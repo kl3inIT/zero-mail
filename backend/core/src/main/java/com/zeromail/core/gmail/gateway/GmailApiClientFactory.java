@@ -7,7 +7,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.gmail.config.GmailProperties;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
@@ -52,13 +52,13 @@ public class GmailApiClientFactory {
                     String clientId,
             @Value("${spring.security.oauth2.client.registration.google.client-secret}")
                     String clientSecret,
-            ZeroMailCoreProperties properties,
+            GmailProperties gmailProperties,
             GmailConnectionRepository gmailConnectionRepository,
             RefreshTokenCipher refreshTokenCipher) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-        this.apiRootUrl = properties.gmail().apiRootUrl();
-        this.tokenEndpoint = properties.gmail().oauthTokenUrl();
+        this.apiRootUrl = gmailProperties.apiRootUrl();
+        this.tokenEndpoint = gmailProperties.oauthTokenUrl();
         this.gmailConnectionRepository = gmailConnectionRepository;
         this.refreshTokenCipher = refreshTokenCipher;
     }

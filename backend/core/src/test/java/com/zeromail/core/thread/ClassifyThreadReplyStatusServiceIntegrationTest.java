@@ -69,8 +69,7 @@ class ClassifyThreadReplyStatusServiceIntegrationTest extends PostgresContainerT
     }
 
     @Test
-    void classify_opens_tenant_bound_transaction_when_outer_listener_transaction_exists()
-            throws Exception {
+    void classify_opens_tenant_bound_transaction_when_outer_listener_transaction_exists() {
         UUID listenerTenantId = UUID.fromString("00000000-0000-0000-0000-0000000005c3");
         String gmailThreadId = "gmail-thread-listener-transaction";
         ClassifyThreadReplyStatusService classifierTarget =

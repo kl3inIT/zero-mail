@@ -20,9 +20,11 @@ public class ChatToolCatalog {
     private static final Map<ToolCategory, Integer> EXPECTED_PARTITION =
             Map.of(
                     ToolCategory.READ, 8,
-                    ToolCategory.WRITE_REVERSIBLE, 7,
+                    ToolCategory.WRITE_REVERSIBLE, 6,
                     ToolCategory.CONFIRM_REQUIRED, 6,
                     ToolCategory.CONFIRMED_SEND, 3);
+    private static final int EXPECTED_ACTIVE_TOOL_COUNT =
+            EXPECTED_PARTITION.values().stream().mapToInt(Integer::intValue).sum();
 
     private final List<ToolDefinition> toolDefinitions;
 
@@ -54,8 +56,11 @@ public class ChatToolCatalog {
     }
 
     public void validate() {
-        if (toolDefinitions.size() != ChatToolName.values().length) {
-            throw new IllegalStateException("Chat tool catalog must contain exactly 24 tools");
+        if (toolDefinitions.size() != EXPECTED_ACTIVE_TOOL_COUNT) {
+            throw new IllegalStateException(
+                    "Chat tool catalog must contain exactly "
+                            + EXPECTED_ACTIVE_TOOL_COUNT
+                            + " active tools");
         }
         EnumSet<ChatToolName> seenToolNames = EnumSet.noneOf(ChatToolName.class);
         EnumMap<ToolCategory, Integer> partition = new EnumMap<>(ToolCategory.class);
@@ -80,11 +85,6 @@ public class ChatToolCatalog {
                         "Chat tool category mismatch for " + toolDefinition.name().id());
             }
             partition.merge(toolDefinition.category(), 1, Integer::sum);
-        }
-        EnumSet<ChatToolName> missingToolNames = EnumSet.allOf(ChatToolName.class);
-        missingToolNames.removeAll(seenToolNames);
-        if (!missingToolNames.isEmpty()) {
-            throw new IllegalStateException("Missing chat tools: " + missingToolNames);
         }
         EXPECTED_PARTITION.forEach(
                 (toolCategory, expectedCount) -> {
@@ -135,7 +135,7 @@ public class ChatToolCatalog {
                         GetSenderSafetyEntryArgs.class),
                 tool(
                         ChatToolName.SEARCH_MEMORIES,
-                        "Search assistant memories",
+                        "Search saved knowledge snippets and chat-saved memories",
                         SearchMemoriesArgs.class),
                 tool(ChatToolName.APPLY_LABEL, "Apply a Gmail label", ApplyLabelArgs.class),
                 tool(ChatToolName.REMOVE_LABEL, "Remove a Gmail label", RemoveLabelArgs.class),
@@ -149,10 +149,6 @@ public class ChatToolCatalog {
                         ChatToolName.SAVE_DRAFT,
                         "Save a Gmail draft without sending",
                         SaveDraftArgs.class),
-                tool(
-                        ChatToolName.ADD_TO_KNOWLEDGE_BASE,
-                        "Add assistant knowledge snippet",
-                        AddToKnowledgeBaseArgs.class),
                 tool(
                         ChatToolName.CREATE_RULE,
                         "Create a rule after explicit confirmation",
@@ -171,7 +167,8 @@ public class ChatToolCatalog {
                         BulkArchiveArgs.class),
                 tool(
                         ChatToolName.SAVE_MEMORY,
-                        "Save assistant memory after preview",
+                        "Save a user-approved knowledge snippet after preview. Use this whenever"
+                                + " the user asks Zero Mail to remember something long term.",
                         SaveMemoryArgs.class),
                 tool(
                         ChatToolName.UPDATE_PERSONAL_INSTRUCTIONS,
@@ -237,8 +234,6 @@ public class ChatToolCatalog {
     public record DisableRuleArgs(UUID ruleId) {}
 
     public record SaveDraftArgs(String to, String subject, Sensitive<String> body) {}
-
-    public record AddToKnowledgeBaseArgs(String content) {}
 
     public record CreateRuleArgs(String sourceText) {}
 

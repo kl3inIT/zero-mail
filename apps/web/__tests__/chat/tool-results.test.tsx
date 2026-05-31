@@ -18,7 +18,6 @@ const TOOL_NAMES = [
   'updateRule',
   'disableRule',
   'saveDraft',
-  'addToKnowledgeBase',
 ] as const;
 
 describe('tool-results dispatcher', () => {
@@ -147,10 +146,6 @@ describe('tool-results render smoke', () => {
     saveDraft: {
       input: { to: 'x@example.com', subject: 'Re: hi', body: 'Body' },
       output: { draft_id: 'd1', gmail_thread_id: 't1' },
-    },
-    addToKnowledgeBase: {
-      input: { title: 'Deadline', content: 'Submit 15/06' },
-      output: { knowledge_snippet_id: 'k1' },
     },
   };
 

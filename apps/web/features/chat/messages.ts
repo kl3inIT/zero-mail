@@ -52,8 +52,8 @@ export const chatMessages = {
     en: 'Draft a polite decline',
   },
   'chat.suggestion.memory': {
-    vi: 'Lưu ghi chú: tôi đang làm dự án X',
-    en: 'Save note: I am working on project X',
+    vi: 'Lưu vào kho kiến thức: tôi đang làm dự án X',
+    en: 'Save to knowledge: I am working on project X',
   },
   'chat.prompt.placeholder': {
     vi: 'Nhắn cho Zero Mail...',
@@ -176,16 +176,20 @@ export const chatMessages = {
     en: 'Archive in bulk',
   },
   'chat.preview.saveMemory': {
-    vi: 'Lưu trí nhớ',
-    en: 'Save memory',
+    vi: 'Lưu vào kho kiến thức',
+    en: 'Save to knowledge',
   },
   'chat.preview.updateInstructions': {
     vi: 'Cập nhật hướng dẫn',
     en: 'Update instructions',
   },
   'chat.preview.memoryContent': {
-    vi: 'Nội dung sẽ lưu',
-    en: 'Will save',
+    vi: 'Nội dung kiến thức sẽ lưu',
+    en: 'Knowledge content to save',
+  },
+  'chat.preview.memoryDestination': {
+    vi: 'Sau khi lưu, mục này sẽ xuất hiện trong Cài đặt AI -> Kho kiến thức.',
+    en: 'After saving, this item appears in AI settings -> Knowledge.',
   },
   'chat.preview.instructionsBefore': {
     vi: 'Trước',

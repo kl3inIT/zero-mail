@@ -1,8 +1,8 @@
 package com.zeromail.core.admin.spend.projection;
 
 import com.zeromail.core.admin.cat.domain.Feature;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.spend.exception.SpendRangeTooWideException;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;

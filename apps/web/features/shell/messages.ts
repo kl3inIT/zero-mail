@@ -127,13 +127,17 @@ export const shellMessages = {
     vi: 'Đăng xuất',
     en: 'Sign out',
   },
-  'nav.sectionMail': {
-    vi: 'Thư',
-    en: 'Mail',
+  'nav.sectionDaily': {
+    vi: 'Hằng ngày',
+    en: 'Daily',
   },
-  'nav.sectionManage': {
-    vi: 'Quản lý',
-    en: 'Manage',
+  'nav.sectionAutomation': {
+    vi: 'Tự động hóa',
+    en: 'Automation',
+  },
+  'nav.sectionTools': {
+    vi: 'Công cụ',
+    en: 'Tools',
   },
   'nav.dashboard': {
     vi: 'Tổng quan',

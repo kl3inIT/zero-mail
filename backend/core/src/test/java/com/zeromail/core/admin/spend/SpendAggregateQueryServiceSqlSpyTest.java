@@ -2,11 +2,11 @@ package com.zeromail.core.admin.spend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.admin.config.AdminProperties;
 import com.zeromail.core.admin.spend.persistence.lowlevel.SpendAggregateReadRepository;
 import com.zeromail.core.admin.spend.projection.SpendDashboardSnapshot;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import com.zeromail.core.admin.spend.usecases.SpendAggregateQueryService;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.support.PostgresContainerTest;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -39,7 +39,7 @@ import org.springframework.jdbc.datasource.DelegatingDataSource;
 class SpendAggregateQueryServiceSqlSpyTest extends PostgresContainerTest {
 
     @Autowired private DataSource dataSource;
-    @Autowired private ZeroMailCoreProperties coreProperties;
+    @Autowired private AdminProperties adminProperties;
 
     @Test
     void snapshot_never_selects_prompt_or_completion_columns() {
@@ -49,7 +49,7 @@ class SpendAggregateQueryServiceSqlSpyTest extends PostgresContainerTest {
                 new SpendAggregateReadRepository(new NamedParameterJdbcTemplate(spyingDataSource));
         SpendAggregateQueryService spendAggregateQueryService =
                 new SpendAggregateQueryService(
-                        spendAggregateReadRepository, Clock.systemUTC(), coreProperties);
+                        spendAggregateReadRepository, Clock.systemUTC(), adminProperties);
 
         Instant now = Instant.now();
         SpendQuery spendQuery =

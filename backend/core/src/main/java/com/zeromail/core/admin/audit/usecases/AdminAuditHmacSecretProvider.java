@@ -1,6 +1,6 @@
 package com.zeromail.core.admin.audit.usecases;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.admin.config.AdminProperties;
 import java.util.Base64;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
@@ -14,15 +14,15 @@ public class AdminAuditHmacSecretProvider {
 
     private static final int MIN_SECRET_BYTES = 32;
 
-    private final ZeroMailCoreProperties coreProperties;
+    private final AdminProperties adminProperties;
 
-    public AdminAuditHmacSecretProvider(ZeroMailCoreProperties coreProperties) {
-        this.coreProperties =
-                Objects.requireNonNull(coreProperties, "coreProperties must not be null");
+    public AdminAuditHmacSecretProvider(AdminProperties adminProperties) {
+        this.adminProperties =
+                Objects.requireNonNull(adminProperties, "adminProperties must not be null");
     }
 
     public byte[] secret() {
-        String hmacSecretBase64 = coreProperties.admin().audit().hmacKekBase64();
+        String hmacSecretBase64 = adminProperties.audit().hmacKekBase64();
         if (hmacSecretBase64 == null || hmacSecretBase64.isBlank()) {
             throw new IllegalStateException(
                     "zero-mail.admin.audit.hmac-kek-base64 must be configured");

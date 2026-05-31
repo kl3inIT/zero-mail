@@ -19,7 +19,6 @@ import {
   Plus,
   RefreshCw,
   Settings,
-  ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 
@@ -71,18 +70,21 @@ type NavItem = {
 
 type AccountNavItem = {
   href: Route;
-  labelKey: 'nav.settings' | 'nav.billing' | 'nav.upgradePlan' | 'nav.privacy';
+  labelKey: 'nav.settings' | 'nav.billing' | 'nav.upgradePlan';
   icon: typeof Settings;
 };
 
-const MAIL_NAV: NavItem[] = [
+const DAILY_NAV: NavItem[] = [
   { href: '/inbox' as Route, labelKey: 'nav.inbox', icon: Inbox },
   { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
+];
+
+const AUTOMATION_NAV: NavItem[] = [
+  { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
   { href: '/ai' as Route, labelKey: 'nav.ai', icon: Bot },
 ];
 
-const MANAGE_NAV: NavItem[] = [
-  { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
+const TOOLS_NAV: NavItem[] = [
   { href: '/cleanup/unsubscribe-campaign', labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
 ];
@@ -91,7 +93,6 @@ const ACCOUNT_NAV: AccountNavItem[] = [
   { href: '/settings' as Route, labelKey: 'nav.settings', icon: Settings },
   { href: '/credits' as Route, labelKey: 'nav.billing', icon: CreditCard },
   { href: '/upgrade-plan' as Route, labelKey: 'nav.upgradePlan', icon: Crown },
-  { href: '/settings/privacy' as Route, labelKey: 'nav.privacy', icon: ShieldCheck },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -341,22 +342,33 @@ export function AppSidebar() {
         <SidebarGroup className="p-0">
           {!isCollapsed && (
             <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-5 text-[11px] font-semibold tracking-normal uppercase">
-              {t('nav.sectionMail')}
+              {t('nav.sectionDaily')}
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">{MAIL_NAV.map(renderNavItem)}</SidebarMenu>
+            <SidebarMenu className="gap-0.5">{DAILY_NAV.map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarGroup className="p-0">
           {!isCollapsed && (
             <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-5 text-[11px] font-semibold tracking-normal uppercase">
-              {t('nav.sectionManage')}
+              {t('nav.sectionAutomation')}
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">{MANAGE_NAV.map(renderNavItem)}</SidebarMenu>
+            <SidebarMenu className="gap-0.5">{AUTOMATION_NAV.map(renderNavItem)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup className="p-0">
+          {!isCollapsed && (
+            <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-5 text-[11px] font-semibold tracking-normal uppercase">
+              {t('nav.sectionTools')}
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">{TOOLS_NAV.map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

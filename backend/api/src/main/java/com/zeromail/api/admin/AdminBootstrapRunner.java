@@ -4,7 +4,7 @@ import com.zeromail.core.admin.auth.domain.AdminStatus;
 import com.zeromail.core.admin.auth.persistence.AdminUserEntity;
 import com.zeromail.core.admin.auth.persistence.AdminUserRepository;
 import com.zeromail.core.admin.auth.usecases.EnrollmentTokenService;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.admin.config.AdminProperties;
 import java.security.SecureRandom;
 import java.util.Locale;
 import java.util.UUID;
@@ -20,23 +20,23 @@ public class AdminBootstrapRunner implements CommandLineRunner {
     private static final String ADMIN_ENROLLMENT_BASE_URL =
             "https://admin.zeromail.vn/enroll?token=";
 
-    private final ZeroMailCoreProperties zeroMailCoreProperties;
+    private final AdminProperties adminProperties;
     private final AdminUserRepository adminUserRepository;
     private final EnrollmentTokenService enrollmentTokenService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public AdminBootstrapRunner(
-            ZeroMailCoreProperties zeroMailCoreProperties,
+            AdminProperties adminProperties,
             AdminUserRepository adminUserRepository,
             EnrollmentTokenService enrollmentTokenService) {
-        this.zeroMailCoreProperties = zeroMailCoreProperties;
+        this.adminProperties = adminProperties;
         this.adminUserRepository = adminUserRepository;
         this.enrollmentTokenService = enrollmentTokenService;
     }
 
     @Override
     public void run(String... args) {
-        for (String bootstrapEmail : zeroMailCoreProperties.admin().bootstrapEmails()) {
+        for (String bootstrapEmail : adminProperties.bootstrapEmails()) {
             String normalizedEmail = bootstrapEmail.trim().toLowerCase(Locale.ROOT);
             AdminUserEntity adminUser =
                     adminUserRepository

@@ -8,12 +8,12 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartBody;
 import com.google.api.services.gmail.model.MessagePartHeader;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxUnavailableException;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxUnavailableReason;
 import com.zeromail.core.llm.gateway.sanitization.JsoupSafeHtmlSanitizer;
+import com.zeromail.core.shared.crypto.CryptoProperties;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -92,14 +92,8 @@ class RecentInboxReadServiceTest {
         assertThat(renderedHtml).doesNotContain("cid:logo%20image@example.test");
     }
 
-    private static ZeroMailCoreProperties coreProperties() {
-        return new ZeroMailCoreProperties(
-                new ZeroMailCoreProperties.CryptoProperties(
-                        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
-                null,
-                null,
-                null,
-                null);
+    private static CryptoProperties cryptoProperties() {
+        return new CryptoProperties("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
     }
 
     private static RecentInboxReadService service(
@@ -108,7 +102,7 @@ class RecentInboxReadServiceTest {
         return new RecentInboxReadService(
                 gmailConnectionRepository,
                 gmailApiClientFactory,
-                coreProperties(),
+                cryptoProperties(),
                 new JsoupSafeHtmlSanitizer());
     }
 }

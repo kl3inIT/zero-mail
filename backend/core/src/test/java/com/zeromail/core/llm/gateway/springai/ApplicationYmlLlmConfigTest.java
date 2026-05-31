@@ -17,16 +17,20 @@ class ApplicationYmlLlmConfigTest {
         String workerApplicationYml =
                 Files.readString(
                         repoRoot().resolve("backend/worker/src/main/resources/application.yml"));
+        // The chat[.client].observations.log-prompt/completion=false suppression block is
+        // centralized in backend/core's zero-mail-shared.yml (imported by both runtimes,
+        // imported values WIN), so the privacy invariant lives in one correctness-locked file
+        // instead of being duplicated per module.
+        String sharedYml =
+                Files.readString(
+                        repoRoot().resolve("backend/core/src/main/resources/zero-mail-shared.yml"));
 
         assertThat(apiApplicationYml).contains("ZEROMAIL_LLM_PLATFORM_API_KEY:?");
         assertThat(workerApplicationYml).contains("ZEROMAIL_LLM_PLATFORM_API_KEY:?");
-        assertThat(countMatches(apiApplicationYml, "log-prompt: false")).isGreaterThanOrEqualTo(2);
-        assertThat(countMatches(apiApplicationYml, "log-completion: false"))
-                .isGreaterThanOrEqualTo(2);
-        assertThat(countMatches(workerApplicationYml, "log-prompt: false"))
-                .isGreaterThanOrEqualTo(2);
-        assertThat(countMatches(workerApplicationYml, "log-completion: false"))
-                .isGreaterThanOrEqualTo(2);
+        assertThat(apiApplicationYml).contains("zero-mail-shared.yml");
+        assertThat(workerApplicationYml).contains("zero-mail-shared.yml");
+        assertThat(countMatches(sharedYml, "log-prompt: false")).isGreaterThanOrEqualTo(2);
+        assertThat(countMatches(sharedYml, "log-completion: false")).isGreaterThanOrEqualTo(2);
         assertThat(workerApplicationYml).contains("ZEROMAIL_LLM_DRIFT_ENABLED");
     }
 

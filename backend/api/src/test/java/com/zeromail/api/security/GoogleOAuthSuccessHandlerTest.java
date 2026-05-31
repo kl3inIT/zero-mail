@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.zeromail.api.config.ZeroMailApiProperties;
+import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import java.net.URI;
@@ -34,9 +34,9 @@ import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
  */
 class GoogleOAuthSuccessHandlerTest {
 
-    private static final ZeroMailApiProperties PROPS =
-            new ZeroMailApiProperties(
-                    new ZeroMailApiProperties.WebProperties(URI.create("http://localhost:3000/")),
+    private static final ApiProperties PROPS =
+            new ApiProperties(
+                    new ApiProperties.WebProperties(URI.create("http://localhost:3000/")),
                     null /* null triggers CorsProperties defaults via compact constructor */,
                     null /* null triggers GmailProperties defaults via compact constructor */);
 

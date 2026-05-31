@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.domain.ActionValidator;
 import com.zeromail.core.llm.domain.AllowListedTools;
@@ -103,8 +103,8 @@ class LlmGatewayPlatformPathTest {
                 new ActionValidator());
     }
 
-    private ZeroMailLlmProperties llmProperties() {
-        return new ZeroMailLlmProperties(
+    private PlatformProperties llmProperties() {
+        return new PlatformProperties(
                 "openai",
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",

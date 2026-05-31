@@ -7,6 +7,7 @@
             "llm :: exception",
             "llm :: gateway.sanitization",
             "llm :: usecases",
+            "chat :: settings-api",
             "billing",
             "billing :: domain",
             "triage",

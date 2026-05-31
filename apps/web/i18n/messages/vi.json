@@ -9,20 +9,241 @@
     "notify": "thông báo"
   },
   "ai": {
+    "actions": {
+      "addSender": "Thêm người gửi",
+      "addSnippet": "Thêm đoạn kiến thức",
+      "cancel": "Hủy",
+      "delete": "Xóa",
+      "edit": "Sửa",
+      "generateFromSent": "Tạo từ email đã gửi gần đây",
+      "remove": "Gỡ",
+      "replaceKey": "Thay key",
+      "save": "Lưu",
+      "set": "Đặt giá trị",
+      "testConnection": "Kiểm tra kết nối"
+    },
+    "behavior": {
+      "autoDraftReplies": {
+        "description": "AI tự tạo bản nháp trả lời khi quy tắc cho phép.",
+        "title": "Tự động soạn nháp trả lời"
+      },
+      "draftConfidence": {
+        "description": "Chỉ tạo nháp khi độ tin cậy đạt ngưỡng bạn chọn.",
+        "fieldLabel": "Chọn ngưỡng",
+        "high": "HIGH - chỉ khi AI rất chắc chắn",
+        "low": "LOW - tạo nháp rộng hơn, bạn kiểm tra lại",
+        "medium": "MEDIUM - cân bằng giữa tốc độ và an toàn",
+        "title": "Ngưỡng tự tin nháp"
+      },
+      "sensitiveData": {
+        "description": "Loại bỏ dữ liệu nhạy cảm khỏi prompt gửi tới LLM.",
+        "title": "Bảo vệ dữ liệu nhạy cảm"
+      }
+    },
+    "byok": {
+      "active": {
+        "description": "Bật để dùng key này cho mọi tính năng AI.",
+        "disabledTooltip": "Chọn model và kiểm tra kết nối thành công trước khi bật BYOK.",
+        "title": "Đang hoạt động"
+      },
+      "baseUrl": {
+        "label": "Base URL"
+      },
+      "costFooter": "Chi phí AI 7 ngày qua: {amount}",
+      "delete": {
+        "confirm": "Xóa key BYOK? Zero Mail sẽ quay lại dùng key nền tảng."
+      },
+      "empty": {
+        "body": "Điền key cá nhân, bấm Lưu để mã hóa trên server, rồi Kiểm tra kết nối để tải model.",
+        "title": "Đang dùng key nền tảng"
+      },
+      "key": {
+        "label": "API key",
+        "masked": "Key đã lưu: ****{lastFourChars}"
+      },
+      "model": {
+        "empty": "Đã lưu key. Kiểm tra kết nối để tải model",
+        "label": "Model",
+        "saveFirst": "Lưu key trước khi kiểm tra kết nối"
+      },
+      "provider": {
+        "anthropic": "Anthropic",
+        "deepseek": "DeepSeek",
+        "google": "Google",
+        "label": "Nhà cung cấp",
+        "openai": "OpenAI"
+      },
+      "replace": {
+        "confirm": "Thay key {provider}? Key cũ sẽ bị ghi đè và không khôi phục được. BYOK sẽ tắt đến khi bạn kiểm tra lại và chọn model."
+      },
+      "status": {
+        "fail": "Kiểm tra lỗi",
+        "ok": "Kết nối OK"
+      },
+      "test": {
+        "disabledTooltip": "Endpoint kiểm tra dùng key đã lưu; hãy lưu key trước."
+      },
+      "title": "Key cá nhân (BYOK)",
+      "titleDescription": "Bật để dùng key của bạn cho mọi tính năng AI. Khi tắt, hệ thống dùng key mặc định của Zero Mail."
+    },
+    "confirm": {
+      "deleteKnowledge": "Xóa đoạn kiến thức {title}? Hành động này không thể hoàn tác.",
+      "removeSafetyNet": "Gỡ {pattern} khỏi lưới an toàn? AI sẽ lại tự xử lý thư từ địa chỉ này."
+    },
+    "empty": {
+      "knowledge": {
+        "body": "Thêm thông tin về bạn hoặc khách hàng để AI dùng khi soạn thư. Bấm + Thêm đoạn kiến thức để bắt đầu.",
+        "title": "Chưa có đoạn kiến thức nào"
+      },
+      "safetyNet": {
+        "body": "Thêm email (vd. ceo@acme.com) hoặc domain (vd. @acme.com) để AI luôn để bạn xử lý tay.",
+        "title": "Chưa có người gửi nào"
+      },
+      "sent": {
+        "body": "Hộp thư Đã gửi trống nên không tạo được mẫu giọng văn. Hãy viết thử vài email rồi quay lại sau.",
+        "title": "Không tìm thấy email đã gửi"
+      }
+    },
+    "knowledge": {
+      "content": {
+        "label": "Nội dung"
+      },
+      "dialog": {
+        "addTitle": "Thêm đoạn kiến thức",
+        "editTitle": "Sửa đoạn kiến thức"
+      },
+      "table": {
+        "delete": "Xóa",
+        "edit": "Sửa",
+        "lastUpdated": "Cập nhật",
+        "title": "Tiêu đề"
+      },
+      "title": {
+        "description": "Thông tin cố định AI nên nhớ khi soạn thư.",
+        "label": "Tiêu đề",
+        "text": "Kho kiến thức"
+      }
+    },
     "page": {
-      "description": "Dạy AI cách hành xử với hộp thư của bạn — ai được bảo vệ khỏi tự động hoá, và (sắp tới) giọng văn cùng phong cách bạn muốn AI bắt chước khi soạn nháp.",
-      "title": "Cấu hình AI"
+      "description": "Tinh chỉnh giọng văn, hành vi, và nhà cung cấp AI.",
+      "title": "Cài đặt AI"
+    },
+    "safetyNet": {
+      "add": {
+        "placeholder": "ceo@acme.com hoặc @acme.com"
+      },
+      "autoSend": {
+        "description": "Khi bật, rule có thể tự gửi, trả lời hoặc chuyển tiếp email mà không cần bạn xác nhận. Email không an toàn sẽ được lưu thành nháp Gmail thay vì gửi đi.",
+        "title": "Cho rule tự gửi email"
+      },
+      "createdBy": {
+        "system": "Hệ thống",
+        "user": "Bạn"
+      },
+      "deleteDisabled": "Người gửi này do hệ thống tự thêm nên không thể xóa.",
+      "kind": {
+        "domain": "Domain",
+        "email": "Email"
+      },
+      "protectedSenders": {
+        "description": "Email hoặc domain mà AI không bao giờ tự xử lý.",
+        "title": "Người gửi được bảo vệ"
+      },
+      "tip": "Mẹo: dùng @acme.com để bảo vệ toàn bộ domain."
+    },
+    "sections": {
+      "behavior": {
+        "helper": "Khi nào AI hành động tự động",
+        "title": "Hành vi trợ lý"
+      },
+      "provider": {
+        "helper": "Key cá nhân và chi phí AI",
+        "title": "Nhà cung cấp AI"
+      },
+      "safetyNet": {
+        "helper": "Người gửi mà AI không bao giờ tự xử lý",
+        "title": "Lưới an toàn"
+      },
+      "updates": {
+        "helper": "Tóm tắt hằng ngày và chế độ shadow",
+        "title": "Cập nhật"
+      },
+      "voice": {
+        "helper": "Cách AI viết thay bạn",
+        "title": "Giọng văn của bạn"
+      }
     },
     "senders": {
       "add": "Bảo vệ",
       "added": "Đã bảo vệ {email}",
       "addFailed": "Chưa thêm được người gửi. Hãy thử lại.",
-      "adding": "Đang thêm…",
-      "description": "Email từ những người gửi này luôn được giữ nguyên — không gắn nhãn, không lưu trữ, không soạn nháp tự động, dù quy tắc có khớp đến đâu.",
+      "adding": "Đang thêm...",
+      "description": "Email từ những người gửi này luôn được giữ nguyên - không gắn nhãn, không lưu trữ, không soạn nháp tự động, dù quy tắc có khớp đến đâu.",
       "heading": "Người gửi được bảo vệ",
       "inputLabel": "Email người gửi cần bảo vệ",
       "inputPlaceholder": "sep@congty.com",
       "invalidEmail": "Email không hợp lệ."
+    },
+    "toast": {
+      "aiPreferenceSaved": "Đã lưu lựa chọn AI",
+      "behaviorSaved": "Đã lưu hành vi",
+      "byokDeleted": "Đã xóa key cá nhân",
+      "byokKeySaved": "Đã lưu key (không hiển thị lại)",
+      "byokTestOk": "Key hoạt động bình thường",
+      "genericFailure": "Không lưu được. Thử lại nhé.",
+      "safetyNetAdded": "Đã thêm người gửi vào lưới an toàn",
+      "safetyNetRemoved": "Đã gỡ người gửi",
+      "snippetAdded": "Đã thêm đoạn kiến thức",
+      "snippetDeleted": "Đã xóa đoạn kiến thức",
+      "snippetUpdated": "Đã cập nhật đoạn kiến thức",
+      "voiceGenerated": "Đã tạo bản nháp - xem lại trước khi lưu",
+      "voiceSaved": "Đã lưu giọng văn"
+    },
+    "updates": {
+      "dailyDigest": {
+        "description": "Nhận một bản tóm tắt email hằng ngày.",
+        "title": "Tóm tắt hằng ngày"
+      },
+      "pauseTriage": {
+        "description": "Tạm dừng tự động xử lý nhưng vẫn giữ dữ liệu cấu hình.",
+        "title": "Tạm dừng triage"
+      }
+    },
+    "voice": {
+      "language": {
+        "description": "Ngôn ngữ mặc định khi AI soạn nháp.",
+        "english": "English",
+        "title": "Ngôn ngữ AI viết",
+        "vietnamese": "Tiếng Việt"
+      },
+      "personalInstructions": {
+        "description": "Những điều AI cần biết về bạn trước khi soạn thư.",
+        "fieldLabel": "Hướng dẫn cá nhân",
+        "placeholder": "Ví dụ: ưu tiên trả lời ngắn, lịch sự, nêu rõ bước tiếp theo...",
+        "title": "Về tôi (hướng dẫn cá nhân)"
+      },
+      "signature": {
+        "description": "Chữ ký AI có thể chèn vào bản nháp khi phù hợp.",
+        "fieldLabel": "Nội dung chữ ký",
+        "placeholder": "Tên, chức danh, số điện thoại...",
+        "title": "Chữ ký email"
+      },
+      "tone": {
+        "casual": "Casual",
+        "custom": "Custom",
+        "description": "Tone mặc định khi AI tạo bản nháp.",
+        "formal": "Formal",
+        "friendly": "Friendly",
+        "professional": "Professional",
+        "title": "Tone giọng văn"
+      },
+      "wordCount": "{count} từ",
+      "writingStyle": {
+        "description": "Mô tả cách bạn thường viết để AI bắt chước an toàn hơn.",
+        "fieldLabel": "Nội dung phong cách",
+        "placeholder": "Viết 200-500 từ về cách bạn chào hỏi, giải thích, từ chối, và kết thúc email...",
+        "title": "Phong cách viết"
+      }
     }
   },
   "analytics": {
@@ -189,6 +410,11 @@
       "30d": "30 ngày qua",
       "7d": "7 ngày qua",
       "90d": "90 ngày qua"
+    }
+  },
+  "audit": {
+    "badge": {
+      "blockedBySafetyNet": "Chặn bởi lưới an toàn: {pattern}"
     }
   },
   "auth": {
@@ -365,12 +591,13 @@
       "failed": "Thao tác lỗi",
       "instructionsAfter": "Sau",
       "instructionsBefore": "Trước",
-      "memoryContent": "Nội dung sẽ lưu",
+      "memoryContent": "Nội dung kiến thức sẽ lưu",
+      "memoryDestination": "Sau khi lưu, mục này sẽ xuất hiện trong Cài đặt AI -> Kho kiến thức.",
       "outsideSourceThread": "Thêm bởi AI · xác minh",
       "overwriteNotice": "Sẽ ghi đè hướng dẫn hiện tại",
       "removeSender": "Bỏ khỏi danh sách an toàn",
       "ruleName": "Tên quy tắc",
-      "saveMemory": "Lưu trí nhớ",
+      "saveMemory": "Lưu vào kho kiến thức",
       "saving": "Đang lưu...",
       "send": "Gửi qua Gmail",
       "sender": "Người gửi",
@@ -395,7 +622,7 @@
     },
     "suggestion": {
       "draft": "Soạn email từ chối lịch sự",
-      "memory": "Lưu ghi chú: tôi đang làm dự án X",
+      "memory": "Lưu vào kho kiến thức: tôi đang làm dự án X",
       "rules": "Liệt kê quy tắc đang bật",
       "search": "Tìm email từ Acme tuần này"
     },
@@ -673,6 +900,27 @@
     }
   },
   "errors": {
+    "ai": {
+      "byok": {
+        "base_url_host_private": "Base URL không được trỏ tới mạng nội bộ hoặc localhost.",
+        "base_url_host_unresolvable": "Không phân giải được host của Base URL.",
+        "base_url_not_https": "Base URL phải bắt đầu bằng https://",
+        "base_url_not_supported_for_provider": "Base URL này không phù hợp với nhà cung cấp đã chọn.",
+        "base_url_port_not_allowed": "Base URL chỉ được dùng cổng HTTPS mặc định.",
+        "model_not_in_last_test": "Model này không nằm trong lần kiểm tra kết nối gần nhất.",
+        "no_model_picked": "Hãy chọn model và kiểm tra kết nối thành công trước khi bật BYOK.",
+        "no_row": "Lưu trước rồi kiểm tra lại.",
+        "provider_not_allowed": "Nhà cung cấp này không hỗ trợ BYOK.",
+        "rate_limit_unavailable": "Tạm thời chưa kiểm tra được giới hạn. Thử lại sau.",
+        "rate_limited": "Bạn thao tác quá nhiều lần. Thử lại sau.",
+        "test_connection": {
+          "rate_limited": "Bạn đã kiểm tra quá nhiều lần. Thử lại sau 1 giờ."
+        }
+      },
+      "test_connection": {
+        "rate_limited": "Bạn đã kiểm tra quá nhiều lần. Thử lại sau 1 giờ."
+      }
+    },
     "auth": {
       "consent_denied": "Quyền truy cập Gmail bị từ chối. Hãy đăng nhập lại bằng Google và cấp quyền Gmail để tiếp tục.",
       "currentUserNotFound": "Không tìm thấy tài khoản hiện tại. Hãy đăng nhập lại.",
@@ -681,6 +929,11 @@
       "unauthorized": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại bằng Google."
     },
     "badRequest": "Yêu cầu không hợp lệ. Hãy kiểm tra lại và thử lần nữa.",
+    "behavior": {
+      "draft_confidence": {
+        "invalid": "Ngưỡng tự tin nháp không hợp lệ."
+      }
+    },
     "billing": {
       "checkout": {
         "unavailable": "Chưa thể mở trang thanh toán. Hãy thử lại sau."
@@ -723,6 +976,12 @@
     "fieldFallback": "Giá trị này không hợp lệ. Hãy kiểm tra lại.",
     "gmail": {
       "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
+    },
+    "knowledge": {
+      "not_found": "Không tìm thấy đoạn kiến thức này. Hãy tải lại danh sách.",
+      "title": {
+        "duplicate": "Đã có đoạn kiến thức với tiêu đề này."
+      }
     },
     "llm": {
       "byok": {
@@ -786,6 +1045,11 @@
       "version_mismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại.",
       "versionMismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại."
     },
+    "safety_net": {
+      "not_found": "Không tìm thấy người gửi trong lưới an toàn. Hãy tải lại danh sách.",
+      "observation_not_deletable": "Không thể xóa người gửi do hệ thống tự thêm.",
+      "pattern_invalid": "Mẫu người gửi không hợp lệ. Dùng email hoặc domain như @acme.com."
+    },
     "schemaMismatch": "Trang này cần hợp đồng API mới hơn. Hãy tạo lại typed client trước khi tiếp tục.",
     "triage": {
       "audit": {
@@ -810,6 +1074,23 @@
         }
       },
       "generic": "Một hoặc nhiều trường không hợp lệ. Hãy kiểm tra lại."
+    },
+    "voice": {
+      "generate": {
+        "failed": "Chưa tạo được giọng văn từ email đã gửi. Thử lại sau.",
+        "gmail_read_failed": "Không đọc được email đã gửi lúc này. Thử lại sau.",
+        "rate_limited": "Đã đạt giới hạn 3 lần/giờ. Thử lại sau."
+      },
+      "personal_instructions": {
+        "too_long": "Hướng dẫn cá nhân không được vượt 2000 ký tự."
+      },
+      "tone_preset": {
+        "invalid": "Tone không hợp lệ."
+      },
+      "writing_style": {
+        "too_long": "Mô tả giọng văn không được vượt 500 từ.",
+        "too_short": "Mô tả giọng văn cần ít nhất 200 từ."
+      }
     }
   },
   "feat": {
@@ -1475,8 +1756,9 @@
     "pricing": "Bảng giá",
     "privacy": "Quyền riêng tư",
     "rules": "Quy tắc",
-    "sectionMail": "Thư",
-    "sectionManage": "Quản lý",
+    "sectionAutomation": "Tự động hóa",
+    "sectionDaily": "Hằng ngày",
+    "sectionTools": "Công cụ",
     "settings": "Cài đặt",
     "signIn": "Đăng nhập",
     "subscription": "Gói đăng ký",

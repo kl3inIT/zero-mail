@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ProtectedSenderResponse } from '@/features/triage/api/triage-api';
-import { useOptInSender } from '@/features/triage/hooks/useOptInSender';
+import { useDeleteProtectedSender } from '@/features/triage/hooks/useDeleteProtectedSender';
 
 type SenderRowProps = {
   sender: ProtectedSenderResponse;
@@ -14,32 +15,48 @@ type SenderRowProps = {
 
 export function SenderRow({ sender }: SenderRowProps) {
   const t = useTranslations();
-  const optIn = useOptInSender();
-  const senderEmail = sender.senderEmail ?? t('triage.senders.unknown');
-  const [locallyOptedIn, setLocallyOptedIn] = useState(false);
-  const optedIn = Boolean(sender.optedIn) || locallyOptedIn;
+  const deleteSender = useDeleteProtectedSender();
+  const pattern = sender.pattern || sender.senderEmail || t('triage.senders.unknown');
+  const canDelete = sender.createdByUser;
+
+  const deleteButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      aria-label={t('ai.actions.remove')}
+      disabled={!canDelete || deleteSender.isPending}
+      onClick={() => deleteSender.mutate(sender.id)}
+    >
+      <Trash2 className="size-4" aria-hidden="true" />
+    </Button>
+  );
 
   return (
     <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 space-y-1">
-        <p className="text-foreground truncate text-sm font-medium">{senderEmail}</p>
-        {optedIn ? (
-          <Badge variant="outline" className="border-accent bg-accent text-accent-foreground">
-            {t('triage.senders.optedIn')}
+      <div className="min-w-0 space-y-2">
+        <p className="text-foreground truncate text-sm font-medium">{pattern}</p>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline">
+            {sender.patternKind === 'DOMAIN'
+              ? t('ai.safetyNet.kind.domain')
+              : t('ai.safetyNet.kind.email')}
           </Badge>
-        ) : null}
+          <Badge variant="outline">
+            {sender.createdByUser
+              ? t('ai.safetyNet.createdBy.user')
+              : t('ai.safetyNet.createdBy.system')}
+          </Badge>
+        </div>
       </div>
-      <Button
-        type="button"
-        variant={optedIn ? 'outline' : 'default'}
-        disabled={optedIn || optIn.isPending || !sender.senderEmail}
-        onClick={() => {
-          if (!sender.senderEmail) return;
-          optIn.mutate(sender.senderEmail, { onSuccess: () => setLocallyOptedIn(true) });
-        }}
-      >
-        {optedIn ? t('triage.senders.optedIn') : t('triage.senders.optIn')}
-      </Button>
+      {canDelete ? (
+        deleteButton
+      ) : (
+        <Tooltip>
+          <TooltipTrigger render={<span className="inline-flex" />}>{deleteButton}</TooltipTrigger>
+          <TooltipContent>{t('ai.safetyNet.deleteDisabled')}</TooltipContent>
+        </Tooltip>
+      )}
     </div>
   );
 }

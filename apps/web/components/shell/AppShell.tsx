@@ -7,7 +7,6 @@ import { Menu } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
 import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { PauseBanner } from '@/features/triage/components/PauseBanner';
 import { AppSidebar } from './AppSidebar';
 
 function MobileTopBar() {
@@ -49,7 +48,6 @@ export function AppShell({
         <div className="bg-sidebar flex h-screen w-screen overflow-hidden">
           <AppSidebar />
           <SidebarInset className="bg-sidebar relative min-w-0 p-1.5 transition-[margin] sm:p-2 md:peer-data-[state=expanded]:-ml-8">
-            <PauseBanner />
             <div
               className="border-border bg-card flex flex-1 flex-col overflow-hidden rounded-xl border"
               data-testid="app-shell-content"

@@ -4,7 +4,7 @@ import com.zeromail.core.chat.confirm.send.AssistantWriteCommand;
 import com.zeromail.core.chat.confirm.send.AssistantWriteExecutor.WriteToolHandler;
 import com.zeromail.core.chat.confirm.send.AssistantWriteExecutor.WriteToolResult;
 import com.zeromail.core.chat.domain.ChatToolName;
-import com.zeromail.core.chat.usecases.AssistantMemoryService;
+import com.zeromail.core.chat.usecases.AssistantKnowledgeService;
 import com.zeromail.core.chat.usecases.AssistantPersonalInstructionsService;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
 import com.zeromail.core.rules.usecases.RuleCreateCommand;
@@ -23,7 +23,7 @@ public class ConfirmRequiredToolHandlers {
 
     public ConfirmRequiredToolHandlers(
             RuleManagementService ruleManagementService,
-            AssistantMemoryService assistantMemoryService,
+            AssistantKnowledgeService assistantKnowledgeService,
             AssistantPersonalInstructionsService assistantPersonalInstructionsService,
             SenderSafetyEntryService senderSafetyEntryService,
             TriageGmailWriter triageGmailWriter) {
@@ -38,7 +38,8 @@ public class ConfirmRequiredToolHandlers {
         handlerMap.put(
                 ChatToolName.BULK_ARCHIVE, command -> bulkArchive(triageGmailWriter, command));
         handlerMap.put(
-                ChatToolName.SAVE_MEMORY, command -> saveMemory(assistantMemoryService, command));
+                ChatToolName.SAVE_MEMORY,
+                command -> saveMemory(assistantKnowledgeService, command));
         handlerMap.put(
                 ChatToolName.UPDATE_PERSONAL_INSTRUCTIONS,
                 command ->
@@ -95,12 +96,13 @@ public class ConfirmRequiredToolHandlers {
     }
 
     private static WriteToolResult saveMemory(
-            AssistantMemoryService assistantMemoryService, AssistantWriteCommand command) {
-        java.util.UUID memoryId =
-                assistantMemoryService.save(
+            AssistantKnowledgeService assistantKnowledgeService, AssistantWriteCommand command) {
+        java.util.UUID knowledgeSnippetId =
+                assistantKnowledgeService.appendChatMemory(
                         command.tenantId(),
                         WriteToolArguments.text(command.inputJson(), "content"));
-        return WriteReversibleToolHandlers.result("memory_id", memoryId.toString());
+        return WriteReversibleToolHandlers.result(
+                "knowledge_snippet_id", knowledgeSnippetId.toString());
     }
 
     private static WriteToolResult updatePersonalInstructions(

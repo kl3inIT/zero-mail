@@ -2,7 +2,7 @@ package com.zeromail.core.admin.mkey.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 

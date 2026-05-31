@@ -1,5 +1,6 @@
 package com.zeromail.core.billing.usecases;
 
+import com.zeromail.core.billing.config.BillingProperties;
 import com.zeromail.core.billing.exception.BillingCheckoutUnavailableException;
 import com.zeromail.core.billing.exception.BillingPlanDowngradeNotAllowedException;
 import com.zeromail.core.billing.exception.BillingPlanNotFoundException;
@@ -13,7 +14,6 @@ import com.zeromail.core.billing.persistence.PlanFeaturePermissionRepository;
 import com.zeromail.core.billing.projection.BillingPlanCatalogView;
 import com.zeromail.core.billing.projection.BillingPlanView;
 import com.zeromail.core.billing.projection.PlanFeatureSummary;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
@@ -41,14 +41,14 @@ public class BillingPlanQueryService {
             BillingCheckoutSessionRepository billingCheckoutSessionRepository,
             BillingPlanRepository billingPlanRepository,
             LemonSqueezyCheckoutClient checkoutClient,
-            ZeroMailCoreProperties coreProperties,
+            BillingProperties billingProperties,
             PlanFeaturePermissionRepository planFeaturePermissionRepository,
             FeatureCatalogCache featureCatalogCache,
             CurrentBillingPlanResolver currentBillingPlanResolver) {
         this.billingCheckoutSessionRepository = billingCheckoutSessionRepository;
         this.billingPlanRepository = billingPlanRepository;
         this.checkoutClient = checkoutClient;
-        this.checkoutReuseWindow = coreProperties.billing().lemonSqueezy().checkoutReuseWindow();
+        this.checkoutReuseWindow = billingProperties.lemonSqueezy().checkoutReuseWindow();
         this.planFeaturePermissionRepository = planFeaturePermissionRepository;
         this.featureCatalogCache = featureCatalogCache;
         this.currentBillingPlanResolver = currentBillingPlanResolver;

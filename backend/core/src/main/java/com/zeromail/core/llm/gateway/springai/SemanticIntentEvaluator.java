@@ -1,8 +1,8 @@
 package com.zeromail.core.llm.gateway.springai;
 
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.routing.PlatformLlmRouteCredentials;
 import com.zeromail.core.llm.usecases.LlmUsage;
@@ -54,26 +54,26 @@ public class SemanticIntentEvaluator
       """;
 
     private final ChatClient platformChatClient;
-    private final ZeroMailLlmProperties llmProperties;
+    private final PlatformProperties llmProperties;
     private final BeanOutputConverter<SemanticIntentResponse> outputConverter =
             new BeanOutputConverter<>(SemanticIntentResponse.class);
 
     @Autowired
     public SemanticIntentEvaluator(
             @Qualifier("platformChatClient") ChatClient platformChatClient,
-            ZeroMailCoreProperties zeroMailCoreProperties) {
-        this(platformChatClient, zeroMailCoreProperties.llm().platform());
+            LlmProperties llmConfiguration) {
+        this(platformChatClient, llmConfiguration.platform());
     }
 
     SemanticIntentEvaluator(ChatClient platformChatClient) {
         this(
                 platformChatClient,
-                new ZeroMailLlmProperties(
+                new PlatformProperties(
                         null, null, "test-platform-key", null, null, null, null, null, null));
     }
 
     private SemanticIntentEvaluator(
-            ChatClient platformChatClient, ZeroMailLlmProperties llmProperties) {
+            ChatClient platformChatClient, PlatformProperties llmProperties) {
         this.platformChatClient = platformChatClient;
         this.llmProperties = llmProperties;
     }

@@ -95,6 +95,9 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
     @Column(name = "lease_owner", length = 255)
     private String leaseOwner;
 
+    @Column(name = "blocked_by_safety_net_pattern", length = 320)
+    private String blockedBySafetyNetPattern;
+
     /**
      * H-3 Path A discriminator (changelog 086-triage-audit-source.yaml). Defaults to {@link
      * CleanupAuditSource#TRIAGE} for every existing rule-driven write site; cleanup-campaign writes
@@ -244,6 +247,14 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
 
     public String getLeaseOwner() {
         return leaseOwner;
+    }
+
+    public String getBlockedBySafetyNetPattern() {
+        return blockedBySafetyNetPattern;
+    }
+
+    public void markBlockedBySafetyNetPattern(String blockedBySafetyNetPattern) {
+        this.blockedBySafetyNetPattern = blockedBySafetyNetPattern;
     }
 
     public CleanupAuditSource getSource() {

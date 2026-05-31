@@ -3,7 +3,7 @@ package com.zeromail.api.controllers.chat;
 import com.zeromail.api.dto.chat.ChatStreamRequestDto;
 import com.zeromail.core.chat.llm.VercelProtocolEmitter;
 import com.zeromail.core.chat.usecases.ChatOrchestrator;
-import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
+import com.zeromail.core.chat.usecases.ChatProperties;
 import com.zeromail.core.tenant.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,13 +39,13 @@ public class ChatController {
 
     private final ChatOrchestrator chatOrchestrator;
     private final TaskScheduler chatHeartbeatTaskScheduler;
-    private final ZeroMailChatProperties chatProperties;
+    private final ChatProperties chatProperties;
     private final ObjectMapper objectMapper;
 
     public ChatController(
             ChatOrchestrator chatOrchestrator,
             @Qualifier("chatHeartbeatTaskScheduler") TaskScheduler chatHeartbeatTaskScheduler,
-            ZeroMailChatProperties chatProperties,
+            ChatProperties chatProperties,
             ObjectMapper objectMapper) {
         this.chatOrchestrator = chatOrchestrator;
         this.chatHeartbeatTaskScheduler = chatHeartbeatTaskScheduler;
@@ -57,6 +58,8 @@ public class ChatController {
             @Valid @RequestBody ChatStreamRequestDto request, HttpServletResponse response) {
         String tenantId = TenantContext.currentOrThrow();
         response.setHeader(VERCEL_PROTOCOL_HEADER, "v1");
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-transform");
+        response.setHeader("X-Accel-Buffering", "no");
         SseEmitter sseEmitter =
                 new SseEmitter(Duration.ofMinutes(chatProperties.sseTimeoutMinutes()).toMillis());
         AtomicReference<Disposable> streamSubscriptionReference = new AtomicReference<>();
@@ -78,7 +81,7 @@ public class ChatController {
                 };
         VercelProtocolEmitter vercelProtocolEmitter =
                 new VercelProtocolEmitter(
-                        new SseEmitterFrameWriter(sseEmitter, cleanup), objectMapper);
+                        new SseEmitterFrameWriter(sseEmitter, response, cleanup), objectMapper);
         ScheduledFuture<?> heartbeatFuture =
                 chatHeartbeatTaskScheduler.scheduleAtFixedRate(
                         vercelProtocolEmitter::emitHeartbeat,
@@ -107,16 +110,19 @@ public class ChatController {
         return sseEmitter;
     }
 
-    private record SseEmitterFrameWriter(SseEmitter sseEmitter, Runnable terminalFrameCleanup)
+    private record SseEmitterFrameWriter(
+            SseEmitter sseEmitter, HttpServletResponse response, Runnable terminalFrameCleanup)
             implements VercelProtocolEmitter.FrameWriter {
 
         @Override
         public void write(String frame) throws IOException {
             if (frame.startsWith(": keepalive")) {
                 sseEmitter.send(SseEmitter.event().comment("keepalive"));
+                response.flushBuffer();
                 return;
             }
             sseEmitter.send(SseEmitter.event().data(frame));
+            response.flushBuffer();
             if (frame.contains("\"type\":\"finish\"") || frame.contains("\"type\":\"error\"")) {
                 terminalFrameCleanup.run();
                 sseEmitter.complete();

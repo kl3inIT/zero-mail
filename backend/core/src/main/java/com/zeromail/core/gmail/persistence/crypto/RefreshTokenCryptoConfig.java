@@ -1,6 +1,6 @@
 package com.zeromail.core.gmail.persistence.crypto;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.shared.crypto.CryptoProperties;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
 import java.util.Base64;
 import java.util.Map;
@@ -12,8 +12,8 @@ import org.springframework.context.annotation.Configuration;
 public class RefreshTokenCryptoConfig {
 
     @Bean
-    RefreshTokenCipher refreshTokenCipher(ZeroMailCoreProperties properties) {
-        byte[] keyBytes = Base64.getDecoder().decode(properties.crypto().refreshTokenKeyBase64());
+    RefreshTokenCipher refreshTokenCipher(CryptoProperties cryptoProperties) {
+        byte[] keyBytes = Base64.getDecoder().decode(cryptoProperties.refreshTokenKeyBase64());
         if (keyBytes.length != 32) {
             throw new IllegalStateException(
                     "AES-256 key must be exactly 32 bytes, got " + keyBytes.length);
@@ -22,8 +22,8 @@ public class RefreshTokenCryptoConfig {
     }
 
     @Bean
-    PlatformSecretCipher platformSecretCipher(ZeroMailCoreProperties properties) {
-        byte[] keyBytes = Base64.getDecoder().decode(properties.crypto().refreshTokenKeyBase64());
+    PlatformSecretCipher platformSecretCipher(CryptoProperties cryptoProperties) {
+        byte[] keyBytes = Base64.getDecoder().decode(cryptoProperties.refreshTokenKeyBase64());
         if (keyBytes.length != 32) {
             throw new IllegalStateException(
                     "AES-256 key must be exactly 32 bytes, got " + keyBytes.length);

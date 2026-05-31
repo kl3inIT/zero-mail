@@ -1,13 +1,18 @@
 'use client';
 
+import { Plus } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { LoadingState } from '@/components/states/LoadingState';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { SenderRow } from '@/features/triage/components/SenderRow';
+import { Input } from '@/components/ui/input';
 import type { ProtectedSenderResponse } from '@/features/triage/api/triage-api';
+import { SenderRow } from '@/features/triage/components/SenderRow';
+import { useOptInSender } from '@/features/triage/hooks/useOptInSender';
 import { useProtectedSenders } from '@/features/triage/hooks/useProtectedSenders';
 
 export type SenderSafetyNetListProps = {
@@ -46,26 +51,48 @@ function SenderSafetyNetQueryState() {
 
 function SenderSafetyNetView({ senders }: { senders: ProtectedSenderResponse[] }) {
   const t = useTranslations();
+  const optInSender = useOptInSender();
+  const [pattern, setPattern] = useState('');
+
+  function handleSubmit(formEvent: FormEvent<HTMLFormElement>) {
+    formEvent.preventDefault();
+    const trimmedPattern = pattern.trim().toLowerCase();
+    if (!trimmedPattern) return;
+    optInSender.mutate(trimmedPattern, {
+      onSuccess: () => setPattern(''),
+    });
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('triage.senders.title')}</CardTitle>
-        <CardDescription>{t('triage.senders.body')}</CardDescription>
+        <CardTitle>{t('ai.safetyNet.protectedSenders.title')}</CardTitle>
+        <CardDescription>{t('ai.safetyNet.protectedSenders.description')}</CardDescription>
       </CardHeader>
-      <CardContent>
-        {senders.length === 0 ? (
-          <EmptyState
-            heading={t('triage.senders.empty.title')}
-            body={t('triage.senders.empty.body')}
+      <CardContent className="space-y-4">
+        <form className="flex flex-col gap-2 sm:flex-row" onSubmit={handleSubmit}>
+          <Input
+            value={pattern}
+            onChange={(changeEvent) => setPattern(changeEvent.target.value)}
+            placeholder={t('ai.safetyNet.add.placeholder')}
+            aria-label={t('ai.actions.addSender')}
+            disabled={optInSender.isPending}
           />
+          <Button type="submit" disabled={optInSender.isPending || pattern.trim().length === 0}>
+            <Plus className="size-4" aria-hidden="true" />
+            {t('ai.actions.addSender')}
+          </Button>
+        </form>
+        <p className="text-muted-foreground text-xs">{t('ai.safetyNet.tip')}</p>
+        {senders.length === 0 ? (
+          <EmptyState heading={t('ai.empty.safetyNet.title')} body={t('ai.empty.safetyNet.body')} />
         ) : (
           <div
-            className="divide-border bg-muted/40 divide-y rounded-xl border"
+            className="divide-border bg-muted/40 divide-y rounded-lg border"
             data-testid="sender-safety-net-list"
           >
-            {senders.map((sender, index) => (
-              <SenderRow key={sender.senderEmail ?? `unknown-sender-${index}`} sender={sender} />
+            {senders.map((sender) => (
+              <SenderRow key={sender.id} sender={sender} />
             ))}
           </div>
         )}

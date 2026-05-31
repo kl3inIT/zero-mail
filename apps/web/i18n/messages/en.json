@@ -9,20 +9,241 @@
     "notify": "notify"
   },
   "ai": {
+    "actions": {
+      "addSender": "Add sender",
+      "addSnippet": "Add snippet",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "generateFromSent": "Generate from recent sent emails",
+      "remove": "Remove",
+      "replaceKey": "Replace key",
+      "save": "Save",
+      "set": "Set",
+      "testConnection": "Test connection"
+    },
+    "behavior": {
+      "autoDraftReplies": {
+        "description": "Let the AI draft replies when rules allow it.",
+        "title": "Auto-draft replies"
+      },
+      "draftConfidence": {
+        "description": "Only draft when confidence reaches your chosen threshold.",
+        "fieldLabel": "Select threshold",
+        "high": "HIGH - only when the AI is very confident",
+        "low": "LOW - draft more often, you review",
+        "medium": "MEDIUM - balance speed and caution",
+        "title": "Draft confidence threshold"
+      },
+      "sensitiveData": {
+        "description": "Strip sensitive data from prompts sent to the LLM.",
+        "title": "Sensitive data protection"
+      }
+    },
+    "byok": {
+      "active": {
+        "description": "Enable this key for all AI features.",
+        "disabledTooltip": "Pick a model and pass the connection test before enabling BYOK.",
+        "title": "Active"
+      },
+      "baseUrl": {
+        "label": "Base URL"
+      },
+      "costFooter": "AI cost last 7 days: {amount}",
+      "delete": {
+        "confirm": "Delete the BYOK key? Zero Mail will return to the platform key."
+      },
+      "empty": {
+        "body": "Enter your personal key, save it for server-side encryption, then test the connection to load models.",
+        "title": "Using the platform key"
+      },
+      "key": {
+        "label": "API key",
+        "masked": "Saved key: ****{lastFourChars}"
+      },
+      "model": {
+        "empty": "Saved key. Test the connection to load models",
+        "label": "Model",
+        "saveFirst": "Save the key before testing the connection"
+      },
+      "provider": {
+        "anthropic": "Anthropic",
+        "deepseek": "DeepSeek",
+        "google": "Google",
+        "label": "Provider",
+        "openai": "OpenAI"
+      },
+      "replace": {
+        "confirm": "Replace {provider} key? The previous key will be overwritten and cannot be recovered. BYOK will stay off until you test again and pick a model."
+      },
+      "status": {
+        "fail": "Test failed",
+        "ok": "Connection OK"
+      },
+      "test": {
+        "disabledTooltip": "The test endpoint uses the saved key; save the key first."
+      },
+      "title": "Personal key (BYOK)",
+      "titleDescription": "Enable your own key for all AI features. When disabled, Zero Mail uses the platform key."
+    },
+    "confirm": {
+      "deleteKnowledge": "Delete snippet {title}? This cannot be undone.",
+      "removeSafetyNet": "Remove {pattern} from the safety net? The AI will resume auto-actioning email from this sender."
+    },
+    "empty": {
+      "knowledge": {
+        "body": "Add facts about you or customers for the AI to use when drafting. Click + Add snippet to start.",
+        "title": "No snippets yet"
+      },
+      "safetyNet": {
+        "body": "Add an email (e.g. ceo@acme.com) or a domain (e.g. @acme.com) so the AI always leaves these to you.",
+        "title": "No senders yet"
+      },
+      "sent": {
+        "body": "Your Sent folder is empty so no style sample could be generated. Send a few emails and come back.",
+        "title": "No sent emails found"
+      }
+    },
+    "knowledge": {
+      "content": {
+        "label": "Content"
+      },
+      "dialog": {
+        "addTitle": "Add snippet",
+        "editTitle": "Edit snippet"
+      },
+      "table": {
+        "delete": "Delete",
+        "edit": "Edit",
+        "lastUpdated": "Last updated",
+        "title": "Title"
+      },
+      "title": {
+        "description": "Stable facts the AI should remember while drafting.",
+        "label": "Title",
+        "text": "Knowledge"
+      }
+    },
     "page": {
-      "description": "Teach the AI how to behave in your inbox — who is shielded from automation, and (soon) the voice and style you want it to mirror when drafting replies.",
-      "title": "AI configuration"
+      "description": "Tune your voice, behavior, and AI provider.",
+      "title": "AI settings"
+    },
+    "safetyNet": {
+      "add": {
+        "placeholder": "ceo@acme.com or @acme.com"
+      },
+      "autoSend": {
+        "description": "When on, rules can send, reply, or forward email without asking you first. Anything unsafe is saved as a Gmail draft instead of being sent.",
+        "title": "Let rules send email"
+      },
+      "createdBy": {
+        "system": "System",
+        "user": "You"
+      },
+      "deleteDisabled": "This sender was added by the system and cannot be deleted.",
+      "kind": {
+        "domain": "Domain",
+        "email": "Email"
+      },
+      "protectedSenders": {
+        "description": "Emails or domains the AI never auto-actions.",
+        "title": "Protected senders"
+      },
+      "tip": "Tip: use @acme.com to protect an entire domain."
+    },
+    "sections": {
+      "behavior": {
+        "helper": "When the AI acts automatically",
+        "title": "Behavior"
+      },
+      "provider": {
+        "helper": "Personal keys and AI cost",
+        "title": "AI Provider"
+      },
+      "safetyNet": {
+        "helper": "Senders the AI never auto-actions",
+        "title": "Safety net"
+      },
+      "updates": {
+        "helper": "Daily digest and shadow mode",
+        "title": "Updates"
+      },
+      "voice": {
+        "helper": "How the AI writes for you",
+        "title": "Your voice"
+      }
     },
     "senders": {
       "add": "Protect",
       "added": "Protected {email}",
       "addFailed": "Could not protect this sender. Try again.",
-      "adding": "Adding…",
-      "description": "Mail from these senders is always left alone — no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
+      "adding": "Adding...",
+      "description": "Mail from these senders is always left alone - no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
       "heading": "Protected senders",
       "inputLabel": "Sender email to protect",
       "inputPlaceholder": "boss@company.com",
       "invalidEmail": "Invalid email address."
+    },
+    "toast": {
+      "aiPreferenceSaved": "AI preference saved",
+      "behaviorSaved": "Behavior saved",
+      "byokDeleted": "Personal key deleted",
+      "byokKeySaved": "Key saved (will not be shown again)",
+      "byokTestOk": "Key works",
+      "genericFailure": "Couldn't save. Please try again.",
+      "safetyNetAdded": "Sender added to safety net",
+      "safetyNetRemoved": "Sender removed",
+      "snippetAdded": "Snippet added",
+      "snippetDeleted": "Snippet deleted",
+      "snippetUpdated": "Snippet updated",
+      "voiceGenerated": "Draft generated - review before saving",
+      "voiceSaved": "Voice saved"
+    },
+    "updates": {
+      "dailyDigest": {
+        "description": "Receive one daily email digest.",
+        "title": "Daily digest"
+      },
+      "pauseTriage": {
+        "description": "Pause automatic triage while keeping your configuration.",
+        "title": "Pause triage"
+      }
+    },
+    "voice": {
+      "language": {
+        "description": "Default language for AI drafts.",
+        "english": "English",
+        "title": "AI output language",
+        "vietnamese": "Vietnamese"
+      },
+      "personalInstructions": {
+        "description": "What the AI should know about you before drafting.",
+        "fieldLabel": "Personal instructions",
+        "placeholder": "Example: keep replies concise, courteous, and explicit about next steps...",
+        "title": "About me (personal instructions)"
+      },
+      "signature": {
+        "description": "A signature the AI can include in drafts when appropriate.",
+        "fieldLabel": "Signature content",
+        "placeholder": "Name, title, phone number...",
+        "title": "Email signature"
+      },
+      "tone": {
+        "casual": "Casual",
+        "custom": "Custom",
+        "description": "Default tone for AI drafts.",
+        "formal": "Formal",
+        "friendly": "Friendly",
+        "professional": "Professional",
+        "title": "Tone"
+      },
+      "wordCount": "{count} words",
+      "writingStyle": {
+        "description": "Describe how you usually write so the AI can mirror you more safely.",
+        "fieldLabel": "Style content",
+        "placeholder": "Write 200-500 words about how you greet, explain, decline, and close emails...",
+        "title": "Writing style"
+      }
     }
   },
   "analytics": {
@@ -189,6 +410,11 @@
       "30d": "Last 30 days",
       "7d": "Last 7 days",
       "90d": "Last 90 days"
+    }
+  },
+  "audit": {
+    "badge": {
+      "blockedBySafetyNet": "Blocked by safety net: {pattern}"
     }
   },
   "auth": {
@@ -365,12 +591,13 @@
       "failed": "Action failed",
       "instructionsAfter": "After",
       "instructionsBefore": "Before",
-      "memoryContent": "Will save",
+      "memoryContent": "Knowledge content to save",
+      "memoryDestination": "After saving, this item appears in AI settings -> Knowledge.",
       "outsideSourceThread": "Added by AI · verify",
       "overwriteNotice": "Will overwrite current instructions",
       "removeSender": "Remove from safety net",
       "ruleName": "Rule name",
-      "saveMemory": "Save memory",
+      "saveMemory": "Save to knowledge",
       "saving": "Saving...",
       "send": "Send via Gmail",
       "sender": "Sender",
@@ -395,7 +622,7 @@
     },
     "suggestion": {
       "draft": "Draft a polite decline",
-      "memory": "Save note: I am working on project X",
+      "memory": "Save to knowledge: I am working on project X",
       "rules": "List enabled rules",
       "search": "Find email from Acme this week"
     },
@@ -673,6 +900,27 @@
     }
   },
   "errors": {
+    "ai": {
+      "byok": {
+        "base_url_host_private": "Base URL cannot point to a private network or localhost.",
+        "base_url_host_unresolvable": "Base URL host could not be resolved.",
+        "base_url_not_https": "Base URL must start with https://",
+        "base_url_not_supported_for_provider": "This Base URL is not supported for the selected provider.",
+        "base_url_port_not_allowed": "Base URL can only use the default HTTPS port.",
+        "model_not_in_last_test": "This model was not returned by the latest connection test.",
+        "no_model_picked": "Pick a model and pass the connection test before enabling BYOK.",
+        "no_row": "Save first, then test again.",
+        "provider_not_allowed": "BYOK is not supported for this provider.",
+        "rate_limit_unavailable": "Rate limiting is temporarily unavailable. Try again later.",
+        "rate_limited": "Too many attempts. Try again later.",
+        "test_connection": {
+          "rate_limited": "Too many test attempts. Try again in 1 hour."
+        }
+      },
+      "test_connection": {
+        "rate_limited": "Too many test attempts. Try again in 1 hour."
+      }
+    },
     "auth": {
       "consent_denied": "Gmail access was declined. Sign in with Google and approve Gmail access to continue.",
       "currentUserNotFound": "The current account could not be found. Sign in again.",
@@ -681,6 +929,11 @@
       "unauthorized": "Your session expired. Sign in with Google again."
     },
     "badRequest": "The request is invalid. Check it and try again.",
+    "behavior": {
+      "draft_confidence": {
+        "invalid": "Invalid draft confidence threshold."
+      }
+    },
     "billing": {
       "checkout": {
         "unavailable": "Checkout is temporarily unavailable. Try again later."
@@ -723,6 +976,12 @@
     "fieldFallback": "This value is invalid. Check it and try again.",
     "gmail": {
       "disconnected": "Google access was revoked or expired. Reconnect Gmail."
+    },
+    "knowledge": {
+      "not_found": "This snippet could not be found. Reload the list.",
+      "title": {
+        "duplicate": "A snippet with this title already exists."
+      }
     },
     "llm": {
       "byok": {
@@ -786,6 +1045,11 @@
       "version_mismatch": "The rule changed before the action finished. Reload and try again.",
       "versionMismatch": "The rule changed before the action finished. Reload and try again."
     },
+    "safety_net": {
+      "not_found": "This safety-net sender could not be found. Reload the list.",
+      "observation_not_deletable": "Cannot delete a system-observed sender.",
+      "pattern_invalid": "Invalid sender pattern. Use an email or a domain like @acme.com."
+    },
     "schemaMismatch": "This page needs a newer API contract. Regenerate the typed client before continuing.",
     "triage": {
       "audit": {
@@ -810,6 +1074,23 @@
         }
       },
       "generic": "One or more fields are invalid. Please check them and try again."
+    },
+    "voice": {
+      "generate": {
+        "failed": "Could not generate a voice sample from sent emails. Try again later.",
+        "gmail_read_failed": "Could not read sent emails right now. Try again later.",
+        "rate_limited": "Reached the 3/hour limit. Try again later."
+      },
+      "personal_instructions": {
+        "too_long": "Personal instructions cannot exceed 2000 characters."
+      },
+      "tone_preset": {
+        "invalid": "Invalid tone preset."
+      },
+      "writing_style": {
+        "too_long": "Writing style cannot exceed 500 words.",
+        "too_short": "Writing style needs at least 200 words."
+      }
     }
   },
   "feat": {
@@ -1475,8 +1756,9 @@
     "pricing": "Pricing",
     "privacy": "Privacy",
     "rules": "Rules",
-    "sectionMail": "Mail",
-    "sectionManage": "Manage",
+    "sectionAutomation": "Automation",
+    "sectionDaily": "Daily",
+    "sectionTools": "Tools",
     "settings": "Settings",
     "signIn": "Sign in",
     "subscription": "Subscription",

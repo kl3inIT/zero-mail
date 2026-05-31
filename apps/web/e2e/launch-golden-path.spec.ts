@@ -135,8 +135,8 @@ test.describe('Launch golden path', () => {
     const page = await context.newPage();
 
     try {
-      await test.step('1. land on dashboard with header-authenticated backend', async () => {
-        await page.goto(`${FRONTEND_BASE_URL}/dashboard`, { waitUntil: 'domcontentloaded' });
+      await test.step('1. land on app with header-authenticated backend', async () => {
+        await page.goto(`${FRONTEND_BASE_URL}/rules`, { waitUntil: 'domcontentloaded' });
         await expectAppShellChrome(page, { sidebarVisible: true });
       });
 

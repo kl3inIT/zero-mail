@@ -1,3 +1,7 @@
 package com.zeromail.core.triage.usecases;
 
-public record ProtectedSenderListItem(String senderEmail, boolean optedIn) {}
+import java.time.Instant;
+import java.util.UUID;
+
+public record ProtectedSenderListItem(
+        UUID id, String pattern, String patternKind, boolean createdByUser, Instant createdAt) {}

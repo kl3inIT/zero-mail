@@ -26,8 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><b>Privacy:</b> logs carry only an SHA-256 hex of the email; the raw value never leaves the
  * persistence layer. IP addresses are hashed with a configurable pepper (see {@code
- * zeromail.waitlist.ip-hash-pepper}) so the stored {@code ip_hash} can support abuse triage without
- * retaining the original IP.
+ * zero-mail.waitlist.ip-hash-pepper}) so the stored {@code ip_hash} can support abuse triage
+ * without retaining the original IP.
  */
 @Service
 public class WaitlistService {
@@ -41,7 +41,7 @@ public class WaitlistService {
     public WaitlistService(
             WaitlistEmailRepository waitlistEmailRepository,
             AccountService accountService,
-            @Value("${zeromail.waitlist.ip-hash-pepper:}") String ipHashPepper) {
+            @Value("${zero-mail.waitlist.ip-hash-pepper:}") String ipHashPepper) {
         this.waitlistEmailRepository = waitlistEmailRepository;
         this.accountService = accountService;
         this.ipHashPepper = ipHashPepper == null ? "" : ipHashPepper;

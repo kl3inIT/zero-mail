@@ -233,8 +233,8 @@ async function openWithRulesExamplesMock(
       return;
     }
 
-    if (url.pathname === '/api/llm/byok' && request.method() === 'GET') {
-      await route.fulfill({ status: 204, body: '' });
+    if (url.pathname === '/api/byok' && request.method() === 'GET') {
+      await fulfillJson(route, { code: 'ai.byok.no_row' }, 404);
       return;
     }
 

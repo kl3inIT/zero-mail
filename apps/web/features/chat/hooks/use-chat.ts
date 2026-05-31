@@ -86,7 +86,7 @@ export function useChat({ chatId, initialMessages }: UseChatOptions) {
   const chat = useVercelChat({
     id: chatId,
     messages: initialMessages,
-    experimental_throttle: 100,
+    experimental_throttle: 16,
     transport,
     onData: (dataPart) => {
       if (isPersistencePart(dataPart)) {

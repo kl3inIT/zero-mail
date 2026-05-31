@@ -56,13 +56,13 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  * {@link org.springframework.http.converter.HttpMessageNotReadableException} (malformed JSON /
  * unknown enum value). Without that inheritance, the response of a malformed body request is
  * silently overwritten by the security filter chain to {@code 401} on error re-dispatch (verified
- * by {@code ByokControllerIntegrationTest.post_validate_accepts_lowercase_preset_id}). The parent
- * also covers {@code HttpRequestMethodNotSupportedException} (405), {@code
- * HttpMediaTypeNotSupportedException} (415), {@code NoHandlerFoundException} (404), and peers —
- * re-implementing each as a hand-rolled {@code @ExceptionHandler} would bloat this file rather than
- * slim it. (Historical note: the original rationale cited Spring #35982 / bypassed {@code
- * MethodArgumentNotValidException}; the safety test confirms that specific bypass no longer
- * reproduces, but the broader framework-exception coverage still earns the inheritance.)
+ * by malformed-body API tests). The parent also covers {@code
+ * HttpRequestMethodNotSupportedException} (405), {@code HttpMediaTypeNotSupportedException} (415),
+ * {@code NoHandlerFoundException} (404), and peers — re-implementing each as a hand-rolled
+ * {@code @ExceptionHandler} would bloat this file rather than slim it. (Historical note: the
+ * original rationale cited Spring #35982 / bypassed {@code MethodArgumentNotValidException}; the
+ * safety test confirms that specific bypass no longer reproduces, but the broader
+ * framework-exception coverage still earns the inheritance.)
  *
  * <p><b>Privacy invariants:</b>
  *

@@ -1,6 +1,6 @@
 package com.zeromail.core.admin.mkey.usecases;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.llm.routing.PlatformLlmRouteCredentialResolver;
 import com.zeromail.core.llm.routing.PlatformLlmRouteCredentials;
 import java.util.Arrays;

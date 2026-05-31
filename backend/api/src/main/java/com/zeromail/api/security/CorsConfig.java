@@ -1,6 +1,6 @@
 package com.zeromail.api.security;
 
-import com.zeromail.api.config.ZeroMailApiProperties;
+import com.zeromail.api.config.ApiProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -16,7 +16,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class CorsConfig {
 
     @Bean
-    UrlBasedCorsConfigurationSource corsConfigurationSource(ZeroMailApiProperties properties) {
+    UrlBasedCorsConfigurationSource corsConfigurationSource(ApiProperties properties) {
         var cors = properties.cors();
 
         CorsConfiguration config = new CorsConfiguration();

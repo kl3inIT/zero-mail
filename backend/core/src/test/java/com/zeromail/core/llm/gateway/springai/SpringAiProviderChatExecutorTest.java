@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -109,6 +110,67 @@ class SpringAiProviderChatExecutorTest {
                             assertThat(toolCall.argsJson()).contains("Receipts");
                         });
         assertRawToolCallAdvisorAutoRegistrationDisabled(chatClientRequestSpecification);
+    }
+
+    @Test
+    void omits_tool_callbacks_for_text_generation_requests() {
+        SpringAiProviderChatClientFactory chatClientFactory =
+                mock(SpringAiProviderChatClientFactory.class);
+        ChatClient chatClient = mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec chatClientRequestSpecification =
+                mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.CallResponseSpec callResponseSpecification =
+                mock(ChatClient.CallResponseSpec.class);
+        LlmProviderCredential credential =
+                new LlmProviderCredential(
+                        "CUSTOM_OPENAI",
+                        SpringAiProviderChatClientFactory.OPENAI_FORMAT,
+                        "https://example.test/v1",
+                        "test-key".getBytes(StandardCharsets.UTF_8),
+                        LlmCredentialSource.BYOK);
+        LlmChatRequest request =
+                new LlmChatRequest(
+                        "system",
+                        "text-generation-user-message",
+                        List.of(),
+                        "cx/gpt-5.5",
+                        0.2,
+                        128,
+                        false);
+        when(chatClientFactory.create(
+                        any(LlmProviderCredential.class),
+                        anyString(),
+                        ArgumentMatchers.anyDouble(),
+                        any(),
+                        ArgumentMatchers.anyBoolean()))
+                .thenReturn(chatClient);
+        doReturn(OpenAiChatOptions.builder())
+                .when(chatClientFactory)
+                .options(
+                        any(LlmProviderCredential.class),
+                        anyString(),
+                        ArgumentMatchers.anyDouble(),
+                        any(),
+                        ArgumentMatchers.anyBoolean());
+        when(chatClient.prompt()).thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.system(anyString()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.user(anyString()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.advisors(
+                        ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.options(any(ChatOptions.Builder.class)))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.call()).thenReturn(callResponseSpecification);
+        when(callResponseSpecification.chatResponse())
+                .thenReturn(chatResponseWithToolCalls(List.of()));
+        SpringAiProviderChatExecutor executor = new SpringAiProviderChatExecutor(chatClientFactory);
+
+        executor.call(credential, request);
+
+        verify(chatClientRequestSpecification, never())
+                .tools(ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any());
     }
 
     private void assertRawToolCallAdvisorAutoRegistrationDisabled(

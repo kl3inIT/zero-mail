@@ -5,7 +5,9 @@ import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Entity
 @Table(name = "assistant_settings")
@@ -36,6 +38,18 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
 
     @Column(name = "ai_output_language", length = 8)
     private String aiOutputLanguage;
+
+    @Column(name = "email_signature", length = 500)
+    private String emailSignature;
+
+    @Column(name = "auto_draft_replies", nullable = false)
+    private boolean autoDraftReplies = true;
+
+    @Column(name = "draft_confidence", nullable = false, length = 8)
+    private String draftConfidence = DraftConfidence.MEDIUM.id();
+
+    @Column(name = "sensitive_data_protection", nullable = false)
+    private boolean sensitiveDataProtection = true;
 
     protected AssistantSettingsEntity() {
         // Hibernate
@@ -85,5 +99,70 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
 
     public String getAiOutputLanguage() {
         return aiOutputLanguage;
+    }
+
+    public String getEmailSignature() {
+        return emailSignature;
+    }
+
+    public boolean isAutoDraftReplies() {
+        return autoDraftReplies;
+    }
+
+    public String getDraftConfidenceId() {
+        return draftConfidence;
+    }
+
+    public DraftConfidence getDraftConfidence() {
+        return DraftConfidence.fromId(draftConfidence);
+    }
+
+    public boolean isSensitiveDataProtection() {
+        return sensitiveDataProtection;
+    }
+
+    public void applyVoiceSettings(
+            String writingStyle,
+            String personalInstructions,
+            String emailSignature,
+            String aiOutputLanguage) {
+        this.writingStyle = writingStyle;
+        this.personalInstructions = personalInstructions;
+        this.emailSignature = emailSignature;
+        this.aiOutputLanguage = aiOutputLanguage;
+    }
+
+    public void applyBehaviorSettings(
+            boolean autoDraftReplies,
+            DraftConfidence draftConfidence,
+            boolean sensitiveDataProtection) {
+        this.autoDraftReplies = autoDraftReplies;
+        this.draftConfidence = requireDraftConfidence(draftConfidence).id();
+        this.sensitiveDataProtection = sensitiveDataProtection;
+    }
+
+    private static DraftConfidence requireDraftConfidence(DraftConfidence draftConfidence) {
+        if (draftConfidence == null) {
+            throw new IllegalArgumentException("draftConfidence must not be null");
+        }
+        return draftConfidence;
+    }
+
+    public enum DraftConfidence {
+        LOW,
+        MEDIUM,
+        HIGH;
+
+        public String id() {
+            return name();
+        }
+
+        public static DraftConfidence fromId(String id) {
+            return Stream.of(values())
+                    .filter(draftConfidence -> draftConfidence.id().equals(id))
+                    .findFirst()
+                    .orElseThrow(
+                            () -> new NoSuchElementException("Unknown DraftConfidence id: " + id));
+        }
     }
 }

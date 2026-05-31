@@ -2,7 +2,7 @@ package com.zeromail.api.dto.admin.cat;
 
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.domain.RoutingTier;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

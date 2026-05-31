@@ -1,7 +1,7 @@
 package com.zeromail.core.admin.mkey.exception;
 
-import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
 import com.zeromail.core.shared.exception.ErrorClass;
 import java.util.Map;
 

@@ -1,7 +1,7 @@
 package com.zeromail.api.dto.admin.mkey;
 
 import com.zeromail.api.security.AdminRequestBody;
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
+import com.zeromail.core.llm.domain.KeyFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 096-safety-net-pattern-kind-and-audit-badge
+      author: zeromail
+      comment: Add user-created/domain metadata to sender safety-net rows and expose blocked safety-net pattern on triage audit rows.
+      preConditions:
+        - onFail: HALT
+        - tableExists:
+            tableName: tenant_protected_sender_observation
+        - columnExists:
+            tableName: tenant_protected_sender_observation
+            columnName: sender_email
+        - tableExists:
+            tableName: triage_audit
+        - columnExists:
+            tableName: triage_audit
+            columnName: decision
+      changes:
+        - addColumn:
+            tableName: tenant_protected_sender_observation
+            columns:
+              - column:
+                  name: pattern_kind
+                  type: varchar(8)
+                  defaultValue: EMAIL
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by_user
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: triage_audit
+            columns:
+              - column:
+                  name: blocked_by_safety_net_pattern
+                  type: varchar(320)
+        - sql:
+            comment: Existing observation rows are email-pattern rows created by triage observations.
+            sql: UPDATE tenant_protected_sender_observation SET pattern_kind = 'EMAIL' WHERE pattern_kind IS NULL
+        - sql:
+            comment: Closed enum for sender safety-net patterns.
+            sql: ALTER TABLE tenant_protected_sender_observation ADD CONSTRAINT ck_tenant_protected_sender_pattern_kind CHECK (pattern_kind IN ('EMAIL','DOMAIN'))
+      rollback:
+        - sql:
+            sql: ALTER TABLE tenant_protected_sender_observation DROP CONSTRAINT IF EXISTS ck_tenant_protected_sender_pattern_kind
+        - dropColumn:
+            tableName: triage_audit
+            columnName: blocked_by_safety_net_pattern
+        - dropColumn:
+            tableName: tenant_protected_sender_observation
+            columns:
+              - column:
+                  name: pattern_kind
+              - column:
+                  name: created_by_user

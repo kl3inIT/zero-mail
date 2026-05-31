@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -116,6 +117,43 @@ class SpringAiLlmModelClientTest {
         LlmChatResult chatResult = modelClient.call(request());
 
         assertThat(chatResult.toolCalls()).isEmpty();
+    }
+
+    @Test
+    void omits_tool_callbacks_when_request_has_no_tools() {
+        ChatClient platformChatClient = mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec chatClientRequestSpecification =
+                mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.CallResponseSpec callResponseSpecification =
+                mock(ChatClient.CallResponseSpec.class);
+        when(platformChatClient.prompt()).thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.system(anyString()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.user(anyString()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.advisors(
+                        ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.options(any(OpenAiChatOptions.Builder.class)))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.call()).thenReturn(callResponseSpecification);
+        when(callResponseSpecification.chatResponse())
+                .thenReturn(chatResponseWithToolCalls(List.of()));
+        SpringAiLlmModelClient modelClient = new SpringAiLlmModelClient(platformChatClient);
+        LlmChatRequest request =
+                new LlmChatRequest(
+                        "system",
+                        "text-generation-user-message",
+                        List.of(),
+                        "openai/gpt-5.4-nano",
+                        0.2,
+                        128,
+                        false);
+
+        modelClient.call(request);
+
+        verify(chatClientRequestSpecification, never())
+                .tools(ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any());
     }
 
     private void assertRawToolCallAdvisorAutoRegistrationDisabled(

@@ -7,8 +7,6 @@ import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogWriteRepository;
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogWriteRepository.ProviderDeleteCandidate;
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogWriteRepository.ProviderDeleteResult;
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyFeature;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.domain.event.MasterKeyRotatedEvent;
@@ -23,6 +21,10 @@ import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
 import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
+import com.zeromail.core.llm.domain.MasterKeyTestResult;
+import com.zeromail.core.llm.gateway.springai.ProviderConnectionTester;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
 import com.zeromail.core.shared.exception.ErrorClass;
 import java.net.URI;
@@ -49,7 +51,7 @@ public class MasterKeyAdminService {
     private final PlatformSecretCipher platformSecretCipher;
     private final MasterKeyEditSessionService masterKeyEditSessionService;
     private final MasterKeyRateLimiter masterKeyRateLimiter;
-    private final ModelsProbeClient modelsProbeClient;
+    private final ProviderConnectionTester providerConnectionTester;
     private final AdminAuditWriter adminAuditWriter;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final Clock clock;
@@ -62,7 +64,7 @@ public class MasterKeyAdminService {
             PlatformSecretCipher platformSecretCipher,
             MasterKeyEditSessionService masterKeyEditSessionService,
             MasterKeyRateLimiter masterKeyRateLimiter,
-            ModelsProbeClient modelsProbeClient,
+            ProviderConnectionTester providerConnectionTester,
             AdminAuditWriter adminAuditWriter,
             ApplicationEventPublisher applicationEventPublisher,
             Clock clock) {
@@ -85,7 +87,8 @@ public class MasterKeyAdminService {
                 Objects.requireNonNull(masterKeyEditSessionService, "masterKeyEditSessionService");
         this.masterKeyRateLimiter =
                 Objects.requireNonNull(masterKeyRateLimiter, "masterKeyRateLimiter");
-        this.modelsProbeClient = Objects.requireNonNull(modelsProbeClient, "modelsProbeClient");
+        this.providerConnectionTester =
+                Objects.requireNonNull(providerConnectionTester, "providerConnectionTester");
         this.adminAuditWriter = Objects.requireNonNull(adminAuditWriter, "adminAuditWriter");
         this.applicationEventPublisher =
                 Objects.requireNonNull(applicationEventPublisher, "applicationEventPublisher");
@@ -736,7 +739,9 @@ public class MasterKeyAdminService {
      */
     private MasterKeyTestResult probe(
             LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
-        return modelsProbeClient.probe(provider, keyFormat, cleanBaseUrl(baseUrl), plaintextKey);
+        return providerConnectionTester
+                .probeConnection(provider, keyFormat, cleanBaseUrl(baseUrl), plaintextKey)
+                .result();
     }
 
     private void writeChangedAudit(

@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.zeromail.api.config.ZeroMailApiProperties;
+import com.zeromail.api.config.ApiProperties;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -23,9 +23,9 @@ import org.springframework.security.oauth2.core.OAuth2Error;
  */
 class LoginRedirectAuthenticationFailureHandlerTest {
 
-    private static final ZeroMailApiProperties PROPS =
-            new ZeroMailApiProperties(
-                    new ZeroMailApiProperties.WebProperties(URI.create("http://localhost:3000")),
+    private static final ApiProperties PROPS =
+            new ApiProperties(
+                    new ApiProperties.WebProperties(URI.create("http://localhost:3000")),
                     null /* null triggers CorsProperties defaults via compact constructor */,
                     null /* null triggers GmailProperties defaults via compact constructor */);
 

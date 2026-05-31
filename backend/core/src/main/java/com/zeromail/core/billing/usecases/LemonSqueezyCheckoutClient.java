@@ -1,7 +1,7 @@
 package com.zeromail.core.billing.usecases;
 
+import com.zeromail.core.billing.config.BillingProperties;
 import com.zeromail.core.billing.persistence.BillingPlanEntity;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,15 +28,15 @@ public class LemonSqueezyCheckoutClient {
     private static final MediaType JSON_API_MEDIA_TYPE =
             MediaType.parseMediaType("application/vnd.api+json");
 
-    private final ZeroMailCoreProperties.BillingProperties.LemonSqueezyProperties lemonSqueezy;
+    private final BillingProperties.LemonSqueezyProperties lemonSqueezy;
     private final ObjectMapper objectMapper;
     private final RestClient.Builder restClientBuilder;
 
     public LemonSqueezyCheckoutClient(
-            ZeroMailCoreProperties coreProperties,
+            BillingProperties billingProperties,
             ObjectMapper objectMapper,
             RestClient.Builder restClientBuilder) {
-        this.lemonSqueezy = coreProperties.billing().lemonSqueezy();
+        this.lemonSqueezy = billingProperties.lemonSqueezy();
         this.objectMapper = objectMapper;
         this.restClientBuilder = restClientBuilder;
     }

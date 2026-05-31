@@ -11,7 +11,7 @@ import {
 } from '@/features/chat/components/preview-card/preview-card';
 
 describe('chat tool catalog contract', () => {
-  it('matches the Phase 7 24-tool authoritative list and partition', () => {
+  it('matches the authoritative active tool list and partition', () => {
     expect(CHAT_TOOL_NAMES).toEqual([
       'searchInbox',
       'getMessage',
@@ -27,7 +27,6 @@ describe('chat tool catalog contract', () => {
       'updateRule',
       'disableRule',
       'saveDraft',
-      'addToKnowledgeBase',
       'createRule',
       'deleteRule',
       'removeSenderFromSafetyNet',
@@ -38,9 +37,9 @@ describe('chat tool catalog contract', () => {
       'replyEmail',
       'forwardEmail',
     ]);
-    expect(CHAT_TOOL_NAMES).toHaveLength(24);
+    expect(CHAT_TOOL_NAMES).toHaveLength(23);
     expect(CHAT_TOOL_PARTITIONS.read).toHaveLength(8);
-    expect(CHAT_TOOL_PARTITIONS.writeReversible).toHaveLength(7);
+    expect(CHAT_TOOL_PARTITIONS.writeReversible).toHaveLength(6);
     expect(CHAT_TOOL_PARTITIONS.confirmRequired).toHaveLength(6);
     expect(CHAT_TOOL_PARTITIONS.confirmedSend).toHaveLength(3);
     expect(CHAT_TOOL_PARTITIONS.confirmRequired).toContain('createRule');

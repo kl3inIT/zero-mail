@@ -3,9 +3,9 @@ package com.zeromail.core.aiEval;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.draft.usecases.DraftBodyGenerator;
 import com.zeromail.core.draft.usecases.ToneContextBuilder;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.domain.ActionValidator;
 import com.zeromail.core.llm.domain.AllowListedTools;
@@ -190,7 +190,7 @@ class DraftTokenBudgetEvalTest {
                 gatewayClass.getDeclaredConstructor(
                         LlmModelClient.class,
                         SanitizationPipeline.class,
-                        ZeroMailLlmProperties.class,
+                        PlatformProperties.class,
                         AllowListedTools.class,
                         ActionValidator.class);
         constructor.setAccessible(true);
@@ -198,7 +198,7 @@ class DraftTokenBudgetEvalTest {
                 constructor.newInstance(
                         recordingModelClient,
                         new SanitizationPipeline(List.of(new PassThroughSanitizer())),
-                        new ZeroMailLlmProperties(
+                        new PlatformProperties(
                                 "openai",
                                 "https://openrouter.ai/api/v1",
                                 "synthetic-platform-key",

@@ -21,7 +21,6 @@ public enum ChatToolName implements IdentifiedEnum {
     UPDATE_RULE("updateRule", ToolCategory.WRITE_REVERSIBLE),
     DISABLE_RULE("disableRule", ToolCategory.WRITE_REVERSIBLE),
     SAVE_DRAFT("saveDraft", ToolCategory.WRITE_REVERSIBLE),
-    ADD_TO_KNOWLEDGE_BASE("addToKnowledgeBase", ToolCategory.WRITE_REVERSIBLE),
 
     CREATE_RULE("createRule", ToolCategory.CONFIRM_REQUIRED),
     DELETE_RULE("deleteRule", ToolCategory.CONFIRM_REQUIRED),

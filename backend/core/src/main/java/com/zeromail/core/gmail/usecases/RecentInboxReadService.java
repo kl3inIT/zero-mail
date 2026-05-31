@@ -8,13 +8,13 @@ import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartBody;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
+import com.zeromail.core.shared.crypto.CryptoProperties;
 import com.zeromail.core.shared.html.SafeHtmlSanitizer;
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -67,7 +67,7 @@ public class RecentInboxReadService {
     public RecentInboxReadService(
             GmailConnectionRepository gmailConnectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
-            ZeroMailCoreProperties properties,
+            CryptoProperties cryptoProperties,
             SafeHtmlSanitizer safeHtmlSanitizer) {
         this.gmailConnectionRepository =
                 Objects.requireNonNull(
@@ -79,8 +79,8 @@ public class RecentInboxReadService {
                 Objects.requireNonNull(safeHtmlSanitizer, "safeHtmlSanitizer must not be null");
         this.inboxCursorCodec =
                 new InboxCursorCodec(
-                        Objects.requireNonNull(properties, "properties must not be null")
-                                .crypto()
+                        Objects.requireNonNull(
+                                        cryptoProperties, "cryptoProperties must not be null")
                                 .refreshTokenKeyBase64());
     }
 

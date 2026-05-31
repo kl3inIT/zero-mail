@@ -1,7 +1,7 @@
 package com.zeromail.core.admin.cat.domain.event;
 
 import com.zeromail.core.admin.cat.domain.Feature;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;

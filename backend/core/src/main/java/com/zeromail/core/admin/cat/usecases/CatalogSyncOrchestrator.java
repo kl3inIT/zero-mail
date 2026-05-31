@@ -10,8 +10,8 @@ import com.zeromail.core.admin.cat.persistence.lowlevel.CatalogSyncJobRepository
 import com.zeromail.core.admin.cat.projection.CatalogDiff;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.CatalogSyncJob;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.shared.exception.ErrorClass;
 import java.time.Clock;
 import java.time.Duration;

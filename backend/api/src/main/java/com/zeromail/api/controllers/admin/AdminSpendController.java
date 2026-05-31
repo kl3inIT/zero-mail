@@ -6,14 +6,14 @@ import com.zeromail.core.admin.audit.usecases.AdminReadEventDebouncer;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.domain.Feature;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.config.AdminProperties;
 import com.zeromail.core.admin.spend.exception.SpendExportTooLargeException;
 import com.zeromail.core.admin.spend.exception.SpendInvalidRangeException;
 import com.zeromail.core.admin.spend.projection.SpendDashboardSnapshot;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import com.zeromail.core.admin.spend.usecases.SpendAggregateQueryService;
 import com.zeromail.core.admin.spend.usecases.SpendCsvExporter;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.llm.domain.LlmProvider;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -69,7 +69,7 @@ public class AdminSpendController {
             SpendCsvExporter spendCsvExporter,
             AdminAuditWriter adminAuditWriter,
             AdminReadEventDebouncer adminReadEventDebouncer,
-            ZeroMailCoreProperties coreProperties,
+            AdminProperties adminProperties,
             Clock clock) {
         this.spendAggregateQueryService =
                 Objects.requireNonNull(
@@ -81,9 +81,8 @@ public class AdminSpendController {
         this.adminReadEventDebouncer =
                 Objects.requireNonNull(
                         adminReadEventDebouncer, "adminReadEventDebouncer must not be null");
-        Objects.requireNonNull(coreProperties, "coreProperties must not be null");
-        this.rowLevelClassificationSince =
-                coreProperties.admin().spend().rowLevelClassificationSince();
+        Objects.requireNonNull(adminProperties, "adminProperties must not be null");
+        this.rowLevelClassificationSince = adminProperties.spend().rowLevelClassificationSince();
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 

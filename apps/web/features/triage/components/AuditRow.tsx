@@ -7,6 +7,7 @@ import { Archive, FileEdit, Tag, Wand2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
+import { AuditSafetyNetBadge } from '@/features/triage/components/AuditSafetyNetBadge';
 import { UndoButton } from '@/features/triage/components/UndoButton';
 import type { AuditEntry } from '@/features/triage/api/triage-api';
 import { cn } from '@/lib/utils';
@@ -71,7 +72,10 @@ export function AuditRow({ entry, now }: AuditRowProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
-          <ActionBadge entry={entry} />
+          <div className="flex max-w-64 flex-col items-end gap-1">
+            <ActionBadge entry={entry} />
+            <AuditSafetyNetBadge pattern={entry.blockedBySafetyNetPattern} />
+          </div>
           <time
             className="text-muted-foreground hidden w-24 shrink-0 text-right text-xs tabular-nums sm:block"
             title={new Date(entry.timestamp).toLocaleString()}

@@ -16,7 +16,8 @@ public record AuditLogRow(
         String decisionState,
         Instant createdAt,
         Instant undoableUntil,
-        String draftId) {
+        String draftId,
+        String blockedBySafetyNetPattern) {
 
     public AuditLogRow {
         Objects.requireNonNull(auditId, "auditId must not be null");

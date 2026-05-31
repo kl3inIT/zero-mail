@@ -16,6 +16,8 @@ public interface TenantProtectedSenderObservationRepository
     Optional<TenantProtectedSenderObservationEntity> findByTenantIdAndSenderEmail(
             UUID tenantId, String senderEmail);
 
+    Optional<TenantProtectedSenderObservationEntity> findByIdAndTenantId(UUID id, UUID tenantId);
+
     List<TenantProtectedSenderObservationEntity> findByTenantId(UUID tenantId);
 
     @Modifying
@@ -57,5 +59,51 @@ public interface TenantProtectedSenderObservationRepository
             @Param("id") UUID id,
             @Param("tenantId") UUID tenantId,
             @Param("senderEmail") String senderEmail,
+            @Param("observedAt") Instant observedAt);
+
+    @Modifying
+    @Transactional
+    @Query(
+            value =
+                    """
+          INSERT INTO tenant_protected_sender_observation AS protected_sender_observation (
+            id,
+            tenant_id,
+            sender_email,
+            first_observed_at,
+            last_observed_at,
+            observation_count,
+            pattern_kind,
+            created_by_user,
+            created_at,
+            updated_at,
+            version
+          )
+          VALUES (
+            :id,
+            :tenantId,
+            :senderPattern,
+            :observedAt,
+            :observedAt,
+            1,
+            :patternKind,
+            TRUE,
+            :observedAt,
+            :observedAt,
+            0
+          )
+          ON CONFLICT (tenant_id, sender_email)
+          DO UPDATE SET
+            pattern_kind = EXCLUDED.pattern_kind,
+            created_by_user = TRUE,
+            updated_at = EXCLUDED.updated_at,
+            version = protected_sender_observation.version + 1
+          """,
+            nativeQuery = true)
+    int upsertUserPattern(
+            @Param("id") UUID id,
+            @Param("tenantId") UUID tenantId,
+            @Param("senderPattern") String senderPattern,
+            @Param("patternKind") String patternKind,
             @Param("observedAt") Instant observedAt);
 }

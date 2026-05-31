@@ -2,9 +2,9 @@ package com.zeromail.core.admin.mkey.persistence.lowlevel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.support.PostgresContainerTest;
 import java.util.List;
 import java.util.UUID;

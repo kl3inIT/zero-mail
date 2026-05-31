@@ -1,8 +1,8 @@
 package com.zeromail.core.chat.usecases.tools;
 
 import com.zeromail.core.chat.domain.ChatToolName;
-import com.zeromail.core.chat.persistence.AssistantMemoryEntity;
-import com.zeromail.core.chat.persistence.AssistantMemoryJpaRepository;
+import com.zeromail.core.chat.persistence.AssistantKnowledgeMemoryEntity;
+import com.zeromail.core.chat.persistence.AssistantKnowledgeMemoryJpaRepository;
 import com.zeromail.core.chat.usecases.ChatToolCatalog.SearchMemoriesArgs;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
@@ -20,12 +20,13 @@ public class SearchMemoriesToolHandler implements ChatReadToolHandler {
     private static final Logger log = LoggerFactory.getLogger(SearchMemoriesToolHandler.class);
     private static final int MEMORY_CONTENT_CAP = 200;
 
-    private final AssistantMemoryJpaRepository assistantMemoryRepository;
+    private final AssistantKnowledgeMemoryJpaRepository assistantKnowledgeMemoryRepository;
     private final ObjectMapper objectMapper;
 
     public SearchMemoriesToolHandler(
-            AssistantMemoryJpaRepository assistantMemoryRepository, ObjectMapper objectMapper) {
-        this.assistantMemoryRepository = assistantMemoryRepository;
+            AssistantKnowledgeMemoryJpaRepository assistantKnowledgeMemoryRepository,
+            ObjectMapper objectMapper) {
+        this.assistantKnowledgeMemoryRepository = assistantKnowledgeMemoryRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -42,9 +43,8 @@ public class SearchMemoriesToolHandler implements ChatReadToolHandler {
                 ReadToolJson.readArgs(objectMapper, inputJson, SearchMemoriesArgs.class);
         String query = args.query() == null ? "" : args.query().trim();
         List<MemoryOutput> memories =
-                assistantMemoryRepository
-                        .findByTenantIdAndContentContainingIgnoreCase(
-                                boundTenantId, query, Pageable.ofSize(20))
+                assistantKnowledgeMemoryRepository
+                        .searchByTenantIdAndQuery(boundTenantId, query, Pageable.ofSize(20))
                         .stream()
                         .map(SearchMemoriesToolHandler::toOutput)
                         .toList();
@@ -56,11 +56,11 @@ public class SearchMemoriesToolHandler implements ChatReadToolHandler {
         return ReadToolJson.writeOutput(objectMapper, new SearchMemoriesOutput(memories));
     }
 
-    private static MemoryOutput toOutput(AssistantMemoryEntity assistantMemory) {
+    private static MemoryOutput toOutput(AssistantKnowledgeMemoryEntity assistantMemory) {
         return new MemoryOutput(
-                assistantMemory.getMemoryId(),
+                assistantMemory.getKnowledgeMemoryId(),
                 ReadToolJson.cap(assistantMemory.getContent(), MEMORY_CONTENT_CAP),
-                assistantMemory.getCreatedAt());
+                assistantMemory.getUpdatedAt());
     }
 
     public record SearchMemoriesOutput(List<MemoryOutput> memories) {}

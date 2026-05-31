@@ -48,8 +48,8 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
                         "assistant_pending_action",
                         "assistant_action_audit",
                         "assistant_settings",
-                        "assistant_memory",
                         "assistant_knowledge_snippet");
+        assertThat(seen).doesNotContain("assistant_memory");
     }
 
     @Test
@@ -102,7 +102,6 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
         assertThat(columnExists("assistant_action_audit", "in_flight_at")).isTrue();
         assertThat(columnExists("assistant_settings", "assistant_settings_id")).isTrue();
         assertThat(columnExists("assistant_settings", "version")).isTrue();
-        assertThat(columnExists("assistant_memory", "version")).isTrue();
         assertThat(columnExists("assistant_knowledge_snippet", "version")).isTrue();
         assertThat(
                         jdbcTemplate.queryForObject(

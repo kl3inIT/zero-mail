@@ -21,6 +21,7 @@ export function SaveMemoryBody({
   return (
     <div className="grid gap-2 text-sm">
       <p className="text-muted-foreground text-xs font-medium uppercase">{t('memoryContent')}</p>
+      <p className="text-muted-foreground text-xs">{t('memoryDestination')}</p>
       {editing ? (
         <Textarea
           className="min-h-28"

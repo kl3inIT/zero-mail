@@ -132,6 +132,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
     try {
       const response = await confirmAction.mutateAsync({
         chatId: action.chatId,
+        invalidatesKnowledge: action.kind === 'saveMemory',
         body: {
           toolCallId: action.toolCallId,
           contentOverride,

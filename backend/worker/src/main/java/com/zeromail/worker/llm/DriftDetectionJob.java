@@ -3,7 +3,7 @@ package com.zeromail.worker.llm;
 import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.ToolCallResult;
 import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.worker.config.ZeroMailLlmDriftProperties;
+import com.zeromail.worker.config.DriftProperties;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -26,14 +26,14 @@ public class DriftDetectionJob {
     private final LlmGateway llmGateway;
     private final DriftFixtureLoader fixtureLoader;
     private final ObjectMapper objectMapper;
-    private final ZeroMailLlmDriftProperties driftProperties;
+    private final DriftProperties driftProperties;
     private volatile int lastRunDriftCount = -1;
 
     public DriftDetectionJob(
             LlmGateway llmGateway,
             DriftFixtureLoader fixtureLoader,
             ObjectMapper objectMapper,
-            ZeroMailLlmDriftProperties driftProperties) {
+            DriftProperties driftProperties) {
         this.llmGateway = llmGateway;
         this.fixtureLoader = fixtureLoader;
         this.objectMapper = objectMapper;

@@ -4,7 +4,7 @@ import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.domain.RoutingTier;
 import com.zeromail.core.admin.cat.persistence.FeatureDefaultProviderEntity;
 import com.zeromail.core.admin.cat.persistence.FeatureTierModelEntity;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

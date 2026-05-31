@@ -1,7 +1,7 @@
 package com.zeromail.api.security;
 
 import com.zeromail.core.admin.auth.usecases.AdminUserDetailsService;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.billing.config.BillingProperties;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,13 +44,13 @@ public class SecurityConfig {
     // Production defaults; override via env for local dev (rpId=localhost,
     // allowedOrigins=http://localhost:5174). Browser-side WebAuthn rejects any
     // ceremony where the rpId is not a registrable suffix of the current origin.
-    @Value("${zeromail.admin.webauthn.rp-id:admin.zeromail.vn}")
+    @Value("${zero-mail.admin.webauthn.rp-id:admin.zeromail.vn}")
     private String adminWebAuthnRpId;
 
-    @Value("${zeromail.admin.webauthn.rp-name:Zero Mail Admin}")
+    @Value("${zero-mail.admin.webauthn.rp-name:Zero Mail Admin}")
     private String adminWebAuthnRpName;
 
-    @Value("${zeromail.admin.webauthn.allowed-origins:https://admin.zeromail.vn}")
+    @Value("${zero-mail.admin.webauthn.allowed-origins:https://admin.zeromail.vn}")
     private Set<String> adminWebAuthnAllowedOrigins;
 
     @Bean
@@ -116,7 +116,7 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     SecurityFilterChain lemonSqueezyWebhookChain(
-            HttpSecurity http, ZeroMailCoreProperties coreProperties) throws Exception {
+            HttpSecurity http, BillingProperties billingProperties) throws Exception {
         http.securityMatcher("/api/plan-upgrades/webhooks/lemon-squeezy")
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(
@@ -129,7 +129,7 @@ public class SecurityConfig {
                                         .anyRequest()
                                         .denyAll())
                 .addFilterBefore(
-                        new LemonSqueezyWebhookSignatureFilter(coreProperties),
+                        new LemonSqueezyWebhookSignatureFilter(billingProperties),
                         AuthorizationFilter.class);
         return http.build();
     }
@@ -247,7 +247,7 @@ public class SecurityConfig {
 
     @Bean
     CookieSerializer adminCookieSerializer(
-            @Value("${zeromail.session.cookie.secure:true}") boolean secureCookie) {
+            @Value("${zero-mail.session.cookie.secure:true}") boolean secureCookie) {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
         cookieSerializer.setCookieName("ZEROMAIL_ADMIN");
         cookieSerializer.setCookiePath("/");
@@ -259,7 +259,7 @@ public class SecurityConfig {
 
     @Bean
     CookieSerializer userCookieSerializer(
-            @Value("${zeromail.session.cookie.secure:true}") boolean secureCookie) {
+            @Value("${zero-mail.session.cookie.secure:true}") boolean secureCookie) {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
         cookieSerializer.setCookieName("ZEROMAIL_SESSION");
         cookieSerializer.setCookiePath("/");

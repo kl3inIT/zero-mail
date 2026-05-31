@@ -2,7 +2,7 @@ package com.zeromail.core.admin.cat.projection;
 
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.domain.RoutingTier;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.util.UUID;
 
 /**

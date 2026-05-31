@@ -1,5 +1,6 @@
 package com.zeromail.core.triage;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -24,6 +25,7 @@ import com.zeromail.core.triage.usecases.TriageAuditSaga.GmailWriteResult;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.ReservePhaseResult;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.TriageAuditCommand;
 import com.zeromail.core.triage.usecases.TriageDraftBodyGenerator;
+import com.zeromail.core.triage.usecases.TriageDraftSettings;
 import com.zeromail.core.triage.usecases.TriageOrchestratorService;
 import com.zeromail.core.triage.usecases.TriageRuleEvaluationInputFactory;
 import com.zeromail.core.triage.usecases.TriageRuleEvaluationInputFactory.TriageRuleEvaluationInput;
@@ -61,6 +63,7 @@ class TriageOutboundRuntimeGateTest {
     private final TriageAuditSaga triageAuditSaga = mock(TriageAuditSaga.class);
     private final TriageDraftBodyGenerator draftBodyGenerator =
             mock(TriageDraftBodyGenerator.class);
+    private final TriageDraftSettings triageDraftSettings = mock(TriageDraftSettings.class);
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService =
             mock(ClassifyThreadReplyStatusService.class);
     private final PlatformTransactionManager transactionManager =
@@ -105,6 +108,41 @@ class TriageOutboundRuntimeGateTest {
         verify(triageAuditSaga)
                 .outboundDraftFallbackPhase(
                         any(TriageAuditCommand.class), eq(AUDIT_ID), eq("SENDER_SAFETY_NET"));
+    }
+
+    @Test
+    void missing_sender_still_falls_back_to_draft_for_outbound_actions() throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(
+                        true, false, senderDomainMatcher(), sendEmailAction(), triageInput(null));
+        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
+                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
+        when(triageAuditSaga.outboundDraftFallbackPhase(
+                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("SENDER_SAFETY_NET")))
+                .thenReturn(applied("draft-missing-sender"));
+
+        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        verify(triageAuditSaga, never())
+                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
+        verify(triageAuditSaga)
+                .outboundDraftFallbackPhase(
+                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("SENDER_SAFETY_NET"));
+    }
+
+    @Test
+    void auto_draft_replies_disabled_skips_save_draft_before_reserving_audit() throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(true, false, senderDomainMatcher(), saveDraftAction());
+        when(triageDraftSettings.autoDraftRepliesEnabled(TENANT_ID)).thenReturn(false);
+
+        TriageOrchestratorService.OrchestrationResult orchestrationResult =
+                withTenant(
+                        TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        assertThat(orchestrationResult.appliedActions()).isZero();
+        verify(draftBodyGenerator, never()).generate(any(), any(), any(), any());
+        verify(triageAuditSaga, never()).reservePhase(any(TriageAuditCommand.class), any());
     }
 
     @Test
@@ -218,10 +256,25 @@ class TriageOutboundRuntimeGateTest {
             String matcherAstJson,
             String actionIntentsJson)
             throws Exception {
+        return orchestratorService(
+                autoSendRulesEnabled,
+                senderProtected,
+                matcherAstJson,
+                actionIntentsJson,
+                triageInput("sender@example.com"));
+    }
+
+    private TriageOrchestratorService orchestratorService(
+            boolean autoSendRulesEnabled,
+            boolean senderProtected,
+            String matcherAstJson,
+            String actionIntentsJson,
+            TriageRuleEvaluationInput triageRuleEvaluationInput)
+            throws Exception {
         when(tenantService.triageSettingsFor(TENANT_ID))
                 .thenReturn(TenantService.TenantTriageSettings.defaults());
         when(triageRuleEvaluationInputFactory.fetch(any(MailMessageObserved.class)))
-                .thenReturn(Optional.of(triageInput()));
+                .thenReturn(Optional.of(triageRuleEvaluationInput));
         when(ruleManagementService.listEnabledForExecution(TENANT_ID))
                 .thenReturn(
                         List.of(
@@ -233,8 +286,9 @@ class TriageOutboundRuntimeGateTest {
                                         actionIntentsJson)));
         when(ruleAutomationSettingsService.readOrDefault(TENANT_ID))
                 .thenReturn(new RuleAutomationSettingsView(autoSendRulesEnabled));
-        when(senderSafetyNetService.isProtected(TENANT_ID, "sender@example.com"))
-                .thenReturn(senderProtected);
+        when(triageDraftSettings.autoDraftRepliesEnabled(TENANT_ID)).thenReturn(true);
+        when(senderSafetyNetService.matchedProtectedPattern(TENANT_ID, "sender@example.com"))
+                .thenReturn(senderProtected ? Optional.of("sender@example.com") : Optional.empty());
 
         @SuppressWarnings("unchecked")
         ObjectProvider<MeterRegistry> meterRegistryProvider = mock(ObjectProvider.class);
@@ -250,12 +304,13 @@ class TriageOutboundRuntimeGateTest {
                 senderSafetyNetService,
                 triageAuditSaga,
                 draftBodyGenerator,
+                triageDraftSettings,
                 classifyThreadReplyStatusService,
                 transactionManager,
                 meterRegistryProvider);
     }
 
-    private static TriageRuleEvaluationInput triageInput() {
+    private static TriageRuleEvaluationInput triageInput(String sanitizedSenderEmail) {
         Instant observedAt = Instant.parse("2026-05-23T00:00:00Z");
         RuleEvaluationInput ruleEvaluationInput =
                 new RuleEvaluationInput(
@@ -275,7 +330,7 @@ class TriageOutboundRuntimeGateTest {
                         Set.of());
         return new TriageRuleEvaluationInput(
                 ruleEvaluationInput,
-                "sender@example.com",
+                sanitizedSenderEmail,
                 GMAIL_THREAD_ID,
                 "<inbound@example.com>",
                 null,
@@ -311,6 +366,12 @@ class TriageOutboundRuntimeGateTest {
     private static String labelAction() {
         return """
                 [{"type":"label","labelName":"Needs review"}]
+                """;
+    }
+
+    private static String saveDraftAction() {
+        return """
+                [{"type":"save_draft","instruction":"Draft a concise reply"}]
                 """;
     }
 
@@ -352,12 +413,13 @@ class TriageOutboundRuntimeGateTest {
                 .isEqualTo("TENANT_CONTEXT_MISMATCH");
     }
 
-    private static void withTenant(UUID tenantId, TenantRunnable tenantRunnable) {
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(tenantRunnable::run);
+    private static <T> T withTenant(UUID tenantId, TenantSupplier<T> tenantSupplier) {
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(tenantSupplier::get);
     }
 
     @FunctionalInterface
-    private interface TenantRunnable {
-        void run();
+    private interface TenantSupplier<T> {
+        T get();
     }
 }
