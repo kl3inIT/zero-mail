@@ -46,7 +46,7 @@ export function AvailableActionsPanel({
 }: Props) {
   const t = useTranslations();
   const sortedActions = useMemo(
-    () => [...actions].sort((left, right) => left.displayOrder - right.displayOrder),
+    () => actions.toSorted((left, right) => left.displayOrder - right.displayOrder),
     [actions],
   );
 
@@ -81,7 +81,7 @@ function ActionItem({ action }: { action: RuleCatalogActionDescriptorResponse })
   const Icon = ACTION_ICONS[action.actionKey] ?? CheckCircle2;
 
   return (
-    <div className="hover:bg-muted/40 flex items-center gap-2 rounded-md px-2 py-2">
+    <div className="hover:bg-muted/40 flex items-center gap-2 rounded-md p-2">
       <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
       <span className="text-foreground truncate text-sm font-medium">{action.label}</span>
     </div>

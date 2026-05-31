@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 
@@ -13,26 +14,39 @@ import {
   type Frontmatter,
 } from '@/lib/docs/loader';
 
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations();
+  return {
+    title: t('docs.indexHeading'),
+    description: t('docs.empty.body'),
+  };
+}
+
 /**
  * Docs index (Phase 1.3 Plan 06 — D-D3, D-D4).
  * Phase 01.5 Plan 02 — deflated from PageShell/EmptyState to raw <main>/Card (D-C1, D-C2).
  */
 export default async function DocsIndexPage() {
-  const t = await getTranslations();
-  const locale = await getLocale();
+  const [t, locale, entries] = await Promise.all([
+    getTranslations(),
+    getLocale(),
+    listDocFilenames(),
+  ]);
 
-  const entries = await listDocFilenames();
-  const docs: Frontmatter[] = [];
-  for (const name of entries) {
-    const m = name.match(FILENAME_RE);
-    if (!m) continue;
-    if (m[2] !== locale) continue;
-    const raw = await fs.readFile(path.join(DOCS_DIR, name), 'utf8');
-    const { data } = matter(raw);
-    const fm = FrontmatterSchema.safeParse(data);
-    if (!fm.success) continue;
-    docs.push(fm.data);
-  }
+  const matchedEntries = entries.flatMap((name) => {
+    const match = name.match(FILENAME_RE);
+    return match && match[2] === locale ? [{ name, match }] : [];
+  });
+
+  const parsed = await Promise.all(
+    matchedEntries.map(async ({ name }) => {
+      const raw = await fs.readFile(path.join(DOCS_DIR, name), 'utf8');
+      const { data } = matter(raw);
+      return FrontmatterSchema.safeParse(data);
+    }),
+  );
+
+  const docs: Frontmatter[] = parsed.flatMap((fm) => (fm.success ? [fm.data] : []));
   docs.sort((a, b) => a.order - b.order);
 
   return (

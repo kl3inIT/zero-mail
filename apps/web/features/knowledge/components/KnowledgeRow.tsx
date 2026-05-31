@@ -1,6 +1,7 @@
 'use client';
 
 import { Pencil, Trash2 } from 'lucide-react';
+import { useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -17,10 +18,14 @@ type KnowledgeRowProps = {
 export function KnowledgeRow({ snippet, onEdit, onDelete }: KnowledgeRowProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const updatedAt = new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(snippet.updatedAt));
+  const updatedAt = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(snippet.updatedAt)),
+    [locale, snippet.updatedAt],
+  );
 
   return (
     <TableRow>

@@ -326,7 +326,7 @@ export function AppSidebar() {
           <button
             type="button"
             onClick={toggleSidebar}
-            className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex h-8 w-8 items-center justify-center rounded-md transition-colors"
+            className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-md transition-colors"
             aria-label={t('shell.sidebar.toggle')}
             data-testid="sidebar-collapse-toggle"
           >

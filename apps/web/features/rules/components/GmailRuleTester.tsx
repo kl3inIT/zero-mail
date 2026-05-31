@@ -28,6 +28,8 @@ const SAMPLE_SIZES = [10, 20] as const;
 
 type RowResult = { matched: boolean; actions: string[]; conflicts: number };
 
+const dateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+
 export function GmailRuleTester({ enabledRulesCount }: { enabledRulesCount: number }) {
   const t = useTranslations();
   const [sampleSize, setSampleSize] = useState<SampleSize>(10);
@@ -305,7 +307,7 @@ function LoadingRows() {
   return (
     <div className="divide-y overflow-hidden rounded-lg border">
       {Array.from({ length: 5 }).map((_, index) => (
-        <div key={index} className="flex items-center gap-3 px-3 py-3">
+        <div key={index} className="flex items-center gap-3 p-3">
           <div className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-3.5 w-40" />
             <Skeleton className="h-3.5 w-full max-w-md" />
@@ -319,12 +321,11 @@ function LoadingRows() {
 
 function toRowResult(response: RulePreviewResponse): RowResult {
   const row = response.rows[0];
-  const actions = (row?.proposedActionChips ?? [])
-    .map((chip) => {
-      const label = chip.safeLabel ?? chip.actionTypeId ?? '';
-      return label.startsWith('label:') ? label.replace('label:', '') : label;
-    })
-    .filter(Boolean);
+  const actions = (row?.proposedActionChips ?? []).flatMap((chip) => {
+    const label = chip.safeLabel ?? chip.actionTypeId ?? '';
+    const normalized = label.startsWith('label:') ? label.replace('label:', '') : label;
+    return normalized ? [normalized] : [];
+  });
   return {
     matched: row?.matched ?? false,
     actions,
@@ -353,5 +354,5 @@ function formatDate(value: string | undefined): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date);
+  return dateFormatter.format(date);
 }

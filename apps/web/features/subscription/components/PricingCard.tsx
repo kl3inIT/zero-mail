@@ -15,13 +15,15 @@ export type CreditOption = {
   labelVi: string;
 };
 
+const EMPTY_CREDIT_OPTIONS: readonly CreditOption[] = [];
+
 type PricingCardProps = {
   planName: string;
   isFeatured?: boolean;
   basePriceMonthly?: number;
   basePriceAnnual?: number;
   fixedCreditsString?: string;
-  creditOptions?: CreditOption[];
+  creditOptions?: readonly CreditOption[];
   selectedCreditsValue?: number;
   onCreditsValueChange?: (credits: number) => void;
   isAnnualBillingSelected: boolean;
@@ -37,7 +39,7 @@ export function PricingCard({
   basePriceMonthly,
   basePriceAnnual,
   fixedCreditsString,
-  creditOptions = [],
+  creditOptions = EMPTY_CREDIT_OPTIONS,
   selectedCreditsValue,
   onCreditsValueChange,
   isAnnualBillingSelected,
@@ -190,7 +192,7 @@ export function PricingCard({
       <div className="bg-border my-6 h-[1px]" />
 
       {/* Feature Sections */}
-      <div className="flex flex-1 flex-col justify-start space-y-6">
+      <div className="flex flex-1 flex-col justify-start gap-y-6">
         {/* Credits Section */}
         <div className="space-y-1.5">
           <h4 className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
@@ -212,8 +214,8 @@ export function PricingCard({
             {t('subscription.section.triage')}
           </h4>
           <ul className="text-foreground/80 space-y-2 text-[13px] leading-relaxed font-medium">
-            {featuresTriage.map((feature, idx) => (
-              <li key={idx} className="flex items-start">
+            {featuresTriage.map((feature) => (
+              <li key={feature} className="flex items-start">
                 <span className="mr-2 text-blue-500">•</span>
                 <span>{feature}</span>
               </li>
@@ -230,8 +232,8 @@ export function PricingCard({
             {t('subscription.section.limits')}
           </h4>
           <ul className="text-foreground/80 space-y-2 text-[13px] leading-relaxed font-medium">
-            {featuresLimits.map((feature, idx) => (
-              <li key={idx} className="flex items-start">
+            {featuresLimits.map((feature) => (
+              <li key={feature} className="flex items-start">
                 <span className="mr-2 text-blue-500">•</span>
                 <span>{feature}</span>
               </li>

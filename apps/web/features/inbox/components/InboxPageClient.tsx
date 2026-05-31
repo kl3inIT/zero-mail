@@ -160,16 +160,17 @@ export function InboxPageClient() {
   const selectedMessageId = selectedMessage?.gmailMessageId ?? null;
   const detailQuery = useInboxMessageDetail(selectedMessageId);
   const markRead = useMarkInboxMessageRead();
-  const markReadAttemptedRef = useRef(new Set<string>());
+  const markReadAttemptedRef = useRef<Set<string>>(undefined);
 
   useEffect(() => {
     if (!selectedMessage || !selectedMessage.unread || !detailQuery.isSuccess) {
       return;
     }
-    if (markReadAttemptedRef.current.has(selectedMessage.gmailMessageId)) {
+    const attempted = (markReadAttemptedRef.current ??= new Set<string>());
+    if (attempted.has(selectedMessage.gmailMessageId)) {
       return;
     }
-    markReadAttemptedRef.current.add(selectedMessage.gmailMessageId);
+    attempted.add(selectedMessage.gmailMessageId);
     markRead.mutate(selectedMessage.gmailMessageId);
   }, [detailQuery.isSuccess, markRead, selectedMessage]);
 
@@ -470,9 +471,9 @@ function InboxMessageDetailPanel({
   const selectedMessageId = selectedMessage?.gmailMessageId ?? null;
   const [composerState, setComposerState] = useState<InboxComposerState | null>(null);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [trackedMessageId, setTrackedMessageId] = useState<string | null>(selectedMessageId);
-  if (trackedMessageId !== selectedMessageId) {
-    setTrackedMessageId(selectedMessageId);
+  const trackedMessageIdRef = useRef<string | null>(selectedMessageId);
+  if (trackedMessageIdRef.current !== selectedMessageId) {
+    trackedMessageIdRef.current = selectedMessageId;
     setDetailsExpanded(false);
   }
   const activeComposerState =
@@ -1060,7 +1061,7 @@ function InboxReplyComposer({
           value={bodyText}
           onChange={(event) => setBodyText(event.currentTarget.value)}
           placeholder={t('inbox.composer.bodyPlaceholder')}
-          className="bg-card min-h-36 resize-y rounded-none border-0 px-3 py-3 shadow-none focus-visible:ring-0"
+          className="bg-card min-h-36 resize-y rounded-none border-0 p-3 shadow-none focus-visible:ring-0"
           data-testid="inbox-composer-body"
         />
         <div className="bg-card flex flex-wrap items-center gap-2 px-3 py-2">
@@ -1208,6 +1209,7 @@ function InboxReplyComposer({
             type="file"
             className="hidden"
             multiple
+            aria-label={t('inbox.composer.attach')}
             onChange={handleAttachmentChange}
             data-testid="inbox-composer-file-input"
           />
@@ -1283,9 +1285,7 @@ function InlineAssistantPreview({
 }) {
   const t = useTranslations();
   const visibleParts = messages.flatMap((message) =>
-    message.parts
-      .map((part, index) => ({ message, part, index }))
-      .filter(({ message }) => message.role !== 'user'),
+    message.role === 'user' ? [] : message.parts.map((part, index) => ({ message, part, index })),
   );
 
   if (autoConfirm) {
@@ -1460,8 +1460,14 @@ function composerPreset(
 ): ComposerPreset {
   const currentEmail = normalizeEmail(currentUserEmail ?? '');
   const senderEmail = extractEmailAddress(selectedMessage.from);
-  const toRecipients = selectedMessage.to.map(extractEmailAddress).filter(Boolean);
-  const ccRecipients = selectedMessage.cc.map(extractEmailAddress).filter(Boolean);
+  const toRecipients = selectedMessage.to.flatMap((value) => {
+    const email = extractEmailAddress(value);
+    return email ? [email] : [];
+  });
+  const ccRecipients = selectedMessage.cc.flatMap((value) => {
+    const email = extractEmailAddress(value);
+    return email ? [email] : [];
+  });
   const replyRecipients =
     senderEmail && senderEmail !== currentEmail
       ? [senderEmail]
@@ -1752,6 +1758,25 @@ function normalizeSearchText(value: string): string {
     .trim();
 }
 
+// Intl.DateTimeFormat constructors allocate locale-data tables; cache one instance
+// per locale so the inbox list (rendered per row) doesn't rebuild them each call.
+const inboxTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+const inboxSameYearDateFormatters = new Map<string, Intl.DateTimeFormat>();
+const inboxFullDateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function cachedDateFormatter(
+  cache: Map<string, Intl.DateTimeFormat>,
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  let formatter = cache.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    cache.set(locale, formatter);
+  }
+  return formatter;
+}
+
 function formatInboxListDate(value: string, locale: string): string {
   const timestamp = Date.parse(value);
   if (!Number.isFinite(timestamp)) return value;
@@ -1764,14 +1789,15 @@ function formatInboxListDate(value: string, locale: string): string {
     receivedDate.getDate() === now.getDate();
 
   if (sameDay) {
-    return new Intl.DateTimeFormat(locale, {
+    return cachedDateFormatter(inboxTimeFormatters, locale, {
       hour: 'numeric',
       minute: '2-digit',
     }).format(receivedDate);
   }
 
   const sameYear = receivedDate.getFullYear() === now.getFullYear();
-  return new Intl.DateTimeFormat(locale, {
+  const cache = sameYear ? inboxSameYearDateFormatters : inboxFullDateFormatters;
+  return cachedDateFormatter(cache, locale, {
     day: 'numeric',
     month: 'short',
     ...(sameYear ? {} : { year: 'numeric' }),
@@ -1854,7 +1880,7 @@ function InboxListSkeleton() {
   return (
     <div className="divide-border divide-y" aria-busy="true">
       {Array.from({ length: 8 }).map((_, index) => (
-        <div key={index} className="flex gap-3 px-3 py-3">
+        <div key={index} className="flex gap-3 p-3">
           <Skeleton className="size-9 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
             <div className="flex items-center justify-between gap-4">

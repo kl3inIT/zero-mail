@@ -159,7 +159,7 @@ function AddProviderKeyForm({
     return (
         <DialogContent className="sm:max-w-xl">
             <DialogHeader>
-                <DialogTitle>Thêm key mới — {provider}</DialogTitle>
+                <DialogTitle>Thêm key mới: {provider}</DialogTitle>
                 <DialogDescription>
                     Key phải test PASS trước khi lưu. Priority sẽ được gán vào cuối chuỗi failover.
                 </DialogDescription>

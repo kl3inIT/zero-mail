@@ -107,7 +107,10 @@ function PickerForm({
   );
 
   const providerRows = masterKeysQuery.data?.rows ?? [];
-  const providerGroups = useMemo(() => groupProviderRows(providerRows), [providerRows]);
+  const providerGroups = useMemo(
+    () => groupProviderRows(masterKeysQuery.data?.rows ?? []),
+    [masterKeysQuery.data?.rows],
+  );
   const firstAvailableProvider =
     providerGroups.springAi[0]?.provider ??
     providerGroups.openAi[0]?.provider ??
@@ -232,7 +235,7 @@ function PickerForm({
               {selectedModelIds.map((modelId, index) => (
                 <li
                   key={modelId}
-                  className="border-border bg-background flex items-center gap-2 rounded-md border px-2 py-2"
+                  className="border-border bg-background flex items-center gap-2 rounded-md border p-2"
                 >
                   <Badge variant="secondary" className="font-mono">
                     {index + 1}

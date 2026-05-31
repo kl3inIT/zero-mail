@@ -12,8 +12,7 @@ import { gmailQueryKeys } from '@/features/gmail/query-keys';
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 
 export default async function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const incomingHeaders = await headers();
+  const [cookieStore, incomingHeaders] = await Promise.all([cookies(), headers()]);
   const cookieHeader = cookieStore.toString();
   const requestHeaders = backendRequestHeaders(cookieHeader, incomingHeaders);
   const defaultSidebarOpen = cookieStore.get(SIDEBAR_COOKIE_NAME)?.value !== 'false';

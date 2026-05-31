@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form';
 import { TriangleAlertIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,9 @@ export function ConfirmTwiceDialog({
   onConfirm,
 }: ConfirmTwiceDialogProps) {
   const [step, setStep] = useState<1 | 2>(1);
-  const [reasonValue, setReasonValue] = useState('');
+  // Mirrors the form's reason field for use in submit/confirm handlers only — never
+  // rendered, so a ref avoids re-renders on every keystroke.
+  const reasonValueRef = useRef('');
   const [typedToken, setTypedToken] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   // Either the real audit row id surfaced by the backend, or the empty string when
@@ -71,10 +73,8 @@ export function ConfirmTwiceDialog({
       onChange: reasonSchema,
     },
   });
-  const headerClassName = useMemo(
-    () => (variant === 'destructive' ? 'bg-destructive-soft text-destructive' : 'bg-warning-soft text-amber'),
-    [variant],
-  );
+  const headerClassName =
+    variant === 'destructive' ? 'bg-destructive-soft text-destructive' : 'bg-warning-soft text-amber';
 
   return (
     <Dialog
@@ -83,7 +83,7 @@ export function ConfirmTwiceDialog({
         onOpenChange(nextOpen);
         if (!nextOpen) {
           setStep(1);
-          setReasonValue('');
+          reasonValueRef.current = '';
           setTypedToken('');
           setSubmitError(null);
           setSuccessAuditId(null);
@@ -94,7 +94,7 @@ export function ConfirmTwiceDialog({
         <div className={`flex items-center gap-2 px-5 py-3 ${headerClassName}`}>
           <TriangleAlertIcon className="size-4" />
           <span className="text-sm font-semibold">
-            {actionLabel} — {targetLabel}
+            {actionLabel}: {targetLabel}
           </span>
         </div>
         <div className="p-5">
@@ -112,7 +112,7 @@ export function ConfirmTwiceDialog({
               className="mt-5 space-y-4"
               onSubmit={(event) => {
                 event.preventDefault();
-                const validationResult = reasonSchema.safeParse({ reason: reasonValue });
+                const validationResult = reasonSchema.safeParse({ reason: reasonValueRef.current });
                 if (validationResult.success) {
                   setStep(2);
                 }
@@ -138,7 +138,7 @@ export function ConfirmTwiceDialog({
                       placeholder="VD: ngừng sử dụng tài khoản admin thử nghiệm"
                       onBlur={field.handleBlur}
                       onChange={(event) => {
-                        setReasonValue(event.target.value);
+                        reasonValueRef.current = event.target.value;
                         field.handleChange(event.target.value);
                       }}
                     />
@@ -185,7 +185,7 @@ export function ConfirmTwiceDialog({
                   disabled={typedToken !== confirmationToken || Boolean(successAuditId)}
                   onClick={() => {
                     setSubmitError(null);
-                    void onConfirm(reasonValue)
+                    void onConfirm(reasonValueRef.current)
                       .then((result) => setSuccessAuditId(result.auditId ?? ''))
                       .catch((error: unknown) => {
                         setSubmitError(error instanceof Error ? error.message : 'Không thể hoàn tất thao tác.');

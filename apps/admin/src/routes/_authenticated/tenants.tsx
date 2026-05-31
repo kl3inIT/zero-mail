@@ -13,6 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { TenantListFilters, TenantListRow, TenantStatusFilter } from '@/features/tenants/tenants-api';
 import { useTenantList } from '@/features/tenants/use-tenant-list';
 
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
+
 const tenantListSearchSchema = z.object({
   status: z.enum(['ACTIVE', 'PAUSED', 'DISCONNECTED']).optional().catch(undefined),
   from: z.string().optional().catch(undefined),
@@ -255,10 +260,7 @@ export function formatDateTime(value?: string): string {
   if (!value) {
     return '-';
   }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
+  return dateTimeFormatter.format(new Date(value));
 }
 
 function shortId(value: string): string {

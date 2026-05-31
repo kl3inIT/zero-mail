@@ -33,7 +33,7 @@ export function SenderRow({ sender }: SenderRowProps) {
   );
 
   return (
-    <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 space-y-2">
         <p className="text-foreground truncate text-sm font-medium">{pattern}</p>
         <div className="flex flex-wrap gap-2">

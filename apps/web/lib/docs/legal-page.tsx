@@ -1,88 +1,19 @@
-import { promises as fs } from 'node:fs';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import type { Metadata } from 'next';
-import matter from 'gray-matter';
 import { compileMDX } from 'next-mdx-remote/rsc';
-import { getLocale } from 'next-intl/server';
 
-import { FrontmatterSchema, buildDocPath } from '@/lib/docs/loader';
-
-type LegalDocSlug = 'privacy' | 'terms';
-
-type LegalHeading = {
-  id: string;
-  text: string;
-};
+import {
+  extractLevelTwoHeadings,
+  fallbackLegalBody,
+  fallbackLegalTitle,
+  readLegalDocSource,
+  slugifyHeading,
+  type LegalDocSlug,
+} from '@/lib/docs/legal-page-data';
 
 function extractTextFromNode(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(extractTextFromNode).join('');
   return '';
-}
-
-function stripMarkdownSyntax(text: string): string {
-  return text
-    .replace(/\[([^\][]+)]\([^)]+\)/g, '$1')
-    .replace(/[`*_~]/g, '')
-    .trim();
-}
-
-function slugifyHeading(text: string): string {
-  const normalizedText = text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return normalizedText || 'section';
-}
-
-function extractLevelTwoHeadings(source: string): LegalHeading[] {
-  const contentWithoutFrontmatter = source.replace(/^---[\s\S]*?---\s*/, '');
-
-  return contentWithoutFrontmatter
-    .split(/\r?\n/)
-    .map((line) => line.match(/^##\s+(.+?)\s*$/))
-    .filter((match): match is RegExpMatchArray => Boolean(match))
-    .map((match) => {
-      const text = stripMarkdownSyntax(match[1]);
-      return {
-        id: slugifyHeading(text),
-        text,
-      };
-    });
-}
-
-async function readLegalDocSource(slug: LegalDocSlug) {
-  const locale = await resolveLegalLocale();
-
-  const filePath = buildDocPath(slug, locale);
-
-  try {
-    const source = await fs.readFile(filePath, 'utf8');
-    const parsedFrontmatter = FrontmatterSchema.safeParse(matter(source).data);
-    if (!parsedFrontmatter.success) return null;
-    if (parsedFrontmatter.data.slug !== slug || parsedFrontmatter.data.locale !== locale)
-      return null;
-
-    return {
-      frontmatter: parsedFrontmatter.data,
-      locale,
-      source,
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function resolveLegalLocale(): Promise<'en' | 'vi'> {
-  try {
-    const locale = await getLocale();
-    return locale === 'vi' ? 'vi' : 'en';
-  } catch {
-    return 'en';
-  }
 }
 
 const mdxComponents = {
@@ -126,25 +57,6 @@ const mdxComponents = {
     />
   ),
 };
-
-export async function generateLegalDocMetadata(slug: LegalDocSlug): Promise<Metadata> {
-  const document = await readLegalDocSource(slug);
-  const title = document?.frontmatter.title ?? fallbackLegalTitle(slug);
-  const description = fallbackLegalDescription(slug);
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: `/${slug}`,
-    },
-    openGraph: {
-      title,
-      description,
-      type: 'article',
-    },
-  };
-}
 
 export async function LegalDocPage({ slug }: { slug: LegalDocSlug }) {
   const document = await readLegalDocSource(slug);
@@ -203,20 +115,4 @@ export async function LegalDocPage({ slug }: { slug: LegalDocSlug }) {
       </aside>
     </section>
   );
-}
-
-function fallbackLegalTitle(slug: LegalDocSlug): string {
-  return slug === 'privacy' ? 'Chính sách bảo mật' : 'Điều khoản dịch vụ';
-}
-
-function fallbackLegalDescription(slug: LegalDocSlug): string {
-  return slug === 'privacy'
-    ? 'How Zero Mail collects, uses, protects, and limits access to Gmail and account data.'
-    : 'The terms that govern use of Zero Mail, including Gmail authorization, AI actions, credits, and acceptable use.';
-}
-
-function fallbackLegalBody(slug: LegalDocSlug): string {
-  return slug === 'privacy'
-    ? 'This page explains how Zero Mail handles account data, Gmail access, automation, and privacy safeguards.'
-    : 'These terms describe how Zero Mail can be used, including Gmail authorization, automation controls, credits, and acceptable use.';
 }

@@ -157,9 +157,11 @@ function MasterKeyProviderRoute() {
   }
 
   function testAllKeys() {
-    keys
-      .filter((entry) => entry.status === 'ACTIVE')
-      .forEach((entry) => testKey(entry));
+    for (const entry of keys) {
+      if (entry.status === 'ACTIVE') {
+        testKey(entry);
+      }
+    }
   }
 
   function disableModel(model: CatalogModel) {

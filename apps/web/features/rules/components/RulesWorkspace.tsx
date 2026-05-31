@@ -282,7 +282,7 @@ export function RulesWorkspace() {
   };
 
   const rules = useMemo(
-    () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
+    () => (rulesQuery.data?.rules ?? []).toSorted(compareRulesByOrder),
     [rulesQuery.data?.rules],
   );
 
@@ -462,48 +462,7 @@ export function RulesWorkspace() {
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
   return (
     <div className="space-y-6">
-      <div
-        role="tablist"
-        aria-label={t('rules.tabs.label')}
-        className="bg-muted text-muted-foreground inline-flex w-full rounded-lg p-[3px]"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'list'}
-          aria-controls="rules-tabpanel-list"
-          id="rules-tab-list"
-          onPointerDown={() => setActiveTab('list')}
-          onClick={() => setActiveTab('list')}
-          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
-        >
-          {t('rules.tabs.list')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'test'}
-          aria-controls="rules-tabpanel-test"
-          id="rules-tab-test"
-          onPointerDown={() => setActiveTab('test')}
-          onClick={() => setActiveTab('test')}
-          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
-        >
-          {t('rules.tabs.test')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'history'}
-          aria-controls="rules-tabpanel-history"
-          id="rules-tab-history"
-          onPointerDown={() => setActiveTab('history')}
-          onClick={() => setActiveTab('history')}
-          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
-        >
-          {t('rules.tabs.history')}
-        </button>
-      </div>
+      <RulesTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === 'list' && (
         <section
@@ -635,6 +594,45 @@ export function RulesWorkspace() {
 
 const RULES_TABS = ['list', 'test', 'history'] as const;
 type RulesTab = (typeof RULES_TABS)[number];
+
+function RulesTabBar({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: RulesTab;
+  onTabChange: (tab: RulesTab) => void;
+}) {
+  const t = useTranslations();
+  const tabLabel: Record<RulesTab, string> = {
+    list: t('rules.tabs.list'),
+    test: t('rules.tabs.test'),
+    history: t('rules.tabs.history'),
+  };
+
+  return (
+    <div
+      role="tablist"
+      aria-label={t('rules.tabs.label')}
+      className="bg-muted text-muted-foreground inline-flex w-full rounded-lg p-[3px]"
+    >
+      {RULES_TABS.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === tab}
+          aria-controls={`rules-tabpanel-${tab}`}
+          id={`rules-tab-${tab}`}
+          onPointerDown={() => onTabChange(tab)}
+          onClick={() => onTabChange(tab)}
+          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
+        >
+          {tabLabel[tab]}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function normalizeRulesTab(value: string | null): RulesTab {
   return RULES_TABS.includes(value as RulesTab) ? (value as RulesTab) : 'list';

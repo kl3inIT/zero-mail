@@ -7,15 +7,13 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
 import { AuditSafetyNetBadge } from '@/features/triage/components/AuditSafetyNetBadge';
 import { UndoBoundary } from '@/features/triage/components/AuditLog';
+import { ActionBadge, MessageRef, UndoClosedLabel } from '@/features/triage/components/AuditRow';
 import {
-  ActionBadge,
   formatAuditTimestamp,
   isUndoAvailable,
-  MessageRef,
   shouldShowDraftAction,
   shouldShowUndoBoundary,
-  UndoClosedLabel,
-} from '@/features/triage/components/AuditRow';
+} from '@/features/triage/components/audit-row-utils';
 import { UndoButton } from '@/features/triage/components/UndoButton';
 import type { AuditEntry } from '@/features/triage/api/triage-api';
 

@@ -28,6 +28,12 @@ import { cn } from '@/lib/utils';
 
 type CandidateRow = UnsubscribeCandidateResponse & { riskBadge?: string };
 
+const lastSeenFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
 function deriveRiskBadge(candidate: CandidateRow): string {
   if (candidate.riskBadge) return candidate.riskBadge;
   if (candidate.suppressed) return 'SUPPRESSED_BLOCKED';
@@ -60,14 +66,16 @@ export function CandidateListTable({
   );
   const selectableVisibleEmails = useMemo(
     () =>
-      candidates
-        .filter(
-          (candidate) =>
-            candidate.senderEmail &&
-            candidate.unsubscribeMethod !== 'NONE' &&
-            candidate.suppressed !== true,
-        )
-        .map((candidate) => candidate.senderEmail!),
+      candidates.reduce<string[]>((emails, candidate) => {
+        if (
+          candidate.senderEmail &&
+          candidate.unsubscribeMethod !== 'NONE' &&
+          candidate.suppressed !== true
+        ) {
+          emails.push(candidate.senderEmail);
+        }
+        return emails;
+      }, []),
     [candidates],
   );
   const selectedVisibleCount = selectableVisibleEmails.filter((senderEmail) =>
@@ -309,9 +317,5 @@ function formatLastSeen(value: string | undefined): string {
   if (!value) return '-';
   const timestamp = Date.parse(value);
   if (Number.isNaN(timestamp)) return value;
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(timestamp));
+  return lastSeenFormatter.format(new Date(timestamp));
 }

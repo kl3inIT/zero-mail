@@ -9,60 +9,60 @@ import { toast } from 'sonner';
 import { PricingCard, CreditOption } from '@/features/subscription/components/PricingCard';
 import { cn } from '@/lib/utils';
 
+// Column 2 credit options configuration
+const columnTwoPricingOptions: CreditOption[] = [
+  {
+    creditsValue: 21000,
+    priceMonthly: 49.99,
+    priceAnnual: 39.99,
+    labelEn: '21,000 credits / month',
+    labelVi: '21.000 tín dụng / tháng',
+  },
+  {
+    creditsValue: 45000,
+    priceMonthly: 99.99,
+    priceAnnual: 79.99,
+    labelEn: '45,000 credits / month',
+    labelVi: '45.000 tín dụng / tháng',
+  },
+  {
+    creditsValue: 70000,
+    priceMonthly: 149.99,
+    priceAnnual: 119.99,
+    labelEn: '70,000 credits / month',
+    labelVi: '70.000 tín dụng / tháng',
+  },
+];
+
+// Column 3 credit options configuration
+const columnThreePricingOptions: CreditOption[] = [
+  {
+    creditsValue: 125000,
+    priceMonthly: 249.99,
+    priceAnnual: 199.99,
+    labelEn: '125,000 credits / month',
+    labelVi: '125.000 tín dụng / tháng',
+  },
+  {
+    creditsValue: 250000,
+    priceMonthly: 449.99,
+    priceAnnual: 359.99,
+    labelEn: '250,000 credits / month',
+    labelVi: '250.000 tín dụng / tháng',
+  },
+  {
+    creditsValue: 500000,
+    priceMonthly: 799.99,
+    priceAnnual: 639.99,
+    labelEn: '500,000 credits / month',
+    labelVi: '500.000 tín dụng / tháng',
+  },
+];
+
 export function SubscriptionPage() {
   const t = useTranslations();
   const pricingDialogRouter = useRouter();
   const [isAnnualBillingSelected, setIsAnnualBillingSelected] = useState(false);
-
-  // Column 2 credit options configuration
-  const columnTwoPricingOptions: CreditOption[] = [
-    {
-      creditsValue: 21000,
-      priceMonthly: 49.99,
-      priceAnnual: 39.99,
-      labelEn: '21,000 credits / month',
-      labelVi: '21.000 tín dụng / tháng',
-    },
-    {
-      creditsValue: 45000,
-      priceMonthly: 99.99,
-      priceAnnual: 79.99,
-      labelEn: '45,000 credits / month',
-      labelVi: '45.000 tín dụng / tháng',
-    },
-    {
-      creditsValue: 70000,
-      priceMonthly: 149.99,
-      priceAnnual: 119.99,
-      labelEn: '70,000 credits / month',
-      labelVi: '70.000 tín dụng / tháng',
-    },
-  ];
-
-  // Column 3 credit options configuration
-  const columnThreePricingOptions: CreditOption[] = [
-    {
-      creditsValue: 125000,
-      priceMonthly: 249.99,
-      priceAnnual: 199.99,
-      labelEn: '125,000 credits / month',
-      labelVi: '125.000 tín dụng / tháng',
-    },
-    {
-      creditsValue: 250000,
-      priceMonthly: 449.99,
-      priceAnnual: 359.99,
-      labelEn: '250,000 credits / month',
-      labelVi: '250.000 tín dụng / tháng',
-    },
-    {
-      creditsValue: 500000,
-      priceMonthly: 799.99,
-      priceAnnual: 639.99,
-      labelEn: '500,000 credits / month',
-      labelVi: '500.000 tín dụng / tháng',
-    },
-  ];
 
   // Dynamic state values for dropdown selection
   const [columnTwoSelectedCredits, setColumnTwoSelectedCredits] = useState<number>(21000);
@@ -126,7 +126,7 @@ export function SubscriptionPage() {
           className="text-muted-foreground hover:text-foreground absolute top-6 right-6 cursor-pointer transition-colors"
           aria-label="Close pricing portal"
         >
-          <X className="h-6 w-6" />
+          <X className="size-6" />
         </button>
 
         {/* Modal Header */}

@@ -189,7 +189,7 @@ function RuleTableRow({
       )}
       onClick={() => onSelectRule(rule)}
     >
-      <TableCell className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
+      <TableCell className="p-4" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center gap-2">
           {pending ? (
             <Loader2 className="text-muted-foreground size-4 animate-spin" aria-hidden="true" />
@@ -204,17 +204,17 @@ function RuleTableRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="px-4 py-4 align-top whitespace-normal">
+      <TableCell className="p-4 align-top whitespace-normal">
         <div className="min-w-0">
           <p className="text-foreground truncate text-sm font-semibold">
             {rule.displayName ?? t('rules.composer.title')}
           </p>
         </div>
       </TableCell>
-      <TableCell className="px-4 py-4 align-top whitespace-normal">
+      <TableCell className="p-4 align-top whitespace-normal">
         <SummaryChips items={whenItems} />
       </TableCell>
-      <TableCell className="px-4 py-4 align-top whitespace-normal">
+      <TableCell className="p-4 align-top whitespace-normal">
         <SummaryChips items={thenItems} action />
       </TableCell>
       <TableCell className="px-2 py-3 align-top" onClick={(event) => event.stopPropagation()}>
@@ -247,11 +247,20 @@ function RuleMobileCard(props: RuleRowProps) {
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
       className={cn(
-        'hover:bg-muted/30 cursor-pointer p-4 transition-colors',
+        'hover:bg-muted/30 focus-visible:ring-ring cursor-pointer p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none',
         selected && 'bg-muted/40 hover:bg-muted/40',
       )}
       onClick={() => onSelectRule(rule)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelectRule(rule);
+        }
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

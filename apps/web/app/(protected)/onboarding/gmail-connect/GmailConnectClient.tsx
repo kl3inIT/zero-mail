@@ -1,24 +1,23 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/states/LoadingState';
+import type { CurrentUser } from '@/features/account/api/account-api';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 
-export function GmailConnectClient() {
+/**
+ * Step gating (redirect a user past/away from the Gmail-connect screen) runs
+ * server-side in `page.tsx` via `redirect()`. This client component keeps the
+ * connect UI; `initialUser` seeds the TanStack cache from the server fetch to
+ * avoid a hydration flash.
+ */
+export function GmailConnectClient({ initialUser }: { initialUser?: CurrentUser }) {
   const t = useTranslations();
   const router = useRouter();
-  const me = useCurrentUser();
-
-  useEffect(() => {
-    if (!me.data) return;
-    const step = me.data.onboardingStep;
-    if (step === 'TEMPLATE_SELECTED') router.replace('/onboarding/complete');
-    else if (step === 'COMPLETE') router.replace('/settings');
-  }, [me.data, router]);
+  const me = useCurrentUser(initialUser);
 
   if (!me.data) {
     return (

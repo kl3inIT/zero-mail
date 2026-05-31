@@ -2,7 +2,7 @@
 
 import { CheckCircle2, KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useState, type FormEvent } from 'react';
+import { useReducer, type FormEvent } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ByokProvider, ByokResponse, ByokTestResult } from '@/features/ai/api/byok-api';
+import { BYOK_PROVIDER_OPTIONS, DEFAULT_PROVIDER } from '@/features/ai/api/byok-providers';
 import { ConfirmDialog } from '@/features/ai/components/ConfirmDialog';
 import { SectionHeader } from '@/features/ai/components/SectionHeader';
 import { SettingCard } from '@/features/ai/components/SettingCard';
@@ -29,18 +30,6 @@ import { useDeleteByok } from '@/features/ai/hooks/useDeleteByok';
 import { useSaveByok } from '@/features/ai/hooks/useSaveByok';
 import { useSelectByokModel } from '@/features/ai/hooks/useSelectByokModel';
 import { useTestByokConnection } from '@/features/ai/hooks/useTestByokConnection';
-
-export const BYOK_PROVIDER_OPTIONS: Array<{
-  provider: ByokProvider;
-  defaultBaseUrl: string;
-}> = [
-  { provider: 'OPENAI', defaultBaseUrl: 'https://api.openai.com/v1' },
-  { provider: 'ANTHROPIC', defaultBaseUrl: 'https://api.anthropic.com/v1' },
-  { provider: 'GOOGLE', defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta' },
-  { provider: 'DEEPSEEK', defaultBaseUrl: 'https://api.deepseek.com/v1' },
-];
-
-const DEFAULT_PROVIDER = BYOK_PROVIDER_OPTIONS[0];
 
 export function AiProviderSection() {
   const t = useTranslations();
@@ -83,6 +72,120 @@ export function AiProviderSection() {
   );
 }
 
+type ByokFormState = {
+  savedRow: ByokResponse | null;
+  provider: ByokProvider;
+  baseUrl: string;
+  apiKey: string;
+  editingKey: boolean;
+  models: string[];
+  modelId: string;
+  active: boolean;
+  lastTestResult: ByokTestResult | null;
+  lastTestedAt: string | null;
+};
+
+type ByokFormAction =
+  | { type: 'providerChanged'; provider: ByokProvider }
+  | { type: 'baseUrlChanged'; baseUrl: string }
+  | { type: 'apiKeyChanged'; apiKey: string }
+  | { type: 'keyReplaceRequested' }
+  | { type: 'modelIdSet'; modelId: string }
+  | { type: 'activeSet'; active: boolean }
+  | { type: 'savedRowApplied'; row: ByokResponse }
+  | { type: 'saveCompleted'; row: ByokResponse }
+  | { type: 'tested'; result: ByokTestResult; models: string[]; testedAt: string }
+  | { type: 'deleted' };
+
+function createInitialByokFormState(initialRow: ByokResponse | null): ByokFormState {
+  return {
+    savedRow: initialRow,
+    provider: initialRow?.provider ?? DEFAULT_PROVIDER.provider,
+    baseUrl: initialRow?.baseUrl ?? DEFAULT_PROVIDER.defaultBaseUrl,
+    apiKey: '',
+    editingKey: initialRow === null,
+    models: initialRow?.modelId ? [initialRow.modelId] : [],
+    modelId: initialRow?.modelId ?? '',
+    active: initialRow?.active ?? false,
+    lastTestResult: initialRow?.lastTestResult ?? null,
+    lastTestedAt: initialRow?.lastTestedAt ?? null,
+  };
+}
+
+function applySavedRowToState(state: ByokFormState, row: ByokResponse): ByokFormState {
+  return {
+    ...state,
+    savedRow: row,
+    provider: row.provider,
+    baseUrl: row.baseUrl,
+    modelId: row.modelId ?? '',
+    active: row.active,
+    lastTestResult: row.lastTestResult ?? null,
+    lastTestedAt: row.lastTestedAt ?? null,
+  };
+}
+
+function byokFormReducer(state: ByokFormState, action: ByokFormAction): ByokFormState {
+  switch (action.type) {
+    case 'providerChanged':
+      return {
+        ...state,
+        provider: action.provider,
+        baseUrl: defaultBaseUrlFor(action.provider),
+        apiKey: '',
+        editingKey: true,
+        models: [],
+        modelId: '',
+        lastTestResult: null,
+        lastTestedAt: null,
+        active: false,
+      };
+    case 'baseUrlChanged':
+      return { ...state, baseUrl: action.baseUrl };
+    case 'apiKeyChanged':
+      return { ...state, apiKey: action.apiKey };
+    case 'keyReplaceRequested':
+      return { ...state, apiKey: '', editingKey: true };
+    case 'modelIdSet':
+      return { ...state, modelId: action.modelId };
+    case 'activeSet':
+      return { ...state, active: action.active };
+    case 'savedRowApplied':
+      return applySavedRowToState(state, action.row);
+    case 'saveCompleted':
+      return {
+        ...applySavedRowToState(state, action.row),
+        apiKey: '',
+        editingKey: false,
+        models: [],
+      };
+    case 'tested': {
+      const succeeded = action.result === 'OK';
+      return {
+        ...state,
+        lastTestResult: action.result,
+        lastTestedAt: action.testedAt,
+        savedRow: state.savedRow
+          ? {
+              ...state.savedRow,
+              active: succeeded ? state.savedRow.active : false,
+              lastTestResult: action.result,
+              lastTestedAt: action.testedAt,
+              modelId: succeeded ? state.savedRow.modelId : undefined,
+            }
+          : state.savedRow,
+        models: succeeded ? action.models : [],
+        modelId: succeeded ? state.modelId : '',
+        active: succeeded ? state.active : false,
+      };
+    }
+    case 'deleted':
+      return createInitialByokFormState(null);
+    default:
+      return state;
+  }
+}
+
 function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -91,20 +194,19 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
   const selectModel = useSelectByokModel();
   const activateByok = useActivateByok();
   const deleteByok = useDeleteByok();
-  const [savedRow, setSavedRow] = useState(initialRow);
-  const [provider, setProvider] = useState<ByokProvider>(
-    initialRow?.provider ?? DEFAULT_PROVIDER.provider,
-  );
-  const [baseUrl, setBaseUrl] = useState(initialRow?.baseUrl ?? DEFAULT_PROVIDER.defaultBaseUrl);
-  const [apiKey, setApiKey] = useState('');
-  const [editingKey, setEditingKey] = useState(initialRow === null);
-  const [models, setModels] = useState<string[]>(initialRow?.modelId ? [initialRow.modelId] : []);
-  const [modelId, setModelId] = useState(initialRow?.modelId ?? '');
-  const [active, setActive] = useState(initialRow?.active ?? false);
-  const [lastTestResult, setLastTestResult] = useState<ByokTestResult | null>(
-    initialRow?.lastTestResult ?? null,
-  );
-  const [lastTestedAt, setLastTestedAt] = useState(initialRow?.lastTestedAt ?? null);
+  const [state, dispatch] = useReducer(byokFormReducer, initialRow, createInitialByokFormState);
+  const {
+    savedRow,
+    provider,
+    baseUrl,
+    apiKey,
+    editingKey,
+    models,
+    modelId,
+    active,
+    lastTestResult,
+    lastTestedAt,
+  } = state;
 
   const hasSavedRow = savedRow !== null;
   const formDirty =
@@ -127,25 +229,7 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
   const modelPlaceholder = hasSavedRow ? t('ai.byok.model.empty') : t('ai.byok.model.saveFirst');
 
   function handleProviderChange(nextProvider: ByokProvider) {
-    setProvider(nextProvider);
-    setBaseUrl(defaultBaseUrlFor(nextProvider));
-    setApiKey('');
-    setEditingKey(true);
-    setModels([]);
-    setModelId('');
-    setLastTestResult(null);
-    setLastTestedAt(null);
-    setActive(false);
-  }
-
-  function applySavedRow(nextRow: ByokResponse) {
-    setSavedRow(nextRow);
-    setProvider(nextRow.provider);
-    setBaseUrl(nextRow.baseUrl);
-    setModelId(nextRow.modelId ?? '');
-    setActive(nextRow.active);
-    setLastTestResult(nextRow.lastTestResult ?? null);
-    setLastTestedAt(nextRow.lastTestedAt ?? null);
+    dispatch({ type: 'providerChanged', provider: nextProvider });
   }
 
   async function handleSave(formEvent: FormEvent<HTMLFormElement>) {
@@ -155,73 +239,47 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
       baseUrl: baseUrl.trim(),
       apiKey: apiKey.trim(),
     });
-    applySavedRow(savedByok);
-    setApiKey('');
-    setEditingKey(false);
-    setModels([]);
+    dispatch({ type: 'saveCompleted', row: savedByok });
   }
 
   async function handleTestConnection() {
     const result = await testConnection.mutateAsync();
     const testedAt = new Date().toISOString();
-    setLastTestResult(result.result);
-    setLastTestedAt(testedAt);
-    setSavedRow((currentRow) =>
-      currentRow
-        ? {
-            ...currentRow,
-            active: result.result === 'OK' ? currentRow.active : false,
-            lastTestResult: result.result,
-            lastTestedAt: testedAt,
-            modelId: result.result === 'OK' ? currentRow.modelId : undefined,
-          }
-        : currentRow,
-    );
-    if (result.result === 'OK') {
-      setModels(result.models ?? []);
-      return;
-    }
-    setModels([]);
-    setModelId('');
-    setActive(false);
+    dispatch({
+      type: 'tested',
+      result: result.result,
+      models: result.models ?? [],
+      testedAt,
+    });
   }
 
   async function handleModelChange(nextModelId: string) {
     const previousModelId = modelId;
-    setModelId(nextModelId);
+    dispatch({ type: 'modelIdSet', modelId: nextModelId });
     try {
       const savedByok = await selectModel.mutateAsync(nextModelId);
-      applySavedRow(savedByok);
+      dispatch({ type: 'savedRowApplied', row: savedByok });
     } catch (modelSelectionError) {
-      setModelId(previousModelId);
+      dispatch({ type: 'modelIdSet', modelId: previousModelId });
       throw modelSelectionError;
     }
   }
 
   async function handleActiveChange(nextActive: boolean) {
     const previousActive = active;
-    setActive(nextActive);
+    dispatch({ type: 'activeSet', active: nextActive });
     try {
       const savedByok = await activateByok.mutateAsync(nextActive);
-      applySavedRow(savedByok);
+      dispatch({ type: 'savedRowApplied', row: savedByok });
     } catch (activationError) {
-      setActive(previousActive);
+      dispatch({ type: 'activeSet', active: previousActive });
       throw activationError;
     }
   }
 
   async function handleDelete() {
     await deleteByok.mutateAsync();
-    setSavedRow(null);
-    setProvider(DEFAULT_PROVIDER.provider);
-    setBaseUrl(DEFAULT_PROVIDER.defaultBaseUrl);
-    setApiKey('');
-    setEditingKey(true);
-    setModels([]);
-    setModelId('');
-    setLastTestResult(null);
-    setLastTestedAt(null);
-    setActive(false);
+    dispatch({ type: 'deleted' });
   }
 
   const statusBadge = lastTestResult ? (
@@ -304,7 +362,9 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
             id="byok-base-url"
             type="url"
             value={baseUrl}
-            onChange={(changeEvent) => setBaseUrl(changeEvent.target.value)}
+            onChange={(changeEvent) =>
+              dispatch({ type: 'baseUrlChanged', baseUrl: changeEvent.target.value })
+            }
             maxLength={255}
             disabled={busy}
             required
@@ -324,10 +384,7 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
                 title={t('ai.actions.replaceKey')}
                 description={t('ai.byok.replace.confirm', { provider: providerLabel(provider) })}
                 confirmLabel={t('ai.actions.replaceKey')}
-                onConfirm={() => {
-                  setApiKey('');
-                  setEditingKey(true);
-                }}
+                onConfirm={() => dispatch({ type: 'keyReplaceRequested' })}
                 trigger={
                   <Button type="button" variant="outline">
                     <Pencil className="size-4" aria-hidden="true" />
@@ -341,7 +398,9 @@ function ByokCard({ initialRow }: { initialRow: ByokResponse | null }) {
               id="byok-api-key"
               type="password"
               value={apiKey}
-              onChange={(changeEvent) => setApiKey(changeEvent.target.value)}
+              onChange={(changeEvent) =>
+                dispatch({ type: 'apiKeyChanged', apiKey: changeEvent.target.value })
+              }
               disabled={busy}
               autoComplete="off"
               required={!hasSavedRow || editingKey}
@@ -447,16 +506,29 @@ function uniqueModelOptions(models: string[], selectedModelId: string): string[]
   return Array.from(new Set([selectedModelId, ...models].filter(Boolean)));
 }
 
+const usdFormatters = new Map<string, Intl.NumberFormat>();
+const timeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function resolveLocale(locale: string): string {
+  return locale === 'vi' ? 'vi-VN' : 'en-US';
+}
+
 function formatUsd(locale: string, usd: number): string {
-  return new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(usd);
+  const resolvedLocale = resolveLocale(locale);
+  let formatter = usdFormatters.get(resolvedLocale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(resolvedLocale, { style: 'currency', currency: 'USD' });
+    usdFormatters.set(resolvedLocale, formatter);
+  }
+  return formatter.format(usd);
 }
 
 function formatTime(locale: string, value: string): string {
-  return new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
+  const resolvedLocale = resolveLocale(locale);
+  let formatter = timeFormatters.get(resolvedLocale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(resolvedLocale, { hour: '2-digit', minute: '2-digit' });
+    timeFormatters.set(resolvedLocale, formatter);
+  }
+  return formatter.format(new Date(value));
 }

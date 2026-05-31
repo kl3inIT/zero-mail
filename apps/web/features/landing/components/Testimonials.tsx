@@ -15,6 +15,7 @@ export default async function Testimonials() {
   const t = await getTranslations('landingTestimonials');
 
   const reviews = REVIEW_META.map((meta) => ({
+    id: meta.id,
     text: t(`${meta.id}.text`),
     author: meta.author,
     role: t(`${meta.id}.role`),
@@ -34,16 +35,16 @@ export default async function Testimonials() {
         </div>
 
         <div className="mx-auto max-w-7xl columns-1 gap-6 space-y-6 md:columns-2 lg:columns-3">
-          {reviews.map((review, i) => (
+          {reviews.map((review) => (
             <div
-              key={i}
+              key={review.id}
               className="break-inside-avoid rounded-[24px] border border-(--line-strong) bg-(--bg-elevated) p-6 shadow-sm transition-shadow hover:shadow-md md:p-8"
             >
               <p className="mb-6 text-[15px] leading-relaxed text-(--text-muted) md:text-base">
                 {review.text}
               </p>
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-200">
+                <div className="size-10 shrink-0 overflow-hidden rounded-full bg-gray-200">
                   <Image
                     src={review.avatar}
                     alt={review.author}

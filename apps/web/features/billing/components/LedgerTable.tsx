@@ -17,12 +17,14 @@ import { cn } from '@/lib/utils';
 
 export type LedgerEntry = BillingLedgerEntryResponse;
 
+const EMPTY_ROWS: LedgerEntry[] = [];
+
 type LedgerTableProps = {
   rows?: LedgerEntry[];
   injectedRows?: LedgerEntry[];
 };
 
-export function LedgerTable({ rows = [], injectedRows }: LedgerTableProps) {
+export function LedgerTable({ rows = EMPTY_ROWS, injectedRows }: LedgerTableProps) {
   const t = useTranslations();
   const locale = useLocale();
   const entries = injectedRows ?? rows;

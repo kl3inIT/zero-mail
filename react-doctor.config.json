@@ -1,4 +1,22 @@
 {
   "$schema": "https://react.doctor/schema/config.json",
-  "lint": true
+  "lint": true,
+  "deadCode": true,
+  "ignore": {
+    "files": [
+      "**/dist/**",
+      "**/.next/**",
+      "**/coverage/**",
+      "**/build/**",
+      "**/out/**",
+      "**/components/ui/**"
+    ],
+    "rules": ["deslop/unused-file"],
+    "overrides": [
+      {
+        "files": ["**/src/routes/**"],
+        "rules": ["react-doctor/only-export-components", "react-doctor/no-multi-comp"]
+      }
+    ]
+  }
 }

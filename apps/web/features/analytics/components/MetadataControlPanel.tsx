@@ -37,9 +37,12 @@ type ActionPoint = {
   total: number;
 };
 
+const EMPTY_ACTION_MIX: readonly ActionMixResponse[] = [];
+const EMPTY_REPLY_BUCKETS: readonly ReplyBucketResponse[] = [];
+
 export function MetadataControlPanel({
-  actionMix = [],
-  replyBuckets = [],
+  actionMix = EMPTY_ACTION_MIX as ActionMixResponse[],
+  replyBuckets = EMPTY_REPLY_BUCKETS as ReplyBucketResponse[],
   automationOpportunities,
   className,
 }: MetadataControlPanelProps) {

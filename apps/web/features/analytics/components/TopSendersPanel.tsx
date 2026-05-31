@@ -21,13 +21,16 @@ type TopSendersPanelProps = {
   className?: string;
 };
 
+const EMPTY_SENDERS: readonly TopSenderResponse[] = [];
+const EMPTY_DOMAIN_LOAD: readonly DomainLoadResponse[] = [];
+
 function senderCount(sender: TopSenderResponse): number {
   return safeCount(sender.count);
 }
 
 export function TopSendersPanel({
-  senders = [],
-  domainLoad = [],
+  senders = EMPTY_SENDERS as TopSenderResponse[],
+  domainLoad = EMPTY_DOMAIN_LOAD as DomainLoadResponse[],
   className,
 }: TopSendersPanelProps) {
   const t = useTranslations();
@@ -68,7 +71,7 @@ export function TopSendersPanel({
 
                 return (
                   <li
-                    key={`${email}-${index}`}
+                    key={email || `sender-rank-${index + 1}`}
                     className="bg-muted/30 ring-foreground/10 rounded-lg px-3 py-2.5 ring-1"
                   >
                     <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3">
@@ -158,7 +161,7 @@ function DomainRow({
   const width = `${Math.max(10, Math.round(percentOf(count, maxCount) * 100))}%`;
 
   return (
-    <div className="bg-muted/30 ring-foreground/10 flex flex-col gap-2 rounded-lg px-3 py-3 ring-1">
+    <div className="bg-muted/30 ring-foreground/10 flex flex-col gap-2 rounded-lg p-3 ring-1">
       <div className="flex min-w-0 items-center justify-between gap-3">
         <span className="truncate text-sm font-medium">{domain}</span>
         <Badge variant="secondary" className="tabular-nums">

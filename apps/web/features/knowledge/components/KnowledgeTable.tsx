@@ -64,7 +64,13 @@ export function KnowledgeTable() {
           heading={t('ai.empty.knowledge.title')}
           body={t('ai.empty.knowledge.body')}
           cta={
-            <Button type="button" onClick={openCreateDialog}>
+            <Button
+              type="button"
+              onClick={() => {
+                setEditingSnippet(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className="size-4" aria-hidden="true" />
               {t('ai.actions.addSnippet')}
             </Button>

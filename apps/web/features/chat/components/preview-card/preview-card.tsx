@@ -123,7 +123,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
   const cta = t(ctaKey(action.kind));
 
   function handleOverrideChange(key: string, value: string) {
-    setContentOverride((current) => ({ ...current, [key]: value }));
+    setContentOverride((previous) => ({ ...previous, [key]: value }));
   }
 
   async function handleConfirm() {
@@ -213,7 +213,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
           <VipBanner checked={vipAcknowledged} onCheckedChange={setVipAcknowledged} />
         )}
       </CardHeader>
-      <CardContent className="space-y-4 px-4 py-4">
+      <CardContent className="space-y-4 p-4">
         {bodySlot({
           action,
           draftBody: computed.draftBody,

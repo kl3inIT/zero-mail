@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { LoadingState } from '@/components/states/LoadingState';
+import type { CurrentUser } from '@/features/account/api/account-api';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { TemplateCard } from '@/features/onboarding/components/TemplateCard';
 import { useSelectTemplate } from '@/features/onboarding/hooks/useSelectTemplate';
@@ -139,19 +140,18 @@ function isTemplateKey(value: unknown): value is TemplateKey {
   return templates.some((tpl) => tpl.key === value);
 }
 
-export function TemplateSelectClient() {
+/**
+ * Step gating (redirect a user past/away from the template-select screen) runs
+ * server-side in `page.tsx` via `redirect()`. This client component keeps the
+ * template picker; `initialUser` seeds the TanStack cache from the server fetch
+ * to avoid a hydration flash.
+ */
+export function TemplateSelectClient({ initialUser }: { initialUser?: CurrentUser }) {
   const t = useTranslations();
   const router = useRouter();
-  const me = useCurrentUser();
+  const me = useCurrentUser(initialUser);
   const selectMut = useSelectTemplate();
   const [selected, setSelected] = useState<TemplateKey>('label-newsletters');
-
-  useEffect(() => {
-    if (!me.data) return;
-    const step = me.data.onboardingStep;
-    if (step === 'TEMPLATE_SELECTED') router.replace('/onboarding/complete');
-    else if (step === 'COMPLETE') router.replace('/settings');
-  }, [me.data, router]);
 
   if (!me.data) {
     return (
@@ -201,7 +201,12 @@ export function TemplateSelectClient() {
             variant="accent"
             size="lg"
             disabled={selectMut.isPending}
-            onClick={() => selectMut.mutate({ templateKey: selected })}
+            onClick={() =>
+              selectMut.mutate(
+                { templateKey: selected },
+                { onSuccess: () => router.push('/onboarding/complete') },
+              )
+            }
             className="mt-5 h-11 w-full"
           >
             {selectMut.isPending ? t('common.loading') : t('onboarding.template.saveCta')}

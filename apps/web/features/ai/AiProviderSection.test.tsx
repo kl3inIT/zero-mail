@@ -4,10 +4,8 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ByokResponse } from '@/features/ai/api/byok-api';
-import {
-  AiProviderSection,
-  BYOK_PROVIDER_OPTIONS,
-} from '@/features/ai/components/AiProviderSection';
+import { BYOK_PROVIDER_OPTIONS } from '@/features/ai/api/byok-providers';
+import { AiProviderSection } from '@/features/ai/components/AiProviderSection';
 import enMessages from '@/i18n/messages/en.json';
 
 const mocks = vi.hoisted(() => ({

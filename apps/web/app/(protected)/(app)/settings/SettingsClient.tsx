@@ -30,6 +30,10 @@ function isGmailConnectionStatus(value: string | undefined): value is GmailConne
   );
 }
 
+function reconnect() {
+  window.location.href = getApiUrl('/api/tenant/connect-gmail');
+}
+
 function ThemeSwitcher({ currentTheme }: { currentTheme: 'light' | 'dark' }) {
   const t = useTranslations();
   return (
@@ -90,9 +94,6 @@ export function SettingsClient({
       : 'NOT_CONNECTED';
   const ingestionHealth = gmailConnection?.ingestionHealth ?? 'HEALTHY';
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
-  const reconnect = () => {
-    window.location.href = getApiUrl('/api/tenant/connect-gmail');
-  };
 
   return (
     <div className="flex h-full flex-col">

@@ -43,7 +43,7 @@ const formSchema = z.object({
     .max(32, 'Tối đa 32 ký tự.')
     .regex(/^[A-Za-z0-9][A-Za-z0-9_:-]{1,31}$/, 'Chỉ dùng chữ, số, _, :, -.'),
   displayName: z.string().min(1, 'Bắt buộc.').max(120),
-  defaultBaseUrl: z.string().url('Nhập URL hợp lệ.').max(500),
+  defaultBaseUrl: z.url('Nhập URL hợp lệ.').max(500),
   plaintextKey: z.string().min(10, 'Key tối thiểu 10 ký tự.').max(2048),
   label: z.string().max(64),
 });

@@ -12,8 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
+const VND_NUMBER_FORMAT = new Intl.NumberFormat('vi-VN');
+
 function formatVnd(value: number): string {
-  return new Intl.NumberFormat('vi-VN').format(value);
+  return VND_NUMBER_FORMAT.format(value);
 }
 
 export function PlanList() {
@@ -25,7 +27,7 @@ export function PlanList() {
   if (plansQuery.isLoading) {
     return (
       <div className="flex h-48 items-center justify-center">
-        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        <Loader2 className="text-muted-foreground size-6 animate-spin" />
       </div>
     );
   }
@@ -39,7 +41,7 @@ export function PlanList() {
   }
 
   const currentPlanCode = plansQuery.data.currentPlanCode;
-  const plans = [...plansQuery.data.plans].sort((a, b) => a.tierRank - b.tierRank);
+  const plans = plansQuery.data.plans.toSorted((a, b) => a.tierRank - b.tierRank);
   const currentPlanTier = plans.find((plan) => plan.code === currentPlanCode)?.tierRank ?? 0;
 
   function startCheckout(plan: BillingPlanResponse): void {
@@ -164,7 +166,7 @@ function PlanCard({
 
         <ul className="text-foreground space-y-2 text-sm">
           <li className="flex items-start gap-2">
-            <Check className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+            <Check className="text-primary mt-0.5 size-4 shrink-0" />
             <span>
               {t('billing.plans.includedCredits', {
                 credits: plan.monthlyCreditAllowance.toLocaleString('vi-VN'),
@@ -173,7 +175,7 @@ function PlanCard({
           </li>
           {plan.features.map((feature) => (
             <li key={feature.code} className="flex items-start gap-2">
-              <Check className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+              <Check className="text-primary mt-0.5 size-4 shrink-0" />
               <div className="flex flex-col">
                 <span>{feature.displayName}</span>
                 {feature.creditCost > 0 && (
@@ -197,7 +199,7 @@ function PlanCard({
             disabled={isCheckoutDisabled}
             onClick={() => onStartCheckout(plan)}
           >
-            {isCheckoutPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isCheckoutPending && <Loader2 className="size-4 animate-spin" />}
             {ctaLabel}
           </Button>
         </div>

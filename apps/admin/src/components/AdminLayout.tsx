@@ -64,7 +64,7 @@ export function AdminLayout({admin: _admin}: AdminLayoutProps) {
     return (
         <div className="bg-background text-foreground min-h-screen">
             <div className="grid min-h-screen grid-cols-[240px_1fr]">
-                <aside className="border-border bg-secondary border-r px-4 py-4">
+                <aside className="border-border bg-secondary border-r p-4">
                     <div className="border-border mb-4 flex items-center gap-2 border-b pb-4">
                         <div
                             className="bg-ink text-background grid size-8 place-items-center rounded-md text-sm font-semibold">
@@ -125,7 +125,7 @@ export function AdminLayout({admin: _admin}: AdminLayoutProps) {
                         <AdminBreadcrumb/>
                         <ThemeToggle/>
                     </div>
-                    <div className="w-full px-8 py-8">
+                    <div className="w-full p-8">
                         <Outlet/>
                     </div>
                 </main>

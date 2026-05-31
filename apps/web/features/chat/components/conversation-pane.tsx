@@ -35,7 +35,7 @@ import {
   type PreviewCardAction,
 } from './preview-card/preview-card-state';
 import { StreamingTextResponse } from './streaming-text-response';
-import { hasToolResultRenderer, renderToolResult } from './tool-results';
+import { hasToolResultRenderer, ToolResult } from './tool-results';
 
 type ToolLikePart = {
   type: string;
@@ -132,11 +132,11 @@ function ChatMessageParts({
           if (hasToolResultRenderer(toolName)) {
             return (
               <div key={`${message.id}-${toolPart.toolCallId ?? index}`} className="my-1">
-                {renderToolResult({
-                  toolName,
-                  input: parseMaybeJsonObject(toolPart.input),
-                  output: parseMaybeJsonObject(toolPart.output),
-                })}
+                <ToolResult
+                  toolName={toolName}
+                  input={parseMaybeJsonObject(toolPart.input)}
+                  output={parseMaybeJsonObject(toolPart.output)}
+                />
               </div>
             );
           }

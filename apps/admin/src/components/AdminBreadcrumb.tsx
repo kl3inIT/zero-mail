@@ -45,17 +45,15 @@ function deriveLabel(routeId: string, params: Record<string, string>): string | 
 export function AdminBreadcrumb() {
   const matches = useMatches();
 
-  const rawCrumbs: Crumb[] = matches
-    .filter((match) => match.routeId.startsWith('/_authenticated'))
-    .map((match) => {
-      const label = deriveLabel(
-        match.routeId,
-        match.params as Record<string, string>,
-      );
-      if (!label) return null;
-      return { to: match.pathname, label } satisfies Crumb;
-    })
-    .filter((crumb): crumb is Crumb => crumb !== null);
+  const rawCrumbs: Crumb[] = matches.flatMap((match) => {
+    if (!match.routeId.startsWith('/_authenticated')) return [];
+    const label = deriveLabel(
+      match.routeId,
+      match.params as Record<string, string>,
+    );
+    if (!label) return [];
+    return [{ to: match.pathname, label } satisfies Crumb];
+  });
 
   // Layout + index routes resolve to the same pathname/label — dedupe consecutive duplicates.
   const crumbs = rawCrumbs.filter(

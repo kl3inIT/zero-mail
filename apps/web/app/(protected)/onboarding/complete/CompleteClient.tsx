@@ -1,27 +1,26 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/states/LoadingState';
+import type { CurrentUser } from '@/features/account/api/account-api';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { CheckIcon } from '@/features/landing/components/PrototypeIcons';
 import { useCompleteOnboarding } from '@/features/onboarding/hooks/useCompleteOnboarding';
 
-export function CompleteClient() {
+/**
+ * Step gating (redirect a user whose `onboardingStep` does not belong on the
+ * completion screen) runs server-side in `page.tsx` via `redirect()`, so this
+ * client component no longer carries a `useEffect` redirect. `initialUser`
+ * seeds the TanStack cache from the server fetch to avoid a hydration flash.
+ */
+export function CompleteClient({ initialUser }: { initialUser?: CurrentUser }) {
   const t = useTranslations();
   const router = useRouter();
-  const me = useCurrentUser();
+  const me = useCurrentUser(initialUser);
   const completeMut = useCompleteOnboarding();
-
-  useEffect(() => {
-    if (!me.data) return;
-    const step = me.data.onboardingStep;
-    if (step === 'GMAIL_CONNECTED') router.replace('/onboarding/template-select');
-    else if (step === 'COMPLETE') router.replace('/settings');
-  }, [me.data, router]);
 
   if (!me.data) {
     return (
@@ -63,7 +62,7 @@ export function CompleteClient() {
                   {t('onboarding.completion.draft.status')}
                 </span>
               </div>
-              <p className="text-foreground px-4 py-4 text-sm leading-relaxed whitespace-pre-line">
+              <p className="text-foreground p-4 text-sm leading-relaxed whitespace-pre-line">
                 {t('onboarding.completion.draft.body')}
               </p>
               <div className="flex items-center gap-2 border-t px-4 py-3">

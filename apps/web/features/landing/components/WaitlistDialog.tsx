@@ -61,6 +61,7 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
   const [successState, setSuccessState] = useState<SuccessState | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
 
   const clearDialogTimeouts = useCallback(() => {
     if (closeTimeoutRef.current !== null) {
@@ -106,6 +107,16 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+    } else if (!isOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [isOpen]);
+
   function closeDialog() {
     setIsOpen(false);
     clearWaitlistHash();
@@ -144,14 +155,15 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
     }
   }
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
       aria-labelledby="waitlist-title"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm"
+      onCancel={(event) => {
+        event.preventDefault();
+        closeDialog();
+      }}
+      className="fixed inset-0 z-[100] m-0 size-full max-h-none max-w-none items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm backdrop:bg-transparent open:flex"
     >
       <button type="button" aria-label="Đóng" className="absolute inset-0" onClick={closeDialog} />
       <div className="relative z-10 w-full max-w-[420px] overflow-hidden rounded-[24px] border border-(--line-strong) bg-(--bg-elevated) p-6 shadow-2xl">
@@ -201,6 +213,7 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
             <input
               type="email"
               name="email"
+              aria-label={copy.emailPlaceholder}
               placeholder={copy.emailPlaceholder}
               value={email}
               onChange={(event) => setEmail(event.currentTarget.value)}
@@ -217,7 +230,7 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
               value={website}
               onChange={(event) => setWebsite(event.currentTarget.value)}
               aria-hidden="true"
-              className="absolute top-[-9999px] left-[-9999px] h-0 w-0 opacity-0"
+              className="absolute top-[-9999px] left-[-9999px] size-0 opacity-0"
             />
             {errorMessage && (
               <div className="rounded-lg border border-(--red) bg-(--red-soft) px-3 py-2 text-[13px] text-(--red)">
@@ -239,6 +252,6 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
           </form>
         )}
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -1,10 +1,32 @@
 import { promises as fs } from 'node:fs';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { FrontmatterSchema, SLUG_RE, buildDocPath } from '@/lib/docs/loader';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  if (!SLUG_RE.test(slug)) return {};
+
+  const locale = await getLocale();
+  if (locale !== 'vi' && locale !== 'en') return {};
+
+  try {
+    const source = await fs.readFile(buildDocPath(slug, locale), 'utf8');
+    const { frontmatter } = await compileMDX({ source, options: { parseFrontmatter: true } });
+    const fm = FrontmatterSchema.safeParse(frontmatter);
+    return fm.success ? { title: fm.data.title } : {};
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Single doc page (Phase 1.3 Plan 06 — D-D1..D-D5, REVIEWS Revision 6).
@@ -29,18 +51,22 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
 
   const filePath = buildDocPath(slug, locale);
 
-  let source: string;
+  let source: string | null = null;
   try {
     source = await fs.readFile(filePath, 'utf8');
   } catch {
-    notFound();
+    source = null;
   }
+  if (source === null) notFound();
 
-  const t = await getTranslations();
-  const { content, frontmatter } = await compileMDX({
-    source: source!,
-    options: { parseFrontmatter: true },
-  });
+  const [t, compiled] = await Promise.all([
+    getTranslations(),
+    compileMDX({
+      source,
+      options: { parseFrontmatter: true },
+    }),
+  ]);
+  const { content, frontmatter } = compiled;
 
   const fm = FrontmatterSchema.safeParse(frontmatter);
   if (!fm.success) notFound();

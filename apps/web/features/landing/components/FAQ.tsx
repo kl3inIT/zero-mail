@@ -22,9 +22,9 @@ export default async function FAQ() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {faqs.map((faq, i) => (
+            {faqs.map((faq) => (
               <div
-                key={i}
+                key={faq.q}
                 className="rounded-[24px] border border-(--line-strong) bg-(--bg-elevated) p-8 shadow-sm"
               >
                 <h4 className="mb-4 text-[17px] font-bold text-(--ink)">{faq.q}</h4>

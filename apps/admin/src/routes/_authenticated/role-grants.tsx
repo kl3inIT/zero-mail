@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { CopyIcon, UserPlusIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useReducer, useState } from 'react';
 
 import { ConfirmTwiceDialog } from '@/components/ConfirmTwiceDialog';
 import { Badge } from '@/components/ui/badge';
@@ -18,14 +18,55 @@ export const Route = createFileRoute('/_authenticated/role-grants')({
   component: RoleGrantsRoute,
 });
 
+// The grant dialog is a small workflow that opens, validates an email, fires the mutation, then
+// reveals the one-time enrollment URL — its fields are reset together, so they live in one reducer.
+type GrantDialogState = {
+  open: boolean;
+  email: string;
+  emailError: string | null;
+  enrollmentUrl: string | null;
+};
+
+type GrantDialogAction =
+  | { type: 'opened' }
+  | { type: 'closed' }
+  | { type: 'emailChanged'; email: string }
+  | { type: 'validationFailed'; message: string }
+  | { type: 'granted'; enrollmentUrl: string };
+
+const initialGrantDialogState: GrantDialogState = {
+  open: false,
+  email: '',
+  emailError: null,
+  enrollmentUrl: null,
+};
+
+function grantDialogReducer(
+  state: GrantDialogState,
+  action: GrantDialogAction,
+): GrantDialogState {
+  switch (action.type) {
+    case 'opened':
+      return { ...initialGrantDialogState, open: true };
+    case 'closed':
+      return initialGrantDialogState;
+    case 'emailChanged':
+      return { ...state, email: action.email };
+    case 'validationFailed':
+      return { ...state, emailError: action.message };
+    case 'granted':
+      return { ...state, emailError: null, enrollmentUrl: action.enrollmentUrl };
+  }
+}
+
 function RoleGrantsRoute() {
   const admins = useAdmins();
   const grantAdmin = useGrantAdmin();
   const revokeAdmin = useRevokeAdmin();
-  const [grantDialogOpen, setGrantDialogOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [grantedEnrollmentUrl, setGrantedEnrollmentUrl] = useState<string | null>(null);
+  const [grantDialog, dispatchGrantDialog] = useReducer(
+    grantDialogReducer,
+    initialGrantDialogState,
+  );
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string } | null>(null);
 
   return (
@@ -35,7 +76,7 @@ function RoleGrantsRoute() {
           <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Audit và truy cập</p>
           <h1 className="text-xl font-semibold text-ink">Phân quyền admin</h1>
         </div>
-        <Button onClick={() => setGrantDialogOpen(true)}>
+        <Button onClick={() => dispatchGrantDialog({ type: 'opened' })}>
           <UserPlusIcon className="size-4" />
           Cấp quyền admin
         </Button>
@@ -83,7 +124,10 @@ function RoleGrantsRoute() {
         </CardContent>
       </Card>
 
-      <Dialog open={grantDialogOpen} onOpenChange={setGrantDialogOpen}>
+      <Dialog
+        open={grantDialog.open}
+        onOpenChange={(open) => dispatchGrantDialog({ type: open ? 'opened' : 'closed' })}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cấp quyền admin</DialogTitle>
@@ -93,13 +137,15 @@ function RoleGrantsRoute() {
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              setEmailError(null);
-              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                setEmailError('Vui lòng nhập email quản trị viên hợp lệ.');
+              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(grantDialog.email)) {
+                dispatchGrantDialog({
+                  type: 'validationFailed',
+                  message: 'Vui lòng nhập email quản trị viên hợp lệ.',
+                });
                 return;
               }
-              void grantAdmin.mutateAsync(email).then((result) => {
-                setGrantedEnrollmentUrl(result.enrollmentUrl);
+              void grantAdmin.mutateAsync(grantDialog.email).then((result) => {
+                dispatchGrantDialog({ type: 'granted', enrollmentUrl: result.enrollmentUrl });
               });
             }}
           >
@@ -107,25 +153,31 @@ function RoleGrantsRoute() {
               <Label htmlFor="grant-admin-email">Email quản trị viên</Label>
               <Input
                 id="grant-admin-email"
-                value={email}
+                value={grantDialog.email}
                 type="email"
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) =>
+                  dispatchGrantDialog({ type: 'emailChanged', email: event.target.value })
+                }
               />
-              {emailError && <p className="text-sm text-destructive">{emailError}</p>}
+              {grantDialog.emailError && (
+                <p className="text-sm text-destructive">{grantDialog.emailError}</p>
+              )}
             </div>
             <Button type="submit" disabled={grantAdmin.isPending}>
               Cấp quyền admin
             </Button>
           </form>
-          {grantedEnrollmentUrl && (
+          {grantDialog.enrollmentUrl && (
             <div className="rounded-md border border-border bg-secondary p-3">
               <Label>URL đăng ký một lần</Label>
               <div className="mt-2 flex gap-2">
-                <Input readOnly value={grantedEnrollmentUrl} className="font-mono text-xs" />
+                <Input readOnly value={grantDialog.enrollmentUrl} className="font-mono text-xs" />
                 <Button
                   variant="secondary"
                   type="button"
-                  onClick={() => void navigator.clipboard.writeText(grantedEnrollmentUrl)}
+                  onClick={() =>
+                    void navigator.clipboard.writeText(grantDialog.enrollmentUrl ?? '')
+                  }
                 >
                   <CopyIcon className="size-4" />
                   Sao chép

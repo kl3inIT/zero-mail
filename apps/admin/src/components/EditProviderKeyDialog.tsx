@@ -83,9 +83,9 @@ function EditForm({
   return (
     <DialogContent className="sm:max-w-xl">
       <DialogHeader>
-        <DialogTitle>Sửa key — {provider}</DialogTitle>
+        <DialogTitle>Sửa key: {provider}</DialogTitle>
         <DialogDescription>
-          Cập nhật nhãn và base URL. Plaintext key không đổi — dùng "Xoay khóa" nếu cần xoay
+          Cập nhật nhãn và base URL. Plaintext key không đổi, dùng "Xoay khóa" nếu cần xoay
           secret.
         </DialogDescription>
       </DialogHeader>
