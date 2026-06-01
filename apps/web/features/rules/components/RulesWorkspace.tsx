@@ -7,7 +7,6 @@ import { Plus } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +20,7 @@ import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
-import { RulePreviewPanel } from '@/features/rules/components/RulePreviewPanel';
+import { GmailRuleTester } from '@/features/rules/components/GmailRuleTester';
 import { AuditLog } from '@/features/triage/components/AuditLog';
 import {
   compiledResponseToRequest,
@@ -36,7 +35,6 @@ import {
   useCompileRule,
   useCreateRule,
   useDeleteRule,
-  usePreviewAllEnabledRules,
   usePreviewCustomMail,
   useRules,
   useUpdateRule,
@@ -266,7 +264,6 @@ export function RulesWorkspace() {
   const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
   const deleteRuleMutation = useDeleteRule();
-  const previewAllEnabledMutation = usePreviewAllEnabledRules();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const previewCustomMailMutation = usePreviewCustomMail();
 
@@ -276,13 +273,16 @@ export function RulesWorkspace() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = normalizeRulesTab(searchParams.get('tab'));
+  const searchParamsTab = normalizeRulesTab(searchParams.get('tab'));
+  const [activeTab, setActiveTabState] = useState<RulesTab>(searchParamsTab);
+
   const setActiveTab = (nextTab: RulesTab) => {
+    setActiveTabState(nextTab);
     router.replace(`/rules?tab=${nextTab}`, { scroll: false });
   };
 
   const rules = useMemo(
-    () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
+    () => (rulesQuery.data?.rules ?? []).toSorted(compareRulesByOrder),
     [rulesQuery.data?.rules],
   );
 
@@ -419,32 +419,6 @@ export function RulesWorkspace() {
     });
   }
 
-  async function handlePreview(options: { evaluateSemanticIntents?: boolean } = {}) {
-    const evaluateSemanticIntents = options.evaluateSemanticIntents ?? false;
-    dispatch({ type: 'previewStarted' });
-
-    try {
-      const result = await previewAllEnabledMutation.mutateAsync({
-        sampleSize: state.sampleSize,
-        evaluateSemanticIntents,
-      });
-      dispatch({ type: 'previewSucceeded', preview: result });
-    } catch (error) {
-      if (isGmailUnavailable(error)) {
-        dispatch({
-          type: 'previewGmailUnavailable',
-          message: t('errors.rules.gmail.unavailable'),
-        });
-        return;
-      }
-      dispatch({ type: 'previewFailed', message: t('errors.rules.preview.generic') });
-    }
-  }
-
-  function handleEvaluateSemanticIntents() {
-    void handlePreview({ evaluateSemanticIntents: true });
-  }
-
   async function handleToggleRule(rule: RuleResponse) {
     if (!rule.ruleId) return;
     dispatch({ type: 'ruleTogglePending', ruleId: rule.ruleId });
@@ -476,110 +450,100 @@ export function RulesWorkspace() {
         body: input.body,
       });
       setCustomMailResult(response);
-    } catch {
+    } catch (error) {
+      if (isInsufficientCredit(error)) {
+        setCustomMailError(t('errors.rules.insufficientCredits'));
+        return;
+      }
       setCustomMailError(t('errors.rules.testCustom.generic'));
     }
   }
 
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
-  const canPreview = enabledRulesCount > 0;
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(nextValue) => setActiveTab(normalizeRulesTab(nextValue))}
-      className="space-y-6"
-    >
-      <TabsList aria-label={t('rules.tabs.label')}>
-        <TabsTrigger value="list">{t('rules.tabs.list')}</TabsTrigger>
-        <TabsTrigger value="test">{t('rules.tabs.test')}</TabsTrigger>
-        <TabsTrigger value="history">{t('rules.tabs.history')}</TabsTrigger>
-      </TabsList>
+    <div className="space-y-6">
+      <RulesTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <TabsContent value="list" className="space-y-6">
-        <RuleList
-          rules={rules}
-          selectedRuleId={state.selectedRuleId}
-          isLoading={rulesQuery.isLoading}
-          pendingRuleId={state.pendingRuleId}
-          onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
-          onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
-          onToggleEnabled={handleToggleRule}
-          onDeleteRule={handleDeleteRule}
-          action={
-            <Button
-              type="button"
-              size="sm"
-              className="gap-1.5 rounded-md"
-              onClick={() => dispatch({ type: 'newRuleStarted' })}
-            >
-              <Plus className="size-3.5" />
-              {t('rules.composer.newRuleCta')}
-            </Button>
-          }
-        />
-      </TabsContent>
+      {activeTab === 'list' && (
+        <section
+          id="rules-tabpanel-list"
+          role="tabpanel"
+          aria-labelledby="rules-tab-list"
+          className="space-y-6"
+        >
+          <RuleList
+            rules={rules}
+            selectedRuleId={state.selectedRuleId}
+            isLoading={rulesQuery.isLoading}
+            pendingRuleId={state.pendingRuleId}
+            onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
+            onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
+            onToggleEnabled={handleToggleRule}
+            onDeleteRule={handleDeleteRule}
+            action={
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 rounded-md"
+                onClick={() => dispatch({ type: 'newRuleStarted' })}
+              >
+                <Plus className="size-3.5" />
+                {t('rules.composer.newRuleCta')}
+              </Button>
+            }
+          />
+        </section>
+      )}
 
-      <TabsContent value="test" className="space-y-6">
-        <p className="text-muted-foreground text-sm">
-          {t('rules.tabs.testIntro', { count: enabledRulesCount })}
-        </p>
-        <Tabs defaultValue="custom" className="space-y-4">
-          <TabsList aria-label={t('rules.tabs.testModeLabel')}>
-            <TabsTrigger value="custom" className="gap-2">
-              {t('rules.tabs.testCustom')}
-              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                {t('rules.tabs.freeBadge')}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="gmail" className="gap-2">
-              {t('rules.tabs.testGmail')}
-              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                {t('rules.tabs.creditBadge')}
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
+      {activeTab === 'test' && (
+        <section
+          id="rules-tabpanel-test"
+          role="tabpanel"
+          aria-labelledby="rules-tab-test"
+          className="space-y-6"
+        >
+          <p className="text-muted-foreground text-sm">
+            {t('rules.tabs.testIntro', { count: enabledRulesCount })}
+          </p>
+          <Tabs defaultValue="custom" className="space-y-4">
+            <TabsList aria-label={t('rules.tabs.testModeLabel')}>
+              <TabsTrigger value="custom">{t('rules.tabs.testCustom')}</TabsTrigger>
+              <TabsTrigger value="gmail">{t('rules.tabs.testGmail')}</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="custom">
-            <CustomMailTester
-              selectedCount={0}
-              isRunning={previewCustomMailMutation.isPending}
-              result={customMailResult}
-              resultError={customMailError}
-              onClearSelection={() => undefined}
-              onRunTest={handleRunCustomMailTest}
-            />
-          </TabsContent>
+            <TabsContent value="custom">
+              <CustomMailTester
+                selectedCount={0}
+                isRunning={previewCustomMailMutation.isPending}
+                result={customMailResult}
+                resultError={customMailError}
+                onClearSelection={() => undefined}
+                onRunTest={handleRunCustomMailTest}
+              />
+            </TabsContent>
 
-          <TabsContent value="gmail" className="space-y-3">
-            <Alert variant="warning">
-              <AlertTitle>{t('rules.tabs.gmailCreditWarningTitle')}</AlertTitle>
-              <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
-            </Alert>
-            <RulePreviewPanel
-              enabledRulesCount={enabledRulesCount}
-              preview={state.preview}
-              previewError={state.previewError}
-              gmailUnavailableError={state.gmailUnavailableError}
-              isPreviewing={previewAllEnabledMutation.isPending}
-              canPreview={canPreview}
-              sampleSize={state.sampleSize}
-              isEvaluatingSemanticIntents={
-                previewAllEnabledMutation.isPending && Boolean(state.preview)
-              }
-              onSampleSizeChange={(sampleSize) =>
-                dispatch({ type: 'sampleSizeChanged', sampleSize })
-              }
-              onPreview={() => handlePreview()}
-              onEvaluateSemanticIntents={handleEvaluateSemanticIntents}
-            />
-          </TabsContent>
-        </Tabs>
-      </TabsContent>
+            <TabsContent value="gmail" className="space-y-3">
+              <Alert variant="warning">
+                <AlertTitle>{t('rules.tabs.gmailCreditWarningTitle')}</AlertTitle>
+                <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
+              </Alert>
+              <GmailRuleTester enabledRulesCount={enabledRulesCount} />
+            </TabsContent>
+          </Tabs>
+        </section>
+      )}
 
-      <TabsContent value="history" className="space-y-4">
-        <p className="text-muted-foreground text-sm">{t('rules.tabs.historyIntro')}</p>
-        <AuditLog />
-      </TabsContent>
+      {activeTab === 'history' && (
+        <section
+          id="rules-tabpanel-history"
+          role="tabpanel"
+          aria-labelledby="rules-tab-history"
+          className="space-y-4"
+        >
+          <p className="text-muted-foreground text-sm">{t('rules.tabs.historyIntro')}</p>
+          <AuditLog />
+        </section>
+      )}
 
       {/* Composer dialog — for creating and editing rules */}
       <Dialog
@@ -624,12 +588,51 @@ export function RulesWorkspace() {
           )}
         </DialogContent>
       </Dialog>
-    </Tabs>
+    </div>
   );
 }
 
 const RULES_TABS = ['list', 'test', 'history'] as const;
 type RulesTab = (typeof RULES_TABS)[number];
+
+function RulesTabBar({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: RulesTab;
+  onTabChange: (tab: RulesTab) => void;
+}) {
+  const t = useTranslations();
+  const tabLabel: Record<RulesTab, string> = {
+    list: t('rules.tabs.list'),
+    test: t('rules.tabs.test'),
+    history: t('rules.tabs.history'),
+  };
+
+  return (
+    <div
+      role="tablist"
+      aria-label={t('rules.tabs.label')}
+      className="bg-muted text-muted-foreground inline-flex w-full rounded-lg p-[3px]"
+    >
+      {RULES_TABS.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === tab}
+          aria-controls={`rules-tabpanel-${tab}`}
+          id={`rules-tab-${tab}`}
+          onPointerDown={() => onTabChange(tab)}
+          onClick={() => onTabChange(tab)}
+          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
+        >
+          {tabLabel[tab]}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function normalizeRulesTab(value: string | null): RulesTab {
   return RULES_TABS.includes(value as RulesTab) ? (value as RulesTab) : 'list';
@@ -687,10 +690,6 @@ function apiErrorCode(error: unknown): string | undefined {
 
 function isInsufficientCredit(error: unknown): boolean {
   return apiErrorCode(error) === ErrorCode.BillingInsufficient;
-}
-
-function isGmailUnavailable(error: unknown): boolean {
-  return apiErrorCode(error) === ErrorCode.RulesGmailUnavailable;
 }
 
 function maybeApiError(error: unknown): ApiError | undefined {

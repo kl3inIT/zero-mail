@@ -1,81 +1,19 @@
-import { promises as fs } from 'node:fs';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import matter from 'gray-matter';
 import { compileMDX } from 'next-mdx-remote/rsc';
-import { getLocale } from 'next-intl/server';
 
-import { FrontmatterSchema, buildDocPath } from '@/lib/docs/loader';
-
-type LegalDocSlug = 'privacy' | 'terms';
-
-type LegalHeading = {
-  id: string;
-  text: string;
-};
+import {
+  extractLevelTwoHeadings,
+  fallbackLegalBody,
+  fallbackLegalTitle,
+  readLegalDocSource,
+  slugifyHeading,
+  type LegalDocSlug,
+} from '@/lib/docs/legal-page-data';
 
 function extractTextFromNode(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(extractTextFromNode).join('');
   return '';
-}
-
-function stripMarkdownSyntax(text: string): string {
-  return text
-    .replace(/\[([^\][]+)]\([^)]+\)/g, '$1')
-    .replace(/[`*_~]/g, '')
-    .trim();
-}
-
-function slugifyHeading(text: string): string {
-  const normalizedText = text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return normalizedText || 'section';
-}
-
-function extractLevelTwoHeadings(source: string): LegalHeading[] {
-  const contentWithoutFrontmatter = source.replace(/^---[\s\S]*?---\s*/, '');
-
-  return contentWithoutFrontmatter
-    .split(/\r?\n/)
-    .map((line) => line.match(/^##\s+(.+?)\s*$/))
-    .filter((match): match is RegExpMatchArray => Boolean(match))
-    .map((match) => {
-      const text = stripMarkdownSyntax(match[1]);
-      return {
-        id: slugifyHeading(text),
-        text,
-      };
-    });
-}
-
-async function readLegalDocSource(slug: LegalDocSlug) {
-  const locale = await getLocale();
-  if (locale !== 'vi' && locale !== 'en') notFound();
-
-  const filePath = buildDocPath(slug, locale);
-
-  try {
-    const source = await fs.readFile(filePath, 'utf8');
-    const parsedFrontmatter = FrontmatterSchema.safeParse(matter(source).data);
-    if (!parsedFrontmatter.success) notFound();
-    if (parsedFrontmatter.data.slug !== slug || parsedFrontmatter.data.locale !== locale)
-      notFound();
-
-    return {
-      frontmatter: parsedFrontmatter.data,
-      locale,
-      source,
-    };
-  } catch {
-    notFound();
-  }
 }
 
 const mdxComponents = {
@@ -120,30 +58,24 @@ const mdxComponents = {
   ),
 };
 
-export async function generateLegalDocMetadata(slug: LegalDocSlug): Promise<Metadata> {
-  const { frontmatter } = await readLegalDocSource(slug);
-  const title = frontmatter.title;
-  const description =
-    slug === 'privacy'
-      ? 'How Zero Mail collects, uses, protects, and limits access to Gmail and account data.'
-      : 'The terms that govern use of Zero Mail, including Gmail authorization, AI actions, credits, and acceptable use.';
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: `/${slug}`,
-    },
-    openGraph: {
-      title,
-      description,
-      type: 'article',
-    },
-  };
-}
-
 export async function LegalDocPage({ slug }: { slug: LegalDocSlug }) {
-  const { frontmatter, source } = await readLegalDocSource(slug);
+  const document = await readLegalDocSource(slug);
+  if (!document) {
+    return (
+      <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-4 py-8 sm:py-12 lg:grid-cols-[minmax(0,48rem)_16rem] lg:items-start lg:px-6">
+        <article className="min-w-0">
+          <h1 className="text-foreground mb-3 text-4xl font-semibold tracking-tight">
+            {fallbackLegalTitle(slug)}
+          </h1>
+          <div className="legal-mdx">
+            <p>{fallbackLegalBody(slug)}</p>
+          </div>
+        </article>
+      </section>
+    );
+  }
+
+  const { frontmatter, source } = document;
   const headings = extractLevelTwoHeadings(source);
   const { content } = await compileMDX({
     source,

@@ -3,7 +3,6 @@ package com.zeromail.core.chat.llm.springai;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.openai.errors.OpenAIServiceException;
-import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.usecases.ChatToolCatalog;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -56,9 +55,7 @@ class OpenRouterStreamingProbeTest {
         List<String> failingToolNames = new ArrayList<>();
         ChatToolCatalog chatToolCatalog = new ChatToolCatalog();
 
-        for (ChatToolName chatToolName : ChatToolName.values()) {
-            ChatToolCatalog.ToolDefinition toolDefinition =
-                    chatToolCatalog.byName(chatToolName).orElseThrow();
+        for (ChatToolCatalog.ToolDefinition toolDefinition : chatToolCatalog.toolDefinitions()) {
             try {
                 stream(
                         "openai/gpt-5.4-nano",
@@ -68,7 +65,7 @@ class OpenRouterStreamingProbeTest {
                                 .build());
             } catch (RuntimeException runtimeException) {
                 failingToolNames.add(
-                        chatToolName.id()
+                        toolDefinition.name().id()
                                 + " -> "
                                 + rootCause(runtimeException).getClass().getSimpleName()
                                 + " "

@@ -39,6 +39,8 @@ const tenantDetailSearchSchema = z.object({
 
 type TenantDialogAction = 'pause' | 'disconnect' | 'delete';
 
+const integerFormatter = new Intl.NumberFormat();
+
 export const Route = createFileRoute('/_authenticated/tenants/$tenantId')({
   validateSearch: tenantDetailSearchSchema,
   component: TenantDetailRoute,
@@ -401,5 +403,5 @@ function deletionConsequences(preview?: TenantDeletionPreviewResponse, loading =
 }
 
 function formatInteger(value: number): string {
-  return new Intl.NumberFormat().format(value);
+  return integerFormatter.format(value);
 }

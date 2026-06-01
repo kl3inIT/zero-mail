@@ -1,0 +1,130 @@
+databaseChangeLog:
+  - changeSet:
+      id: 102-subscription
+      author: zeromail
+      comment: >-
+        Per-tenant Lemon Squeezy subscription state. Missing row = the tenant is on
+        the FREE plan (no LS subscription). One row per tenant enforced by
+        uq_subscription_tenant. lemon_squeezy_product_id and lemon_squeezy_variant_id
+        are snapshot fields captured at subscription_created time so the historical
+        plan identity is preserved even if billing_plan rows are later edited.
+        current_period_start/end mirror the LS billing period. last_credit_grant_at
+        is bookkeeping for the monthly grant job to stay idempotent. The FREE plan
+        is granted credits by a separate job (out of scope here).
+      changes:
+        - createTable:
+            tableName: subscription
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_subscription_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: plan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_subscription_plan
+                    references: billing_plan(id)
+              - column:
+                  name: status
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lemon_squeezy_subscription_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lemon_squeezy_customer_id
+                  type: bigint
+              - column:
+                  name: lemon_squeezy_order_id
+                  type: bigint
+              - column:
+                  name: lemon_squeezy_product_id
+                  type: bigint
+              - column:
+                  name: lemon_squeezy_variant_id
+                  type: bigint
+              - column:
+                  name: current_period_start
+                  type: timestamptz
+              - column:
+                  name: current_period_end
+                  type: timestamptz
+              - column:
+                  name: last_credit_grant_at
+                  type: timestamptz
+              - column:
+                  name: cancel_at_period_end
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: renews_at
+                  type: timestamptz
+              - column:
+                  name: ends_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: subscription
+            constraintName: uq_subscription_tenant
+            columnNames: tenant_id
+        - addUniqueConstraint:
+            tableName: subscription
+            constraintName: uq_subscription_ls_subscription_id
+            columnNames: lemon_squeezy_subscription_id
+        - sql:
+            sql: ALTER TABLE subscription ADD CONSTRAINT ck_subscription_status CHECK (status IN ('ACTIVE','ON_TRIAL','PAUSED','PAST_DUE','CANCELLED','EXPIRED'))
+        - sql:
+            sql: ALTER TABLE subscription ADD CONSTRAINT ck_subscription_period_bounds CHECK (current_period_start IS NULL OR current_period_end IS NULL OR current_period_end > current_period_start)
+        - createIndex:
+            tableName: subscription
+            indexName: idx_subscription_status_period_end
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: current_period_end
+        - createIndex:
+            tableName: subscription
+            indexName: idx_subscription_plan
+            columns:
+              - column:
+                  name: plan_id
+      rollback:
+        - dropTable:
+            tableName: subscription
+            cascadeConstraints: true

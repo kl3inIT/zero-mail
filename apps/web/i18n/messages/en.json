@@ -9,44 +9,240 @@
     "notify": "notify"
   },
   "ai": {
+    "actions": {
+      "addSender": "Add sender",
+      "addSnippet": "Add snippet",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "generateFromSent": "Generate from recent sent emails",
+      "remove": "Remove",
+      "replaceKey": "Replace key",
+      "save": "Save",
+      "set": "Set",
+      "testConnection": "Test connection"
+    },
+    "behavior": {
+      "autoDraftReplies": {
+        "description": "Let the AI draft replies when rules allow it.",
+        "title": "Auto-draft replies"
+      },
+      "draftConfidence": {
+        "description": "Only draft when confidence reaches your chosen threshold.",
+        "fieldLabel": "Select threshold",
+        "high": "HIGH - only when the AI is very confident",
+        "low": "LOW - draft more often, you review",
+        "medium": "MEDIUM - balance speed and caution",
+        "title": "Draft confidence threshold"
+      },
+      "sensitiveData": {
+        "description": "Strip sensitive data from prompts sent to the LLM.",
+        "title": "Sensitive data protection"
+      }
+    },
+    "byok": {
+      "active": {
+        "description": "Enable this key for all AI features.",
+        "disabledTooltip": "Pick a model and pass the connection test before enabling BYOK.",
+        "title": "Active"
+      },
+      "baseUrl": {
+        "label": "Base URL"
+      },
+      "costFooter": "AI cost last 7 days: {amount}",
+      "delete": {
+        "confirm": "Delete the BYOK key? Zero Mail will return to the platform key."
+      },
+      "empty": {
+        "body": "Enter your personal key, save it for server-side encryption, then test the connection to load models.",
+        "title": "Using the platform key"
+      },
+      "key": {
+        "label": "API key",
+        "masked": "Saved key: ****{lastFourChars}"
+      },
+      "model": {
+        "empty": "Saved key. Test the connection to load models",
+        "label": "Model",
+        "saveFirst": "Save the key before testing the connection"
+      },
+      "provider": {
+        "anthropic": "Anthropic",
+        "deepseek": "DeepSeek",
+        "google": "Google",
+        "label": "Provider",
+        "openai": "OpenAI"
+      },
+      "replace": {
+        "confirm": "Replace {provider} key? The previous key will be overwritten and cannot be recovered. BYOK will stay off until you test again and pick a model."
+      },
+      "status": {
+        "fail": "Test failed",
+        "ok": "Connection OK"
+      },
+      "test": {
+        "disabledTooltip": "The test endpoint uses the saved key; save the key first."
+      },
+      "title": "Personal key (BYOK)",
+      "titleDescription": "Enable your own key for all AI features. When disabled, Zero Mail uses the platform key."
+    },
+    "confirm": {
+      "deleteKnowledge": "Delete snippet {title}? This cannot be undone.",
+      "removeSafetyNet": "Remove {pattern} from the safety net? The AI will resume auto-actioning email from this sender."
+    },
+    "empty": {
+      "knowledge": {
+        "body": "Add facts about you or customers for the AI to use when drafting. Click + Add snippet to start.",
+        "title": "No snippets yet"
+      },
+      "safetyNet": {
+        "body": "Add an email (e.g. ceo@acme.com) or a domain (e.g. @acme.com) so the AI always leaves these to you.",
+        "title": "No senders yet"
+      },
+      "sent": {
+        "body": "Your Sent folder is empty so no style sample could be generated. Send a few emails and come back.",
+        "title": "No sent emails found"
+      }
+    },
+    "knowledge": {
+      "content": {
+        "label": "Content"
+      },
+      "dialog": {
+        "addTitle": "Add snippet",
+        "editTitle": "Edit snippet"
+      },
+      "table": {
+        "delete": "Delete",
+        "edit": "Edit",
+        "lastUpdated": "Last updated",
+        "title": "Title"
+      },
+      "title": {
+        "description": "Stable facts the AI should remember while drafting.",
+        "label": "Title",
+        "text": "Knowledge"
+      }
+    },
     "page": {
-      "description": "Teach the AI how to behave in your inbox — who is shielded from automation, and (soon) the voice and style you want it to mirror when drafting replies.",
-      "title": "AI configuration"
+      "description": "Tune your voice, behavior, and AI provider.",
+      "title": "AI settings"
+    },
+    "safetyNet": {
+      "add": {
+        "placeholder": "ceo@acme.com or @acme.com"
+      },
+      "autoSend": {
+        "description": "When on, rules can send, reply, or forward email without asking you first. Anything unsafe is saved as a Gmail draft instead of being sent.",
+        "title": "Let rules send email"
+      },
+      "createdBy": {
+        "system": "System",
+        "user": "You"
+      },
+      "deleteDisabled": "This sender was added by the system and cannot be deleted.",
+      "kind": {
+        "domain": "Domain",
+        "email": "Email"
+      },
+      "protectedSenders": {
+        "description": "Emails or domains the AI never auto-actions.",
+        "title": "Protected senders"
+      },
+      "tip": "Tip: use @acme.com to protect an entire domain."
+    },
+    "sections": {
+      "behavior": {
+        "helper": "When the AI acts automatically",
+        "title": "Behavior"
+      },
+      "provider": {
+        "helper": "Personal keys and AI cost",
+        "title": "AI Provider"
+      },
+      "safetyNet": {
+        "helper": "Senders the AI never auto-actions",
+        "title": "Safety net"
+      },
+      "updates": {
+        "helper": "Daily digest and shadow mode",
+        "title": "Updates"
+      },
+      "voice": {
+        "helper": "How the AI writes for you",
+        "title": "Your voice"
+      }
     },
     "senders": {
       "add": "Protect",
       "added": "Protected {email}",
       "addFailed": "Could not protect this sender. Try again.",
-      "adding": "Adding…",
-      "description": "Mail from these senders is always left alone — no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
+      "adding": "Adding...",
+      "description": "Mail from these senders is always left alone - no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
       "heading": "Protected senders",
       "inputLabel": "Sender email to protect",
       "inputPlaceholder": "boss@company.com",
       "invalidEmail": "Invalid email address."
     },
-    "writingProfile": {
-      "charCount": "{current} / {max}",
-      "description": "Applied to both the chat assistant and the Generate button in the inbox composer. Leave blank to skip.",
+    "toast": {
+      "aiPreferenceSaved": "AI preference saved",
+      "behaviorSaved": "Behavior saved",
+      "byokDeleted": "Personal key deleted",
+      "byokKeySaved": "Key saved (will not be shown again)",
+      "byokTestOk": "Key works",
+      "genericFailure": "Couldn't save. Please try again.",
+      "safetyNetAdded": "Sender added to safety net",
+      "safetyNetRemoved": "Sender removed",
+      "snippetAdded": "Snippet added",
+      "snippetDeleted": "Snippet deleted",
+      "snippetUpdated": "Snippet updated",
+      "voiceGenerated": "Draft generated - review before saving",
+      "voiceSaved": "Voice saved"
+    },
+    "updates": {
+      "dailyDigest": {
+        "description": "Receive one daily email digest.",
+        "title": "Daily digest"
+      },
+      "pauseTriage": {
+        "description": "Pause automatic triage while keeping your configuration.",
+        "title": "Pause triage"
+      }
+    },
+    "voice": {
       "language": {
-        "auto": "Infer from email",
-        "en": "English",
-        "label": "Preferred AI language",
-        "vi": "Vietnamese"
+        "description": "Default language for AI drafts.",
+        "english": "English",
+        "title": "AI output language",
+        "vietnamese": "Vietnamese"
       },
       "personalInstructions": {
-        "help": "Context the AI should know about you — name, role, current projects, preferred sign-off.",
-        "label": "Personal instructions",
-        "placeholder": "Example: My name is Alex, founder of Zero Mail. Always sign off \"Best, Alex\". I am hiring interns in Q1 2026."
+        "description": "What the AI should know about you before drafting.",
+        "fieldLabel": "Personal instructions",
+        "placeholder": "Example: keep replies concise, courteous, and explicit about next steps...",
+        "title": "About me (personal instructions)"
       },
-      "save": "Save profile",
-      "saved": "AI writing profile saved.",
-      "saveFailed": "Save failed. Try again.",
-      "saving": "Saving…",
-      "title": "AI writing profile",
+      "signature": {
+        "description": "A signature the AI can include in drafts when appropriate.",
+        "fieldLabel": "Signature content",
+        "placeholder": "Name, title, phone number...",
+        "title": "Email signature"
+      },
+      "tone": {
+        "casual": "Casual",
+        "custom": "Custom",
+        "description": "Default tone for AI drafts.",
+        "formal": "Formal",
+        "friendly": "Friendly",
+        "professional": "Professional",
+        "title": "Tone"
+      },
+      "wordCount": "{count} words",
       "writingStyle": {
-        "help": "How you want the AI to write — length, tone, language, other preferences.",
-        "label": "Writing style",
-        "placeholder": "Example: Default to short replies (≤3 sentences). English only when the recipient prefers it. No emoji."
+        "description": "Describe how you usually write so the AI can mirror you more safely.",
+        "fieldLabel": "Style content",
+        "placeholder": "Write 200-500 words about how you greet, explain, decline, and close emails...",
+        "title": "Writing style"
       }
     }
   },
@@ -216,6 +412,11 @@
       "90d": "Last 90 days"
     }
   },
+  "audit": {
+    "badge": {
+      "blockedBySafetyNet": "Blocked by safety net: {pattern}"
+    }
+  },
   "auth": {
     "backToSite": "Back to site",
     "error": {
@@ -250,8 +451,8 @@
   },
   "billing": {
     "balance": {
-      "betaCredits": "Beta credits",
-      "betaNotice": "Free during beta. We'll notify you before paid plans are required.",
+      "additionalCreditDetail": "Outside the monthly plan reset",
+      "additionalCredits": "Additional credits",
       "description": "Balance available for Zero Mail AI actions.",
       "error": {
         "body": "Something went wrong fetching your credit balance. Try again.",
@@ -261,9 +462,8 @@
       "held": "Held credits",
       "heldDetail": "Reserved by in-flight actions",
       "label": "Available credits",
+      "monthlyCredits": "Monthly credits",
       "monthlyGrant": "{credits} credits / month",
-      "noExpiry": "Does not reset with beta",
-      "paidCredits": "Paid credits",
       "refreshLabel": "Refreshes",
       "refreshValue": "Every 45 seconds",
       "resetsAt": "Resets at",
@@ -294,6 +494,11 @@
         "retry": "Try again",
         "title": "Couldn't load transaction history"
       },
+      "pagination": {
+        "end": "End reached",
+        "loaded": "{count} transactions loaded",
+        "loadMore": "Load more"
+      },
       "title": "Transaction history",
       "type": {
         "adjustment": "Adjustment",
@@ -311,8 +516,43 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Track free beta credits, paid credits, and recent usage activity.",
-      "title": "Billing"
+      "description": "Track your balance, monthly reset, and credit usage history.",
+      "title": "Credits & usage history"
+    },
+    "plans": {
+      "checkoutCta": "Pay now",
+      "checkoutError": "Couldn't open checkout. Try again later.",
+      "checkoutPending": "Opening checkout",
+      "currentPlan": "Current plan",
+      "description": {
+        "free": "For starting with Zero Mail on the base allowance.",
+        "plus": "For individual users who run AI workflows more often.",
+        "pro": "For advanced users and small teams."
+      },
+      "empty": "No plans to show.",
+      "error": "Couldn't load plans.",
+      "freeIncluded": "Included",
+      "includedCredits": "{credits} credits each month",
+      "lowerTierUnavailable": "Already covered",
+      "monthly": "Monthly",
+      "perInvocation": "/ run",
+      "perMonth": "/month",
+      "plan": {
+        "free": "Free",
+        "plus": "Plus",
+        "pro": "Pro"
+      },
+      "planDescription": {
+        "free": "For starting with Zero Mail on the base allowance.",
+        "plus": "For individual users who run AI workflows more often.",
+        "pro": "For advanced users and small teams."
+      },
+      "subtitle": "Pay once for the current monthly period. Plans below your active tier are disabled.",
+      "title": "Monthly credit plans"
+    },
+    "upgrade": {
+      "description": "Choose the monthly credit plan that fits your AI usage.",
+      "title": "Upgrade plan"
     }
   },
   "chat": {
@@ -351,12 +591,13 @@
       "failed": "Action failed",
       "instructionsAfter": "After",
       "instructionsBefore": "Before",
-      "memoryContent": "Will save",
+      "memoryContent": "Knowledge content to save",
+      "memoryDestination": "After saving, this item appears in AI settings -> Knowledge.",
       "outsideSourceThread": "Added by AI · verify",
       "overwriteNotice": "Will overwrite current instructions",
       "removeSender": "Remove from safety net",
       "ruleName": "Rule name",
-      "saveMemory": "Save memory",
+      "saveMemory": "Save to knowledge",
       "saving": "Saving...",
       "send": "Send via Gmail",
       "sender": "Sender",
@@ -381,7 +622,7 @@
     },
     "suggestion": {
       "draft": "Draft a polite decline",
-      "memory": "Save note: I am working on project X",
+      "memory": "Save to knowledge: I am working on project X",
       "rules": "List enabled rules",
       "search": "Find email from Acme this week"
     },
@@ -659,6 +900,27 @@
     }
   },
   "errors": {
+    "ai": {
+      "byok": {
+        "base_url_host_private": "Base URL cannot point to a private network or localhost.",
+        "base_url_host_unresolvable": "Base URL host could not be resolved.",
+        "base_url_not_https": "Base URL must start with https://",
+        "base_url_not_supported_for_provider": "This Base URL is not supported for the selected provider.",
+        "base_url_port_not_allowed": "Base URL can only use the default HTTPS port.",
+        "model_not_in_last_test": "This model was not returned by the latest connection test.",
+        "no_model_picked": "Pick a model and pass the connection test before enabling BYOK.",
+        "no_row": "Save first, then test again.",
+        "provider_not_allowed": "BYOK is not supported for this provider.",
+        "rate_limit_unavailable": "Rate limiting is temporarily unavailable. Try again later.",
+        "rate_limited": "Too many attempts. Try again later.",
+        "test_connection": {
+          "rate_limited": "Too many test attempts. Try again in 1 hour."
+        }
+      },
+      "test_connection": {
+        "rate_limited": "Too many test attempts. Try again in 1 hour."
+      }
+    },
     "auth": {
       "consent_denied": "Gmail access was declined. Sign in with Google and approve Gmail access to continue.",
       "currentUserNotFound": "The current account could not be found. Sign in again.",
@@ -667,10 +929,23 @@
       "unauthorized": "Your session expired. Sign in with Google again."
     },
     "badRequest": "The request is invalid. Check it and try again.",
+    "behavior": {
+      "draft_confidence": {
+        "invalid": "Invalid draft confidence threshold."
+      }
+    },
     "billing": {
+      "checkout": {
+        "unavailable": "Checkout is temporarily unavailable. Try again later."
+      },
       "insufficient": "Insufficient credits. Please try again later.",
       "ledger": {
         "invalidState": "Internal billing-state error — please try again later."
+      },
+      "plan": {
+        "downgradeNotAllowed": "Your active plan is higher than the selected plan.",
+        "featureDisabled": "This feature is not available on your current plan.",
+        "notFound": "This billing plan was not found. Choose another plan."
       }
     },
     "boundary": {
@@ -701,6 +976,12 @@
     "fieldFallback": "This value is invalid. Check it and try again.",
     "gmail": {
       "disconnected": "Google access was revoked or expired. Reconnect Gmail."
+    },
+    "knowledge": {
+      "not_found": "This snippet could not be found. Reload the list.",
+      "title": {
+        "duplicate": "A snippet with this title already exists."
+      }
     },
     "llm": {
       "byok": {
@@ -743,7 +1024,7 @@
       "not_found": "This rule could not be found. Reload the rules list.",
       "notFound": "This rule could not be found. Reload the rules list.",
       "preview": {
-        "generic": "Preview could not finish. Check Gmail connection and credits, then preview the rule again.",
+        "generic": "Preview could not finish due to a server error. Please try again in a moment.",
         "invalid_sample_size": "Preview sample size must be 10, 20, 50, or 100.",
         "required": "Preview the current rule version before enabling it."
       },
@@ -760,9 +1041,17 @@
         "generic": "Could not run the custom-mail test. Please try again.",
         "subjectOrBodyRequired": "Enter at least a subject or a body."
       },
+      "testGmail": {
+        "generic": "Could not test this email right now. Please try again in a moment."
+      },
       "unsafe_action": "This rule asks for an action that is not allowed in v1.",
       "version_mismatch": "The rule changed before the action finished. Reload and try again.",
       "versionMismatch": "The rule changed before the action finished. Reload and try again."
+    },
+    "safety_net": {
+      "not_found": "This safety-net sender could not be found. Reload the list.",
+      "observation_not_deletable": "Cannot delete a system-observed sender.",
+      "pattern_invalid": "Invalid sender pattern. Use an email or a domain like @acme.com."
     },
     "schemaMismatch": "This page needs a newer API contract. Regenerate the typed client before continuing.",
     "triage": {
@@ -788,6 +1077,23 @@
         }
       },
       "generic": "One or more fields are invalid. Please check them and try again."
+    },
+    "voice": {
+      "generate": {
+        "failed": "Could not generate a voice sample from sent emails. Try again later.",
+        "gmail_read_failed": "Could not read sent emails right now. Try again later.",
+        "rate_limited": "Reached the 3/hour limit. Try again later."
+      },
+      "personal_instructions": {
+        "too_long": "Personal instructions cannot exceed 2000 characters."
+      },
+      "tone_preset": {
+        "invalid": "Invalid tone preset."
+      },
+      "writing_style": {
+        "too_long": "Writing style cannot exceed 500 words.",
+        "too_short": "Writing style needs at least 200 words."
+      }
     }
   },
   "feat": {
@@ -1442,7 +1748,7 @@
     "ai": "AI configuration",
     "analytics": "Analytics",
     "beta": "v1",
-    "billing": "Billing",
+    "billing": "Credits",
     "chat": "Assistant",
     "cleanupGroup": "Unsubscribe",
     "cleanupSuppression": "Safe list",
@@ -1461,8 +1767,9 @@
     "pricing": "Pricing",
     "privacy": "Privacy",
     "rules": "Rules",
-    "sectionMail": "Mail",
-    "sectionManage": "Manage",
+    "sectionAutomation": "Automation",
+    "sectionDaily": "Daily",
+    "sectionTools": "Tools",
     "settings": "Settings",
     "signIn": "Sign in",
     "subscription": "Subscription",
@@ -1470,6 +1777,7 @@
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
     "trust": "Trust & safety",
+    "upgradePlan": "Upgrade plan",
     "waitlist": "Register to experience Zero Mail"
   },
   "needsReply": {
@@ -1957,7 +2265,7 @@
       "creditBadge": "Uses credits",
       "customer": "Customer escalations",
       "freeBadge": "Free",
-      "gmailCreditWarningBody": "When a rule uses semantic LLM matchers, each test consumes platform credits. The Custom email tab tests rule logic for free.",
+      "gmailCreditWarningBody": "Each run samples your recent Gmail and calls the LLM for semantic matchers, so it consumes platform credits. Your Gmail is not modified.",
       "gmailCreditWarningTitle": "Real Gmail test uses credits",
       "history": "History",
       "historyIntro": "Every AI action applied to your Gmail, with the matching rule, reason, and a 30-day undo window.",
@@ -1980,7 +2288,7 @@
         "body": "Enter a subject and body, then click \"Test\" to see which rules would match.",
         "heading": "No results yet"
       },
-      "intro": "Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed.",
+      "intro": "Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed, but rules with semantic matchers call the LLM, so each run uses credits.",
       "noSelectedHint": "No rules selected — all enabled rules will be tested.",
       "openCta": "Test with custom email",
       "result": {
@@ -2001,6 +2309,17 @@
       "subjectPlaceholder": "Example: Stripe receipt May — $49",
       "title": "Test with a custom email"
     },
+    "testGmail": {
+      "empty": {
+        "body": "Could not load recent Gmail emails. Click \"Reload\" to try again.",
+        "heading": "No recent emails"
+      },
+      "reload": "Reload",
+      "retestRow": "Retest",
+      "stop": "Stop",
+      "testAll": "Test all",
+      "testRow": "Test"
+    },
     "title": "Sentences, not filters."
   },
   "settings": {
@@ -2017,6 +2336,7 @@
       "confirmPhrase": "delete my data",
       "cta": "Delete account and data"
     },
+    "description": "Manage your account, connection, credits, and Zero Mail operating settings.",
     "display": {
       "dialogBody": "Change the interface language and light/dark display mode here.",
       "heading": "Display",
@@ -2035,6 +2355,13 @@
       "label": "Language",
       "saveCta": "Update language preference",
       "vi": "Tiếng Việt"
+    },
+    "navigation": {
+      "account": "Account",
+      "ai": "AI configuration",
+      "credits": "Credits",
+      "privacy": "Privacy",
+      "upgradePlan": "Upgrade plan"
     },
     "notifications": {
       "description": "Manage your daily summary email.",
@@ -2088,6 +2415,10 @@
     }
   },
   "shell": {
+    "accounts": {
+      "addManage": "Add or manage accounts",
+      "title": "Accounts"
+    },
     "balance": {
       "label": "Credits"
     },
@@ -2122,16 +2453,52 @@
       "english": "English",
       "label": "Account",
       "language": "Language",
+      "planLoading": "Loading plan",
       "settings": "Settings",
       "signOut": "Sign out",
       "vietnamese": "Vietnamese"
     }
   },
   "subscription": {
+    "allSotaModels": "All SOTA models",
     "annual": "Annual",
     "billedAnnually": "Billed annually",
     "contactSales": "Contact Sales",
+    "credits": "Credits",
     "currentPlan": "Current Plan",
+    "feature": {
+      "drafts": {
+        "basic": "Basic AI auto-draft replies",
+        "high": "High-quality auto-draft replies based on rules",
+        "unlimited": "Unlimited rule executions & outbound safety audits"
+      },
+      "limits": {
+        "1gmail": "1 Gmail account integration",
+        "3gmail": "Up to 3 Gmail accounts integrated",
+        "unlimited": "Unlimited Gmail accounts"
+      },
+      "rules": {
+        "advanced": "Advanced rule builder with custom filters",
+        "api": "API access & custom webhook triggers",
+        "basic": "Standard natural-language rule builder"
+      },
+      "support": {
+        "basic": "Community support",
+        "dedicated": "Dedicated 24/7 support & guided onboarding",
+        "priority": "Priority email support"
+      },
+      "triage": {
+        "advanced": "Advanced AI triage & priority instant processing",
+        "basic": "Basic AI triage (auto-archive, label, star)",
+        "enterprise": "Enterprise-grade zero-latency triage pipeline"
+      }
+    },
+    "featureAgents": "Full access to AI Slides, AI Developer, and more agents",
+    "featureAudio": "Audio & Music: ElevenLabs, MiniMax, and more",
+    "featureChat": "Chat: Claude Opus 4.7, GPT-5.5, and more",
+    "featureImage": "Image: GPT Image 2, Nano Banana Pro, and more",
+    "featureStorage": "50GB storage with AI Drive",
+    "featureVideo": "Video: Gemini Veo 3.1, Seedance v2, and more",
     "free": {
       "b1": "50 emails processed per day",
       "b2": "Basic AI triage",
@@ -2144,6 +2511,11 @@
     "getStarted": "Get Started",
     "monthly": "Monthly",
     "perMonth": "/month",
+    "plan": {
+      "plus": "Plus",
+      "pro": "Pro",
+      "starter": "Starter"
+    },
     "plus": {
       "b1": "Unlimited emails processed",
       "b2": "AI auto-draft replies",
@@ -2166,9 +2538,16 @@
       "includesIntro": "Everything in Plus, plus:",
       "name": "Professional"
     },
-    "savePercent": "Save 20%",
+    "professionalWorkspace": "Professional workspace",
+    "savePercent": "SAVE 20%",
+    "section": {
+      "credits": "Credits",
+      "limits": "Limits & Support",
+      "triage": "AI Email Automation"
+    },
     "subtitle": "Simple pricing, no hidden fees. Upgrade or downgrade anytime.",
-    "title": "Choose your plan",
+    "title": "Upgrade your subscription",
+    "toStart": "To start",
     "upgrade": "Upgrade"
   },
   "templates": {

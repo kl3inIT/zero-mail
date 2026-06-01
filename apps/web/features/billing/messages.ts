@@ -1,11 +1,99 @@
 export const billingMessages = {
   'billing.page.title': {
-    vi: 'Thanh toán',
-    en: 'Billing',
+    vi: 'Tín dụng & lịch sử sử dụng',
+    en: 'Credits & usage history',
   },
   'billing.page.description': {
-    vi: 'Theo dõi tín dụng beta miễn phí, tín dụng đã nạp và lịch sử sử dụng gần đây.',
-    en: 'Track free beta credits, paid credits, and recent usage activity.',
+    vi: 'Theo dõi số dư, lịch reset hàng tháng và lịch sử dùng tín dụng.',
+    en: 'Track your balance, monthly reset, and credit usage history.',
+  },
+  'billing.upgrade.title': {
+    vi: 'Nâng cấp gói',
+    en: 'Upgrade plan',
+  },
+  'billing.upgrade.description': {
+    vi: 'Chọn gói tín dụng hàng tháng phù hợp với mức sử dụng AI của bạn.',
+    en: 'Choose the monthly credit plan that fits your AI usage.',
+  },
+  'billing.plans.title': {
+    vi: 'Gói tín dụng hàng tháng',
+    en: 'Monthly credit plans',
+  },
+  'billing.plans.subtitle': {
+    vi: 'Thanh toán một lần cho chu kỳ tháng hiện tại. Các gói thấp hơn gói đang active sẽ không thể chọn.',
+    en: 'Pay once for the current monthly period. Plans below your active tier are disabled.',
+  },
+  'billing.plans.plan.free': {
+    vi: 'Free',
+    en: 'Free',
+  },
+  'billing.plans.plan.plus': {
+    vi: 'Plus',
+    en: 'Plus',
+  },
+  'billing.plans.plan.pro': {
+    vi: 'Pro',
+    en: 'Pro',
+  },
+  'billing.plans.planDescription.free': {
+    vi: 'Dành cho bắt đầu dùng Zero Mail với hạn mức cơ bản.',
+    en: 'For starting with Zero Mail on the base allowance.',
+  },
+  'billing.plans.planDescription.plus': {
+    vi: 'Cho người dùng cá nhân muốn dùng AI thường xuyên hơn.',
+    en: 'For individual users who run AI workflows more often.',
+  },
+  'billing.plans.planDescription.pro': {
+    vi: 'Cho người dùng nâng cao và team nhỏ.',
+    en: 'For advanced users and small teams.',
+  },
+  'billing.plans.currentPlan': {
+    vi: 'Gói hiện tại',
+    en: 'Current plan',
+  },
+  'billing.plans.lowerTierUnavailable': {
+    vi: 'Bạn đã có toàn quyền',
+    en: 'Already covered',
+  },
+  'billing.plans.checkoutPending': {
+    vi: 'Đang mở checkout',
+    en: 'Opening checkout',
+  },
+  'billing.plans.freeIncluded': {
+    vi: 'Đã bao gồm',
+    en: 'Included',
+  },
+  'billing.plans.checkoutCta': {
+    vi: 'Thanh toán ngay',
+    en: 'Pay now',
+  },
+  'billing.plans.perMonth': {
+    vi: '/tháng',
+    en: '/month',
+  },
+  'billing.plans.perInvocation': {
+    vi: '/ lượt',
+    en: '/ run',
+  },
+  'billing.plans.monthly': {
+    vi: 'Hàng tháng',
+    en: 'Monthly',
+  },
+  'billing.plans.includedCredits': {
+    vi: '{credits} tín dụng mỗi tháng',
+    en: '{credits} credits each month',
+  },
+  'billing.plans.empty': {
+    vi: 'Không có gói nào để hiển thị.',
+    en: 'No plans to show.',
+  },
+  'billing.plans.error': {
+    vi: 'Không tải được danh sách gói.',
+    en: "Couldn't load plans.",
+  },
+  'billing.plans.checkoutError': {
+    vi: 'Không thể mở trang thanh toán. Vui lòng thử lại sau.',
+    en: "Couldn't open checkout. Try again later.",
   },
   'billing.balance.label': {
     vi: 'Tín dụng hiện có',
@@ -27,21 +115,21 @@ export const billingMessages = {
     vi: 'Đã reserve cho tác vụ đang chạy',
     en: 'Reserved by in-flight actions',
   },
-  'billing.balance.betaCredits': {
-    vi: 'Tín dụng beta',
-    en: 'Beta credits',
+  'billing.balance.monthlyCredits': {
+    vi: 'Tín dụng hàng tháng',
+    en: 'Monthly credits',
   },
-  'billing.balance.paidCredits': {
-    vi: 'Tín dụng trả phí',
-    en: 'Paid credits',
+  'billing.balance.additionalCredits': {
+    vi: 'Tín dụng thêm',
+    en: 'Additional credits',
   },
   'billing.balance.monthlyGrant': {
     vi: '{credits} tín dụng / tháng',
     en: '{credits} credits / month',
   },
-  'billing.balance.noExpiry': {
-    vi: 'Không reset theo kỳ beta',
-    en: 'Does not reset with beta',
+  'billing.balance.additionalCreditDetail': {
+    vi: 'Không bị reset theo gói hàng tháng',
+    en: 'Outside the monthly plan reset',
   },
   'billing.balance.resetsAt': {
     vi: 'Reset lúc',
@@ -50,10 +138,6 @@ export const billingMessages = {
   'billing.balance.resetUnknown': {
     vi: 'Chưa rõ',
     en: 'Unknown',
-  },
-  'billing.balance.betaNotice': {
-    vi: 'Miễn phí trong giai đoạn beta. Zero Mail sẽ báo trước khi cần chuyển sang gói trả phí.',
-    en: "Free during beta. We'll notify you before paid plans are required.",
   },
   'billing.balance.refreshLabel': {
     vi: 'Tự cập nhật',
@@ -110,6 +194,18 @@ export const billingMessages = {
   'billing.ledger.error.retry': {
     vi: 'Thử lại',
     en: 'Try again',
+  },
+  'billing.ledger.pagination.loaded': {
+    vi: 'Đã tải {count} giao dịch',
+    en: '{count} transactions loaded',
+  },
+  'billing.ledger.pagination.loadMore': {
+    vi: 'Tải thêm',
+    en: 'Load more',
+  },
+  'billing.ledger.pagination.end': {
+    vi: 'Đã hết',
+    en: 'End reached',
   },
   'billing.ledger.columns.timestamp': {
     vi: 'Thời gian',
@@ -178,5 +274,21 @@ export const billingMessages = {
   'billing.copy.aria': {
     vi: 'Sao chép {label}',
     en: 'Copy {label}',
+  },
+  'errors.billing.plan.featureDisabled': {
+    vi: 'Tính năng này chưa khả dụng trong gói hiện tại của bạn.',
+    en: 'This feature is not available on your current plan.',
+  },
+  'errors.billing.plan.notFound': {
+    vi: 'Không tìm thấy gói thanh toán này. Hãy chọn một gói khác.',
+    en: 'This billing plan was not found. Choose another plan.',
+  },
+  'errors.billing.checkout.unavailable': {
+    vi: 'Chưa thể mở trang thanh toán. Hãy thử lại sau.',
+    en: 'Checkout is temporarily unavailable. Try again later.',
+  },
+  'errors.billing.plan.downgradeNotAllowed': {
+    vi: 'Gói hiện tại của bạn đang cao hơn gói đã chọn.',
+    en: 'Your active plan is higher than the selected plan.',
   },
 } as const;

@@ -28,6 +28,11 @@ public final class ErrorCodes {
     public static final String AUTH_GMAIL_SCOPE_REQUIRED = "error.auth.gmail_scope_required";
     public static final String BILLING_INSUFFICIENT_CREDITS = "error.billing.insufficient";
     public static final String BILLING_LEDGER_INVALID_STATE = "error.billing.ledger.invalidState";
+    public static final String BILLING_PLAN_FEATURE_DISABLED = "error.billing.plan.featureDisabled";
+    public static final String BILLING_PLAN_NOT_FOUND = "error.billing.plan.notFound";
+    public static final String BILLING_CHECKOUT_UNAVAILABLE = "error.billing.checkout.unavailable";
+    public static final String BILLING_PLAN_DOWNGRADE_NOT_ALLOWED =
+            "error.billing.plan.downgradeNotAllowed";
     public static final String LLM_SAFETY_VIOLATION = "error.llm.safety_violation";
     public static final String LLM_SANITIZATION_FAILED = "error.llm.sanitization_failed";
     public static final String LLM_BYOK_INVALID = "error.llm.byok.invalid";
@@ -64,6 +69,18 @@ public final class ErrorCodes {
             "error.cleanup.campaign.undo_window_expired";
     public static final String CAMPAIGN_RETRY_CONFLICT = "error.cleanup.campaign.retry_conflict";
     public static final String SENDER_SUPPRESSED = "error.cleanup.sender_suppressed";
+    public static final String VOICE_WRITING_STYLE_TOO_SHORT = "voice.writing_style.too_short";
+    public static final String VOICE_WRITING_STYLE_TOO_LONG = "voice.writing_style.too_long";
+    public static final String VOICE_PERSONAL_INSTRUCTIONS_TOO_LONG =
+            "voice.personal_instructions.too_long";
+    public static final String BEHAVIOR_DRAFT_CONFIDENCE_INVALID =
+            "behavior.draft_confidence.invalid";
+    public static final String KNOWLEDGE_TITLE_DUPLICATE = "knowledge.title.duplicate";
+    public static final String KNOWLEDGE_NOT_FOUND = "knowledge.not_found";
+    public static final String SAFETY_NET_PATTERN_INVALID = "safety_net.pattern_invalid";
+    public static final String SAFETY_NET_OBSERVATION_NOT_DELETABLE =
+            "safety_net.observation_not_deletable";
+    public static final String SAFETY_NET_NOT_FOUND = "safety_net.not_found";
 
     private ErrorCodes() {}
 }

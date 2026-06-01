@@ -25,6 +25,22 @@ export function safeCount(value: number | undefined): number {
   return Number.isFinite(value) ? Math.max(0, Math.trunc(value ?? 0)) : 0;
 }
 
+export function formatTimeSaved(seconds: number | undefined): {
+  hours: number;
+  minutes: number;
+  label: string;
+} {
+  const totalMinutes = Math.floor(safeCount(seconds) / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return { hours, minutes: totalMinutes, label: `${totalMinutes}m` };
+  }
+
+  return { hours, minutes, label: `${hours}h ${minutes.toString().padStart(2, '0')}m` };
+}
+
 export function clampRatio(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;

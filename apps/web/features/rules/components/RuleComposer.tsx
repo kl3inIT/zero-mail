@@ -64,6 +64,9 @@ import {
 } from '@/features/rules/lib/rule-structure';
 import { createRuleStructureCopy } from '@/features/rules/lib/rule-structure-copy';
 
+const EMPTY_EXAMPLE_PERSONAS: RuleCatalogPersonaResponse[] = [];
+const EMPTY_ACTION_DESCRIPTORS: RuleCatalogActionDescriptorResponse[] = [];
+
 type Props = {
   sourceText: string;
   initialDisplayName?: string | null;
@@ -101,10 +104,10 @@ export function RuleComposer({
   insufficientCreditError,
   isCompiling,
   isSaving,
-  examplePersonas = [],
+  examplePersonas = EMPTY_EXAMPLE_PERSONAS,
   isLoadingExamples = false,
   examplesError = false,
-  actions = [],
+  actions = EMPTY_ACTION_DESCRIPTORS,
   isLoadingActions = false,
   isActionsError = false,
   onSourceTextChange,
@@ -381,7 +384,7 @@ const RULE_PERSONA_ORDER = new Map<string, number>(
 );
 
 function orderRuleExamplePersonas(personas: RuleCatalogPersonaResponse[]) {
-  return [...personas].sort((left, right) => {
+  return personas.toSorted((left, right) => {
     const leftOrder = RULE_PERSONA_ORDER.get(left.personaKey) ?? 1_000;
     const rightOrder = RULE_PERSONA_ORDER.get(right.personaKey) ?? 1_000;
     if (leftOrder !== rightOrder) return leftOrder - rightOrder;
@@ -513,7 +516,7 @@ function ExampleChooser({
                   type="button"
                   disabled={isDisabled}
                   onClick={() => onExampleClick(example.exampleText)}
-                  className="group text-foreground focus-visible:ring-primary/60 hover:border-primary hover:bg-muted/40 border-input w-full rounded-md border px-3 py-3 text-left text-sm leading-relaxed whitespace-normal transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                  className="group text-foreground focus-visible:ring-primary/60 hover:border-primary hover:bg-muted/40 border-input w-full rounded-md border p-3 text-left text-sm leading-relaxed whitespace-normal transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span className="flex items-start gap-2">
                     <Wand2

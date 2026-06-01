@@ -5,8 +5,7 @@ import java.time.Instant;
 public record BillingCreditSummary(
         int availableCredits,
         int heldCredits,
-        int betaCredits,
-        int paidCredits,
-        int monthlyGrantCredits,
-        Instant resetsAt,
-        boolean freeDuringBeta) {}
+        int monthlyCredits,
+        int additionalCredits,
+        int monthlyCreditAllowance,
+        Instant resetsAt) {}

@@ -10,7 +10,8 @@ Disallow: /rules
 Disallow: /settings
 Disallow: /needs-reply
 Disallow: /analytics
-Disallow: /billing
+Disallow: /credits
+Disallow: /upgrade-plan
 Disallow: /actions/
 
 # ── Search-engine crawlers (Google + Bing OK on landing) ─────────────────────

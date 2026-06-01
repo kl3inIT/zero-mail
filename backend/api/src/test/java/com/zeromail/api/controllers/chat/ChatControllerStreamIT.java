@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.test.context.ActiveProfiles;
@@ -120,9 +121,17 @@ class ChatControllerStreamIT extends ApiPostgresTestBase {
                 mockMvc.perform(asyncDispatch(mvcResult))
                         .andExpect(status().isOk())
                         .andExpect(header().string("x-vercel-ai-ui-message-stream", "v1"))
+                        .andExpect(
+                                header().string(
+                                                HttpHeaders.CACHE_CONTROL,
+                                                "no-cache, no-transform"))
+                        .andExpect(header().string("X-Accel-Buffering", "no"))
                         .andReturn();
 
         assertThat(dispatchedResult.getResponse().getContentAsString())
+                .contains("data:")
+                .contains("\"type\":\"start\"")
+                .contains("\"messageId\":")
                 .contains("\"type\":\"text-delta\"")
                 .contains("\"delta\":\"Xin \"")
                 .contains("\"type\":\"finish\"");

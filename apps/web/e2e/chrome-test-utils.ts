@@ -5,6 +5,7 @@ type OnboardingStep = 'GMAIL_CONNECTED' | 'TEMPLATE_SELECTED' | 'COMPLETE';
 type DraftStatus = 'NO_DRAFT' | 'DRAFT_READY' | 'DRAFT_SENT';
 type AppLocale = 'en' | 'vi';
 type AnalyticsWindow = '7d' | '30d' | '90d';
+type BillingPlanCode = 'FREE' | 'PLUS' | 'PRO';
 
 type NotificationPreferences = {
   channel: string;
@@ -22,6 +23,7 @@ export type ChromeMockState = {
   needsReplyDraftStatus: DraftStatus;
   notificationPreferences: NotificationPreferences;
   autoSendRulesEnabled: boolean;
+  currentPlanCode: BillingPlanCode;
   analyticsRequests: string[];
   notificationPreferenceUpdates: Array<{ digestEnabled: boolean; digestSendHourLocal: number }>;
   balanceRequests: number;
@@ -47,6 +49,7 @@ export function createChromeMockState(overrides: Partial<ChromeMockState> = {}):
       timeZone: 'Asia/Ho_Chi_Minh',
     },
     autoSendRulesEnabled: true,
+    currentPlanCode: 'PLUS',
     analyticsRequests: [],
     notificationPreferenceUpdates: [],
     balanceRequests: 0,
@@ -135,17 +138,49 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
-    if (url.pathname === '/api/billing/balance' && request.method() === 'GET') {
+    if (url.pathname === '/api/credits/balance' && request.method() === 'GET') {
       state.balanceRequests += 1;
       await fulfillJson(route, {
         availableCredits: state.availableCredits,
         heldCredits: 0,
         currency: 'credits',
-        betaCredits: state.availableCredits,
-        paidCredits: 0,
-        monthlyGrantCredits: 300,
+        monthlyCredits: state.availableCredits,
+        additionalCredits: 0,
+        monthlyCreditAllowance: 300,
         resetsAt: '2026-06-01T00:00:00.000Z',
-        freeDuringBeta: true,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/plan-upgrades/plans' && request.method() === 'GET') {
+      await fulfillJson(route, billingPlans(state.currentPlanCode));
+      return;
+    }
+
+    if (url.pathname === '/api/credits/ledger' && request.method() === 'GET') {
+      await fulfillJson(route, billingLedgerPage(url.searchParams));
+      return;
+    }
+
+    const checkoutMatch = url.pathname.match(/^\/api\/plan-upgrades\/plans\/([^/]+)\/checkout$/);
+    if (checkoutMatch && request.method() === 'POST') {
+      const requestedPlanCode = checkoutMatch[1] as BillingPlanCode;
+      if (planTier(requestedPlanCode) < planTier(state.currentPlanCode)) {
+        await fulfillJson(
+          route,
+          {
+            type: 'about:blank',
+            title: 'Plan downgrade is not allowed',
+            status: 409,
+            detail: 'The selected plan is lower than the tenant active paid plan.',
+            code: 'error.billing.plan.downgradeNotAllowed',
+          },
+          409,
+        );
+        return;
+      }
+      await fulfillJson(route, {
+        checkoutUrl: `https://checkout.test/${requestedPlanCode.toLowerCase()}`,
       });
       return;
     }
@@ -281,13 +316,74 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
-    if (url.pathname === '/api/llm/byok' && request.method() === 'GET') {
-      await route.fulfill({ status: 204, body: '' });
+    if (url.pathname === '/api/byok' && request.method() === 'GET') {
+      await fulfillJson(route, { code: 'ai.byok.no_row' }, 404);
       return;
     }
 
     await route.fulfill({ status: 204, body: '' });
   });
+}
+
+function billingPlans(currentPlanCode: BillingPlanCode) {
+  return {
+    currentPlanCode,
+    plans: [
+      billingPlan('FREE', 'Free', 0, 0, 300),
+      billingPlan('PLUS', 'Plus', 1, 199000, 2000),
+      billingPlan('PRO', 'Pro', 2, 399000, 8000),
+    ],
+  };
+}
+
+function billingPlan(
+  code: BillingPlanCode,
+  displayName: string,
+  tierRank: number,
+  priceVnd: number,
+  monthlyCreditAllowance: number,
+) {
+  return {
+    code,
+    displayName,
+    tierRank,
+    billingCycle: code === 'FREE' ? 'NONE' : 'MONTH',
+    currency: 'VND',
+    priceVnd,
+    monthlyCreditAllowance,
+    sortOrder: tierRank * 10,
+    features: [],
+  };
+}
+
+function billingLedgerPage(searchParams: URLSearchParams) {
+  const cursor = searchParams.get('cursor');
+  const limit = Number(searchParams.get('limit') ?? '10');
+  const allEntries = Array.from({ length: 12 }, (_, index) => ({
+    id: `00000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+    timestamp: `2026-05-${String(28 - index).padStart(2, '0')}T08:00:00.000Z`,
+    type: index % 3 === 0 ? 'grant' : index % 3 === 1 ? 'settle' : 'release',
+    description:
+      index % 3 === 0 ? 'Credit grant' : index % 3 === 1 ? 'Credit spent' : 'Credit released',
+    amountCredits: index % 3 === 0 ? 300 : index % 3 === 1 ? -5 : 5,
+    balanceAfterCredits: 300 - index * 5,
+    reference: 'E2E',
+  }));
+  const start = cursor === 'page-2' ? 10 : 0;
+  const entries = allEntries.slice(start, start + limit);
+  const nextCursor = start + limit < allEntries.length ? 'page-2' : null;
+  return { entries, nextCursor };
+}
+
+function planTier(planCode: BillingPlanCode): number {
+  switch (planCode) {
+    case 'FREE':
+      return 0;
+    case 'PLUS':
+      return 1;
+    case 'PRO':
+      return 2;
+  }
 }
 
 export async function openAuthenticatedRoute(

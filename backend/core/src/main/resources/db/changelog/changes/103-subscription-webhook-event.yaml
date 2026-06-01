@@ -1,0 +1,104 @@
+databaseChangeLog:
+  - changeSet:
+      id: 103-subscription-webhook-event
+      author: zeromail
+      comment: >-
+        Append-only audit + idempotency table for Lemon Squeezy webhook deliveries.
+        provider_event_id stores the X-Event-Id header when present (LS sends it as a
+        UUID); dedupe_key is the application-computed dedupe primitive so handlers
+        stay idempotent even if the header is missing. payload_jsonb is REDACTED
+        before insert — never store customer.email, billing_address, or card_*
+        fields. payload_sha256 is computed over the raw payload for forensic
+        integrity. processing_status drives the retry/reaper worker.
+      changes:
+        - createTable:
+            tableName: subscription_webhook_event
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: provider_event_id
+                  type: varchar(255)
+              - column:
+                  name: dedupe_key
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_name
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+              - column:
+                  name: lemon_squeezy_subscription_id
+                  type: bigint
+              - column:
+                  name: signature_verified
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processing_status
+                  type: varchar(32)
+                  defaultValue: RECEIVED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: timestamptz
+              - column:
+                  name: processing_error
+                  type: text
+              - column:
+                  name: payload_sha256
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_jsonb
+                  type: jsonb
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: subscription_webhook_event
+            constraintName: uq_subscription_webhook_event_dedupe_key
+            columnNames: dedupe_key
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_subscription_webhook_event_provider_event_id ON subscription_webhook_event(provider_event_id) WHERE provider_event_id IS NOT NULL
+        - sql:
+            sql: ALTER TABLE subscription_webhook_event ADD CONSTRAINT ck_subscription_webhook_event_processing_status CHECK (processing_status IN ('RECEIVED','PROCESSING','PROCESSED','FAILED','SKIPPED'))
+        - sql:
+            sql: ALTER TABLE subscription_webhook_event ADD CONSTRAINT ck_subscription_webhook_event_sha256_length CHECK (length(payload_sha256) = 64)
+        - createIndex:
+            tableName: subscription_webhook_event
+            indexName: idx_subscription_webhook_event_subscription
+            columns:
+              - column:
+                  name: lemon_squeezy_subscription_id
+        - createIndex:
+            tableName: subscription_webhook_event
+            indexName: idx_subscription_webhook_event_status_received
+            columns:
+              - column:
+                  name: processing_status
+              - column:
+                  name: received_at
+      rollback:
+        - dropTable:
+            tableName: subscription_webhook_event
+            cascadeConstraints: true

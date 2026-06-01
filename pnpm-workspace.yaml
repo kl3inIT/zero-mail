@@ -5,6 +5,7 @@ allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true
   esbuild: true
+  msgpackr-extract: false
   msw: false
   sharp: false
   unrs-resolver: false
@@ -17,5 +18,5 @@ peerDependencyRules:
 
 # CASA Tier 2 dependency CVE remediations — force transitives above patched versions.
 overrides:
-  postcss: '>=8.5.10'      # GHSA-qx2v-qp2m-jg93 (medium 6.1)
-  ip-address: '>=10.1.1'   # GHSA-v2v4-37r5-5v8g (medium 5.3)
+  postcss: '>=8.5.10' # GHSA-qx2v-qp2m-jg93 (medium 6.1)
+  ip-address: '>=10.1.1' # GHSA-v2v4-37r5-5v8g (medium 5.3)

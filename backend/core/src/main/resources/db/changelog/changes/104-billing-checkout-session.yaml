@@ -1,0 +1,88 @@
+databaseChangeLog:
+  - changeSet:
+      id: 104-billing-checkout-session
+      author: zeromail
+      comment: >-
+        Append-only checkout creation audit for Lemon Squeezy hosted checkout sessions.
+        Stores the exact request JSON sent to Lemon Squeezy plus the response JSON and
+        returned checkout URL so operators can inspect one checkout attempt before
+        webhook subscription processing exists.
+      changes:
+        - createTable:
+            tableName: billing_checkout_session
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_checkout_session_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: plan_code
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_email
+                  type: varchar(320)
+              - column:
+                  name: provider_checkout_id
+                  type: varchar(255)
+              - column:
+                  name: checkout_url
+                  type: text
+              - column:
+                  name: status
+                  type: varchar(32)
+                  defaultValue: CREATED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: failure_reason
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reuse_expires_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: request_jsonb
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: response_jsonb
+                  type: jsonb
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_billing_checkout_session_provider_checkout_id ON billing_checkout_session(provider_checkout_id) WHERE provider_checkout_id IS NOT NULL
+        - sql:
+            sql: ALTER TABLE billing_checkout_session ADD CONSTRAINT ck_billing_checkout_session_status CHECK (status IN ('CREATED','FAILED'))
+        - createIndex:
+            tableName: billing_checkout_session
+            indexName: idx_billing_checkout_session_tenant_created
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: created_at
+                  descending: true
+      rollback:
+        - dropTable:
+            tableName: billing_checkout_session
+            cascadeConstraints: true

@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { CalendarClock, Gift, ShieldCheck, WalletCards } from 'lucide-react';
+import { CalendarClock, Gift, WalletCards } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ErrorState } from '@/components/states/ErrorState';
@@ -44,13 +44,12 @@ export function BalanceCard() {
 
   const availableCredits = balance.data?.availableCredits ?? 0;
   const heldCredits = balance.data?.heldCredits ?? 0;
-  const betaCredits = balance.data?.betaCredits ?? 0;
-  const paidCredits = balance.data?.paidCredits ?? 0;
-  const monthlyGrantCredits = balance.data?.monthlyGrantCredits ?? 0;
+  const monthlyCredits = balance.data?.monthlyCredits ?? 0;
+  const additionalCredits = balance.data?.additionalCredits ?? 0;
+  const monthlyCreditAllowance = balance.data?.monthlyCreditAllowance ?? 0;
   const resetLabel = balance.data?.resetsAt
     ? formatDateTime(balance.data.resetsAt, locale)
     : t('billing.balance.resetUnknown');
-  const freeDuringBeta = balance.data?.freeDuringBeta ?? false;
   const showLoading = balance.isPending || !hydrated;
 
   return (
@@ -79,36 +78,26 @@ export function BalanceCard() {
               </p>
               <p className="text-muted-foreground mt-1 text-sm">{t('billing.balance.unit')}</p>
             </div>
-
-            {freeDuringBeta ? (
-              <div
-                className="border-accent/25 bg-accent-soft/60 text-accent-foreground flex gap-2 rounded-lg border px-3 py-2 text-sm leading-6"
-                data-testid="billing-beta-notice"
-              >
-                <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                <span>{t('billing.balance.betaNotice')}</span>
-              </div>
-            ) : null}
           </div>
         )}
 
         {!showLoading ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <CreditMetric
-              label={t('billing.balance.betaCredits')}
-              value={formatCredits(betaCredits, locale)}
+              label={t('billing.balance.monthlyCredits')}
+              value={formatCredits(monthlyCredits, locale)}
               detail={t('billing.balance.monthlyGrant', {
-                credits: formatCredits(monthlyGrantCredits, locale),
+                credits: formatCredits(monthlyCreditAllowance, locale),
               })}
               icon={<Gift className="size-4" aria-hidden="true" />}
-              testId="billing-beta-credits"
+              testId="billing-monthly-credits"
             />
             <CreditMetric
-              label={t('billing.balance.paidCredits')}
-              value={formatCredits(paidCredits, locale)}
-              detail={t('billing.balance.noExpiry')}
+              label={t('billing.balance.additionalCredits')}
+              value={formatCredits(additionalCredits, locale)}
+              detail={t('billing.balance.additionalCreditDetail')}
               icon={<WalletCards className="size-4" aria-hidden="true" />}
-              testId="billing-paid-credits"
+              testId="billing-additional-credits"
             />
             <CreditMetric
               label={t('billing.balance.held')}

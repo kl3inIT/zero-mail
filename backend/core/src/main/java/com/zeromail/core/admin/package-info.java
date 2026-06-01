@@ -6,6 +6,8 @@
             "billing :: persistence",
             "gmail",
             "gmail :: usecases",
+            "llm :: domain",
+            "llm :: gateway.springai",
             "llm :: routing",
             "rules :: catalog.usecases",
             "shared :: crypto",

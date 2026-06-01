@@ -16,12 +16,12 @@ export const shellMessages = {
     en: 'Rules',
   },
   'nav.billing': {
-    vi: 'Thanh toán',
-    en: 'Billing',
+    vi: 'Tín dụng',
+    en: 'Credits',
   },
-  'nav.subscription': {
-    vi: 'Gói đăng ký',
-    en: 'Subscription',
+  'nav.upgradePlan': {
+    vi: 'Nâng cấp gói',
+    en: 'Upgrade plan',
   },
   'nav.settings': {
     vi: 'Cài đặt',
@@ -91,6 +91,18 @@ export const shellMessages = {
     vi: 'Tài khoản',
     en: 'Account',
   },
+  'shell.accounts.title': {
+    vi: 'Tài khoản Gmail',
+    en: 'Accounts',
+  },
+  'shell.accounts.addManage': {
+    vi: 'Thêm hoặc quản lý tài khoản',
+    en: 'Add or manage accounts',
+  },
+  'shell.userMenu.planLoading': {
+    vi: 'Đang tải gói',
+    en: 'Loading plan',
+  },
   'shell.sidebar.toggle': {
     vi: 'Mở điều hướng',
     en: 'Toggle navigation',
@@ -115,13 +127,17 @@ export const shellMessages = {
     vi: 'Đăng xuất',
     en: 'Sign out',
   },
-  'nav.sectionMail': {
-    vi: 'Thư',
-    en: 'Mail',
+  'nav.sectionDaily': {
+    vi: 'Hằng ngày',
+    en: 'Daily',
   },
-  'nav.sectionManage': {
-    vi: 'Quản lý',
-    en: 'Manage',
+  'nav.sectionAutomation': {
+    vi: 'Tự động hóa',
+    en: 'Automation',
+  },
+  'nav.sectionTools': {
+    vi: 'Công cụ',
+    en: 'Tools',
   },
   'nav.dashboard': {
     vi: 'Tổng quan',
@@ -138,5 +154,29 @@ export const shellMessages = {
   'nav.cleanupSuppression': {
     vi: 'Danh sách an toàn',
     en: 'Safe list',
+  },
+  'settings.description': {
+    vi: 'Quản lý tài khoản, kết nối, tín dụng và các cấu hình vận hành của Zero Mail.',
+    en: 'Manage your account, connection, credits, and Zero Mail operating settings.',
+  },
+  'settings.navigation.account': {
+    vi: 'Tài khoản',
+    en: 'Account',
+  },
+  'settings.navigation.credits': {
+    vi: 'Tín dụng',
+    en: 'Credits',
+  },
+  'settings.navigation.upgradePlan': {
+    vi: 'Nâng cấp gói',
+    en: 'Upgrade plan',
+  },
+  'settings.navigation.ai': {
+    vi: 'Cấu hình AI',
+    en: 'AI configuration',
+  },
+  'settings.navigation.privacy': {
+    vi: 'Quyền riêng tư',
+    en: 'Privacy',
   },
 } as const;

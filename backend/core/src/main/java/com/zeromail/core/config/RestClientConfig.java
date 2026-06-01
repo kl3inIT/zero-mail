@@ -1,5 +1,6 @@
 package com.zeromail.core.config;
 
+import com.zeromail.core.llm.config.LlmProperties;
 import java.net.http.HttpClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -21,9 +22,8 @@ class RestClientConfig {
     @Bean
     @Primary
     @ConditionalOnMissingBean(RestClient.Builder.class)
-    RestClient.Builder restClientBuilder(ZeroMailCoreProperties zeroMailCoreProperties) {
-        ZeroMailCoreProperties.ZeroMailLlmByokProperties byokProperties =
-                zeroMailCoreProperties.llm().byok();
+    RestClient.Builder restClientBuilder(LlmProperties llmProperties) {
+        LlmProperties.ByokProperties byokProperties = llmProperties.byok();
         HttpClient httpClient =
                 HttpClient.newBuilder()
                         .connectTimeout(byokProperties.connectTimeout())
@@ -43,9 +43,8 @@ class RestClientConfig {
      * https}.
      */
     @Bean("cleartextRestClientBuilder")
-    RestClient.Builder cleartextRestClientBuilder(ZeroMailCoreProperties zeroMailCoreProperties) {
-        ZeroMailCoreProperties.ZeroMailLlmByokProperties byokProperties =
-                zeroMailCoreProperties.llm().byok();
+    RestClient.Builder cleartextRestClientBuilder(LlmProperties llmProperties) {
+        LlmProperties.ByokProperties byokProperties = llmProperties.byok();
         HttpClient httpClient =
                 HttpClient.newBuilder()
                         .version(HttpClient.Version.HTTP_1_1)

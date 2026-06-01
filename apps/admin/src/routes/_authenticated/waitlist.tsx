@@ -174,28 +174,12 @@ function WaitlistRoute() {
         </Button>
       </header>
 
-      <section className="grid gap-3 md:grid-cols-4">
-        <KpiCard
-          label="Tổng đăng ký"
-          value={formatInteger(overallQuery.data?.totalElements)}
-          hint="Mọi trạng thái"
-        />
-        <KpiCard
-          label="Đang chờ duyệt"
-          value={formatInteger(pendingCountQuery.data?.totalElements)}
-          hint="PENDING"
-        />
-        <KpiCard
-          label="Đã mời"
-          value={formatInteger(invitedCountQuery.data?.totalElements)}
-          hint="INVITED"
-        />
-        <KpiCard
-          label="Lỗi gửi mời"
-          value={formatInteger(failedCountQuery.data?.totalElements)}
-          hint="INVITE_FAILED"
-        />
-      </section>
+      <WaitlistKpiSection
+        total={overallQuery.data?.totalElements}
+        pending={pendingCountQuery.data?.totalElements}
+        invited={invitedCountQuery.data?.totalElements}
+        failed={failedCountQuery.data?.totalElements}
+      />
 
       <Card>
         <CardHeader>
@@ -250,7 +234,7 @@ function WaitlistRoute() {
           {listQuery.isError ? (
             <div className="text-destructive px-6 py-8 text-sm">Không tải được danh sách.</div>
           ) : listQuery.isLoading ? (
-            <div className="text-muted-foreground px-6 py-8 text-sm">Đang tải...</div>
+            <div className="text-muted-foreground px-6 py-8 text-sm">Đang tải…</div>
           ) : items.length === 0 ? (
             <div className="text-muted-foreground px-6 py-8 text-sm">
               Không có mục nào trong trạng thái này.
@@ -311,7 +295,7 @@ function WaitlistRoute() {
                           </Button>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
+                        <span className="text-muted-foreground text-xs">-</span>
                       )}
                     </TableCell>
                   </TableRow>
@@ -347,50 +331,85 @@ function WaitlistRoute() {
         )}
       </Card>
 
-      <AlertDialog
-        open={pendingDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) closeDialog();
+      <WaitlistConfirmDialog
+        dialog={pendingDialog}
+        pending={approveMutation.isPending || rejectMutation.isPending}
+        onClose={closeDialog}
+        onConfirm={() => {
+          void confirmAction();
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingDialog?.kind === 'approve' ? 'Duyệt đăng ký?' : 'Từ chối đăng ký?'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingDialog?.kind === 'approve' ? (
-                <>
-                  Hệ thống sẽ gửi mail mời tới{' '}
-                  <span className="font-mono">{pendingDialog.entry.email}</span> trong vòng 1 phút.
-                  Thao tác này không thể hoàn tác.
-                </>
-              ) : pendingDialog ? (
-                <>
-                  Đăng ký của <span className="font-mono">{pendingDialog.entry.email}</span> sẽ bị
-                  từ chối. Email người dùng KHÔNG được thông báo.
-                </>
-              ) : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeDialog}>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                void confirmAction();
-              }}
-              disabled={approveMutation.isPending || rejectMutation.isPending}
-            >
-              {approveMutation.isPending || rejectMutation.isPending
-                ? 'Đang xử lý...'
-                : pendingDialog?.kind === 'approve'
-                  ? 'Duyệt'
-                  : 'Từ chối'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      />
     </div>
+  );
+}
+
+function WaitlistKpiSection({
+  total,
+  pending,
+  invited,
+  failed,
+}: {
+  total: number | undefined;
+  pending: number | undefined;
+  invited: number | undefined;
+  failed: number | undefined;
+}) {
+  return (
+    <section className="grid gap-3 md:grid-cols-4">
+      <KpiCard label="Tổng đăng ký" value={formatInteger(total)} hint="Mọi trạng thái" />
+      <KpiCard label="Đang chờ duyệt" value={formatInteger(pending)} hint="PENDING" />
+      <KpiCard label="Đã mời" value={formatInteger(invited)} hint="INVITED" />
+      <KpiCard label="Lỗi gửi mời" value={formatInteger(failed)} hint="INVITE_FAILED" />
+    </section>
+  );
+}
+
+function WaitlistConfirmDialog({
+  dialog,
+  pending,
+  onClose,
+  onConfirm,
+}: {
+  dialog: DialogAction;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog
+      open={dialog !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {dialog?.kind === 'approve' ? 'Duyệt đăng ký?' : 'Từ chối đăng ký?'}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {dialog?.kind === 'approve' ? (
+              <>
+                Hệ thống sẽ gửi mail mời tới{' '}
+                <span className="font-mono">{dialog.entry.email}</span> trong vòng 1 phút. Thao tác
+                này không thể hoàn tác.
+              </>
+            ) : dialog ? (
+              <>
+                Đăng ký của <span className="font-mono">{dialog.entry.email}</span> sẽ bị từ chối.
+                Email người dùng KHÔNG được thông báo.
+              </>
+            ) : null}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>Hủy</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} disabled={pending}>
+            {pending ? 'Đang xử lý...' : dialog?.kind === 'approve' ? 'Duyệt' : 'Từ chối'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -409,24 +428,25 @@ function statusLabel(status: WaitlistStatus): string {
   }
 }
 
+const STATUS_BADGE_CONFIG: Record<WaitlistStatus, { className: string; Icon: typeof ClockIcon }> = {
+  PENDING: { className: 'bg-amber-soft text-amber border-amber/40', Icon: ClockIcon },
+  APPROVED: {
+    className: 'bg-violet-soft text-primary border-primary/40',
+    Icon: CheckCircle2Icon,
+  },
+  REJECTED: {
+    className: 'bg-destructive-soft text-destructive border-destructive/40',
+    Icon: XCircleIcon,
+  },
+  INVITED: { className: 'bg-green-soft text-green border-green/40', Icon: MailCheckIcon },
+  INVITE_FAILED: {
+    className: 'bg-destructive-soft text-destructive border-destructive/40',
+    Icon: MailXIcon,
+  },
+};
+
 function StatusBadge({ status }: { status: WaitlistStatus }) {
-  const config: Record<WaitlistStatus, { className: string; Icon: typeof ClockIcon }> = {
-    PENDING: { className: 'bg-amber-soft text-amber border-amber/40', Icon: ClockIcon },
-    APPROVED: {
-      className: 'bg-violet-soft text-primary border-primary/40',
-      Icon: CheckCircle2Icon,
-    },
-    REJECTED: {
-      className: 'bg-destructive-soft text-destructive border-destructive/40',
-      Icon: XCircleIcon,
-    },
-    INVITED: { className: 'bg-green-soft text-green border-green/40', Icon: MailCheckIcon },
-    INVITE_FAILED: {
-      className: 'bg-destructive-soft text-destructive border-destructive/40',
-      Icon: MailXIcon,
-    },
-  };
-  const { className, Icon } = config[status];
+  const { className, Icon } = STATUS_BADGE_CONFIG[status];
   return (
     <Badge variant="outline" className={`gap-1 ${className}`}>
       <Icon className="size-3" />
@@ -435,9 +455,11 @@ function StatusBadge({ status }: { status: WaitlistStatus }) {
   );
 }
 
+const integerFormatter = new Intl.NumberFormat('vi-VN');
+
 function formatInteger(value: number | undefined): string {
   if (value === undefined) return '—';
-  return new Intl.NumberFormat('vi-VN').format(value);
+  return integerFormatter.format(value);
 }
 
 function formatDateTime(iso: string | null | undefined): string {

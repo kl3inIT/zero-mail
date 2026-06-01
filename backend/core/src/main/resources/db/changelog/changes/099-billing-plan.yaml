@@ -1,0 +1,151 @@
+databaseChangeLog:
+  - changeSet:
+      id: 099-billing-plan
+      author: zeromail
+      comment: >-
+        Billing plan catalog for Lemon Squeezy subscriptions. Three rows seeded:
+        FREE (default, monthly credit reset 300, no LS variant), PLUS, and PRO. Prices
+        and Lemon Squeezy product/variant IDs are placeholders — operators update them
+        after creating the products on the LS dashboard. Plans are global (not
+        tenant-scoped); a tenant references one plan via the subscription table or
+        defaults to FREE if no subscription row exists.
+      changes:
+        - createTable:
+            tableName: billing_plan
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_billing_plan_code
+              - column:
+                  name: display_name
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tier_rank
+                  type: smallint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: billing_cycle
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: VND
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price_vnd
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: monthly_credit_allowance
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lemon_squeezy_product_id
+                  type: bigint
+              - column:
+                  name: lemon_squeezy_variant_id
+                  type: bigint
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sort_order
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE billing_plan ADD CONSTRAINT ck_billing_plan_billing_cycle CHECK (billing_cycle IN ('NONE','MONTH'))
+        - sql:
+            sql: ALTER TABLE billing_plan ADD CONSTRAINT ck_billing_plan_currency CHECK (currency = 'VND')
+        - sql:
+            sql: ALTER TABLE billing_plan ADD CONSTRAINT ck_billing_plan_price_non_negative CHECK (price_vnd >= 0)
+        - sql:
+            sql: ALTER TABLE billing_plan ADD CONSTRAINT ck_billing_plan_allowance_non_negative CHECK (monthly_credit_allowance >= 0)
+        - sql:
+            sql: ALTER TABLE billing_plan ADD CONSTRAINT ck_billing_plan_tier_rank_range CHECK (tier_rank BETWEEN 0 AND 99)
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_billing_plan_ls_variant ON billing_plan(lemon_squeezy_variant_id) WHERE lemon_squeezy_variant_id IS NOT NULL
+        - createIndex:
+            tableName: billing_plan
+            indexName: idx_billing_plan_active_sort
+            columns:
+              - column:
+                  name: active
+              - column:
+                  name: sort_order
+        - insert:
+            tableName: billing_plan
+            columns:
+              - column: { name: code, value: FREE }
+              - column: { name: display_name, value: Free }
+              - column: { name: tier_rank, valueNumeric: 0 }
+              - column: { name: billing_cycle, value: NONE }
+              - column: { name: price_vnd, valueNumeric: 0 }
+              - column: { name: monthly_credit_allowance, valueNumeric: 300 }
+              - column: { name: sort_order, valueNumeric: 0 }
+        - insert:
+            tableName: billing_plan
+            columns:
+              - column: { name: code, value: PLUS }
+              - column: { name: display_name, value: Plus }
+              - column: { name: tier_rank, valueNumeric: 1 }
+              - column: { name: billing_cycle, value: MONTH }
+              - column: { name: price_vnd, valueNumeric: 199000 }
+              - column: { name: monthly_credit_allowance, valueNumeric: 3000 }
+              - column: { name: sort_order, valueNumeric: 10 }
+        - insert:
+            tableName: billing_plan
+            columns:
+              - column: { name: code, value: PRO }
+              - column: { name: display_name, value: Pro }
+              - column: { name: tier_rank, valueNumeric: 2 }
+              - column: { name: billing_cycle, value: MONTH }
+              - column: { name: price_vnd, valueNumeric: 799000 }
+              - column: { name: monthly_credit_allowance, valueNumeric: 15000 }
+              - column: { name: sort_order, valueNumeric: 20 }
+      rollback:
+        - dropTable:
+            tableName: billing_plan
+            cascadeConstraints: true

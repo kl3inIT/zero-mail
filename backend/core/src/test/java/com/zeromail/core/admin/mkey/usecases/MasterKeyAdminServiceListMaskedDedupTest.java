@@ -14,11 +14,12 @@ import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.auth.domain.AdminStatus;
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogWriteRepository;
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
+import com.zeromail.core.llm.domain.KeyFormat;
+import com.zeromail.core.llm.domain.LlmProvider;
+import com.zeromail.core.llm.gateway.springai.ProviderConnectionTester;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
 import java.time.Clock;
 import java.time.Instant;
@@ -74,7 +75,7 @@ class MasterKeyAdminServiceListMaskedDedupTest {
                 mock(PlatformSecretCipher.class),
                 mock(MasterKeyEditSessionService.class),
                 mock(MasterKeyRateLimiter.class),
-                mock(ModelsProbeClient.class),
+                mock(ProviderConnectionTester.class),
                 adminAuditWriter,
                 mock(ApplicationEventPublisher.class),
                 Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC));

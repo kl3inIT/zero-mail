@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentUserCached } from '@/features/account/api/account-api';
+import InboxPreview from '@/features/landing/components/InboxPreview';
 import { ArrowRightIcon } from '@/features/landing/components/PrototypeIcons';
 import { ONBOARDING_BYPASS_ROUTE, shouldShowBetaOnboarding } from '@/features/onboarding/config';
 import type { AppLocale } from '@/i18n/routing';
@@ -71,28 +72,13 @@ export default async function Hero() {
           </div>
         </div>
 
-        {/* Video placeholder — replace with <video> when ready */}
         <div className="relative mt-20 w-full max-w-5xl">
           <div className="absolute -inset-4 -z-10 rounded-[3rem] bg-gradient-to-b from-(--accent-soft) to-transparent opacity-20 blur-3xl" />
           <div
-            className="relative aspect-video w-full overflow-hidden rounded-2xl border border-(--line-strong) bg-(--bg-subtle) shadow-[0_24px_80px_-12px_rgba(0,0,0,0.1)]"
-            data-slot="hero-video"
-            aria-label={t('landing.videoPlaceholder')}
+            className="relative w-full overflow-hidden rounded-2xl border border-(--line-strong) bg-(--bg-subtle) shadow-[0_24px_80px_-12px_rgba(0,0,0,0.1)]"
+            data-slot="hero-preview"
           >
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-(--text-muted)">
-              <span className="flex h-16 w-16 items-center justify-center rounded-full border border-(--line-strong) bg-(--bg-elevated)">
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </span>
-              <span className="text-sm font-medium">{t('landing.videoPlaceholder')}</span>
-            </div>
+            <InboxPreview />
           </div>
         </div>
       </div>

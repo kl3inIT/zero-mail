@@ -70,35 +70,35 @@
 
 ### Settings Page — Personalization (carried from v1.1)
 
-- [ ] **SET-VOICE-01**: User can edit free-text writing style description (200–500 words) that influences AI draft tone
-- [ ] **SET-VOICE-02**: User can edit free-text personal instructions ("About me") that gets injected into the system prompt for chat/triage/draft (XML-fenced + sanitized for prompt-injection sentinels + length cap 2000 chars)
-- [ ] **SET-VOICE-03**: User can edit free-text email signature appended to AI drafts
-- [ ] **SET-VOICE-04**: User can manage a list of titled knowledge-base snippets the AI consults when drafting
-- [ ] **SET-VOICE-05**: User can pick a tone preset (professional / friendly / casual / formal / custom) as a quick baseline
-- [ ] **SET-VOICE-06**: User can pick AI output language (VI / EN, default VI) — separate from UI language
-- [ ] **SET-VOICE-07**: User can trigger a "Generate from recent sent emails" action inside the writing-style edit dialog. The action fetches the most recent N sent emails (default N=20, max 50), feeds them transiently to the LLM along with a style-extraction prompt, and returns a concise style guide (≤500 words) that pre-populates the writing-style textarea for the user to review and edit before saving. Privacy invariant: raw email bodies and the LLM prompt/completion exchange MUST be in-memory-only (no DB, no log file, no audit row); only the user-reviewed-and-saved style guide is persisted (into the existing `assistant_settings.writing_style` column). Pulled into v1.2 Phase 9 scope from `SET-VOICE-FUT-03` on 2026-05-26 during discuss-phase.
+- [x] **SET-VOICE-01**: User can edit free-text writing style description (200–500 words) that influences AI draft tone
+- [x] **SET-VOICE-02**: User can edit free-text personal instructions ("About me") that gets injected into the system prompt for chat/triage/draft (XML-fenced + sanitized for prompt-injection sentinels + length cap 2000 chars)
+- [x] **SET-VOICE-03**: User can edit free-text email signature appended to AI drafts
+- [x] **SET-VOICE-04**: User can manage a list of titled knowledge-base snippets the AI consults when drafting
+- [x] **SET-VOICE-05**: User can pick a tone preset (professional / friendly / casual / formal / custom) as a quick baseline
+- [x] **SET-VOICE-06**: User can pick AI output language (VI / EN, default VI) — separate from UI language
+- [x] **SET-VOICE-07**: User can trigger a "Generate from recent sent emails" action inside the writing-style edit dialog. The action fetches the most recent N sent emails (default N=20, max 50), feeds them transiently to the LLM along with a style-extraction prompt, and returns a concise style guide (≤500 words) that pre-populates the writing-style textarea for the user to review and edit before saving. Privacy invariant: raw email bodies and the LLM prompt/completion exchange MUST be in-memory-only (no DB, no log file, no audit row); only the user-reviewed-and-saved style guide is persisted (into the existing `assistant_settings.writing_style` column). Pulled into v1.2 Phase 9 scope from `SET-VOICE-FUT-03` on 2026-05-26 during discuss-phase.
 
 ### Settings Page — Behavior Toggles (carried from v1.1)
 
-- [ ] **SET-BEHV-01**: User can toggle auto-draft replies (master switch for v1.0 DRFT-01..04 background drafts)
-- [ ] **SET-BEHV-02**: User can set a draft confidence threshold (0.0–1.0); AI only saves drafts ≥ threshold
+- [x] **SET-BEHV-01**: User can toggle auto-draft replies (master switch for v1.0 DRFT-01..04 background drafts)
+- [x] **SET-BEHV-02**: User can set a draft confidence threshold (0.0–1.0); AI only saves drafts ≥ threshold
 - [ ] **SET-BEHV-03**: User can toggle daily digest (reuses v1.0 ANL-03 config)
-- [ ] **SET-BEHV-04**: User can toggle sensitive-data protection (controls v1.0 LLM-05 PII redaction behavior; default ON)
+- [x] **SET-BEHV-04**: User can toggle sensitive-data protection (controls v1.0 LLM-05 PII redaction behavior; default ON)
 - [ ] **SET-BEHV-05**: User can surface the shadow-mode toggle (reuses v1.0 TRG-07) from the assistant Settings page
 
 ### Settings Page — Sender Safety Net (carried from v1.1)
 
-- [ ] **SET-SAFE-01**: User can view, add, and remove sender safety net entries (email or domain pattern) via the Settings page (exposes existing v1.0 TRG-07..08 tables to end users for the first time)
+- [x] **SET-SAFE-01**: User can view, add, and remove sender safety net entries (email or domain pattern) via the Settings page (exposes existing v1.0 TRG-07..08 tables to end users for the first time)
 - [ ] **SET-SAFE-02**: User can paste-import multiple entries at once with a parsed preview before save
 - [ ] **SET-SAFE-03**: User can pick per-entry mode (`protect` = never auto-act, `escalate` = notify but don't act)
-- [ ] **SET-SAFE-04**: User sees a visual indicator in the audit log when a rule was blocked by the safety net ("Was going to archive, blocked by VIP rule for ceo@acme.com")
+- [x] **SET-SAFE-04**: User sees a visual indicator in the audit log when a rule was blocked by the safety net ("Was going to archive, blocked by VIP rule for ceo@acme.com")
 
 ### Settings Page — AI Provider/Model (carried from v1.1, rewired onto curated catalog)
 
-- [ ] **SET-AI-01**: User has ONE BYOK card with an `Active` switch as the only on/off control. When the row is `active=true` AND has a tested model, every AI feature (chat / triage / draft / voice-generate) runs through that key+URL+model. When `active=false` (or no row), every feature falls back to the admin-curated catalog default. **Updated 2026-05-26 round 2** — no per-feature picker, no separate `Platform default ↔ Use my key` mode card; the `active` flag on the BYOK row replaces both
-- [ ] **SET-AI-02**: BYOK row holds provider (OpenAI / Anthropic / Google / DeepSeek only — NEVER OpenRouter, NEVER 9Router), base URL (auto-filled per provider, user-editable to support OpenAI-compatible / Anthropic-compatible endpoints; validated as `https://` except `http://localhost*` for dev), API key (AES-GCM encrypted via v1.0 LLM-04 / `RefreshTokenCipher`, never logged, never returned to the frontend after save — only `lastFourChars`), and a user-picked model from the Test-connection response. Saving any field clears `last_test_result` and `last_tested_at` and forces `active=false`. Switching providers/URLs/keys replaces the single tenant row
-- [ ] **SET-AI-03**: User sees a single tenant-wide last-7d AI cost figure below the BYOK card (e.g. `Chi phí AI 7 ngày qua: $2.43`). **Updated 2026-05-26** — per-feature cost rows removed; aggregation is a single tenant-scoped sum from existing `llm_call_audit` rows, no `call_site=CHAT` schema change required
-- [ ] **SET-AI-04**: User can test the BYOK connection (either against the stored row OR an inline-payload pre-save) using the same `/v1/models` probe and enum-only response shape (`OK / INVALID_KEY / RATE_LIMITED / NETWORK_ERROR / TIMEOUT`) as admin MKEY-03. On `OK` the response additionally carries `models[]` (provider's chat-completion-capable model IDs, capped at 100) so the user can pick a model from the result. Both admin and user paths delegate to a shared `ProviderConnectionTester` (D-14). Rate-limited to 10 tests/hour per tenant. Activating the BYOK row requires the last test to be `OK` AND a model to be picked, otherwise `PUT /api/byok/active` returns HTTP 400 `code=ai.byok.no_model_picked`
+- [x] **SET-AI-01**: User has ONE BYOK card with an `Active` switch as the only on/off control. When the row is `active=true` AND has a tested model, every AI feature (chat / triage / draft / voice-generate) runs through that key+URL+model. When `active=false` (or no row), every feature falls back to the admin-curated catalog default. **Updated 2026-05-26 round 2** — no per-feature picker, no separate `Platform default ↔ Use my key` mode card; the `active` flag on the BYOK row replaces both
+- [x] **SET-AI-02**: BYOK row holds provider (OpenAI / Anthropic / Google / DeepSeek only — NEVER OpenRouter, NEVER 9Router), base URL (auto-filled per provider, user-editable to support OpenAI-compatible / Anthropic-compatible endpoints; validated as `https://` except `http://localhost*` for dev), API key (AES-GCM encrypted via v1.0 LLM-04 / `RefreshTokenCipher`, never logged, never returned to the frontend after save — only `lastFourChars`), and a user-picked model from the Test-connection response. Saving any field clears `last_test_result` and `last_tested_at` and forces `active=false`. Switching providers/URLs/keys replaces the single tenant row
+- [x] **SET-AI-03**: User sees a single tenant-wide last-7d AI cost figure below the BYOK card (e.g. `Chi phí AI 7 ngày qua: $2.43`). **Updated 2026-05-26** — per-feature cost rows removed; aggregation is a single tenant-scoped sum from existing `llm_call_audit` rows, no `call_site=CHAT` schema change required
+- [x] **SET-AI-04**: User can test the BYOK connection (either against the stored row OR an inline-payload pre-save) using the same `/v1/models` probe and enum-only response shape (`OK / INVALID_KEY / RATE_LIMITED / NETWORK_ERROR / TIMEOUT`) as admin MKEY-03. On `OK` the response additionally carries `models[]` (provider's chat-completion-capable model IDs, capped at 100) so the user can pick a model from the result. Both admin and user paths delegate to a shared `ProviderConnectionTester` (D-14). Rate-limited to 10 tests/hour per tenant. Activating the BYOK row requires the last test to be `OK` AND a model to be picked, otherwise `PUT /api/byok/active` returns HTTP 400 `code=ai.byok.no_model_picked`
 
 ### Rule Actions and Examples Catalog (NEW — Phase 08.1)
 
@@ -260,26 +260,26 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | RACT-10 | Phase 08.1 | Complete |
 | RACT-11 | Phase 08.1 | Pending |
 | RACT-12 | Phase 08.1 | Complete |
-| SET-VOICE-01 | Phase 9 | Pending |
-| SET-VOICE-02 | Phase 9 | Pending |
-| SET-VOICE-03 | Phase 9 | Pending |
-| SET-VOICE-04 | Phase 9 | Pending |
-| SET-VOICE-05 | Phase 9 | Pending |
-| SET-VOICE-06 | Phase 9 | Pending |
-| SET-VOICE-07 | Phase 9 | Pending |
-| SET-BEHV-01 | Phase 9 | Pending |
-| SET-BEHV-02 | Phase 9 | Pending |
+| SET-VOICE-01 | Phase 9 | Complete |
+| SET-VOICE-02 | Phase 9 | Complete |
+| SET-VOICE-03 | Phase 9 | Complete |
+| SET-VOICE-04 | Phase 9 | Complete |
+| SET-VOICE-05 | Phase 9 | Complete |
+| SET-VOICE-06 | Phase 9 | Complete |
+| SET-VOICE-07 | Phase 9 | Complete |
+| SET-BEHV-01 | Phase 9 | Complete |
+| SET-BEHV-02 | Phase 9 | Complete |
 | SET-BEHV-03 | Phase 9 | Pending |
-| SET-BEHV-04 | Phase 9 | Pending |
+| SET-BEHV-04 | Phase 9 | Complete |
 | SET-BEHV-05 | Phase 9 | Pending |
-| SET-SAFE-01 | Phase 9 | Pending |
+| SET-SAFE-01 | Phase 9 | Complete |
 | SET-SAFE-02 | Phase 9 | Pending |
 | SET-SAFE-03 | Phase 9 | Pending |
-| SET-SAFE-04 | Phase 9 | Pending |
-| SET-AI-01 | Phase 9 | Pending |
-| SET-AI-02 | Phase 9 | Pending |
-| SET-AI-03 | Phase 9 | Pending |
-| SET-AI-04 | Phase 9 | Pending |
+| SET-SAFE-04 | Phase 9 | Complete |
+| SET-AI-01 | Phase 9 | Complete |
+| SET-AI-02 | Phase 9 | Complete |
+| SET-AI-03 | Phase 9 | Complete |
+| SET-AI-04 | Phase 9 | Complete |
 | ARCH-08 | Phase 8 | Complete |
 | ARCH-09 | Phase 8 | Complete |
 | ARCH-10 | Phase 8 | Complete |

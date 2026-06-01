@@ -9,8 +9,8 @@ import com.zeromail.core.admin.cat.persistence.lowlevel.ModelCatalogWriteReposit
 import com.zeromail.core.admin.cat.persistence.lowlevel.ModelCatalogWriteRepository.ProviderModelRow;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.PerFeatureCatalog;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.shared.exception.ErrorClass;
 import java.math.BigDecimal;
 import java.time.Clock;

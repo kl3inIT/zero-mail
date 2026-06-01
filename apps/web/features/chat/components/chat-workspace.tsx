@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { ConversationPane } from './conversation-pane';
 import { HistorySidebar } from './history-sidebar';
@@ -17,7 +17,7 @@ export function ChatWorkspace() {
   const initialPrompt = searchParams.get('prompt') ?? '';
   const [newChatId, setNewChatId] = useState(() => createChatId());
   const activeChatId = queryChatId ?? newChatId;
-  const paneKey = useMemo(() => `${activeChatId}:${initialPrompt}`, [activeChatId, initialPrompt]);
+  const paneKey = `${activeChatId}:${initialPrompt}`;
 
   function handleSelectChat(chatId: string) {
     router.push(`/chat?chat=${chatId}`);

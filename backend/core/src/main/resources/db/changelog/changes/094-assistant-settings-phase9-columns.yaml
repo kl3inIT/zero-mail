@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 094-assistant-settings-phase9-columns
+      author: zeromail
+      comment: Add Phase 9 voice and behavior settings columns. D-17 keeps BYOK mode on user_byok_key.active, so no retired provider-mode column is introduced here.
+      preConditions:
+        - onFail: HALT
+        - tableExists:
+            tableName: assistant_settings
+        - columnExists:
+            tableName: assistant_settings
+            columnName: assistant_settings_id
+        - columnExists:
+            tableName: assistant_settings
+            columnName: tenant_id
+      changes:
+        - addColumn:
+            tableName: assistant_settings
+            columns:
+              - column:
+                  name: email_signature
+                  type: varchar(500)
+              - column:
+                  name: tone_preset
+                  type: varchar(16)
+              - column:
+                  name: auto_draft_replies
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: draft_confidence
+                  type: varchar(8)
+                  defaultValue: MEDIUM
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sensitive_data_protection
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Closed enum for optional user-facing tone preset.
+            sql: ALTER TABLE assistant_settings ADD CONSTRAINT ck_assistant_settings_tone_preset CHECK (tone_preset IS NULL OR tone_preset IN ('PROFESSIONAL','FRIENDLY','CASUAL','FORMAL','CUSTOM'))
+        - sql:
+            comment: Closed enum for draft-confidence policy.
+            sql: ALTER TABLE assistant_settings ADD CONSTRAINT ck_assistant_settings_draft_confidence CHECK (draft_confidence IN ('LOW','MEDIUM','HIGH'))
+      rollback:
+        - sql:
+            sql: ALTER TABLE assistant_settings DROP CONSTRAINT IF EXISTS ck_assistant_settings_draft_confidence
+        - sql:
+            sql: ALTER TABLE assistant_settings DROP CONSTRAINT IF EXISTS ck_assistant_settings_tone_preset
+        - dropColumn:
+            tableName: assistant_settings
+            columns:
+              - column:
+                  name: email_signature
+              - column:
+                  name: tone_preset
+              - column:
+                  name: auto_draft_replies
+              - column:
+                  name: draft_confidence
+              - column:
+                  name: sensitive_data_protection

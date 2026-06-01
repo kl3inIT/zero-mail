@@ -3,7 +3,8 @@
 import { Fragment } from 'react';
 
 import { UndoBoundary } from '@/features/triage/components/AuditLog';
-import { AuditRow, shouldShowUndoBoundary } from '@/features/triage/components/AuditRow';
+import { AuditRow } from '@/features/triage/components/AuditRow';
+import { shouldShowUndoBoundary } from '@/features/triage/components/audit-row-utils';
 import type { AuditEntry } from '@/features/triage/api/triage-api';
 
 type AuditTableProps = {

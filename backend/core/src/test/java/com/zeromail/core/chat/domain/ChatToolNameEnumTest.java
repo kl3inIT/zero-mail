@@ -11,9 +11,9 @@ class ChatToolNameEnumTest {
 
     @Test
     void lists_exact_phase_seven_tool_contract() {
-        assertThat(ChatToolName.values()).hasSize(24);
+        assertThat(ChatToolName.values()).hasSize(23);
         assertThat(ChatToolName.byCategory(ToolCategory.READ)).hasSize(8);
-        assertThat(ChatToolName.byCategory(ToolCategory.WRITE_REVERSIBLE)).hasSize(7);
+        assertThat(ChatToolName.byCategory(ToolCategory.WRITE_REVERSIBLE)).hasSize(6);
         assertThat(ChatToolName.byCategory(ToolCategory.CONFIRM_REQUIRED)).hasSize(6);
         assertThat(ChatToolName.byCategory(ToolCategory.CONFIRMED_SEND)).hasSize(3);
 
@@ -35,7 +35,6 @@ class ChatToolNameEnumTest {
                         "updateRule",
                         "disableRule",
                         "saveDraft",
-                        "addToKnowledgeBase",
                         "createRule",
                         "deleteRule",
                         "removeSenderFromSafetyNet",

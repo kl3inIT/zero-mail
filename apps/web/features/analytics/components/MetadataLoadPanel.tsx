@@ -38,9 +38,12 @@ const CATEGORY_CONFIG_COLORS = [
   'var(--chart-1)',
 ];
 
+const EMPTY_DAILY_LOAD: DailyLoadResponse[] = [];
+const EMPTY_CATEGORY_LOAD: CategoryLoadResponse[] = [];
+
 export function MetadataLoadPanel({
-  dailyLoad = [],
-  categoryLoad = [],
+  dailyLoad = EMPTY_DAILY_LOAD,
+  categoryLoad = EMPTY_CATEGORY_LOAD,
   className,
 }: MetadataLoadPanelProps) {
   const t = useTranslations();
@@ -243,8 +246,8 @@ function CategoryLegendRow({
 
   return (
     <div
-      className="bg-muted/30 ring-foreground/10 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 ring-1"
-      style={{ borderLeftColor: color }}
+      className="bg-muted/30 ring-foreground/10 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-3 py-2.5 ring-1"
+      style={{ boxShadow: `inset 3px 0 0 ${color}` }}
     >
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium">{label}</span>

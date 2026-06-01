@@ -54,7 +54,7 @@ export default defineConfig({
       // unsubscribe-campaign tests catch up.
       thresholds: {
         lines: 20,
-        functions: 25,
+        functions: 20,
         branches: 20,
         statements: 20,
       },

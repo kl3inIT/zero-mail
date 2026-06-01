@@ -4,6 +4,7 @@ import com.zeromail.core.chat.usecases.ChatStreamSink;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,14 +16,20 @@ public class VercelProtocolEmitter implements ChatStreamSink {
 
     private final FrameWriter frameWriter;
     private final ObjectMapper objectMapper;
+    private final String messageId;
     private final Set<String> openTextPartIds = ConcurrentHashMap.newKeySet();
     private final Set<String> completedTextPartIds = ConcurrentHashMap.newKeySet();
     private final Set<String> openToolCallIds = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean streamStarted = new AtomicBoolean(false);
 
     public VercelProtocolEmitter(FrameWriter frameWriter, ObjectMapper objectMapper) {
+        this(frameWriter, objectMapper, UUID.randomUUID().toString());
+    }
+
+    VercelProtocolEmitter(FrameWriter frameWriter, ObjectMapper objectMapper, String messageId) {
         this.frameWriter = frameWriter;
         this.objectMapper = objectMapper;
+        this.messageId = Objects.requireNonNull(messageId, "messageId");
     }
 
     @Override
@@ -122,6 +129,7 @@ public class VercelProtocolEmitter implements ChatStreamSink {
         }
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("type", "start");
+        payload.put("messageId", messageId);
         writeJsonFrame(payload);
     }
 

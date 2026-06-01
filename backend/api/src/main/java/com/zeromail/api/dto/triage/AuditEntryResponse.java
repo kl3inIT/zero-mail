@@ -32,7 +32,8 @@ public record AuditEntryResponse(
         String decisionState,
         Instant createdAt,
         Instant undoableUntil,
-        @Schema(nullable = true) String draftId) {
+        @Schema(nullable = true) String draftId,
+        @Schema(nullable = true) String blockedBySafetyNetPattern) {
 
     public static AuditEntryResponse from(AuditLogRow row) {
         return new AuditEntryResponse(
@@ -47,6 +48,7 @@ public record AuditEntryResponse(
                 row.decisionState(),
                 row.createdAt(),
                 row.undoableUntil(),
-                row.draftId());
+                row.draftId(),
+                row.blockedBySafetyNetPattern());
     }
 }

@@ -100,7 +100,8 @@ const PROTECTED = [
   '/rules',
   '/settings',
   '/ai',
-  '/billing',
+  '/credits',
+  '/upgrade-plan',
   '/needs-reply',
   '/analytics',
 ];

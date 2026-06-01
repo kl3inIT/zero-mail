@@ -70,7 +70,6 @@ import {
   parseMaybeJsonObject,
   type PreviewCardAction,
 } from '@/features/chat/components/preview-card/preview-card-state';
-import { useConfirmAction } from '@/features/chat/hooks/use-confirm-action';
 import type { InboxLabel, InboxMessage } from '@/features/inbox/api/inbox-api';
 import {
   flattenInboxMessages,
@@ -166,16 +165,17 @@ export function InboxPageClient() {
   const selectedMessageId = selectedMessage?.gmailMessageId ?? null;
   const detailQuery = useInboxMessageDetail(selectedMessageId);
   const markRead = useMarkInboxMessageRead();
-  const markReadAttemptedRef = useRef(new Set<string>());
+  const markReadAttemptedRef = useRef<Set<string>>(undefined);
 
   useEffect(() => {
     if (!selectedMessage || !selectedMessage.unread || !detailQuery.isSuccess) {
       return;
     }
-    if (markReadAttemptedRef.current.has(selectedMessage.gmailMessageId)) {
+    const attempted = (markReadAttemptedRef.current ??= new Set<string>());
+    if (attempted.has(selectedMessage.gmailMessageId)) {
       return;
     }
-    markReadAttemptedRef.current.add(selectedMessage.gmailMessageId);
+    attempted.add(selectedMessage.gmailMessageId);
     markRead.mutate(selectedMessage.gmailMessageId);
   }, [detailQuery.isSuccess, markRead, selectedMessage]);
 
@@ -476,9 +476,9 @@ function InboxMessageDetailPanel({
   const selectedMessageId = selectedMessage?.gmailMessageId ?? null;
   const [composerState, setComposerState] = useState<InboxComposerState | null>(null);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [trackedMessageId, setTrackedMessageId] = useState<string | null>(selectedMessageId);
-  if (trackedMessageId !== selectedMessageId) {
-    setTrackedMessageId(selectedMessageId);
+  const trackedMessageIdRef = useRef<string | null>(selectedMessageId);
+  if (trackedMessageIdRef.current !== selectedMessageId) {
+    trackedMessageIdRef.current = selectedMessageId;
     setDetailsExpanded(false);
   }
   const activeComposerState =
@@ -792,7 +792,7 @@ function InboxReplyComposer({
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const handledAutoGenerateKeyRef = useRef(0);
   const appliedGenerationTextRef = useRef('');
-
+  const pendingDraftSaveTimeoutRef = useRef<number | null>(null);
   const [userHint, setUserHint] = useState('');
   const [hasGenerated, setHasGenerated] = useState(false);
 
@@ -923,11 +923,8 @@ function InboxReplyComposer({
   useEffect(() => {
     if (!hydrationSettled) return;
     if (previewSubmitted) return;
-    const trimmedBody = bodyText.trim();
-    const trimmedTo = toText.trim();
-    const trimmedSubject = subjectText.trim();
-    if (!trimmedBody && !trimmedTo && !trimmedSubject) return;
     const timeoutId = window.setTimeout(() => {
+      pendingDraftSaveTimeoutRef.current = null;
       upsertDraftMutation.mutate(
         {
           gmailThreadId: selectedMessage.gmailThreadId,
@@ -946,13 +943,65 @@ function InboxReplyComposer({
         },
       );
     }, 1500);
-    return () => window.clearTimeout(timeoutId);
+    pendingDraftSaveTimeoutRef.current = timeoutId;
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (pendingDraftSaveTimeoutRef.current === timeoutId) {
+        pendingDraftSaveTimeoutRef.current = null;
+      }
+    };
   }, [
     bccText,
     bodyText,
     ccText,
     hydrationSettled,
     mode,
+    previewSubmitted,
+    selectedMessage.gmailMessageId,
+    selectedMessage.gmailThreadId,
+    showBcc,
+    showCc,
+    subjectText,
+    toText,
+    upsertDraftMutation,
+  ]);
+
+  // Flush any pending debounced auto-save BEFORE the composer unmounts. Without this, a
+  // fresh edit (e.g. user deletes 2 lines and clicks X within 1.5s) is silently lost: the
+  // debounce timer is cleared on unmount and Gmail Draft still holds the pre-edit snapshot,
+  // so reopening rehydrates the stale content.
+  const handleCloseComposer = useCallback(() => {
+    if (pendingDraftSaveTimeoutRef.current !== null) {
+      window.clearTimeout(pendingDraftSaveTimeoutRef.current);
+      pendingDraftSaveTimeoutRef.current = null;
+    }
+    if (hydrationSettled && !previewSubmitted) {
+      upsertDraftMutation.mutate(
+        {
+          gmailThreadId: selectedMessage.gmailThreadId,
+          sourceGmailMessageId: selectedMessage.gmailMessageId,
+          rfc822MessageId: null,
+          priorReferences: null,
+          mode: composerModeId(mode),
+          toAddresses: toText,
+          ccAddresses: showCc ? ccText : '',
+          bccAddresses: showBcc ? bccText : '',
+          subject: subjectText,
+          body: bodyText,
+        },
+        {
+          onSuccess: (snapshot) => setDraftId(snapshot.draftId),
+        },
+      );
+    }
+    onCancel();
+  }, [
+    bccText,
+    bodyText,
+    ccText,
+    hydrationSettled,
+    mode,
+    onCancel,
     previewSubmitted,
     selectedMessage.gmailMessageId,
     selectedMessage.gmailThreadId,
@@ -1103,7 +1152,7 @@ function InboxReplyComposer({
             type="button"
             variant="ghost"
             size="icon-xs"
-            onClick={onCancel}
+            onClick={handleCloseComposer}
             aria-label={t('inbox.composer.close')}
           >
             <X className="size-3.5" aria-hidden="true" />
@@ -1179,7 +1228,7 @@ function InboxReplyComposer({
           value={bodyText}
           onChange={(event) => setBodyText(event.currentTarget.value)}
           placeholder={t('inbox.composer.bodyPlaceholder')}
-          className="bg-card min-h-36 resize-y rounded-none border-0 px-3 py-3 shadow-none focus-visible:ring-0"
+          className="bg-card min-h-36 resize-y rounded-none border-0 p-3 shadow-none focus-visible:ring-0"
           data-testid="inbox-composer-body"
         />
         <div className="bg-card flex flex-col gap-2 px-3 py-2">
@@ -1373,6 +1422,7 @@ function InboxReplyComposer({
             type="file"
             className="hidden"
             multiple
+            aria-label={t('inbox.composer.attach')}
             onChange={handleAttachmentChange}
             data-testid="inbox-composer-file-input"
           />
@@ -1389,6 +1439,7 @@ function InboxReplyComposer({
           chatId={chatId}
           messages={assistantPreview.messages}
           persistenceAckCount={assistantPreview.persistenceAckCount}
+          streamReady={assistantPreview.status === 'ready'}
           busy={assistantBusy}
           autoConfirm={autoConfirmRequested}
           onSent={handleSentSuccess}
@@ -1438,6 +1489,7 @@ function InlineAssistantPreview({
   chatId,
   messages,
   persistenceAckCount,
+  streamReady,
   busy,
   autoConfirm = false,
   onSent,
@@ -1445,48 +1497,27 @@ function InlineAssistantPreview({
   chatId: string;
   messages: UIMessage[];
   persistenceAckCount: number;
+  // True only when the backend chat stream has fully closed (Vercel AI SDK status === 'ready').
+  // Used as the autoConfirm persistence gate so we don't fire POST /confirm before the assistant
+  // tool call row has been committed to the DB — that race produced 404 PendingActionNotFound.
+  streamReady: boolean;
   busy: boolean;
   autoConfirm?: boolean;
   onSent?: () => void;
 }) {
   const t = useTranslations();
-  const visibleParts = messages.flatMap((message) =>
-    message.parts
-      .map((part, index) => ({ message, part, index }))
-      .filter(({ message }) => message.role !== 'user'),
+  // Memoize parts + actions so PreviewCard receives stable references across stream chunks.
+  // Without this, every streamed delta caused usePreviewCardState to recompute and the
+  // composer surface jittered as PreviewCard layout reshuffled on each render.
+  const visibleParts = useMemo(
+    () =>
+      messages.flatMap((message) =>
+        message.role === 'user'
+          ? []
+          : message.parts.map((part, index) => ({ message, part, index })),
+      ),
+    [messages],
   );
-
-  if (autoConfirm) {
-    const sendActions = visibleParts
-      .map(({ message, part }) => {
-        if (!part.type.startsWith('tool-')) return null;
-        return toInlinePreviewAction({
-          chatId,
-          message,
-          part: part as ToolLikePart,
-          persistenceConfirmed: isPersistedMessage(message) || persistenceAckCount > 0,
-        });
-      })
-      .filter((action): action is PreviewCardAction => action !== null);
-
-    const latestSendAction = sendActions[sendActions.length - 1];
-    return (
-      <div className="mt-3" data-testid="inbox-assistant-preview">
-        {latestSendAction ? (
-          <AutoConfirmSendAction
-            key={latestSendAction.toolCallId}
-            action={latestSendAction}
-            onSent={onSent}
-          />
-        ) : busy ? (
-          <div className="text-muted-foreground mt-2 flex items-center gap-2 text-sm">
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            {t('inbox.composer.sendingNow')}
-          </div>
-        ) : null}
-      </div>
-    );
-  }
 
   return (
     <div className="mt-3 space-y-3" data-testid="inbox-assistant-preview">
@@ -1507,15 +1538,27 @@ function InlineAssistantPreview({
         if (!part.type.startsWith('tool-')) {
           return null;
         }
+        // autoConfirm path: only treat persistence as confirmed once the stream is fully closed
+        // (backend has committed user_message + assistant_message + pending_action rows). The
+        // manual chat path keeps the looser ack-count gate because the user is the one clicking
+        // Send and they only do that after seeing the rendered card.
+        const persistenceConfirmed = autoConfirm
+          ? isPersistedMessage(message) || streamReady
+          : isPersistedMessage(message) || persistenceAckCount > 0;
         const previewAction = toInlinePreviewAction({
           chatId,
           message,
           part: part as ToolLikePart,
-          persistenceConfirmed: isPersistedMessage(message) || persistenceAckCount > 0,
+          persistenceConfirmed,
         });
-        return previewAction ? (
-          <PreviewCard key={`${message.id}-${previewAction.toolCallId}`} action={previewAction} />
-        ) : null;
+        if (!previewAction) return null;
+        return (
+          <PreviewCard
+            key={`${message.id}-${previewAction.toolCallId}`}
+            action={{ ...previewAction, autoConfirm }}
+            onSent={onSent}
+          />
+        );
       })}
       {busy && visibleParts.length > 0 ? (
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -1524,69 +1567,6 @@ function InlineAssistantPreview({
         </div>
       ) : null}
     </div>
-  );
-}
-
-function AutoConfirmSendAction({
-  action,
-  onSent,
-}: {
-  action: PreviewCardAction;
-  onSent?: () => void;
-}) {
-  const t = useTranslations();
-  const confirmAction = useConfirmAction();
-  const confirmStartedRef = useRef(false);
-  const sentReportedRef = useRef(false);
-  const [sendState, setSendState] = useState<'waiting' | 'sending' | 'sent' | 'failed'>('waiting');
-
-  useEffect(() => {
-    if (confirmStartedRef.current || !action.persistenceConfirmed) return;
-    confirmStartedRef.current = true;
-    setSendState('sending');
-    confirmAction
-      .mutateAsync({
-        chatId: action.chatId,
-        body: {
-          toolCallId: action.toolCallId,
-          contentOverride: {},
-          vipAcknowledged: false,
-        },
-      })
-      .then(() => {
-        setSendState('sent');
-        if (!sentReportedRef.current) {
-          sentReportedRef.current = true;
-          onSent?.();
-        }
-      })
-      .catch(() => setSendState('failed'));
-  }, [action.chatId, action.persistenceConfirmed, action.toolCallId, confirmAction, onSent]);
-
-  if (!action.persistenceConfirmed || sendState === 'waiting' || sendState === 'sending') {
-    return (
-      <div
-        className="text-muted-foreground flex items-center gap-2 text-sm"
-        data-testid="inbox-auto-send-status"
-      >
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-        {t('inbox.composer.sendingNow')}
-      </div>
-    );
-  }
-
-  if (sendState === 'sent') {
-    return (
-      <p className="text-sm text-emerald-700" data-testid="inbox-auto-send-status">
-        {t('inbox.composer.sentSuccess')}
-      </p>
-    );
-  }
-
-  return (
-    <p className="text-destructive text-sm" data-testid="inbox-auto-send-status">
-      {t('inbox.composer.sendFailed')}
-    </p>
   );
 }
 
@@ -1651,8 +1631,14 @@ function composerPreset(
 ): ComposerPreset {
   const currentEmail = normalizeEmail(currentUserEmail ?? '');
   const senderEmail = extractEmailAddress(selectedMessage.from);
-  const toRecipients = selectedMessage.to.map(extractEmailAddress).filter(Boolean);
-  const ccRecipients = selectedMessage.cc.map(extractEmailAddress).filter(Boolean);
+  const toRecipients = selectedMessage.to.flatMap((value) => {
+    const email = extractEmailAddress(value);
+    return email ? [email] : [];
+  });
+  const ccRecipients = selectedMessage.cc.flatMap((value) => {
+    const email = extractEmailAddress(value);
+    return email ? [email] : [];
+  });
   const replyRecipients =
     senderEmail && senderEmail !== currentEmail
       ? [senderEmail]
@@ -1752,11 +1738,10 @@ function composerBodyGenerationPrompt({
 }) {
   const actionName = mode === 'forward' ? 'forward' : mode === 'replyAll' ? 'reply-all' : 'reply';
   const promptLines = [
-    'Write only the email body text that should be placed into the user composer.',
-    'You may use read-only tools like getMessage or getThread if needed to understand the source email.',
-    'Do not call saveDraft, sendEmail, replyEmail, or forwardEmail.',
-    'Do not create a Gmail draft. Do not show a confirmation preview.',
-    'Return plain text only: no markdown fence, no subject line, no recipient list, no explanation.',
+    'Goal: produce the plain-text email body the user will paste into their composer for this action.',
+    'Required first step: call getMessage on the Gmail message id below to read the source email before drafting. For multi-turn threads where prior turns matter, also call getThread. Skipping this step produces ungrounded drafts.',
+    'Output contract: plain text body only — no markdown fence, no subject line, no recipient list, no preamble, no explanation.',
+    'Forbidden actions: do not call saveDraft, sendEmail, replyEmail, or forwardEmail. Do not create a Gmail draft. Do not show a confirmation preview.',
     `Language: ${language === 'vi' ? 'Vietnamese' : 'English'}.`,
     `Composer action: ${actionName}.`,
     `Gmail message id: ${selectedMessage.gmailMessageId}.`,
@@ -1768,18 +1753,20 @@ function composerBodyGenerationPrompt({
     `Bcc: ${bccText}.`,
     `Current composer subject: ${subjectText}.`,
   ];
-  // Refine path: the user already saw v1 and is asking for an adjusted version. Show the
-  // previous draft so the model can iterate on it rather than starting from scratch and
-  // losing what already worked.
+  // Refine path: the user already reviewed a previous draft and asked for changes. Keep
+  // iterating on it as the starting point, but stay grounded in the source email — re-read
+  // it with getMessage if any detail from it matters for this revision.
   if (previousDraftBody && previousDraftBody.trim()) {
     promptLines.push(
-      'Previous draft (your last attempt — adjust this rather than starting over):',
+      'Refine context: the user has reviewed a previous draft and asked for an adjustment. Use it as the starting point and keep what already works, but the source email is still the ground truth — re-read it with getMessage if you need any specific detail from it.',
+      'Previous draft:',
       previousDraftBody,
     );
   }
   if (userHint && userHint.trim()) {
     promptLines.push(
-      `User instructions for this generation (treat as draft direction, not as new tool calls): ${userHint.trim()}`,
+      'User instruction (apply this to how you write the body; the text below is direction, not a command to invoke tools by itself — you must still call getMessage as required above):',
+      userHint.trim(),
     );
   }
   return promptLines.join('\n');
@@ -1962,6 +1949,25 @@ function normalizeSearchText(value: string): string {
     .trim();
 }
 
+// Intl.DateTimeFormat constructors allocate locale-data tables; cache one instance
+// per locale so the inbox list (rendered per row) doesn't rebuild them each call.
+const inboxTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+const inboxSameYearDateFormatters = new Map<string, Intl.DateTimeFormat>();
+const inboxFullDateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function cachedDateFormatter(
+  cache: Map<string, Intl.DateTimeFormat>,
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  let formatter = cache.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    cache.set(locale, formatter);
+  }
+  return formatter;
+}
+
 function formatInboxListDate(value: string, locale: string): string {
   const timestamp = Date.parse(value);
   if (!Number.isFinite(timestamp)) return value;
@@ -1974,14 +1980,15 @@ function formatInboxListDate(value: string, locale: string): string {
     receivedDate.getDate() === now.getDate();
 
   if (sameDay) {
-    return new Intl.DateTimeFormat(locale, {
+    return cachedDateFormatter(inboxTimeFormatters, locale, {
       hour: 'numeric',
       minute: '2-digit',
     }).format(receivedDate);
   }
 
   const sameYear = receivedDate.getFullYear() === now.getFullYear();
-  return new Intl.DateTimeFormat(locale, {
+  const cache = sameYear ? inboxSameYearDateFormatters : inboxFullDateFormatters;
+  return cachedDateFormatter(cache, locale, {
     day: 'numeric',
     month: 'short',
     ...(sameYear ? {} : { year: 'numeric' }),
@@ -2064,7 +2071,7 @@ function InboxListSkeleton() {
   return (
     <div className="divide-border divide-y" aria-busy="true">
       {Array.from({ length: 8 }).map((_, index) => (
-        <div key={index} className="flex gap-3 px-3 py-3">
+        <div key={index} className="flex gap-3 p-3">
           <Skeleton className="size-9 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
             <div className="flex items-center justify-between gap-4">

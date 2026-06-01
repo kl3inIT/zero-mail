@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { DownloadIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useReducer, useState } from 'react';
 
 import { AutoRefreshIndicator } from '@/components/AutoRefreshIndicator';
 import { KpiCard } from '@/components/KpiCard';
@@ -41,16 +41,67 @@ const PRESET_DAY_COUNT: Record<Exclude<PresetId, 'custom'>, number> = {
   '30d': 30,
 };
 
+const FEATURE_DONUT_COLORS: Record<string, string> = {
+  CHAT: 'bg-violet-500',
+  TRIAGE: 'bg-blue-500',
+  DRAFT: 'bg-emerald-500',
+};
+
+// The date-range picker is one state machine: a preset selector plus draft custom inputs that only
+// become the applied range (which drives the fetch) on Apply (WR-06/WR-09). These fields transition
+// together — switching presets clears the validation error, applying promotes draft → applied — so
+// they live in one reducer instead of six interdependent useState calls.
+type RangeState = {
+  preset: PresetId;
+  // Draft inputs the user is typing.
+  customFrom: string;
+  customTo: string;
+  // Applied values that actually drive the fetch — only updated on Apply.
+  appliedFrom: string;
+  appliedTo: string;
+  customRangeError: string | null;
+};
+
+type RangeAction =
+  | { type: 'presetSelected'; preset: PresetId }
+  | { type: 'customFromChanged'; value: string }
+  | { type: 'customToChanged'; value: string }
+  | { type: 'customRangeRejected'; message: string }
+  | { type: 'customRangeApplied'; from: string; to: string };
+
+const initialRangeState: RangeState = {
+  preset: '30d',
+  customFrom: '',
+  customTo: '',
+  appliedFrom: '',
+  appliedTo: '',
+  customRangeError: null,
+};
+
+function rangeReducer(state: RangeState, action: RangeAction): RangeState {
+  switch (action.type) {
+    case 'presetSelected':
+      return { ...state, preset: action.preset, customRangeError: null };
+    case 'customFromChanged':
+      return { ...state, customFrom: action.value, customRangeError: null };
+    case 'customToChanged':
+      return { ...state, customTo: action.value, customRangeError: null };
+    case 'customRangeRejected':
+      return { ...state, customRangeError: action.message };
+    case 'customRangeApplied':
+      return {
+        ...state,
+        customRangeError: null,
+        appliedFrom: action.from,
+        appliedTo: action.to,
+      };
+  }
+}
+
 function SpendRoute() {
   const [paused, setPaused] = useState(false);
-  const [preset, setPreset] = useState<PresetId>('30d');
-  const [customRangeError, setCustomRangeError] = useState<string | null>(null);
-  // Draft inputs the user is typing.
-  const [customFrom, setCustomFrom] = useState<string>('');
-  const [customTo, setCustomTo] = useState<string>('');
-  // Applied values that actually drive the fetch — only updated on Apply (WR-06/WR-09).
-  const [appliedFrom, setAppliedFrom] = useState<string>('');
-  const [appliedTo, setAppliedTo] = useState<string>('');
+  const [range, dispatchRange] = useReducer(rangeReducer, initialRangeState);
+  const { preset, customFrom, customTo, appliedFrom, appliedTo, customRangeError } = range;
   const [csvDownloading, setCsvDownloading] = useState(false);
   const [csvError, setCsvError] = useState<string | null>(null);
 
@@ -97,40 +148,41 @@ function SpendRoute() {
       <div className="bg-card border-border flex flex-wrap items-end justify-between gap-3 rounded-lg border p-3">
         <PresetPicker
           preset={preset}
-          onPresetChange={(nextPreset) => {
-            setPreset(nextPreset);
-            setCustomRangeError(null);
-          }}
+          onPresetChange={(nextPreset) =>
+            dispatchRange({ type: 'presetSelected', preset: nextPreset })
+          }
           customFrom={customFrom}
           customTo={customTo}
-          onCustomFromChange={(value) => {
-            setCustomFrom(value);
-            setCustomRangeError(null);
-          }}
-          onCustomToChange={(value) => {
-            setCustomTo(value);
-            setCustomRangeError(null);
-          }}
+          onCustomFromChange={(value) =>
+            dispatchRange({ type: 'customFromChanged', value })
+          }
+          onCustomToChange={(value) => dispatchRange({ type: 'customToChanged', value })}
           onApplyCustom={() => {
             if (!customFrom || !customTo) {
-              setCustomRangeError('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc.');
+              dispatchRange({
+                type: 'customRangeRejected',
+                message: 'Vui lòng chọn cả ngày bắt đầu và ngày kết thúc.',
+              });
               return;
             }
             const candidate = { from: new Date(customFrom), to: new Date(customTo) };
             if (!isRangeWithinLimit(candidate)) {
-              setCustomRangeError(
-                'Khoảng ngày tối đa là 90 ngày. Chọn khoảng nhỏ hơn hoặc dùng preset 7 ngày / 30 ngày.',
-              );
+              dispatchRange({
+                type: 'customRangeRejected',
+                message:
+                  'Khoảng ngày tối đa là 90 ngày. Chọn khoảng nhỏ hơn hoặc dùng preset 7 ngày / 30 ngày.',
+              });
               return;
             }
             if (candidate.from >= candidate.to) {
-              setCustomRangeError('Ngày bắt đầu phải trước ngày kết thúc.');
+              dispatchRange({
+                type: 'customRangeRejected',
+                message: 'Ngày bắt đầu phải trước ngày kết thúc.',
+              });
               return;
             }
-            setCustomRangeError(null);
             // Commit the draft inputs so the fetch picks them up.
-            setAppliedFrom(customFrom);
-            setAppliedTo(customTo);
+            dispatchRange({ type: 'customRangeApplied', from: customFrom, to: customTo });
           }}
           customRangeError={customRangeError}
         />
@@ -252,7 +304,9 @@ function SpendRoute() {
                 )}
               {spendDashboard.data?.topTenants.map((row, rowIndex) => (
                 <TableRow key={row.tenantId ?? `rollup-${rowIndex}`}>
-                  <TableCell>{renderTenantLabel(row)}</TableCell>
+                  <TableCell>
+                    <TenantLabel row={row} />
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     ${formatMoney(row.totalCost)}
                   </TableCell>
@@ -283,7 +337,7 @@ function SpendRoute() {
   );
 }
 
-function renderTenantLabel(row: TopTenantRowResponse) {
+function TenantLabel({ row }: { row: TopTenantRowResponse }) {
   if (row.tenantId && !row.isKAnonymized) {
     return (
       <Link
@@ -441,11 +495,6 @@ function FeatureDonut({ slices }: { slices: FeatureDonutSliceResponse[] }) {
       </div>
     );
   }
-  const colors: Record<string, string> = {
-    CHAT: 'bg-violet-500',
-    TRIAGE: 'bg-blue-500',
-    DRAFT: 'bg-emerald-500',
-  };
   return (
     <div
       role="img"
@@ -459,7 +508,7 @@ function FeatureDonut({ slices }: { slices: FeatureDonutSliceResponse[] }) {
           return (
             <div
               key={slice.feature}
-              className={colors[slice.feature] ?? 'bg-gray-400'}
+              className={FEATURE_DONUT_COLORS[slice.feature] ?? 'bg-gray-400'}
               style={{ width: `${share * 100}%` }}
               title={`${slice.feature} ${slice.percentOfTotal.toFixed(1)}%`}
             />
@@ -476,7 +525,7 @@ function FeatureDonut({ slices }: { slices: FeatureDonutSliceResponse[] }) {
             <span className="flex items-center gap-2">
               <span
                 aria-hidden
-                className={`size-2 rounded-full ${colors[slice.feature] ?? 'bg-gray-400'}`}
+                className={`size-2 rounded-full ${FEATURE_DONUT_COLORS[slice.feature] ?? 'bg-gray-400'}`}
               />
               <span className="font-mono">{slice.feature}</span>
             </span>

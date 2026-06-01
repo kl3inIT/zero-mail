@@ -3,7 +3,7 @@ import type { components } from '@/lib/api/schema';
 
 export type ProtectedSenderResponse = components['schemas']['ProtectedSenderResponse'];
 export type ProtectedSendersResponse = components['schemas']['ProtectedSendersResponse'];
-export type SenderOptInResponse = components['schemas']['SenderOptInResponse'];
+export type SenderOptInResponse = components['schemas']['ProtectedSenderResponse'];
 export type UndoAuditResponse = components['schemas']['UndoAuditResponse'];
 
 export type AuditMessageRef = {
@@ -26,6 +26,7 @@ export type AuditEntry = {
   gmailThreadId?: string;
   draftId?: string;
   decisionState?: string;
+  blockedBySafetyNetPattern?: string | null;
 };
 
 export type AuditLogPage = {
@@ -93,6 +94,7 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
     gmailThreadId: row.gmailThreadId,
     draftId: row.draftId ?? undefined,
     decisionState: row.decisionState,
+    blockedBySafetyNetPattern: row.blockedBySafetyNetPattern ?? null,
   };
 }
 
@@ -145,4 +147,16 @@ export async function optInSender(senderEmail: string): Promise<SenderOptInRespo
     result,
     `/api/triage/sender-safety-net/${senderEmail}/opt-in failed: ${result.response.status}`,
   );
+}
+
+export async function deleteProtectedSender(id: string): Promise<void> {
+  const result = await api.DELETE('/api/triage/sender-safety-net/{id}', {
+    params: { path: { id } },
+  });
+  if (result.error || !result.response.ok) {
+    throw (
+      result.error ??
+      new Error(`/api/triage/sender-safety-net/${id} failed: ${result.response.status}`)
+    );
+  }
 }

@@ -7,8 +7,14 @@ import { Archive, FileEdit, Tag, Wand2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
+import { AuditSafetyNetBadge } from '@/features/triage/components/AuditSafetyNetBadge';
 import { UndoButton } from '@/features/triage/components/UndoButton';
 import type { AuditEntry } from '@/features/triage/api/triage-api';
+import {
+  formatAuditTimestamp,
+  isUndoAvailable,
+  shouldShowDraftAction,
+} from '@/features/triage/components/audit-row-utils';
 import { cn } from '@/lib/utils';
 
 type AuditRowProps = {
@@ -71,7 +77,10 @@ export function AuditRow({ entry, now }: AuditRowProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
-          <ActionBadge entry={entry} />
+          <div className="flex max-w-64 flex-col items-end gap-1">
+            <ActionBadge entry={entry} />
+            <AuditSafetyNetBadge pattern={entry.blockedBySafetyNetPattern} />
+          </div>
           <time
             className="text-muted-foreground hidden w-24 shrink-0 text-right text-xs tabular-nums sm:block"
             title={new Date(entry.timestamp).toLocaleString()}
@@ -172,38 +181,6 @@ export function UndoClosedLabel() {
       </Tooltip>
     </TooltipProvider>
   );
-}
-
-export function isUndoAvailable(entry: AuditEntry, now: Date): boolean {
-  return !entry.undone && new Date(entry.undoableUntil).getTime() > now.getTime();
-}
-
-export function shouldShowUndoBoundary(entries: AuditEntry[], index: number, now: Date): boolean {
-  if (index === 0) return false;
-  return isUndoAvailable(entries[index - 1], now) && !isUndoAvailable(entries[index], now);
-}
-
-export function shouldShowDraftAction(entry: AuditEntry): entry is AuditEntry & {
-  gmailThreadId: string;
-} {
-  const normalizedAction = entry.action.toLowerCase().replace(/[-\s]+/g, '_');
-  return normalizedAction === 'save_draft' && Boolean(entry.gmailThreadId);
-}
-
-export function formatAuditTimestamp(timestamp: string, now: Date = new Date()): string {
-  const entryDate = new Date(timestamp);
-  const deltaMs = now.getTime() - entryDate.getTime();
-  const deltaMinutes = Math.round(deltaMs / 60_000);
-  if (deltaMinutes < 1) return 'vừa xong';
-  if (deltaMinutes < 60) return `${deltaMinutes} phút trước`;
-  const deltaHours = Math.round(deltaMinutes / 60);
-  if (deltaHours < 24) return `${deltaHours} giờ trước`;
-  const deltaDays = Math.round(deltaHours / 24);
-  if (deltaDays < 7) return `${deltaDays} ngày trước`;
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: '2-digit',
-  }).format(entryDate);
 }
 
 function actionBadgeClassName(action: string): string {

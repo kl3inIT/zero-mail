@@ -19,7 +19,6 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
 } from '@/components/ai/prompt-input';
-import { Response } from '@/components/ai/response';
 import { Suggestion, Suggestions } from '@/components/ai/suggestion';
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from '@/components/ai/tool';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,7 +34,8 @@ import {
   parseMaybeJsonObject,
   type PreviewCardAction,
 } from './preview-card/preview-card-state';
-import { hasToolResultRenderer, renderToolResult } from './tool-results';
+import { StreamingTextResponse } from './streaming-text-response';
+import { hasToolResultRenderer, ToolResult } from './tool-results';
 
 type ToolLikePart = {
   type: string;
@@ -95,7 +95,14 @@ function ChatMessageParts({
     <>
       {message.parts.map((part, index) => {
         if (part.type === 'text') {
-          return <Response key={`${message.id}-${index}`}>{part.text}</Response>;
+          return (
+            <StreamingTextResponse
+              key={`${message.id}-${index}`}
+              text={part.text}
+              revealIncrementally={message.role === 'assistant' && !isPersistedMessage(message)}
+              isStreaming={part.state === 'streaming'}
+            />
+          );
         }
 
         if (part.type === 'reasoning') {
@@ -125,11 +132,11 @@ function ChatMessageParts({
           if (hasToolResultRenderer(toolName)) {
             return (
               <div key={`${message.id}-${toolPart.toolCallId ?? index}`} className="my-1">
-                {renderToolResult({
-                  toolName,
-                  input: parseMaybeJsonObject(toolPart.input),
-                  output: parseMaybeJsonObject(toolPart.output),
-                })}
+                <ToolResult
+                  toolName={toolName}
+                  input={parseMaybeJsonObject(toolPart.input)}
+                  output={parseMaybeJsonObject(toolPart.output)}
+                />
               </div>
             );
           }

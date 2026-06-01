@@ -25,7 +25,7 @@ public class AssistantPersonalInstructionsService {
     @Transactional
     public InstructionUpdateResult overwrite(UUID tenantId, String personalInstructions) {
         String normalizedInstructions =
-                AssistantMemoryService.requireBoundedText(
+                AssistantTextNormalizer.requireBoundedText(
                         personalInstructions,
                         "personalInstructions",
                         MAX_PERSONAL_INSTRUCTIONS_LENGTH);

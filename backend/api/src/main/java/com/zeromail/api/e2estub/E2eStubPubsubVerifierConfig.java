@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Profile;
 
 @Configuration
 @Profile("e2e-stub")
-@ConditionalOnProperty(name = "zeromail.e2e-stub.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "zero-mail.e2e-stub.enabled", havingValue = "true")
 public class E2eStubPubsubVerifierConfig {
 
     @Bean

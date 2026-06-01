@@ -1,122 +1,247 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
+import { useState, useRef, useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { PricingFeatureList } from '@/features/subscription/components/PricingFeatureList';
 import { cn } from '@/lib/utils';
 
+export type CreditOption = {
+  creditsValue: number;
+  priceMonthly: number;
+  priceAnnual: number;
+  labelEn: string;
+  labelVi: string;
+};
+
+const EMPTY_CREDIT_OPTIONS: readonly CreditOption[] = [];
+
 type PricingCardProps = {
-  name: string;
-  description: string;
-  price: string | number;
-  isAnnual: boolean;
-  isPopular?: boolean;
-  features: string[];
-  includesIntro?: string;
-  ctaText: string;
-  isCurrentPlan?: boolean;
-  icon: string; // Emoji
+  planName: string;
+  isFeatured?: boolean;
+  basePriceMonthly?: number;
+  basePriceAnnual?: number;
+  fixedCreditsString?: string;
+  creditOptions?: readonly CreditOption[];
+  selectedCreditsValue?: number;
+  onCreditsValueChange?: (credits: number) => void;
+  isAnnualBillingSelected: boolean;
+  onCtaClick: () => void;
+  isCurrentPlanActive?: boolean;
+  featuresTriage: string[];
+  featuresLimits: string[];
 };
 
 export function PricingCard({
-  name,
-  description,
-  price,
-  isAnnual,
-  isPopular = false,
-  features,
-  includesIntro,
-  ctaText,
-  isCurrentPlan = false,
-  icon,
+  planName,
+  isFeatured = false,
+  basePriceMonthly,
+  basePriceAnnual,
+  fixedCreditsString,
+  creditOptions = EMPTY_CREDIT_OPTIONS,
+  selectedCreditsValue,
+  onCreditsValueChange,
+  isAnnualBillingSelected,
+  onCtaClick,
+  isCurrentPlanActive = false,
+  featuresTriage,
+  featuresLimits,
 }: PricingCardProps) {
   const t = useTranslations();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleCtaClick = () => {
-    if (isCurrentPlan) {
-      toast.info(t('subscription.currentPlan'));
-      return;
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
     }
-    toast.success(`${t('subscription.upgrade')} to ${name} plan - feature coming soon!`);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Determine current active option and price
+  let displayPrice = 0;
+  let activeCreditsString = fixedCreditsString || '';
+
+  const hasCreditDropdown = creditOptions.length > 0;
+  const currentActiveOption = creditOptions.find(
+    (option) => option.creditsValue === selectedCreditsValue,
+  );
+
+  if (hasCreditDropdown && currentActiveOption) {
+    displayPrice = isAnnualBillingSelected
+      ? currentActiveOption.priceAnnual
+      : currentActiveOption.priceMonthly;
+    activeCreditsString = `${selectedCreditsValue?.toLocaleString()}`;
+  } else {
+    displayPrice = isAnnualBillingSelected ? (basePriceAnnual ?? 0) : (basePriceMonthly ?? 0);
+  }
+
+  const handleDropdownSelect = (credits: number) => {
+    if (onCreditsValueChange) {
+      onCreditsValueChange(credits);
+    }
+    setIsDropdownOpen(false);
   };
 
   return (
     <article
       className={cn(
-        'group bg-card/40 relative flex min-h-[550px] flex-col overflow-hidden rounded-[2rem] border p-8 shadow-sm backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl',
-        isPopular
-          ? 'border-primary/60 ring-primary/20 ring-1'
-          : 'border-border/50 hover:border-primary/30',
+        'text-foreground bg-card text-card-foreground relative flex flex-col rounded-[24px] border p-6 transition-all duration-300 select-none',
+        isFeatured
+          ? 'border-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.08)] ring-1 ring-blue-500'
+          : 'border-border hover:border-zinc-400 dark:hover:border-zinc-700',
       )}
     >
-      {/* Background Glow Effect */}
-      <div
-        className={cn(
-          'absolute -top-24 -right-24 h-48 w-48 rounded-full blur-[80px] transition-all duration-500',
-          isPopular
-            ? 'bg-primary/10 group-hover:bg-primary/20'
-            : 'bg-primary/5 group-hover:bg-primary/15',
+      {/* Glow Effect for Featured Card */}
+      {isFeatured && (
+        <div className="pointer-events-none absolute inset-0 -z-10 rounded-[24px] bg-blue-500/5 opacity-50 blur-xl dark:bg-blue-500/3" />
+      )}
+
+      {/* Plan Name & Pricing Header */}
+      <div className="mb-6 space-y-2">
+        <h3 className="text-foreground text-xl font-bold tracking-tight">{planName}</h3>
+        <div className="flex items-baseline gap-1">
+          <span className="text-foreground text-4xl font-extrabold tracking-tight">
+            ${displayPrice.toFixed(2)}
+          </span>
+          <span className="text-muted-foreground text-sm font-medium">
+            {t('subscription.perMonth')}
+          </span>
+        </div>
+        {isAnnualBillingSelected && (
+          <p className="text-xs font-semibold text-blue-500 dark:text-blue-400">
+            {t('subscription.billedAnnually')}
+          </p>
         )}
-      />
+      </div>
 
-      <div className="relative flex flex-1 flex-col">
-        {isPopular ? (
-          <div className="bg-primary text-primary-foreground absolute top-0 right-0 rounded-full px-3 py-1 text-[11px] font-bold tracking-wider uppercase">
-            {t('subscription.popular')}
-          </div>
-        ) : null}
+      {/* Credit Dropdown Select or Spacing */}
+      <div className="relative mb-6" ref={dropdownRef}>
+        {hasCreditDropdown && currentActiveOption ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="bg-muted hover:bg-muted/80 text-foreground border-input flex w-full cursor-pointer items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-all"
+            >
+              <span>
+                {t('subscription.section.credits') === 'Credits'
+                  ? currentActiveOption.labelEn
+                  : currentActiveOption.labelVi}
+              </span>
+              <ChevronDown
+                className={cn(
+                  'text-muted-foreground h-4 w-4 transition-transform duration-300',
+                  isDropdownOpen && 'rotate-180',
+                )}
+              />
+            </button>
 
-        <div className="mb-6 space-y-3">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl" role="img" aria-label={name}>
-              {icon}
-            </span>
-            <h2 className="text-foreground text-2xl font-bold tracking-tight">{name}</h2>
-          </div>
-          <p className="text-muted-foreground min-h-[40px] text-sm leading-relaxed">
-            {description}
+            {isDropdownOpen && (
+              <div className="bg-popover border-border absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-xl border shadow-2xl">
+                {creditOptions.map((option) => (
+                  <button
+                    key={option.creditsValue}
+                    type="button"
+                    onClick={() => handleDropdownSelect(option.creditsValue)}
+                    className={cn(
+                      'hover:bg-muted w-full cursor-pointer px-4 py-3 text-left text-sm transition-all',
+                      option.creditsValue === selectedCreditsValue
+                        ? 'bg-blue-500/10 font-semibold text-blue-500'
+                        : 'text-foreground',
+                    )}
+                  >
+                    {t('subscription.section.credits') === 'Credits'
+                      ? option.labelEn
+                      : option.labelVi}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="h-11" /> // Visual spacer to align cards perfectly when no dropdown is present
+        )}
+      </div>
+
+      {/* Action Button */}
+      <Button
+        type="button"
+        disabled={isCurrentPlanActive}
+        onClick={onCtaClick}
+        className={cn(
+          'w-full cursor-pointer rounded-xl border-none py-6 text-sm font-bold shadow-none transition-all duration-300',
+          isCurrentPlanActive
+            ? 'cursor-not-allowed bg-zinc-800 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-600'
+            : isFeatured
+              ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.25)] hover:bg-blue-500'
+              : 'bg-zinc-200 text-zinc-950 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700',
+        )}
+      >
+        {isCurrentPlanActive ? t('subscription.currentPlan') : t('subscription.toStart')}
+      </Button>
+
+      {/* Divider */}
+      <div className="bg-border my-6 h-[1px]" />
+
+      {/* Feature Sections */}
+      <div className="flex flex-1 flex-col justify-start gap-y-6">
+        {/* Credits Section */}
+        <div className="space-y-1.5">
+          <h4 className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
+            {t('subscription.section.credits')}
+          </h4>
+          <p className="text-foreground text-sm leading-relaxed font-medium">
+            {t('subscription.section.credits') === 'Credits'
+              ? `${activeCreditsString} credits/month`
+              : `${activeCreditsString} tín dụng/tháng`}
           </p>
         </div>
 
-        <div className="mb-8">
-          <div className="flex items-baseline gap-1">
-            <span className="text-foreground text-4xl font-extrabold tracking-tight">
-              {typeof price === 'number' ? `$${price}` : price}
-            </span>
-            <span className="text-muted-foreground text-sm font-semibold">
-              {t('subscription.perMonth')}
-            </span>
-          </div>
-          {isAnnual && price !== '$0' && price !== 0 && (
-            <p className="text-primary mt-1 text-xs font-semibold">
-              {t('subscription.billedAnnually')}
-            </p>
-          )}
+        {/* Divider */}
+        <div className="bg-border h-[1px]" />
+
+        {/* AI Email Automation Section */}
+        <div className="space-y-3">
+          <h4 className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
+            {t('subscription.section.triage')}
+          </h4>
+          <ul className="text-foreground/80 space-y-2 text-[13px] leading-relaxed font-medium">
+            {featuresTriage.map((feature) => (
+              <li key={feature} className="flex items-start">
+                <span className="mr-2 text-blue-500">•</span>
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Features list */}
-        <PricingFeatureList features={features} includesIntro={includesIntro} />
+        {/* Divider */}
+        <div className="bg-border h-[1px]" />
 
-        <Button
-          type="button"
-          variant={isPopular ? 'default' : 'outline'}
-          size="lg"
-          className={cn(
-            'mt-8 h-12 w-full cursor-pointer rounded-xl font-bold transition-all duration-300',
-            !isPopular &&
-              !isCurrentPlan &&
-              'hover:bg-primary hover:text-primary-foreground hover:border-primary',
-            isCurrentPlan &&
-              'bg-muted/80 text-muted-foreground hover:bg-muted/80 cursor-not-allowed',
-          )}
-          onClick={handleCtaClick}
-          disabled={isCurrentPlan}
-        >
-          {isCurrentPlan ? t('subscription.currentPlan') : ctaText}
-        </Button>
+        {/* Limits & Support Section */}
+        <div className="space-y-3">
+          <h4 className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
+            {t('subscription.section.limits')}
+          </h4>
+          <ul className="text-foreground/80 space-y-2 text-[13px] leading-relaxed font-medium">
+            {featuresLimits.map((feature) => (
+              <li key={feature} className="flex items-start">
+                <span className="mr-2 text-blue-500">•</span>
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </article>
   );
 }
+export default PricingCard;

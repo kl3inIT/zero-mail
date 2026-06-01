@@ -13,9 +13,7 @@ import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.persistence.CreditReservationEntity;
 import com.zeromail.core.billing.persistence.CreditReservationRepository;
 import com.zeromail.core.billing.persistence.lowlevel.AdvisoryLockJdbcHelper;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,7 +34,8 @@ class CreditLedgerService implements CreditLedger {
     private final CreditGrantService grantService;
     private final CreditReservationRepository reservationRepository;
     private final AdvisoryLockJdbcHelper advisoryLockHelper;
-    private final ZeroMailCoreProperties coreProperties;
+    private final FeatureCatalogCache featureCatalogCache;
+    private final FeaturePermissionResolver featurePermissionResolver;
 
     CreditLedgerService(
             CreditLedgerEntryRepository entryRepository,
@@ -44,32 +43,33 @@ class CreditLedgerService implements CreditLedger {
             CreditGrantService grantService,
             CreditReservationRepository reservationRepository,
             AdvisoryLockJdbcHelper advisoryLockHelper,
-            ZeroMailCoreProperties coreProperties) {
+            FeatureCatalogCache featureCatalogCache,
+            FeaturePermissionResolver featurePermissionResolver) {
         this.entryRepository = entryRepository;
         this.grantRepository = grantRepository;
         this.grantService = grantService;
         this.reservationRepository = reservationRepository;
         this.advisoryLockHelper = advisoryLockHelper;
-        this.coreProperties = coreProperties;
+        this.featureCatalogCache = featureCatalogCache;
+        this.featurePermissionResolver = featurePermissionResolver;
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ReservationId reserve(UUID tenantId, CallSite callSite) {
-        int requiredCredits = callSite.cost();
+        // Throws FeaturePermissionDeniedException (→ HTTP 402) if the tenant's plan does not
+        // enable this feature; otherwise returns the effective cost (override > catalog default).
+        int requiredCredits =
+                featurePermissionResolver.resolve(tenantId, callSite).effectiveCreditCost();
         if (requiredCredits < 0) {
             throw new IllegalLedgerStateException("Call-site cost cannot be negative: " + callSite);
         }
 
         if (requiredCredits > 0) {
-            grantService.grantCurrentBetaCredits(tenantId);
+            grantService.resetCurrentPlanAllowanceCredits(tenantId);
         }
 
         advisoryLockHelper.acquireTenantLock(tenantId);
-
-        if (requiredCredits > 0) {
-            enforceDailyHardCap(tenantId, requiredCredits);
-        }
 
         UUID selectedGrantId = null;
         if (requiredCredits > 0) {
@@ -191,8 +191,13 @@ class CreditLedgerService implements CreditLedger {
     }
 
     @Override
+    public int defaultCost(CallSite callSite) {
+        return featureCatalogCache.defaultCost(callSite);
+    }
+
+    @Override
     public CreditBalance balance(UUID tenantId) {
-        grantService.grantCurrentBetaCredits(tenantId);
+        grantService.resetCurrentPlanAllowanceCredits(tenantId);
         int availableCredits =
                 Math.toIntExact(entryRepository.sumAvailableCreditsForTenant(tenantId));
         int heldCredits = Math.toIntExact(entryRepository.sumHeldCreditsForTenant(tenantId));
@@ -203,21 +208,5 @@ class CreditLedgerService implements CreditLedger {
         List<CreditGrantEntity> spendableGrants =
                 grantRepository.findSpendableGrants(tenantId, Instant.now(), requiredCredits);
         return spendableGrants.stream().map(CreditGrantEntity::getId).findFirst();
-    }
-
-    private void enforceDailyHardCap(UUID tenantId, int requiredCredits) {
-        ZeroMailCoreProperties.BillingProperties.BillingBetaProperties betaProperties =
-                coreProperties.billing().beta();
-        if (!betaProperties.enabled() || betaProperties.dailyHardCap() <= 0) {
-            return;
-        }
-        LocalDate currentDate = LocalDate.now(CreditGrantService.BETA_CREDIT_ZONE);
-        Instant dayStart =
-                currentDate.atStartOfDay(CreditGrantService.BETA_CREDIT_ZONE).toInstant();
-        int reservedCreditsToday =
-                Math.toIntExact(entryRepository.sumReservedCreditsSince(tenantId, dayStart));
-        if (reservedCreditsToday + requiredCredits > betaProperties.dailyHardCap()) {
-            throw new InsufficientCreditsException();
-        }
     }
 }

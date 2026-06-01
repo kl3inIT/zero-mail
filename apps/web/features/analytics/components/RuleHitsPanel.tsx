@@ -23,7 +23,9 @@ type RuleHitsPanelProps = {
   className?: string;
 };
 
-export function RuleHitsPanel({ ruleHits = [], className }: RuleHitsPanelProps) {
+const EMPTY_RULE_HITS: RuleHitResponse[] = [];
+
+export function RuleHitsPanel({ ruleHits = EMPTY_RULE_HITS, className }: RuleHitsPanelProps) {
   const t = useTranslations();
   const totalDecisions = ruleHits.reduce((sum, ruleHit) => sum + safeCount(ruleHit.decisions), 0);
   const totalApplied = ruleHits.reduce((sum, ruleHit) => sum + safeCount(ruleHit.applied), 0);
@@ -69,8 +71,8 @@ export function RuleHitsPanel({ ruleHits = [], className }: RuleHitsPanelProps) 
             </div>
 
             <div className="flex flex-col gap-3" data-testid="rule-hit-card-list">
-              {ruleHits.map((ruleHit, index) => (
-                <RuleTrustRow key={`${ruleHit.ruleName ?? ''}-${index}`} ruleHit={ruleHit} />
+              {ruleHits.map((ruleHit) => (
+                <RuleTrustRow key={ruleHit.ruleName} ruleHit={ruleHit} />
               ))}
             </div>
           </div>

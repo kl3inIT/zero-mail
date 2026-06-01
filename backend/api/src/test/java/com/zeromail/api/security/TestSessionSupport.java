@@ -2,6 +2,7 @@ package com.zeromail.api.security;
 
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.billing.config.BillingProperties;
 import com.zeromail.core.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -135,6 +136,26 @@ public class TestSessionSupport {
      * authentication for everything else, and inserts the test auth filter so SecurityContext +
      * ScopedValue are populated before any controller runs.
      */
+    @Bean
+    @Order(2)
+    SecurityFilterChain testLemonSqueezyWebhookChain(
+            HttpSecurity http, BillingProperties billingProperties) throws Exception {
+        return http.securityMatcher("/api/plan-upgrades/webhooks/lemon-squeezy")
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(
+                        authorizationRequests ->
+                                authorizationRequests
+                                        .requestMatchers(
+                                                "/api/plan-upgrades/webhooks/lemon-squeezy")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .denyAll())
+                .addFilterBefore(
+                        new LemonSqueezyWebhookSignatureFilter(billingProperties),
+                        UsernamePasswordAuthenticationFilter.class)
+                .build();
+    }
+
     @Bean
     @Order(3)
     SecurityFilterChain testSecurityChain(HttpSecurity http, OncePerRequestFilter testAuthFilter) {

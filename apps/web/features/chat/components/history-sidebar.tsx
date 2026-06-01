@@ -14,15 +14,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useChatHistory, useSoftDeleteChat } from '@/features/chat/hooks/use-chat-history';
 import { cn } from '@/lib/utils';
 
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 function formatTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
+  return timeFormatter.format(date);
 }
 
 export function HistorySidebar({

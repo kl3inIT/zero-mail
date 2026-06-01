@@ -40,10 +40,7 @@ export function ReconnectPrompt({ onReconnect }: { onReconnect: () => void }) {
   );
 }
 
-export function shouldShowReconnectPrompt(
-  status: string,
-  ingestionHealth: string | undefined,
-): boolean {
+function shouldShowReconnectPrompt(status: string, ingestionHealth: string | undefined): boolean {
   return status === 'DISCONNECTED' || (status === 'CONNECTED' && ingestionHealth !== 'HEALTHY');
 }
 

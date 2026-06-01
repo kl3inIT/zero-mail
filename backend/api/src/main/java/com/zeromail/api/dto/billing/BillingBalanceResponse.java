@@ -9,31 +9,28 @@ import java.time.Instant;
             "availableCredits",
             "heldCredits",
             "currency",
-            "betaCredits",
-            "paidCredits",
-            "monthlyGrantCredits",
-            "resetsAt",
-            "freeDuringBeta"
+            "monthlyCredits",
+            "additionalCredits",
+            "monthlyCreditAllowance",
+            "resetsAt"
         })
 public record BillingBalanceResponse(
         int availableCredits,
         int heldCredits,
         String currency,
-        int betaCredits,
-        int paidCredits,
-        int monthlyGrantCredits,
-        Instant resetsAt,
-        boolean freeDuringBeta) {
+        int monthlyCredits,
+        int additionalCredits,
+        int monthlyCreditAllowance,
+        Instant resetsAt) {
 
     public static BillingBalanceResponse from(BillingCreditSummary summary) {
         return new BillingBalanceResponse(
                 summary.availableCredits(),
                 summary.heldCredits(),
                 "credits",
-                summary.betaCredits(),
-                summary.paidCredits(),
-                summary.monthlyGrantCredits(),
-                summary.resetsAt(),
-                summary.freeDuringBeta());
+                summary.monthlyCredits(),
+                summary.additionalCredits(),
+                summary.monthlyCreditAllowance(),
+                summary.resetsAt());
     }
 }

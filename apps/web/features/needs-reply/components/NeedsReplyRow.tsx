@@ -203,11 +203,13 @@ function ageUrgency(ageMs: number): Urgency {
   return 'low';
 }
 
+const absoluteTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
+
 function formatAbsoluteTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
+  return absoluteTimeFormatter.format(date);
 }

@@ -55,13 +55,41 @@ export const rulesMessages = {
     vi: 'Tốn credit',
     en: 'Uses credits',
   },
+  'rules.testGmail.reload': {
+    vi: 'Tải lại',
+    en: 'Reload',
+  },
+  'rules.testGmail.testAll': {
+    vi: 'Test tất cả',
+    en: 'Test all',
+  },
+  'rules.testGmail.stop': {
+    vi: 'Dừng',
+    en: 'Stop',
+  },
+  'rules.testGmail.testRow': {
+    vi: 'Test',
+    en: 'Test',
+  },
+  'rules.testGmail.retestRow': {
+    vi: 'Test lại',
+    en: 'Retest',
+  },
+  'rules.testGmail.empty.heading': {
+    vi: 'Không có email gần đây',
+    en: 'No recent emails',
+  },
+  'rules.testGmail.empty.body': {
+    vi: 'Không tải được email Gmail gần đây. Bấm "Tải lại" để thử lại.',
+    en: 'Could not load recent Gmail emails. Click "Reload" to try again.',
+  },
   'rules.tabs.gmailCreditWarningTitle': {
     vi: 'Test trên Gmail thật sẽ tốn credit',
     en: 'Real Gmail test uses credits',
   },
   'rules.tabs.gmailCreditWarningBody': {
-    vi: 'Nếu quy tắc có matcher cần LLM phân loại, mỗi lần chạy thử sẽ tốn credit nền tảng. Test miễn phí bằng email tự soạn ở tab bên cạnh.',
-    en: 'When a rule uses semantic LLM matchers, each test consumes platform credits. The Custom email tab tests rule logic for free.',
+    vi: 'Mỗi lần chạy thử sẽ lấy mẫu email Gmail gần đây và gọi LLM cho các matcher ngữ nghĩa, nên tốn credit nền tảng. Gmail của bạn không bị thay đổi.',
+    en: 'Each run samples your recent Gmail and calls the LLM for semantic matchers, so it consumes platform credits. Your Gmail is not modified.',
   },
   'rules.list.title': {
     vi: 'Danh sách quy tắc',
@@ -768,8 +796,8 @@ export const rulesMessages = {
     en: 'Test with a custom email',
   },
   'rules.testCustom.intro': {
-    vi: 'Soạn email giả lập để xem quy tắc nào sẽ khớp. Email này KHÔNG được gửi và Gmail không bị thay đổi.',
-    en: 'Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed.',
+    vi: 'Soạn email giả lập để xem quy tắc nào sẽ khớp. Email không được gửi và Gmail không bị thay đổi, nhưng quy tắc có matcher ngữ nghĩa sẽ gọi LLM nên mỗi lần chạy tốn credit.',
+    en: 'Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed, but rules with semantic matchers call the LLM, so each run uses credits.',
   },
   'rules.testCustom.subjectLabel': {
     vi: 'Tiêu đề',
@@ -880,8 +908,12 @@ export const rulesMessages = {
     en: 'Preview sample size must be 10, 20, 50, or 100.',
   },
   'errors.rules.preview.generic': {
-    vi: 'Không thể chạy thử. Kiểm tra kết nối Gmail và tín dụng, rồi chạy thử lại.',
-    en: 'Preview could not finish. Check Gmail connection and credits, then preview the rule again.',
+    vi: 'Không thể chạy thử do lỗi máy chủ. Vui lòng thử lại sau giây lát.',
+    en: 'Preview could not finish due to a server error. Please try again in a moment.',
+  },
+  'errors.rules.testGmail.generic': {
+    vi: 'Không thể test email này lúc này. Vui lòng thử lại sau giây lát.',
+    en: 'Could not test this email right now. Please try again in a moment.',
   },
   'errors.rules.applyLabels.generic': {
     vi: 'Không thể gắn nhãn lên Gmail lúc này. Kiểm tra kết nối Gmail rồi thử lại.',

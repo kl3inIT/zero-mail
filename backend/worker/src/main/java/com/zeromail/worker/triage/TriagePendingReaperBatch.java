@@ -29,7 +29,7 @@ public class TriagePendingReaperBatch {
     public TriagePendingReaperBatch(
             TriageAuditRepository triageAuditRepository,
             Clock clock,
-            @Value("${zeromail.triage.pending-abandoned-threshold:PT30M}")
+            @Value("${zero-mail.triage.pending-abandoned-threshold:PT30M}")
                     Duration abandonedThreshold) {
         if (abandonedThreshold == null
                 || abandonedThreshold.compareTo(SAGA_RETRY_LEASE_WINDOW) <= 0) {

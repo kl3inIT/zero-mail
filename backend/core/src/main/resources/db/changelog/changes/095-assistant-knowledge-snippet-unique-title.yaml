@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 095-assistant-knowledge-snippet-unique-title
+      author: zeromail
+      comment: Add tenant-scoped unique knowledge snippet titles. If duplicates exist, operators must deduplicate manually before this migration runs.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: Duplicate assistant_knowledge_snippet (tenant_id, title) rows exist. Deduplicate manually before adding uq_assistant_knowledge_snippet_tenant_title.
+        - tableExists:
+            tableName: assistant_knowledge_snippet
+        - columnExists:
+            tableName: assistant_knowledge_snippet
+            columnName: tenant_id
+        - columnExists:
+            tableName: assistant_knowledge_snippet
+            columnName: title
+        - columnExists:
+            tableName: assistant_knowledge_snippet
+            columnName: updated_at
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM (SELECT tenant_id, title FROM assistant_knowledge_snippet GROUP BY tenant_id, title HAVING count(*) > 1) duplicate_titles
+      changes:
+        - addUniqueConstraint:
+            tableName: assistant_knowledge_snippet
+            columnNames: tenant_id, title
+            constraintName: uq_assistant_knowledge_snippet_tenant_title
+      rollback:
+        - dropUniqueConstraint:
+            tableName: assistant_knowledge_snippet
+            constraintName: uq_assistant_knowledge_snippet_tenant_title

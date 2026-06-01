@@ -1,13 +1,12 @@
 spring:
   application:
     name: zeromail-worker
-  autoconfigure:
-    exclude:
-      # Spring AI M7 imports Google GenAI embedding connection auto-config even
-      # when Zero Mail disables embedding models. Exclude it until embeddings are
-      # explicitly introduced.
-      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration
-      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration
+  config:
+    # Correctness-locked Spring-AI privacy/suppression block lives in backend/core
+    # (single source of truth, imported by api + worker). Imported values WIN over this file.
+    import: optional:classpath:zero-mail-shared.yml
+  # GenAI embedding auto-config exclusion lives on @SpringBootApplication(excludeName=...)
+  # in ZeroMailWorkerApplication (timing-safe; Boot #26858). Do not re-add a yml exclude block.
   main:
     keep-alive: true
   threads:
@@ -39,27 +38,8 @@ spring:
       hibernate:
         format_sql: false
   ai:
-    model:
-      # Zero Mail builds provider-specific Spring AI ChatModel instances inside
-      # core.llm.gateway.springai so BYOK can vary apiKey/baseUrl/model safely.
-      # Disable starter auto-model beans for unused modalities; otherwise M7
-      # eagerly creates OpenAI audio/image/embedding clients and requires extra credentials.
-      chat: none
-      embedding: none
-      embedding.text: none
-      embedding.multimodal: none
-      image: none
-      audio.speech: none
-      audio.transcription: none
-      moderation: none
-    chat:
-      client:
-        observations:
-          log-prompt: false
-          log-completion: false
-      observations:
-        log-prompt: false
-        log-completion: false
+    # spring.ai.model.*=none + chat[.client].observations.log-prompt/completion=false are
+    # centralized in zero-mail-shared.yml (imported above). Only worker-specific keys remain here.
     retry:
       max-attempts: 2
 zero-mail:
@@ -69,22 +49,10 @@ zero-mail:
         topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
   crypto:
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
-  billing:
-    beta:
-      enabled: ${ZEROMAIL_BILLING_BETA_ENABLED:true}
-      monthly-credits: ${ZEROMAIL_BILLING_BETA_MONTHLY_CREDITS:300}
-      daily-hard-cap: ${ZEROMAIL_BILLING_BETA_DAILY_HARD_CAP:100}
   llm:
     platform:
-      provider: openai
-      base-url: https://openrouter.ai/api/v1
+      # provider/base-url/models/timeouts default in LlmProperties; only api-key is deployment-supplied
       api-key: ${ZEROMAIL_LLM_PLATFORM_API_KEY:?ZEROMAIL_LLM_PLATFORM_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
-      compile-model: openai/gpt-5.4-nano
-      drift-model: openai/gpt-5.4-nano
-      triage-model: openai/gpt-5.4-nano
-      draft-model: openai/gpt-5.4-nano
-      connect-timeout: 5s
-      read-timeout: 30s
     drift:
       enabled: ${ZEROMAIL_LLM_DRIFT_ENABLED:false}
       fixed-tenant-id: 00000000-0000-0000-0000-000000000000

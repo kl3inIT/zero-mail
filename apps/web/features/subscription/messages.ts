@@ -1,62 +1,128 @@
 export const subscriptionMessages = {
-  'subscription.title': { vi: 'Chọn gói của bạn', en: 'Choose your plan' },
-  'subscription.subtitle': {
-    vi: 'Đơn giản, minh bạch. Nâng cấp hoặc hạ cấp bất cứ lúc nào.',
-    en: 'Simple pricing, no hidden fees. Upgrade or downgrade anytime.',
+  'subscription.title': {
+    vi: 'Nâng cấp gói đăng ký của bạn',
+    en: 'Upgrade your subscription',
   },
-  'subscription.monthly': { vi: 'Hàng tháng', en: 'Monthly' },
-  'subscription.annual': { vi: 'Hàng năm', en: 'Annual' },
-  'subscription.savePercent': { vi: 'Tiết kiệm 20%', en: 'Save 20%' },
-  'subscription.popular': { vi: 'Phổ biến nhất', en: 'Most Popular' },
-  'subscription.perMonth': { vi: '/tháng', en: '/month' },
-  'subscription.billedAnnually': { vi: 'Thanh toán hàng năm', en: 'Billed annually' },
-  'subscription.currentPlan': { vi: 'Gói hiện tại', en: 'Current Plan' },
-  'subscription.getStarted': { vi: 'Bắt đầu', en: 'Get Started' },
-  'subscription.upgrade': { vi: 'Nâng cấp', en: 'Upgrade' },
-  'subscription.contactSales': { vi: 'Liên hệ', en: 'Contact Sales' },
-  // Free plan
-  'subscription.free.name': { vi: 'Free', en: 'Free' },
-  'subscription.free.description': {
-    vi: 'Dành cho cá nhân bắt đầu với tự động hóa email.',
-    en: 'For individuals getting started with email automation.',
+  'subscription.monthly': {
+    vi: 'Hàng tháng',
+    en: 'Monthly',
   },
-  'subscription.free.b1': { vi: '50 email xử lý mỗi ngày', en: '50 emails processed per day' },
-  'subscription.free.b2': { vi: 'Phân loại AI cơ bản', en: 'Basic AI triage' },
-  'subscription.free.b3': { vi: '1 tài khoản Gmail', en: '1 Gmail account' },
-  'subscription.free.b4': { vi: 'Hỗ trợ cộng đồng', en: 'Community support' },
-  'subscription.free.b5': { vi: 'Phân tích email cơ bản', en: 'Basic email analytics' },
-  // Plus plan
-  'subscription.plus.name': { vi: 'Plus', en: 'Plus' },
-  'subscription.plus.description': {
-    vi: 'Dành cho người dùng chuyên sâu cần tự động hóa toàn diện.',
-    en: 'For power users who need full inbox automation.',
+  'subscription.annual': {
+    vi: 'Hàng năm',
+    en: 'Annual',
   },
-  'subscription.plus.includesIntro': {
-    vi: 'Mọi thứ trong gói Free, cộng thêm:',
-    en: 'Everything in Free, plus:',
+  'subscription.savePercent': {
+    vi: 'TIẾT KIỆM 20%',
+    en: 'SAVE 20%',
   },
-  'subscription.plus.b1': { vi: 'Email xử lý không giới hạn', en: 'Unlimited emails processed' },
-  'subscription.plus.b2': { vi: 'Tự động soạn nháp trả lời', en: 'AI auto-draft replies' },
-  'subscription.plus.b3': { vi: '2 tài khoản Gmail', en: '2 Gmail accounts' },
-  'subscription.plus.b4': { vi: 'Hỗ trợ ưu tiên', en: 'Priority support' },
-  'subscription.plus.b5': { vi: 'Phân tích nâng cao', en: 'Advanced analytics' },
-  'subscription.plus.b6': { vi: 'Hệ thống quy tắc tùy chỉnh', en: 'Custom rules engine' },
-  // Pro plan
-  'subscription.pro.name': { vi: 'Professional', en: 'Professional' },
-  'subscription.pro.description': {
-    vi: 'Dành cho đội ngũ và doanh nghiệp xử lý lượng lớn email.',
-    en: 'For teams and businesses handling high email volume.',
+  'subscription.toStart': {
+    vi: 'Bắt đầu',
+    en: 'To start',
   },
-  'subscription.pro.includesIntro': {
-    vi: 'Mọi thứ trong gói Plus, cộng thêm:',
-    en: 'Everything in Plus, plus:',
+  'subscription.currentPlan': {
+    vi: 'Gói hiện tại',
+    en: 'Current Plan',
   },
-  'subscription.pro.b1': { vi: 'Bảng phân tích toàn nhóm', en: 'Team-wide analytics dashboard' },
-  'subscription.pro.b2': { vi: 'Tài khoản Gmail không giới hạn', en: 'Unlimited Gmail accounts' },
-  'subscription.pro.b3': { vi: 'Truy cập API', en: 'API access' },
-  'subscription.pro.b4': {
-    vi: 'Chuyên viên hỗ trợ cài đặt riêng',
-    en: 'Dedicated onboarding specialist',
+  'subscription.perMonth': {
+    vi: '/tháng',
+    en: '/month',
   },
-  'subscription.pro.b5': { vi: 'Hỗ trợ khách hàng ưu tiên 24/7', en: 'Priority 24/7 support' },
+  'subscription.billedAnnually': {
+    vi: 'Thanh toán hàng năm',
+    en: 'Billed annually',
+  },
+
+  // Plan names
+  'subscription.plan.starter': {
+    vi: 'Starter',
+    en: 'Starter',
+  },
+  'subscription.plan.plus': {
+    vi: 'Plus',
+    en: 'Plus',
+  },
+  'subscription.plan.pro': {
+    vi: 'Pro',
+    en: 'Pro',
+  },
+
+  // Section Headers
+  'subscription.section.credits': {
+    vi: 'Tín dụng',
+    en: 'Credits',
+  },
+  'subscription.section.triage': {
+    vi: 'Tự động hóa email AI',
+    en: 'AI Email Automation',
+  },
+  'subscription.section.limits': {
+    vi: 'Giới hạn & Hỗ trợ',
+    en: 'Limits & Support',
+  },
+
+  // Features list
+  'subscription.feature.triage.basic': {
+    vi: 'Phân loại AI cơ bản (Tự động lưu trữ, nhãn, gắn sao)',
+    en: 'Basic AI triage (auto-archive, label, star)',
+  },
+  'subscription.feature.triage.advanced': {
+    vi: 'Phân loại AI nâng cao & Ưu tiên xử lý tức thì',
+    en: 'Advanced AI triage & priority instant processing',
+  },
+  'subscription.feature.triage.enterprise': {
+    vi: 'Hệ thống triage doanh nghiệp không độ trễ',
+    en: 'Enterprise-grade zero-latency triage pipeline',
+  },
+
+  'subscription.feature.drafts.basic': {
+    vi: 'Tự động soạn nháp email cơ bản',
+    en: 'Basic AI auto-draft replies',
+  },
+  'subscription.feature.drafts.high': {
+    vi: 'Tự động soạn nháp phản hồi chất lượng cao',
+    en: 'High-quality auto-draft replies based on rules',
+  },
+  'subscription.feature.drafts.unlimited': {
+    vi: 'Không giới hạn lượt chạy quy tắc & Kiểm tra an toàn',
+    en: 'Unlimited rule executions & outbound safety audits',
+  },
+
+  'subscription.feature.rules.basic': {
+    vi: 'Hệ thống quy tắc ngôn ngữ tự nhiên tiêu chuẩn',
+    en: 'Standard natural-language rule builder',
+  },
+  'subscription.feature.rules.advanced': {
+    vi: 'Trình tạo quy tắc nâng cao với bộ lọc tùy chỉnh',
+    en: 'Advanced rule builder with custom filters',
+  },
+  'subscription.feature.rules.api': {
+    vi: 'Hỗ trợ API và kích hoạt webhook tùy chỉnh',
+    en: 'API access & custom webhook triggers',
+  },
+
+  'subscription.feature.limits.1gmail': {
+    vi: 'Kết nối 1 tài khoản Gmail',
+    en: '1 Gmail account integration',
+  },
+  'subscription.feature.limits.3gmail': {
+    vi: 'Kết nối tối đa 3 tài khoản Gmail',
+    en: 'Up to 3 Gmail accounts integrated',
+  },
+  'subscription.feature.limits.unlimited': {
+    vi: 'Không giới hạn tài khoản Gmail',
+    en: 'Unlimited Gmail accounts',
+  },
+
+  'subscription.feature.support.basic': {
+    vi: 'Hỗ trợ qua cộng đồng',
+    en: 'Community support',
+  },
+  'subscription.feature.support.priority': {
+    vi: 'Hỗ trợ ưu tiên qua email',
+    en: 'Priority email support',
+  },
+  'subscription.feature.support.dedicated': {
+    vi: 'Hỗ trợ chuyên biệt 24/7 & Hướng dẫn cài đặt',
+    en: 'Dedicated 24/7 support & guided onboarding',
+  },
 } as const;

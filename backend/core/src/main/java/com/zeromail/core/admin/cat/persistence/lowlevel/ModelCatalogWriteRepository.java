@@ -3,7 +3,7 @@ package com.zeromail.core.admin.cat.persistence.lowlevel;
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;

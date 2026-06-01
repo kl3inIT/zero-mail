@@ -2,7 +2,7 @@ package com.zeromail.core.admin.cat.persistence.lowlevel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import com.zeromail.core.support.PostgresContainerTest;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,10 +1,14 @@
 package com.zeromail.core.billing.persistence.lowlevel;
 
 import com.zeromail.core.billing.projection.BillingLedgerEntrySnapshot;
+import com.zeromail.core.billing.projection.BillingLedgerPage;
+import com.zeromail.core.shared.exception.InvalidPaginationCursorException;
+import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,28 +59,59 @@ public class BillingLedgerReadRepository {
         return credits == null ? 0 : credits;
     }
 
-    public List<BillingLedgerEntrySnapshot> findRecentEntries(UUID tenantId, int limit) {
+    public BillingLedgerPage findRecentEntries(UUID tenantId, int limit, String cursor) {
+        BillingLedgerCursor billingLedgerCursor = decodeCursor(cursor);
         MapSqlParameterSource parameters =
-                new MapSqlParameterSource().addValue("tenantId", tenantId).addValue("limit", limit);
-        return namedParameterJdbcTemplate.query(
-                """
-                SELECT id,
-                       created_at,
-                       kind,
-                       amount_credits,
-                       ref_type,
-                       SUM(amount_credits) OVER (
-                           PARTITION BY tenant_id
-                           ORDER BY created_at ASC, id ASC
-                           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                       )::int AS balance_after_credits
-                  FROM credit_ledger_entry
-                 WHERE tenant_id = :tenantId
-                 ORDER BY created_at DESC, id DESC
-                 LIMIT :limit
-                """,
-                parameters,
-                BillingLedgerReadRepository::mapEntry);
+                new MapSqlParameterSource()
+                        .addValue("tenantId", tenantId)
+                        .addValue("queryLimit", limit + 1)
+                        .addValue("hasCursor", billingLedgerCursor != null)
+                        .addValue(
+                                "cursorCreatedAt",
+                                billingLedgerCursor == null
+                                        ? null
+                                        : Timestamp.from(billingLedgerCursor.createdAt()))
+                        .addValue(
+                                "cursorId",
+                                billingLedgerCursor == null ? null : billingLedgerCursor.id());
+        List<BillingLedgerEntrySnapshot> ledgerEntries =
+                namedParameterJdbcTemplate.query(
+                        """
+                        WITH tenant_entries AS (
+                            SELECT id,
+                                   created_at,
+                                   kind,
+                                   amount_credits,
+                                   ref_type,
+                                   SUM(amount_credits) OVER (
+                                       PARTITION BY tenant_id
+                                       ORDER BY created_at ASC, id ASC
+                                       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                                   )::int AS balance_after_credits
+                              FROM credit_ledger_entry
+                             WHERE tenant_id = :tenantId
+                        )
+                        SELECT id,
+                               created_at,
+                               kind,
+                               amount_credits,
+                               ref_type,
+                               balance_after_credits
+                          FROM tenant_entries
+                         WHERE :hasCursor = FALSE
+                            OR created_at < :cursorCreatedAt
+                            OR (created_at = :cursorCreatedAt AND id < :cursorId)
+                         ORDER BY created_at DESC, id DESC
+                         LIMIT :queryLimit
+                        """,
+                        parameters,
+                        BillingLedgerReadRepository::mapEntry);
+        boolean hasNextPage = ledgerEntries.size() > limit;
+        List<BillingLedgerEntrySnapshot> pageEntries =
+                hasNextPage ? ledgerEntries.subList(0, limit) : ledgerEntries;
+        String nextCursor =
+                hasNextPage ? encodeCursor(pageEntries.get(pageEntries.size() - 1)) : null;
+        return new BillingLedgerPage(pageEntries, nextCursor);
     }
 
     private static BillingLedgerEntrySnapshot mapEntry(ResultSet resultSet, int rowNumber)
@@ -109,4 +144,32 @@ public class BillingLedgerReadRepository {
     private static Instant instantOrNull(Timestamp timestamp) {
         return timestamp == null ? null : timestamp.toInstant();
     }
+
+    private static BillingLedgerCursor decodeCursor(String cursor) {
+        if (cursor == null || cursor.isBlank()) {
+            return null;
+        }
+        try {
+            String decodedCursor =
+                    new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
+            int delimiterIndex = decodedCursor.indexOf('|');
+            if (delimiterIndex <= 0 || delimiterIndex == decodedCursor.length() - 1) {
+                throw new IllegalArgumentException("Cursor delimiter missing");
+            }
+            return new BillingLedgerCursor(
+                    Instant.parse(decodedCursor.substring(0, delimiterIndex)),
+                    UUID.fromString(decodedCursor.substring(delimiterIndex + 1)));
+        } catch (RuntimeException invalidCursor) {
+            throw new InvalidPaginationCursorException(invalidCursor);
+        }
+    }
+
+    private static String encodeCursor(BillingLedgerEntrySnapshot ledgerEntry) {
+        String rawCursor = ledgerEntry.timestamp() + "|" + ledgerEntry.id();
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(rawCursor.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private record BillingLedgerCursor(Instant createdAt, UUID id) {}
 }

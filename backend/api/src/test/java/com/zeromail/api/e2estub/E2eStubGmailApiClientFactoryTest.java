@@ -6,7 +6,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.gmail.config.GmailProperties;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.usecases.ReplyMimeBuilder;
 import java.net.URI;
@@ -19,7 +19,7 @@ class E2eStubGmailApiClientFactoryTest {
     void createDraftStoresDecodedTextBodyFromQuotedPrintableMime() throws Exception {
         E2eStubGmailApiClientFactory gmailApiClientFactory =
                 new E2eStubGmailApiClientFactory(
-                        "client-id", "client-secret", coreProperties(), null, null);
+                        "client-id", "client-secret", gmailProperties(), null, null);
         gmailApiClientFactory.seedMessage(
                 new SeedMessageRequest(
                         "tenant-1",
@@ -60,7 +60,7 @@ class E2eStubGmailApiClientFactoryTest {
     void listMessagesReturnsPageTokenForLazyLoading() throws Exception {
         E2eStubGmailApiClientFactory gmailApiClientFactory =
                 new E2eStubGmailApiClientFactory(
-                        "client-id", "client-secret", coreProperties(), null, null);
+                        "client-id", "client-secret", gmailProperties(), null, null);
         for (int messageIndex = 1; messageIndex <= 5; messageIndex++) {
             gmailApiClientFactory.seedMessage(
                     new SeedMessageRequest(
@@ -105,17 +105,10 @@ class E2eStubGmailApiClientFactoryTest {
         assertThat(thirdPage.getNextPageToken()).isNull();
     }
 
-    private static ZeroMailCoreProperties coreProperties() {
-        return new ZeroMailCoreProperties(
-                new ZeroMailCoreProperties.CryptoProperties(
-                        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
-                // GmailApiClientFactory dereferences properties.gmail().apiRootUrl() in its
-                // constructor — passing null here NPEs before the test body runs.
-                new ZeroMailCoreProperties.GmailProperties(
-                        "https://gmail.googleapis.com/",
-                        URI.create("https://oauth2.googleapis.com/token")),
-                null,
-                null,
-                null);
+    private static GmailProperties gmailProperties() {
+        // GmailApiClientFactory dereferences gmailProperties.apiRootUrl() in its constructor —
+        // passing null here NPEs before the test body runs.
+        return new GmailProperties(
+                "https://gmail.googleapis.com/", URI.create("https://oauth2.googleapis.com/token"));
     }
 }

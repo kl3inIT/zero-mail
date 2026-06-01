@@ -17,13 +17,9 @@ spring:
     compose:
       enabled: false
 
-  jpa:
-    properties:
-      hibernate:
-        format_sql: false
-
   ai:
     chat:
+      # intentional defense-in-depth: also enforced by base + zero-mail-shared.yml — never drop
       client:
         observations:
           log-prompt: false

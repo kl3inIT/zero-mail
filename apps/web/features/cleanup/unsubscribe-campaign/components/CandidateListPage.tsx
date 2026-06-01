@@ -40,6 +40,8 @@ import { useAddSuppression } from '@/features/cleanup/suppression/hooks/useAddSu
 type MethodFilter = 'ALL' | 'READY' | 'ONE_CLICK' | 'MAILTO';
 type SortMode = 'COUNT_DESC' | 'RECENT_DESC' | 'SENDER_ASC';
 
+const compactNumberFormatters = new Map<string, Intl.NumberFormat>();
+
 export function CandidateListPage() {
   const t = useTranslations();
   const candidatesQuery = useCandidates('30d', 25);
@@ -89,7 +91,7 @@ export function CandidateListPage() {
       return matchesSearch && matchesFilter;
     });
 
-    return [...filtered].sort((left, right) => {
+    return filtered.toSorted((left, right) => {
       if (sortMode === 'RECENT_DESC') {
         return Date.parse(right.lastSeenAt ?? '') - Date.parse(left.lastSeenAt ?? '');
       }
@@ -393,7 +395,7 @@ function MetricCard({
 }) {
   const locale = useLocale();
   return (
-    <div className="border-border bg-card rounded-lg border px-5 py-5 shadow-sm">
+    <div className="border-border bg-card rounded-lg border p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <p className="text-muted-foreground min-w-0 text-sm leading-5 font-medium">{label}</p>
         <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
@@ -407,8 +409,13 @@ function MetricCard({
 
 function formatMetricValue(value: number, locale: string): string {
   const intlLocale = locale === 'vi' ? 'vi-VN' : 'en-US';
-  return new Intl.NumberFormat(intlLocale, {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value);
+  let formatter = compactNumberFormatters.get(intlLocale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(intlLocale, {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    });
+    compactNumberFormatters.set(intlLocale, formatter);
+  }
+  return formatter.format(value);
 }

@@ -49,7 +49,7 @@ function MetricSkeleton({ className }: { className?: string }) {
         <Skeleton className="h-5 w-40" />
       </CardHeader>
       <CardContent className="space-y-3">
-        <Skeleton className="h-24 w-24 rounded-full" />
+        <Skeleton className="size-24 rounded-full" />
         <Skeleton className="h-4 w-36" />
         <Skeleton className="h-3 w-full rounded-full" />
       </CardContent>

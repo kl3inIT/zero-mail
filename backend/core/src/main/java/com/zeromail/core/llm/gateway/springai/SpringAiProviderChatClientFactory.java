@@ -3,7 +3,7 @@ package com.zeromail.core.llm.gateway.springai;
 import com.anthropic.models.messages.Model;
 import com.anthropic.models.messages.ToolChoice;
 import com.anthropic.models.messages.ToolChoiceAny;
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.llm.config.LlmProperties;
 import com.zeromail.core.llm.usecases.LlmCredentialSource;
 import com.zeromail.core.llm.usecases.LlmProviderCredential;
 import java.nio.charset.StandardCharsets;
@@ -32,12 +32,12 @@ public class SpringAiProviderChatClientFactory {
     private static final String DEEPSEEK_PROVIDER_ID = "DEEPSEEK";
     private static final int ANTHROPIC_DEFAULT_MAX_TOKENS = 512;
 
-    private final ZeroMailCoreProperties zeroMailCoreProperties;
+    private final LlmProperties llmProperties;
     private final RestClient.Builder restClientBuilder;
 
     public SpringAiProviderChatClientFactory(
-            ZeroMailCoreProperties zeroMailCoreProperties, RestClient.Builder restClientBuilder) {
-        this.zeroMailCoreProperties = zeroMailCoreProperties;
+            LlmProperties llmProperties, RestClient.Builder restClientBuilder) {
+        this.llmProperties = llmProperties;
         this.restClientBuilder = restClientBuilder;
     }
 
@@ -257,8 +257,8 @@ public class SpringAiProviderChatClientFactory {
 
     private Duration timeoutFor(LlmCredentialSource source) {
         return source == LlmCredentialSource.PLATFORM
-                ? zeroMailCoreProperties.llm().platform().readTimeout()
-                : zeroMailCoreProperties.llm().byok().readTimeout();
+                ? llmProperties.platform().readTimeout()
+                : llmProperties.byok().readTimeout();
     }
 
     private static int timeoutMillis(Duration timeout) {

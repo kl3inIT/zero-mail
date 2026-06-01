@@ -7,14 +7,7 @@ import type { AnalyticsWindow } from '@/features/analytics/api/analytics-api';
 import {
   ANALYTICS_WINDOWS as WINDOWS,
   isAnalyticsWindow,
-  normalizeAnalyticsWindow,
 } from '@/features/analytics/components/analytics-window';
-
-// Re-exported for backwards compatibility with callers still importing
-// `normalizeAnalyticsWindow` / `isAnalyticsWindow` from this module.
-// New server-side callers should import directly from `analytics-window.ts`
-// (this file is client-only and would error in RSC contexts).
-export { isAnalyticsWindow, normalizeAnalyticsWindow };
 
 type WindowChipsProps = {
   value: AnalyticsWindow;

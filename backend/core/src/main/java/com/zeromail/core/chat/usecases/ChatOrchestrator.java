@@ -64,7 +64,7 @@ public class ChatOrchestrator {
     private final XmlFencedPersonalizationRenderer personalizationRenderer;
     private final ChatMessageJdbcRepository chatMessageRepository;
     private final ChatToolCatalog chatToolCatalog;
-    private final ZeroMailChatProperties chatProperties;
+    private final ChatProperties chatProperties;
     private final LlmTokenizer llmTokenizer;
     private final TransactionTemplate transactionTemplate;
     private final ChatTurnRepository chatTurnRepository;
@@ -80,7 +80,7 @@ public class ChatOrchestrator {
             XmlFencedPersonalizationRenderer personalizationRenderer,
             ChatMessageJdbcRepository chatMessageRepository,
             ChatToolCatalog chatToolCatalog,
-            ZeroMailChatProperties chatProperties,
+            ChatProperties chatProperties,
             LlmTokenizer llmTokenizer,
             TransactionTemplate transactionTemplate,
             ChatTurnRepository chatTurnRepository,

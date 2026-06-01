@@ -25,7 +25,8 @@
     "tailscale:funnel:api": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode funnel -Target 8080",
     "tailscale:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode status",
     "tailscale:reset": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode reset",
-    "prepare": "husky"
+    "prepare": "husky",
+    "doctor": "npx react-doctor@latest"
   },
   "lint-staged": {
     "*": "pnpm encoding:check"
@@ -33,10 +34,11 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "husky": "9.1.7",
-    "lint-staged": "17.0.5",
+    "lint-staged": "17.0.7",
     "prettier": "3.8.3",
     "prettier-plugin-tailwindcss": "0.8.0",
-    "turbo": "2.9.14"
+    "react-doctor": "^0.2.14",
+    "turbo": "2.9.16"
   },
   "pnpm": {
     "_comment": "Overrides + peerDependencyRules moved to pnpm-workspace.yaml in pnpm v11. This block kept for older tooling compatibility only — pnpm itself reads pnpm-workspace.yaml."

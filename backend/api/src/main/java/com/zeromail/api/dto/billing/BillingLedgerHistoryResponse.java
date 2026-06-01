@@ -2,6 +2,7 @@ package com.zeromail.api.dto.billing;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.zeromail.core.billing.projection.BillingLedgerEntrySnapshot;
+import com.zeromail.core.billing.projection.BillingLedgerPage;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
@@ -13,5 +14,11 @@ public record BillingLedgerHistoryResponse(
     public static BillingLedgerHistoryResponse from(List<BillingLedgerEntrySnapshot> entries) {
         return new BillingLedgerHistoryResponse(
                 entries.stream().map(BillingLedgerEntryResponse::from).toList(), null);
+    }
+
+    public static BillingLedgerHistoryResponse from(BillingLedgerPage page) {
+        return new BillingLedgerHistoryResponse(
+                page.entries().stream().map(BillingLedgerEntryResponse::from).toList(),
+                page.nextCursor());
     }
 }

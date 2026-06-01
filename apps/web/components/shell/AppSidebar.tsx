@@ -1,14 +1,14 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   BarChart3,
   Bot,
   ChevronsUpDown,
-  CircleDotDashed,
   CreditCard,
   Crown,
   Inbox,
@@ -16,6 +16,7 @@ import {
   LogOut,
   MailX,
   PanelLeft,
+  Plus,
   RefreshCw,
   Settings,
   Sparkles,
@@ -34,6 +35,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -47,8 +49,8 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useLogout } from '@/features/account/hooks/useLogout';
+import { useBillingPlans } from '@/features/billing/hooks/useBillingPlans';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
-import { shouldShowBetaOnboarding } from '@/features/onboarding/config';
 import { getApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
 
@@ -62,42 +64,80 @@ type NavItem = {
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.rules'
-    | 'nav.billing'
-    | 'nav.subscription'
-    | 'nav.settings'
-    | 'nav.onboardingProgress'
     | 'nav.cleanupUnsubscribe';
   icon: typeof Inbox;
 };
 
-const CORE_NAV: NavItem[] = [
+type AccountNavItem = {
+  href: Route;
+  labelKey: 'nav.settings' | 'nav.billing' | 'nav.upgradePlan';
+  icon: typeof Settings;
+};
+
+const DAILY_NAV: NavItem[] = [
   { href: '/inbox' as Route, labelKey: 'nav.inbox', icon: Inbox },
   { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
 ];
 
-const MANAGE_NAV: NavItem[] = [
+const AUTOMATION_NAV: NavItem[] = [
   { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
+  { href: '/ai' as Route, labelKey: 'nav.ai', icon: Bot },
+];
+
+const TOOLS_NAV: NavItem[] = [
   { href: '/cleanup/unsubscribe-campaign', labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
-  { href: '/ai', labelKey: 'nav.ai', icon: Bot },
-  { href: '/subscription', labelKey: 'nav.subscription', icon: Crown },
-  { href: '/billing', labelKey: 'nav.billing', icon: CreditCard },
-  { href: '/settings', labelKey: 'nav.settings', icon: Settings },
+];
+
+const ACCOUNT_NAV: AccountNavItem[] = [
+  { href: '/settings' as Route, labelKey: 'nav.settings', icon: Settings },
+  { href: '/credits' as Route, labelKey: 'nav.billing', icon: CreditCard },
+  { href: '/upgrade-plan' as Route, labelKey: 'nav.upgradePlan', icon: Crown },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function UserBlock({ collapsed }: { collapsed: boolean }) {
+function planLabel(planCode: string): string {
+  switch (planCode) {
+    case 'FREE':
+      return 'Free';
+    case 'PLUS':
+      return 'Plus';
+    case 'PRO':
+      return 'Pro';
+    default:
+      return planCode;
+  }
+}
+
+function AccountMenu({
+  collapsed,
+  placement,
+}: {
+  collapsed: boolean;
+  placement: 'header' | 'footer';
+}) {
   const t = useTranslations();
   const router = useRouter();
   const currentUser = useCurrentUser();
+  const billingPlans = useBillingPlans();
   const logout = useLogout();
   const email =
     currentUser.data?.gmailConnectionStatus?.googleEmail ?? currentUser.data?.email ?? '';
   const displayName = email ? email.split('@')[0] : t('shell.userMenu.label');
   const initial = email.charAt(0).toUpperCase();
+  const currentPlanLabel = billingPlans.data?.currentPlanCode
+    ? planLabel(billingPlans.data.currentPlanCode)
+    : t('shell.userMenu.planLoading');
+  const triggerClassName = cn(
+    'group/account flex w-full items-center gap-3 rounded-xl text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+    placement === 'header'
+      ? 'border border-sidebar-border/70 bg-sidebar-accent/35 hover:bg-sidebar-accent/60'
+      : 'hover:bg-sidebar-accent/60',
+    collapsed ? 'mx-auto size-10 justify-center p-0' : 'px-2 py-2',
+  );
 
   return (
     <DropdownMenu>
@@ -105,12 +145,9 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
         render={
           <button
             type="button"
-            className={cn(
-              'hover:bg-sidebar-accent/60 focus-visible:ring-ring group/userblock flex items-center gap-3 rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none',
-              collapsed ? 'mx-auto h-9 w-9 justify-center p-0' : 'min-w-0 flex-1 px-2 py-1',
-            )}
+            className={triggerClassName}
             aria-label={t('shell.userMenu.label')}
-            data-testid="user-menu-trigger"
+            data-testid={placement === 'header' ? 'user-menu-trigger' : 'sidebar-footer-account'}
           />
         }
       >
@@ -124,43 +161,87 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
         </div>
         {!collapsed && (
           <>
-            <div className="flex min-w-0 flex-1 flex-col text-left">
+            <div className="min-w-0 flex-1">
               <p className="text-sidebar-foreground truncate text-sm font-semibold capitalize">
                 {displayName}
               </p>
-              <p className="text-sidebar-foreground/60 truncate text-xs">{email}</p>
+              <p className="text-sidebar-foreground/60 truncate text-xs">
+                {placement === 'header' ? email || currentPlanLabel : currentPlanLabel}
+              </p>
             </div>
             <ChevronsUpDown
-              className="text-sidebar-foreground/40 group-hover/userblock:text-sidebar-foreground size-4 shrink-0 transition-colors"
+              className="text-sidebar-foreground/45 group-hover/account:text-sidebar-foreground size-4 shrink-0 transition-colors"
               aria-hidden="true"
             />
           </>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent side={collapsed ? 'right' : 'bottom'} align="start" className="w-56">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs font-medium">{t('shell.userMenu.label')}</span>
-              {email && <span className="text-muted-foreground truncate text-xs">{email}</span>}
-            </div>
-          </DropdownMenuLabel>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push('/settings')}>
-            <Settings className="size-4" aria-hidden="true" />
-            {t('shell.userMenu.settings')}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            variant="destructive"
-            disabled={logout.isPending}
-            onClick={() => logout.mutate()}
-          >
-            <LogOut className="size-4" aria-hidden="true" />
-            {t('shell.userMenu.signOut')}
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
+      <DropdownMenuContent side={collapsed ? 'right' : 'bottom'} align="start" className="w-64">
+        {placement === 'header' ? (
+          <>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-semibold">
+                {t('shell.accounts.title')}
+              </DropdownMenuLabel>
+              <DropdownMenuItem className="gap-3" onClick={() => router.push('/settings')}>
+                <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+                  {initial || '?'}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold capitalize">{displayName}</p>
+                  {email && <p className="text-muted-foreground truncate text-xs">{email}</p>}
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push('/settings')}>
+              <Plus className="size-4" aria-hidden="true" />
+              {t('shell.accounts.addManage')}
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+                    {initial || '?'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold capitalize">{displayName}</p>
+                    {email && <p className="text-muted-foreground truncate text-xs">{email}</p>}
+                  </div>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              {ACCOUNT_NAV.map((accountNavItem) => {
+                const Icon = accountNavItem.icon;
+                return (
+                  <DropdownMenuItem
+                    key={accountNavItem.href}
+                    onClick={() => router.push(accountNavItem.href)}
+                  >
+                    <Icon className="size-4" aria-hidden="true" />
+                    {t(accountNavItem.labelKey)}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={logout.isPending}
+                onClick={() => logout.mutate()}
+              >
+                <LogOut className="size-4" aria-hidden="true" />
+                {t('shell.userMenu.signOut')}
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -170,8 +251,7 @@ function ReconnectRow({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations();
   const statusQuery = useTenantStatus();
   const status = (statusQuery.data?.connectionStatus ?? 'PENDING') as GmailConnectionStatus;
-  if (status !== 'DISCONNECTED') return null;
-  if (collapsed) return null;
+  if (status !== 'DISCONNECTED' || collapsed) return null;
 
   return (
     <>
@@ -196,22 +276,8 @@ function ReconnectRow({ collapsed }: { collapsed: boolean }) {
 export function AppSidebar() {
   const pathname = usePathname();
   const t = useTranslations();
-  const currentUser = useCurrentUser();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const onboardingStep = currentUser.data?.onboardingStep;
-  const showOnboarding = shouldShowBetaOnboarding(onboardingStep);
-
-  const manageItems: NavItem[] = showOnboarding
-    ? [
-        ...MANAGE_NAV,
-        {
-          href: '/onboarding',
-          labelKey: 'nav.onboardingProgress',
-          icon: CircleDotDashed,
-        } satisfies NavItem,
-      ]
-    : MANAGE_NAV;
 
   function renderNavItem(item: NavItem) {
     const Icon = item.icon;
@@ -243,52 +309,73 @@ export function AppSidebar() {
       collapsible="icon"
       data-testid="app-sidebar"
       className="border-sidebar-border border-r"
-      style={{ '--sidebar-width': '224px', '--sidebar-width-icon': '56px' } as React.CSSProperties}
+      style={{ '--sidebar-width': '224px', '--sidebar-width-icon': '56px' } as CSSProperties}
     >
-      <SidebarHeader
-        className={cn(
-          'border-sidebar-border/50 flex flex-row items-center gap-2 border-b',
-          isCollapsed ? 'flex-col gap-2 px-1 py-3' : 'justify-between px-3 py-3',
-        )}
-      >
-        <UserBlock collapsed={isCollapsed} />
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex h-7 w-7 items-center justify-center rounded-md transition-colors"
-          aria-label={t('shell.sidebar.toggle')}
-          data-testid="sidebar-collapse-toggle"
+      <SidebarHeader className={cn('gap-3', isCollapsed ? 'px-2 py-3' : 'px-3 py-4')}>
+        <div
+          className={cn(
+            'flex items-center gap-2',
+            isCollapsed ? 'justify-center' : 'justify-between',
+          )}
         >
-          <PanelLeft className="size-4" aria-hidden="true" />
-        </button>
+          {!isCollapsed && (
+            <span className="text-sidebar-foreground text-lg font-bold tracking-normal">
+              ZERO MAIL
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-md transition-colors"
+            aria-label={t('shell.sidebar.toggle')}
+            data-testid="sidebar-collapse-toggle"
+          >
+            <PanelLeft className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+        <AccountMenu collapsed={isCollapsed} placement="header" />
       </SidebarHeader>
 
-      <SidebarContent className="gap-3 py-3">
+      <SidebarContent className="gap-3 py-1">
         <ReconnectRow collapsed={isCollapsed} />
 
         <SidebarGroup className="p-0">
           {!isCollapsed && (
-            <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-5 text-[11px] font-semibold tracking-wider uppercase">
-              {t('nav.sectionMail')}
+            <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-5 text-[11px] font-semibold tracking-normal uppercase">
+              {t('nav.sectionDaily')}
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">{CORE_NAV.map(renderNavItem)}</SidebarMenu>
+            <SidebarMenu className="gap-0.5">{DAILY_NAV.map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarGroup className="p-0">
           {!isCollapsed && (
-            <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-5 text-[11px] font-semibold tracking-wider uppercase">
-              {t('nav.sectionManage')}
+            <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-5 text-[11px] font-semibold tracking-normal uppercase">
+              {t('nav.sectionAutomation')}
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">{manageItems.map(renderNavItem)}</SidebarMenu>
+            <SidebarMenu className="gap-0.5">{AUTOMATION_NAV.map(renderNavItem)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup className="p-0">
+          {!isCollapsed && (
+            <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-5 text-[11px] font-semibold tracking-normal uppercase">
+              {t('nav.sectionTools')}
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">{TOOLS_NAV.map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
+      <SidebarFooter className={cn('border-sidebar-border/50 border-t', isCollapsed && 'px-2')}>
+        <AccountMenu collapsed={isCollapsed} placement="footer" />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

@@ -41,10 +41,12 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { error } = await searchParams;
-  const t = await getTranslations();
-  const tLogin = await getTranslations('auth.login');
-  const tAuthError = await getTranslations('auth.error');
+  const [{ error }, t, tLogin, tAuthError] = await Promise.all([
+    searchParams,
+    getTranslations(),
+    getTranslations('auth.login'),
+    getTranslations('auth.error'),
+  ]);
   // Cast error translator to loose shape to allow dynamic key construction for
   // KNOWN_ERROR_CODES. next-intl 4.x strict typed bundle cannot narrow template
   // literals; mirrors the LanguageSwitcher / StatusAlert LooseTranslator pattern.

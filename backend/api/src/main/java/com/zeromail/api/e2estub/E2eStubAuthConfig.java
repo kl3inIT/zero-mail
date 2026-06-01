@@ -36,7 +36,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Configuration
 @Profile("e2e-stub")
-@ConditionalOnProperty(name = "zeromail.e2e-stub.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "zero-mail.e2e-stub.enabled", havingValue = "true")
 public class E2eStubAuthConfig {
 
     public static final String HEADER_SUBJECT = "X-Test-Subject";

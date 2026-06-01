@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { completeStepRedirect, onboardingIndexRedirect } from '@/features/onboarding/config';
 
 const replace = vi.fn();
 const completeMutate = vi.fn();
-let onboardingStep: string | undefined = 'COMPLETE';
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
@@ -18,7 +19,7 @@ vi.mock('@/features/account/hooks/useCurrentUser', () => ({
     data: {
       email: 'tester@example.com',
       preferredLanguage: 'vi',
-      onboardingStep,
+      onboardingStep: 'TEMPLATE_SELECTED',
     },
   }),
 }));
@@ -36,19 +37,33 @@ vi.mock('@/features/onboarding/hooks/useCompleteOnboarding', () => ({
   }),
 }));
 
-import { OnboardingIndexClient } from '@/app/(protected)/onboarding/OnboardingIndexClient';
 import { CompleteClient } from '@/app/(protected)/onboarding/complete/CompleteClient';
 
-describe('/onboarding completion redirect', () => {
-  it('redirects completed users to settings instead of staying on loading copy', async () => {
-    onboardingStep = 'COMPLETE';
-    render(<OnboardingIndexClient />);
-
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/settings'));
+/**
+ * Onboarding step gating moved out of client `useEffect` redirects and into the
+ * Server Component pages (`getCurrentUserCached` + `redirect()` from
+ * next/navigation), per react-doctor/nextjs-no-client-side-redirect. The pure
+ * step→target mapping is unit-tested here; the actual `redirect()` happens in
+ * each route's `page.tsx` at request time.
+ */
+describe('/onboarding step gating (server-side)', () => {
+  it('routes a COMPLETE user from the index to /settings', () => {
+    expect(onboardingIndexRedirect('COMPLETE')).toBe('/settings');
   });
 
+  it('routes a GMAIL_CONNECTED user from /complete forward to template-select', () => {
+    expect(completeStepRedirect('GMAIL_CONNECTED')).toBe('/onboarding/template-select');
+    expect(completeStepRedirect('COMPLETE')).toBe('/settings');
+  });
+
+  it('does not redirect when the step is unknown/unavailable (RSC fetch failed)', () => {
+    expect(onboardingIndexRedirect(undefined)).toBeNull();
+    expect(completeStepRedirect(undefined)).toBeNull();
+  });
+});
+
+describe('/onboarding completion CTA', () => {
   it('redirects to settings after completing onboarding from the completion CTA', () => {
-    onboardingStep = 'TEMPLATE_SELECTED';
     completeMutate.mockImplementationOnce((_variables, options) => options?.onSuccess?.());
 
     render(<CompleteClient />);

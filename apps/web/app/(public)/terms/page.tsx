@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
-import { LegalDocPage, generateLegalDocMetadata } from '@/lib/docs/legal-page';
+import { LegalDocPage } from '@/lib/docs/legal-page';
+import { generateLegalDocMetadata } from '@/lib/docs/legal-page-data';
 
 export async function generateMetadata(): Promise<Metadata> {
   return generateLegalDocMetadata('terms');

@@ -225,6 +225,20 @@ Frontend examples:
 properties to worker `application.yml`, or creating a single monorepo-wide properties file that
 every subproject must parse.
 
+**Documented bend — correctness-locked shared boilerplate is centralized.** The one exception to
+"each module declares its own values" is a small block of *correctness-critical* configuration that
+must never silently drift between API and worker: the Spring-AI model suppression
+(`spring.ai.model.*=none`) plus the privacy observation flags
+(`spring.ai.chat[.client].observations.log-prompt/log-completion=false`). These are a privacy
+invariant (CLAUDE.md: AI prompt/completion capture disabled), not per-deployment tuning, so they
+live in a single file `backend/core/src/main/resources/zero-mail-shared.yml` imported by both
+modules via `spring.config.import: optional:classpath:zero-mail-shared.yml`. Because Boot resolves
+an imported file's values with **precedence over the importing `application.yml`**, the shared file
+*locks* the privacy block — neither module can accidentally override it. This is deliberately narrow:
+per-deployable env values (datasource, redis, oauth, `server.port`, liquibase, session) stay declared
+per-module by design, and `spring.autoconfigure.exclude` is NOT centralized (it stays on each
+`@SpringBootApplication(excludeName=...)` for timing-safety, Boot #26858).
+
 ---
 
 ## 10. Frontend i18n: per-feature `messages.ts` + generated locale bundles

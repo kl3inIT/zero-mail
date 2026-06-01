@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server';
 function CheckIcon() {
   return (
     <svg
-      className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
+      className="mt-0.5 size-5 shrink-0 text-blue-500"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -47,7 +47,7 @@ export default async function Pricing() {
           {/* Starter */}
           <div className="flex flex-col rounded-[32px] border border-(--line-strong) bg-(--bg-elevated) p-8 shadow-sm transition-shadow hover:shadow-md">
             <div className="mb-6 flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--bg-subtle) text-xl">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-(--bg-subtle) text-xl">
                 💼
               </div>
             </div>
@@ -67,8 +67,8 @@ export default async function Pricing() {
             </a>
             <div className="flex-1">
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                {starterBullets.map((text, index) => (
-                  <li key={index} className="flex items-start gap-3">
+                {starterBullets.map((text) => (
+                  <li key={text} className="flex items-start gap-3">
                     <CheckIcon />
                     {text}
                   </li>
@@ -81,7 +81,7 @@ export default async function Pricing() {
           <div className="relative flex flex-col rounded-[32px] border border-(--line-strong) bg-(--bg-elevated) p-8 shadow-sm transition-shadow hover:shadow-md">
             <div className="pointer-events-none absolute inset-0 rounded-[32px] border-2 border-blue-500" />
             <div className="mb-6 flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--bg-subtle) text-xl">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-(--bg-subtle) text-xl">
                 ⚡
               </div>
               <div className="flex gap-2">
@@ -107,8 +107,8 @@ export default async function Pricing() {
             <div className="flex-1">
               <p className="mb-4 text-sm font-semibold text-(--ink)">{t('plus.includesIntro')}</p>
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                {plusBullets.map((text, index) => (
-                  <li key={index} className="flex items-start gap-3">
+                {plusBullets.map((text) => (
+                  <li key={text} className="flex items-start gap-3">
                     <CheckIcon />
                     {text}
                   </li>
@@ -120,7 +120,7 @@ export default async function Pricing() {
           {/* Professional */}
           <div className="flex flex-col rounded-[32px] border border-(--line-strong) bg-(--bg-elevated) p-8 shadow-sm transition-shadow hover:shadow-md">
             <div className="mb-6 flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--bg-subtle) text-xl">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-(--bg-subtle) text-xl">
                 ✨
               </div>
             </div>
@@ -141,8 +141,8 @@ export default async function Pricing() {
             <div className="flex-1">
               <p className="mb-4 text-sm font-semibold text-(--ink)">{t('pro.includesIntro')}</p>
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                {proBullets.map((text, index) => (
-                  <li key={index} className="flex items-start gap-3">
+                {proBullets.map((text) => (
+                  <li key={text} className="flex items-start gap-3">
                     <CheckIcon />
                     {text}
                   </li>

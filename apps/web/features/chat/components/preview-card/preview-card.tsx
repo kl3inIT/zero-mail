@@ -103,7 +103,16 @@ function ctaKey(kind: BodySlotToolName): PreviewCtaKey {
   }
 }
 
-export function PreviewCard({ action }: { action: PreviewCardAction }) {
+export function PreviewCard({
+  action,
+  onSent,
+}: {
+  action: PreviewCardAction;
+  // Optional hook fired exactly once when the backend reports the confirmed action reached
+  // 'sent' terminal state. Used by the inbox composer to delete the cached Gmail Draft after
+  // the assistant actually sends the email so we do not leave a stale draft in Gmail.
+  onSent?: () => void;
+}) {
   const t = useTranslations('chat.preview');
   const confirmAction = useConfirmAction();
   const cancelAction = useCancelAction();
@@ -113,6 +122,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
   const [localState, setLocalState] = useState<string | null>(null);
   const confirmInFlightRef = useRef(false);
   const cancelInFlightRef = useRef(false);
+  const sentReportedRef = useRef(false);
   const computed = usePreviewCardState({
     action: { ...action, state: localState ?? action.state },
     vipAcknowledged,
@@ -123,7 +133,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
   const cta = t(ctaKey(action.kind));
 
   function handleOverrideChange(key: string, value: string) {
-    setContentOverride((current) => ({ ...current, [key]: value }));
+    setContentOverride((previous) => ({ ...previous, [key]: value }));
   }
 
   async function handleConfirm() {
@@ -132,6 +142,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
     try {
       const response = await confirmAction.mutateAsync({
         chatId: action.chatId,
+        invalidatesKnowledge: action.kind === 'saveMemory',
         body: {
           toolCallId: action.toolCallId,
           contentOverride,
@@ -140,6 +151,10 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
       });
       setLocalState(response.state);
       setEditing(false);
+      if (response.state === 'sent' && !sentReportedRef.current) {
+        sentReportedRef.current = true;
+        onSent?.();
+      }
     } finally {
       confirmInFlightRef.current = false;
     }
@@ -212,7 +227,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
           <VipBanner checked={vipAcknowledged} onCheckedChange={setVipAcknowledged} />
         )}
       </CardHeader>
-      <CardContent className="space-y-4 px-4 py-4">
+      <CardContent className="space-y-4 p-4">
         {bodySlot({
           action,
           draftBody: computed.draftBody,

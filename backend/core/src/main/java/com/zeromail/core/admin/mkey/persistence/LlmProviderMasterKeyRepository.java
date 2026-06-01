@@ -1,7 +1,7 @@
 package com.zeromail.core.admin.mkey.persistence;
 
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

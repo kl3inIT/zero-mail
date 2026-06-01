@@ -16,7 +16,7 @@ import com.zeromail.core.admin.cat.persistence.FeatureDefaultProviderRepository;
 import com.zeromail.core.admin.cat.persistence.FeatureTierModelRepository;
 import com.zeromail.core.admin.cat.persistence.ModelCatalogEntity;
 import com.zeromail.core.admin.cat.persistence.ModelCatalogRepository;
-import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.llm.domain.LlmProvider;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;

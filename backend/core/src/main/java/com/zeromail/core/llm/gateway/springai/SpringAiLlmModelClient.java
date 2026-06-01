@@ -1,7 +1,7 @@
 package com.zeromail.core.llm.gateway.springai;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import com.zeromail.core.llm.routing.PlatformLlmRouteCredentials;
 import com.zeromail.core.llm.usecases.LlmChatRequest;
 import com.zeromail.core.llm.usecases.LlmChatResult;
@@ -42,29 +42,29 @@ import tools.jackson.databind.ObjectMapper;
 public class SpringAiLlmModelClient implements LlmModelClient {
 
     private final ChatClient platformChatClient;
-    private final ZeroMailLlmProperties llmProperties;
+    private final PlatformProperties llmProperties;
     private final LlmProviderChatExecutor providerChatExecutor;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     public SpringAiLlmModelClient(
             @Qualifier("platformChatClient") ChatClient platformChatClient,
-            ZeroMailCoreProperties zeroMailCoreProperties,
+            LlmProperties llmConfiguration,
             LlmProviderChatExecutor providerChatExecutor) {
-        this(platformChatClient, zeroMailCoreProperties.llm().platform(), providerChatExecutor);
+        this(platformChatClient, llmConfiguration.platform(), providerChatExecutor);
     }
 
     SpringAiLlmModelClient(ChatClient platformChatClient) {
         this(
                 platformChatClient,
-                new ZeroMailLlmProperties(
+                new PlatformProperties(
                         null, null, "test-platform-key", null, null, null, null, null, null),
                 null);
     }
 
     private SpringAiLlmModelClient(
             ChatClient platformChatClient,
-            ZeroMailLlmProperties llmProperties,
+            PlatformProperties llmProperties,
             LlmProviderChatExecutor providerChatExecutor) {
         this.platformChatClient = platformChatClient;
         this.llmProperties = llmProperties;
@@ -93,12 +93,15 @@ public class SpringAiLlmModelClient implements LlmModelClient {
     }
 
     private LlmChatResult callWithClient(ChatClient chatClient, LlmChatRequest request) {
+        ChatClient.ChatClientRequestSpec requestSpecification =
+                chatClient.prompt().system(request.systemPrompt()).user(request.userMessage());
+        if (!request.tools().isEmpty()) {
+            requestSpecification =
+                    requestSpecification.tools(
+                            toolSpec -> toolSpec.callbacks(translateTools(request.tools())));
+        }
         ChatResponse chatResponse =
-                chatClient
-                        .prompt()
-                        .system(request.systemPrompt())
-                        .user(request.userMessage())
-                        .tools(toolSpec -> toolSpec.callbacks(translateTools(request.tools())))
+                requestSpecification
                         .advisors(SpringAiRawToolCallSupport::preserveRawToolCalls)
                         .options(chatOptions(request))
                         .call()
@@ -163,7 +166,8 @@ public class SpringAiLlmModelClient implements LlmModelClient {
                 new LlmUsage(
                         tokenCount(usage == null ? null : usage.getPromptTokens()),
                         tokenCount(usage == null ? null : usage.getCompletionTokens()),
-                        generation.getMetadata().getFinishReason()));
+                        generation.getMetadata().getFinishReason()),
+                assistantMessage.getText());
     }
 
     private int tokenCount(Integer tokenCount) {

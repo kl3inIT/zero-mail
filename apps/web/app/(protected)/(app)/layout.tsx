@@ -4,7 +4,7 @@ import { cookies, headers } from 'next/headers';
 import { AppShell } from '@/components/shell/AppShell';
 import { getCurrentUser } from '@/features/account/api/account-api';
 import { accountQueryKeys } from '@/features/account/query-keys';
-import { getBillingBalance } from '@/features/billing/api/billing-api';
+import { getBillingBalance, getBillingPlans } from '@/features/billing/api/billing-api';
 import { billingKeys } from '@/features/billing/query-keys';
 import { getTenantStatus } from '@/features/gmail/api/gmail-api';
 import { gmailQueryKeys } from '@/features/gmail/query-keys';
@@ -12,8 +12,7 @@ import { gmailQueryKeys } from '@/features/gmail/query-keys';
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 
 export default async function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const incomingHeaders = await headers();
+  const [cookieStore, incomingHeaders] = await Promise.all([cookies(), headers()]);
   const cookieHeader = cookieStore.toString();
   const requestHeaders = backendRequestHeaders(cookieHeader, incomingHeaders);
   const defaultSidebarOpen = cookieStore.get(SIDEBAR_COOKIE_NAME)?.value !== 'false';
@@ -27,6 +26,10 @@ export default async function ProtectedAppLayout({ children }: { children: React
     queryClient.prefetchQuery({
       queryKey: billingKeys.balance(),
       queryFn: () => getBillingBalance({ headers: requestHeaders }),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: billingKeys.plans(),
+      queryFn: () => getBillingPlans({ headers: requestHeaders }),
     }),
     queryClient.prefetchQuery({
       queryKey: gmailQueryKeys.status(),

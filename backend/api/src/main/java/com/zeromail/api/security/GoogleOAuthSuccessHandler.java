@@ -1,6 +1,6 @@
 package com.zeromail.api.security;
 
-import com.zeromail.api.config.ZeroMailApiProperties;
+import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import jakarta.servlet.ServletException;
@@ -66,7 +66,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             OAuthProvisioningService provisioningService,
             OAuth2AuthorizedClientService authorizedClientService,
             UserRepository userRepository,
-            ZeroMailApiProperties properties) {
+            ApiProperties properties) {
         this.provisioningService = provisioningService;
         this.authorizedClientService = authorizedClientService;
         this.userRepository = userRepository;

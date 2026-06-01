@@ -96,7 +96,7 @@ function AddCatalogModelForm({
   return (
     <DialogContent className="sm:max-w-xl">
       <DialogHeader>
-        <DialogTitle>Thêm model — {provider}</DialogTitle>
+        <DialogTitle>Thêm model: {provider}</DialogTitle>
         <DialogDescription>
           Model ID phải khớp định danh mà provider chấp nhận (vd: <code>gpt-5-nano</code>,{' '}
           <code>claude-haiku-4-5</code>).
@@ -168,7 +168,7 @@ function AddCatalogModelForm({
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
             <p className="font-medium text-destructive">
               Model đã được lưu nhưng probe thất bại ({failedVerification.status}). Model vẫn ở
-              trạng thái <code>{failedVerification.status}</code> và chưa thể gán vào tier — chỉnh
+              trạng thái <code>{failedVerification.status}</code> và chưa thể gán vào tier, chỉnh
               lại Model ID rồi thử lại, hoặc đóng để giữ row và verify sau.
             </p>
             {failedVerification.error && (

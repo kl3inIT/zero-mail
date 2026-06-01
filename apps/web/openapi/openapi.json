@@ -99,6 +99,662 @@
         }
       }
     },
+    "/api/settings/voice/": {
+      "get": {
+        "tags": ["settings-voice"],
+        "operationId": "getVoiceSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["settings-voice"],
+        "operationId": "updateVoiceSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceSettingsUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/voice": {
+      "get": {
+        "tags": ["settings-voice"],
+        "operationId": "getVoiceSettings_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["settings-voice"],
+        "operationId": "updateVoiceSettings_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceSettingsUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/behavior": {
+      "get": {
+        "tags": ["settings-behavior"],
+        "operationId": "getBehaviorSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BehaviorSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["settings-behavior"],
+        "operationId": "updateBehaviorSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BehaviorSettingsUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BehaviorSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/behavior/": {
+      "get": {
+        "tags": ["settings-behavior"],
+        "operationId": "getBehaviorSettings_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BehaviorSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["settings-behavior"],
+        "operationId": "updateBehaviorSettings_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BehaviorSettingsUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BehaviorSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/rules/{ruleId}": {
       "get": {
         "tags": ["rules"],
@@ -462,6 +1118,361 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/RuleAutomationSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knowledge-snippets/{snippetId}": {
+      "put": {
+        "tags": ["knowledge-snippets"],
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "snippetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeSnippetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSnippetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["knowledge-snippets"],
+        "operationId": "delete",
+        "parameters": [
+          {
+            "name": "snippetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/byok/model": {
+      "put": {
+        "tags": ["byok"],
+        "operationId": "setModel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ByokModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ByokResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/byok/active": {
+      "put": {
+        "tags": ["byok"],
+        "operationId": "activate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ByokActivateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ByokResponse"
                 }
               }
             }
@@ -985,7 +1996,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/SenderOptInResponse"
+                  "$ref": "#/components/schemas/ProtectedSenderResponse"
                 }
               }
             }
@@ -1382,6 +2393,93 @@
         }
       }
     },
+    "/api/settings/voice/generate-from-sent": {
+      "post": {
+        "tags": ["settings-voice"],
+        "operationId": "generateFromSent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateFromSentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateFromSentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/rules": {
       "get": {
         "tags": ["rules"],
@@ -1566,6 +2664,94 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RulePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rules/test/message": {
+      "post": {
+        "tags": ["rules"],
+        "operationId": "testSingleMessage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleTestMessageRequest"
               }
             }
           },
@@ -2085,6 +3271,184 @@
         }
       }
     },
+    "/api/plan-upgrades/webhooks/lemon-squeezy": {
+      "post": {
+        "tags": ["plan-upgrade-webhook-controller"],
+        "operationId": "lemonSqueezy",
+        "parameters": [
+          {
+            "name": "headers",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HttpHeaders"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plan-upgrades/plans/{planCode}/checkout": {
+      "post": {
+        "tags": ["plan-upgrades"],
+        "operationId": "checkout",
+        "parameters": [
+          {
+            "name": "planCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCheckoutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/onboarding/select-template": {
       "post": {
         "tags": ["onboarding-controller"],
@@ -2237,17 +3601,17 @@
         }
       }
     },
-    "/api/llm/byok": {
+    "/api/knowledge-snippets/": {
       "get": {
-        "tags": ["llm-byok"],
-        "operationId": "current",
+        "tags": ["knowledge-snippets"],
+        "operationId": "list",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ByokCurrentResponse"
+                  "$ref": "#/components/schemas/KnowledgeSnippetListResponse"
                 }
               }
             }
@@ -2315,13 +3679,13 @@
         }
       },
       "post": {
-        "tags": ["llm-byok"],
-        "operationId": "save",
+        "tags": ["knowledge-snippets"],
+        "operationId": "create",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ByokSaveRequest"
+                "$ref": "#/components/schemas/KnowledgeSnippetRequest"
               }
             }
           },
@@ -2333,7 +3697,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ByokSaveResponse"
+                  "$ref": "#/components/schemas/KnowledgeSnippetResponse"
                 }
               }
             }
@@ -2401,15 +3765,91 @@
         }
       }
     },
-    "/api/llm/byok/validate": {
+    "/api/knowledge-snippets": {
+      "get": {
+        "tags": ["knowledge-snippets"],
+        "operationId": "list_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSnippetListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
-        "tags": ["llm-byok"],
-        "operationId": "validate",
+        "tags": ["knowledge-snippets"],
+        "operationId": "create_1",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ByokValidateRequest"
+                "$ref": "#/components/schemas/KnowledgeSnippetRequest"
               }
             }
           },
@@ -2421,7 +3861,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ByokValidateResponse"
+                  "$ref": "#/components/schemas/KnowledgeSnippetResponse"
                 }
               }
             }
@@ -2573,7 +4013,7 @@
     "/api/cleanup/suppression": {
       "get": {
         "tags": ["cleanup"],
-        "operationId": "list",
+        "operationId": "list_2",
         "responses": {
           "200": {
             "description": "OK",
@@ -3020,27 +4460,17 @@
         }
       }
     },
-    "/api/billing/topup/intent": {
+    "/api/byok/test-connection": {
       "post": {
-        "tags": ["billing"],
-        "operationId": "createIntent",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TopupIntentRequest"
-              }
-            }
-          },
-          "required": true
-        },
+        "tags": ["byok"],
+        "operationId": "testConnection",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/TopupIntentResponse"
+                  "$ref": "#/components/schemas/ByokTestConnectionResponse"
                 }
               }
             }
@@ -3108,15 +4538,91 @@
         }
       }
     },
-    "/api/billing/sepay/webhook": {
+    "/api/byok/": {
+      "get": {
+        "tags": ["byok"],
+        "operationId": "get",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ByokResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
-        "tags": ["billing-webhook"],
-        "operationId": "receive",
+        "tags": ["byok"],
+        "operationId": "save",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SepayWebhookPayload"
+                "$ref": "#/components/schemas/ByokSaveRequest"
               }
             }
           },
@@ -3128,11 +4634,312 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
+                  "$ref": "#/components/schemas/ByokResponse"
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["byok"],
+        "operationId": "delete_1",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/byok": {
+      "get": {
+        "tags": ["byok"],
+        "operationId": "get_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ByokResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["byok"],
+        "operationId": "save_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ByokSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ByokResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["byok"],
+        "operationId": "delete_2",
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "400": {
             "description": "Bad Request",
@@ -3299,7 +5106,7 @@
     "/api/me/notifications": {
       "get": {
         "tags": ["notifications"],
-        "operationId": "get",
+        "operationId": "get_2",
         "responses": {
           "200": {
             "description": "OK",
@@ -3375,7 +5182,7 @@
       },
       "patch": {
         "tags": ["notifications"],
-        "operationId": "update",
+        "operationId": "update_1",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3816,7 +5623,7 @@
     "/api/triage/audit": {
       "get": {
         "tags": ["triage"],
-        "operationId": "list_1",
+        "operationId": "list_3",
         "parameters": [
           {
             "name": "limit",
@@ -3940,7 +5747,7 @@
     "/api/threads": {
       "get": {
         "tags": ["thread-inbox"],
-        "operationId": "list_2",
+        "operationId": "list_4",
         "parameters": [
           {
             "name": "bucket",
@@ -4377,6 +6184,273 @@
         }
       }
     },
+    "/api/settings/ai/cost/": {
+      "get": {
+        "tags": ["settings-ai-cost"],
+        "operationId": "cost",
+        "parameters": [
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "7d"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiCostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/ai/cost": {
+      "get": {
+        "tags": ["settings-ai-cost"],
+        "operationId": "cost_1",
+        "parameters": [
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "7d"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiCostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rules/test/messages": {
+      "get": {
+        "tags": ["rules"],
+        "operationId": "listTestMessages",
+        "parameters": [
+          {
+            "name": "sampleSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleTestMessagesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/rules/templates": {
       "get": {
         "tags": ["rules"],
@@ -4636,6 +6710,84 @@
         }
       }
     },
+    "/api/plan-upgrades/plans": {
+      "get": {
+        "tags": ["plan-upgrades"],
+        "operationId": "plans",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlanListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me": {
       "get": {
         "tags": ["me-controller"],
@@ -4717,7 +6869,7 @@
     "/api/gmail/inbox": {
       "get": {
         "tags": ["gmail-inbox"],
-        "operationId": "list_3",
+        "operationId": "list_5",
         "parameters": [
           {
             "name": "cursor",
@@ -4978,10 +7130,186 @@
         }
       }
     },
+    "/api/credits/ledger": {
+      "get": {
+        "tags": ["credits"],
+        "operationId": "ledger",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingLedgerHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/credits/balance": {
+      "get": {
+        "tags": ["credits"],
+        "operationId": "balance",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingBalanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/chat/{chatId}": {
       "get": {
         "tags": ["Chat"],
-        "operationId": "get_1",
+        "operationId": "get_3",
         "parameters": [
           {
             "name": "chatId",
@@ -5068,7 +7396,7 @@
       },
       "delete": {
         "tags": ["Chat"],
-        "operationId": "delete",
+        "operationId": "delete_3",
         "parameters": [
           {
             "name": "chatId",
@@ -5150,7 +7478,7 @@
     "/api/chat/history": {
       "get": {
         "tags": ["Chat"],
-        "operationId": "list_4",
+        "operationId": "list_6",
         "parameters": [
           {
             "name": "pageSize",
@@ -5247,255 +7575,6 @@
         }
       }
     },
-    "/api/billing/packages": {
-      "get": {
-        "tags": ["billing"],
-        "operationId": "packages",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/BillingPackageResponse"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/billing/ledger": {
-      "get": {
-        "tags": ["billing"],
-        "operationId": "ledger",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 50
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/BillingLedgerHistoryResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/billing/balance": {
-      "get": {
-        "tags": ["billing"],
-        "operationId": "balance",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/BillingBalanceResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/analytics/summary": {
       "get": {
         "tags": ["analytics"],
@@ -5520,6 +7599,88 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/triage/sender-safety-net/{id}": {
+      "delete": {
+        "tags": ["triage"],
+        "operationId": "delete_4",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "400": {
             "description": "Bad Request",
@@ -5758,6 +7919,82 @@
         },
         "required": ["paused"]
       },
+      "VoiceSettingsUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "writingStyle": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1
+          },
+          "personalInstructions": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
+          },
+          "emailSignature": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          },
+          "aiOutputLanguage": {
+            "type": "string",
+            "enum": ["vi", "en"],
+            "pattern": "^(vi|en)$"
+          }
+        }
+      },
+      "VoiceSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "writingStyle": {
+            "type": "string"
+          },
+          "personalInstructions": {
+            "type": "string"
+          },
+          "emailSignature": {
+            "type": "string"
+          },
+          "aiOutputLanguage": {
+            "type": "string",
+            "enum": ["vi", "en"]
+          }
+        },
+        "required": ["aiOutputLanguage", "emailSignature", "personalInstructions", "writingStyle"]
+      },
+      "BehaviorSettingsUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "autoDraftReplies": {
+            "type": "boolean"
+          },
+          "draftConfidence": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"],
+            "pattern": "^(LOW|MEDIUM|HIGH)$"
+          },
+          "sensitiveDataProtection": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BehaviorSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "autoDraftReplies": {
+            "type": "boolean"
+          },
+          "draftConfidence": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          },
+          "sensitiveDataProtection": {
+            "type": "boolean"
+          }
+        },
+        "required": ["autoDraftReplies", "draftConfidence", "sensitiveDataProtection"]
+      },
       "CompiledPayloadRequest": {
         "type": "object",
         "properties": {
@@ -5894,6 +8131,92 @@
         },
         "required": ["autoSendRulesEnabled"]
       },
+      "KnowledgeSnippetRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 0
+          }
+        },
+        "required": ["content", "title"]
+      },
+      "KnowledgeSnippetResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["content", "id", "title", "updatedAt"]
+      },
+      "ByokModelRequest": {
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          }
+        },
+        "required": ["modelId"]
+      },
+      "ByokResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK"]
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "lastFourChars": {
+            "type": "string"
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "lastTestResult": {
+            "type": "string",
+            "enum": ["OK", "INVALID_KEY", "RATE_LIMITED", "NETWORK_ERROR", "TIMEOUT"]
+          },
+          "lastTestedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["active", "baseUrl", "lastFourChars", "provider"]
+      },
+      "ByokActivateRequest": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": ["active"]
+      },
       "WaitlistSubscribeRequest": {
         "type": "object",
         "properties": {
@@ -6008,9 +8331,27 @@
           }
         }
       },
-      "SenderOptInResponse": {
+      "ProtectedSenderResponse": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "patternKind": {
+            "type": "string",
+            "enum": ["EMAIL", "DOMAIN"]
+          },
+          "createdByUser": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "senderEmail": {
             "type": "string"
           },
@@ -6018,7 +8359,15 @@
             "type": "boolean"
           }
         },
-        "required": ["optedIn", "senderEmail"]
+        "required": [
+          "createdAt",
+          "createdByUser",
+          "id",
+          "optedIn",
+          "pattern",
+          "patternKind",
+          "senderEmail"
+        ]
       },
       "UndoAuditResponse": {
         "type": "object",
@@ -6054,6 +8403,27 @@
           }
         },
         "required": ["draftId", "gmailThreadId", "openInGmailUrl", "status"]
+      },
+      "GenerateFromSentRequest": {
+        "type": "object",
+        "properties": {
+          "sampleSize": {
+            "type": "integer",
+            "format": "int32",
+            "default": 20,
+            "maximum": 50,
+            "minimum": 1
+          }
+        }
+      },
+      "GenerateFromSentResponse": {
+        "type": "object",
+        "properties": {
+          "generatedStyle": {
+            "type": "string"
+          }
+        },
+        "required": ["generatedStyle"]
       },
       "RuleCreateRequest": {
         "type": "object",
@@ -6281,6 +8651,20 @@
           }
         },
         "required": ["impactSummary", "rows", "savedRuleMarkedPreviewed"]
+      },
+      "RuleTestMessageRequest": {
+        "type": "object",
+        "properties": {
+          "gmailMessageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "gmailThreadId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["gmailMessageId", "gmailThreadId"]
       },
       "RuleTemplateMaterializationResponse": {
         "type": "object",
@@ -6544,6 +8928,334 @@
         },
         "required": ["status"]
       },
+      "ContentDisposition": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "charset": {
+            "type": "string"
+          },
+          "inline": {
+            "type": "boolean"
+          },
+          "attachment": {
+            "type": "boolean"
+          },
+          "formData": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HttpHeaders": {
+        "type": "object",
+        "properties": {
+          "empty": {
+            "type": "boolean"
+          },
+          "location": {
+            "type": "string",
+            "format": "uri"
+          },
+          "host": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "format": "byte"
+                  },
+                  "hostAddress": {
+                    "type": "string"
+                  },
+                  "linkLocalAddress": {
+                    "type": "boolean"
+                  },
+                  "hostName": {
+                    "type": "string"
+                  },
+                  "multicastAddress": {
+                    "type": "boolean"
+                  },
+                  "anyLocalAddress": {
+                    "type": "boolean"
+                  },
+                  "loopbackAddress": {
+                    "type": "boolean"
+                  },
+                  "siteLocalAddress": {
+                    "type": "boolean"
+                  },
+                  "mcglobal": {
+                    "type": "boolean"
+                  },
+                  "mcnodeLocal": {
+                    "type": "boolean"
+                  },
+                  "mclinkLocal": {
+                    "type": "boolean"
+                  },
+                  "mcsiteLocal": {
+                    "type": "boolean"
+                  },
+                  "mcorgLocal": {
+                    "type": "boolean"
+                  },
+                  "canonicalHostName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "port": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "hostName": {
+                "type": "string"
+              },
+              "hostString": {
+                "type": "string"
+              },
+              "unresolved": {
+                "type": "boolean"
+              }
+            }
+          },
+          "all": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "writeOnly": true
+          },
+          "lastModified": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "date": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentLength": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "connection": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifModifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/MediaType"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpRange"
+            }
+          },
+          "acceptLanguage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "range": {
+                  "type": "string"
+                },
+                "weight": {
+                  "type": "number",
+                  "format": "double"
+                }
+              }
+            }
+          },
+          "acceptPatch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "basicAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "acceptLanguageAsLocales": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlMaxAge": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentDisposition": {
+            "$ref": "#/components/schemas/ContentDisposition"
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "acceptCharset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifNoneMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contentLanguage": {
+            "type": "string"
+          },
+          "cacheControl": {
+            "type": "string"
+          },
+          "accept": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "allow": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            },
+            "uniqueItems": true
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ifMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "etag": {
+            "type": "string"
+          },
+          "accessControlRequestHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlAllowCredentials": {
+            "type": "boolean"
+          },
+          "accessControlExposeHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlAllowMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            }
+          },
+          "accessControlAllowOrigin": {
+            "type": "string"
+          },
+          "accessControlAllowHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlRequestMethod": {
+            "$ref": "#/components/schemas/HttpMethod"
+          },
+          "pragma": {
+            "type": "string"
+          },
+          "upgrade": {
+            "type": "string"
+          },
+          "vary": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
+          }
+        }
+      },
+      "HttpMethod": {},
+      "HttpRange": {},
+      "MediaType": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "subtype": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "qualityValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "charset": {
+            "type": "string"
+          },
+          "concrete": {
+            "type": "boolean"
+          },
+          "wildcardSubtype": {
+            "type": "boolean"
+          },
+          "subtypeSuffix": {
+            "type": "string"
+          },
+          "wildcardType": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BillingCheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "checkoutUrl": {
+            "type": "string",
+            "description": "Hosted Lemon Squeezy checkout URL for the selected billing plan"
+          }
+        },
+        "required": ["checkoutUrl"]
+      },
       "SelectTemplateRequest": {
         "type": "object",
         "properties": {
@@ -6555,93 +9267,6 @@
           }
         },
         "required": ["templateKey"]
-      },
-      "ByokSaveRequest": {
-        "type": "object",
-        "properties": {
-          "preset": {
-            "type": "string",
-            "enum": [
-              "openrouter",
-              "openai",
-              "anthropic",
-              "google-genai",
-              "deepseek",
-              "openai-compatible",
-              "anthropic-compatible"
-            ]
-          },
-          "endpoint": {
-            "type": "string"
-          },
-          "model": {
-            "type": "string",
-            "minLength": 1
-          },
-          "apiKey": {
-            "type": "string"
-          }
-        },
-        "required": ["apiKey", "model", "preset"]
-      },
-      "ByokSaveResponse": {
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "savedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": ["ok", "savedAt"]
-      },
-      "ByokValidateRequest": {
-        "type": "object",
-        "properties": {
-          "preset": {
-            "type": "string",
-            "enum": [
-              "openrouter",
-              "openai",
-              "anthropic",
-              "google-genai",
-              "deepseek",
-              "openai-compatible",
-              "anthropic-compatible"
-            ]
-          },
-          "endpoint": {
-            "type": "string"
-          },
-          "model": {
-            "type": "string",
-            "minLength": 1
-          },
-          "apiKey": {
-            "type": "string"
-          }
-        },
-        "required": ["apiKey", "model", "preset"]
-      },
-      "ByokValidateResponse": {
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "models": {
-            "type": ["array", "null"],
-            "items": {
-              "type": "string"
-            }
-          },
-          "reason": {
-            "type": ["string", "null"]
-          }
-        },
-        "required": ["models", "ok", "reason"]
       },
       "SuppressionAddRequest": {
         "type": "object",
@@ -6728,120 +9353,48 @@
         },
         "required": ["state"]
       },
-      "TopupIntentRequest": {
+      "ByokTestConnectionResponse": {
         "type": "object",
         "properties": {
-          "packageCode": {
+          "result": {
             "type": "string",
-            "minLength": 1
+            "enum": ["OK", "INVALID_KEY", "RATE_LIMITED", "NETWORK_ERROR", "TIMEOUT"]
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
-        "required": ["packageCode"]
+        "required": ["result"]
       },
-      "TopupIntentResponse": {
+      "ByokSaveRequest": {
         "type": "object",
         "properties": {
-          "orderCode": {
-            "type": "string"
-          },
-          "packageCode": {
-            "type": "string"
-          },
-          "packageName": {
-            "type": "string"
-          },
-          "amountVnd": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "creditAmount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "expiresAt": {
+          "provider": {
             "type": "string",
-            "format": "date-time"
+            "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK"],
+            "minLength": 1,
+            "pattern": "^(OPENAI|ANTHROPIC|GOOGLE|DEEPSEEK|OPENROUTER|ROUTER_9R)$"
           },
-          "bankCode": {
-            "type": "string"
+          "baseUrl": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 8
           },
-          "bankName": {
-            "type": "string"
+          "apiKey": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 8
           },
-          "accountNumber": {
-            "type": "string"
-          },
-          "accountName": {
-            "type": "string"
-          },
-          "transferContent": {
-            "type": "string"
-          },
-          "qrPayload": {
-            "type": "string"
+          "modelId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
           }
         },
-        "required": [
-          "accountName",
-          "accountNumber",
-          "amountVnd",
-          "bankCode",
-          "bankName",
-          "creditAmount",
-          "expiresAt",
-          "orderCode",
-          "packageCode",
-          "packageName",
-          "qrPayload",
-          "transferContent"
-        ]
-      },
-      "SepayWebhookPayload": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "gateway": {
-            "type": "string"
-          },
-          "transactionDate": {
-            "type": "string"
-          },
-          "accountNumber": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "transferType": {
-            "type": "string"
-          },
-          "transferAmount": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "accumulated": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "subAccount": {
-            "type": "string"
-          },
-          "referenceCode": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "packageCode": {
-            "type": "string"
-          }
-        }
+        "required": ["apiKey", "baseUrl", "provider"]
       },
       "RuleEnabledRequest": {
         "type": "object",
@@ -7060,18 +9613,6 @@
           }
         }
       },
-      "ProtectedSenderResponse": {
-        "type": "object",
-        "properties": {
-          "senderEmail": {
-            "type": "string"
-          },
-          "optedIn": {
-            "type": "boolean"
-          }
-        },
-        "required": ["optedIn", "senderEmail"]
-      },
       "ProtectedSendersResponse": {
         "type": "object",
         "properties": {
@@ -7124,6 +9665,9 @@
             "format": "date-time"
           },
           "draftId": {
+            "type": ["string", "null"]
+          },
+          "blockedBySafetyNetPattern": {
             "type": ["string", "null"]
           }
         },
@@ -7283,6 +9827,15 @@
         },
         "required": ["feature", "models"]
       },
+      "AiCostResponse": {
+        "type": "object",
+        "properties": {
+          "usd": {
+            "type": "number"
+          }
+        },
+        "required": ["usd"]
+      },
       "RuleTemplateResponse": {
         "type": "object",
         "properties": {
@@ -7351,6 +9904,57 @@
           }
         },
         "required": ["materialization", "rules", "templates"]
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "gmailMessageId": {
+            "type": "string"
+          },
+          "gmailThreadId": {
+            "type": "string"
+          },
+          "sanitizedSenderEmail": {
+            "type": "string"
+          },
+          "sanitizedSenderDomain": {
+            "type": "string"
+          },
+          "sanitizedSubjectExcerpt": {
+            "type": "string"
+          },
+          "internalDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "gmailLabelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "gmailLabelIds",
+          "gmailMessageId",
+          "gmailThreadId",
+          "internalDate",
+          "sanitizedSenderDomain",
+          "sanitizedSenderEmail",
+          "sanitizedSubjectExcerpt"
+        ]
+      },
+      "RuleTestMessagesResponse": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          }
+        },
+        "required": ["messages"]
       },
       "RuleCatalogExampleResponse": {
         "type": "object",
@@ -7454,25 +10058,120 @@
         },
         "required": ["actions"]
       },
-      "ByokCurrentResponse": {
+      "BillingPlanListResponse": {
         "type": "object",
         "properties": {
-          "provider": {
-            "type": ["string", "null"],
-            "enum": ["anthropic", "deepseek", "google-genai", "openai"]
+          "currentPlanCode": {
+            "type": "string",
+            "description": "Tenant\u0027s currently-active plan code. Falls back to FREE when no active paid plan period exists.",
+            "enum": ["FREE", "PLUS", "PRO"]
           },
-          "endpointHost": {
-            "type": ["string", "null"]
-          },
-          "model": {
-            "type": ["string", "null"]
-          },
-          "savedAt": {
-            "type": ["string", "null"],
-            "format": "date-time"
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPlanResponse"
+            }
           }
         },
-        "required": ["endpointHost", "model", "provider", "savedAt"]
+        "required": ["currentPlanCode", "plans"]
+      },
+      "BillingPlanResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["FREE", "PLUS", "PRO"]
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "tierRank": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "billingCycle": {
+            "type": "string",
+            "enum": ["NONE", "MONTH"]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "priceVnd": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "monthlyCreditAllowance": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "features": {
+            "type": "array",
+            "description": "Enabled features for this plan, sorted by feature catalog sort order",
+            "items": {
+              "$ref": "#/components/schemas/PlanFeatureSummaryResponse"
+            }
+          }
+        },
+        "required": [
+          "billingCycle",
+          "code",
+          "currency",
+          "displayName",
+          "features",
+          "monthlyCreditAllowance",
+          "priceVnd",
+          "sortOrder",
+          "tierRank"
+        ]
+      },
+      "PlanFeatureSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["TRIAGE", "COMPOSE", "RULES", "CLEANUP", "INTERNAL"]
+          },
+          "creditCost": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dailyInvocationLimit": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Null \u003d unlimited"
+          },
+          "monthlyInvocationLimit": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Null \u003d unlimited"
+          }
+        },
+        "required": ["category", "code", "creditCost", "displayName"]
+      },
+      "KnowledgeSnippetListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeSnippetResponse"
+            }
+          }
+        },
+        "required": ["items"]
       },
       "GmailInboxLabelResponse": {
         "type": "object",
@@ -7609,6 +10308,100 @@
           }
         },
         "required": ["connectionStatus", "googleEmail"]
+      },
+      "BillingLedgerEntryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "amountCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "balanceAfterCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reference": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amountCredits",
+          "balanceAfterCredits",
+          "description",
+          "id",
+          "timestamp",
+          "type"
+        ]
+      },
+      "BillingLedgerHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingLedgerEntryResponse"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": ["entries"]
+      },
+      "BillingBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "availableCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "heldCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "monthlyCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "additionalCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "monthlyCreditAllowance": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resetsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "additionalCredits",
+          "availableCredits",
+          "currency",
+          "heldCredits",
+          "monthlyCreditAllowance",
+          "monthlyCredits",
+          "resetsAt"
+        ]
       },
       "SuppressionListResponse": {
         "type": "object",
@@ -7771,149 +10564,6 @@
           }
         },
         "required": ["id", "messageCount", "title", "updatedAt"]
-      },
-      "BillingPackageResponse": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "priceVnd": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "creditAmount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "includedFeatures": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "featured": {
-            "type": "boolean"
-          },
-          "description": {
-            "type": "string"
-          },
-          "displayOrder": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "required": [
-          "code",
-          "creditAmount",
-          "description",
-          "displayOrder",
-          "featured",
-          "includedFeatures",
-          "name",
-          "priceVnd"
-        ]
-      },
-      "BillingLedgerEntryResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "type": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "amountCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "balanceAfterCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "reference": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "amountCredits",
-          "balanceAfterCredits",
-          "description",
-          "id",
-          "timestamp",
-          "type"
-        ]
-      },
-      "BillingLedgerHistoryResponse": {
-        "type": "object",
-        "properties": {
-          "entries": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BillingLedgerEntryResponse"
-            }
-          },
-          "nextCursor": {
-            "type": "string"
-          }
-        },
-        "required": ["entries"]
-      },
-      "BillingBalanceResponse": {
-        "type": "object",
-        "properties": {
-          "availableCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "heldCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "betaCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "paidCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "monthlyGrantCredits": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "resetsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "freeDuringBeta": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "availableCredits",
-          "betaCredits",
-          "currency",
-          "freeDuringBeta",
-          "heldCredits",
-          "monthlyGrantCredits",
-          "paidCredits",
-          "resetsAt"
-        ]
       },
       "ActionMixResponse": {
         "type": "object",

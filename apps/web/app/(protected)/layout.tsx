@@ -13,8 +13,7 @@ import { QueryProvider } from '@/lib/query-client';
  * The root layout owns <html>/<body>; this layout MUST NOT redefine them.
  */
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const locale = await getLocale();
-  const messages = await getMessages();
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>

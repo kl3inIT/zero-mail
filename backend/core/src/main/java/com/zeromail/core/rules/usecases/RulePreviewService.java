@@ -22,6 +22,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -141,7 +142,7 @@ public class RulePreviewService {
                         tenantId, ruleId, requestedSampleSize, evaluateSemanticIntents));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             MatcherNode matcherNode,
@@ -150,7 +151,7 @@ public class RulePreviewService {
         return previewDraft(tenantId, matcherNode, actionIntents, requestedSampleSize, false);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             MatcherNode matcherNode,
@@ -166,7 +167,7 @@ public class RulePreviewService {
                         evaluateSemanticIntents));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId, String matcherAst, String actionIntents, Integer requestedSampleSize) {
         return previewDraft(tenantId, matcherAst, actionIntents, requestedSampleSize, false);
@@ -176,8 +177,14 @@ public class RulePreviewService {
      * Preview against every currently-enabled rule for a tenant, with no per-rule focus and no
      * markPreviewSucceeded bookkeeping. Used by the rules /test tab where the user wants to see how
      * their current rule set behaves on real Gmail without first picking a rule.
+     *
+     * <p>Read-write (not {@code readOnly = true}) on purpose: when {@code evaluateSemanticIntents}
+     * is set, the LLM gateway records credit-ledger consumption ({@code settle}/{@code release} run
+     * with {@code Propagation.REQUIRED}, joining this transaction). A read-only transaction would
+     * reject those INSERTs with "cannot execute INSERT in a read-only transaction". This matches
+     * the read-write {@link #previewSavedRule} entry points.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public RulePreviewResult previewAllEnabled(
             UUID tenantId, Integer requestedSampleSize, boolean evaluateSemanticIntents) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -211,7 +218,82 @@ public class RulePreviewService {
                 sampleSize, previewCandidates, previewInputs, false, semanticOverridesByMessage);
     }
 
+    /**
+     * List recent Gmail messages for the test tab without evaluating any rule. No LLM call and no
+     * credit cost — the user picks rows (or "test all") to run the billable per-message evaluation.
+     */
     @Transactional(readOnly = true)
+    public RuleTestMessageList listRecentTestMessages(UUID tenantId, Integer requestedSampleSize) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        PreviewSampleSize sampleSize = PreviewSampleSize.normalize(requestedSampleSize);
+        List<RulePreviewDataService.PreviewInput> previewInputs =
+                rulePreviewDataService.fetchPreviewInputs(tenantId, false, sampleSize);
+        List<RuleTestMessageList.Message> messages =
+                previewInputs.stream()
+                        .map(
+                                previewInput ->
+                                        new RuleTestMessageList.Message(
+                                                previewInput.gmailMessageId(),
+                                                previewInput.gmailThreadId(),
+                                                previewInput.summary().sanitizedSenderEmail(),
+                                                previewInput.summary().sanitizedSenderDomain(),
+                                                previewInput.summary().sanitizedSubjectExcerpt(),
+                                                previewInput.summary().internalDate(),
+                                                previewInput.summary().gmailLabelIds()))
+                        .toList();
+        return new RuleTestMessageList(messages);
+    }
+
+    /**
+     * Evaluate every enabled rule against a single recent message, always resolving semantic
+     * intents through the LLM. This is the billable per-row "Test" action of the test tab.
+     * Read-write because the LLM gateway records credit-ledger consumption (see {@link
+     * #previewAllEnabled}).
+     */
+    @Transactional
+    public RulePreviewResult previewSingleMessage(
+            UUID tenantId, String gmailMessageId, String gmailThreadId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+        Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
+        PreviewSampleSize singleMessageSize = PreviewSampleSize.normalize(null);
+        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        ArrayList<PreviewCandidate> previewCandidates = new ArrayList<>();
+        for (RuleEntity ruleEntity : orderedRules) {
+            if (!ruleEntity.isEnabled()) {
+                continue;
+            }
+            previewCandidates.add(toPreviewCandidate(ruleEntity, false));
+        }
+        if (previewCandidates.isEmpty()) {
+            return new RulePreviewResult(
+                    new RulePreviewResult.ImpactSummary(
+                            singleMessageSize.value(),
+                            0,
+                            0,
+                            Map.of(),
+                            0,
+                            0,
+                            true,
+                            NO_WRITE_NOTICE_KEY),
+                    List.of(),
+                    false);
+        }
+        List<RulePreviewDataService.PreviewInput> previewInputs =
+                List.of(
+                        rulePreviewDataService.fetchPreviewInputById(
+                                tenantId, gmailMessageId, gmailThreadId));
+        Map<String, Map<String, Boolean>> semanticOverridesByMessage =
+                resolveSemanticOverrides(previewCandidates, previewInputs);
+        return buildResult(
+                singleMessageSize,
+                previewCandidates,
+                previewInputs,
+                false,
+                semanticOverridesByMessage);
+    }
+
+    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             String matcherAst,
@@ -226,7 +308,7 @@ public class RulePreviewService {
                 evaluateSemanticIntents);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RuleCustomPreviewResult previewCustomMail(
             UUID tenantId, String subject, String body, List<UUID> requestedRuleIds) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -248,12 +330,21 @@ public class RulePreviewService {
         }
 
         RuleEvaluationInput evaluationInput = buildCustomEvaluationInput(subject, body);
+        LinkedHashMap<UUID, MatcherNode> matcherNodesByRuleId = new LinkedHashMap<>();
+        for (RuleEntity ruleEntity : targetRules) {
+            matcherNodesByRuleId.put(ruleEntity.getId(), parseMatcher(ruleEntity.getMatcherAst()));
+        }
+        // Always resolve semantic intents through the LLM so natural-language
+        // conditions are decided here instead of being left "deferred" forever.
+        Map<String, Boolean> semanticOverrides =
+                resolveCustomSemanticOverrides(matcherNodesByRuleId.values(), subject, body);
+
         ArrayList<RuleCustomPreviewResult.Entry> entries = new ArrayList<>(targetRules.size());
         for (RuleEntity ruleEntity : targetRules) {
-            MatcherNode matcherNode = parseMatcher(ruleEntity.getMatcherAst());
+            MatcherNode matcherNode = matcherNodesByRuleId.get(ruleEntity.getId());
             List<ActionIntent> actionIntents = parseActionIntents(ruleEntity.getActionIntents());
             RuleEvaluationResult evaluationResult =
-                    ruleEvaluator.evaluate(matcherNode, evaluationInput);
+                    ruleEvaluator.evaluate(matcherNode, evaluationInput, semanticOverrides);
             boolean matched = evaluationResult.status() == MatcherEvaluationState.MATCHED;
             boolean deferred = evaluationResult.status() == MatcherEvaluationState.DEFERRED;
             entries.add(
@@ -286,6 +377,42 @@ public class RulePreviewService {
                                     : List.of()));
         }
         return new RuleCustomPreviewResult(List.copyOf(entries));
+    }
+
+    private Map<String, Boolean> resolveCustomSemanticOverrides(
+            Collection<MatcherNode> matcherNodes, String subject, String body) {
+        if (llmGateway == null) {
+            // No LLM gateway wired (test/lite profile): leave semantic nodes
+            // deferred rather than failing the deterministic preview.
+            return Map.of();
+        }
+        LinkedHashMap<String, SemanticIntentMatcher> semanticIntentsByNodeId =
+                new LinkedHashMap<>();
+        for (MatcherNode matcherNode : matcherNodes) {
+            collectSemanticIntentMatchers(matcherNode, semanticIntentsByNodeId);
+        }
+        if (semanticIntentsByNodeId.isEmpty()) {
+            return Map.of();
+        }
+        List<SemanticIntentRequest> intents =
+                semanticIntentsByNodeId.entrySet().stream()
+                        .map(
+                                entry ->
+                                        new SemanticIntentRequest(
+                                                entry.getKey(), entry.getValue().intent()))
+                        .toList();
+        // The custom-tester body is user-authored test input (not mail received
+        // from Gmail), so it may be sent to the LLM. The gateway still sanitizes,
+        // truncates, and injection-hardens the content, and never logs/stores it.
+        return llmGateway.evaluateSemanticIntents(
+                CallSite.PREVIEW, buildCustomSemanticContent(subject, body), intents);
+    }
+
+    private static String buildCustomSemanticContent(String subject, String body) {
+        StringBuilder content = new StringBuilder();
+        content.append("subject: ").append(subject == null ? "" : subject);
+        content.append("\nbody: ").append(body == null ? "" : body);
+        return content.toString();
     }
 
     private RuleEvaluationInput buildCustomEvaluationInput(String subject, String body) {

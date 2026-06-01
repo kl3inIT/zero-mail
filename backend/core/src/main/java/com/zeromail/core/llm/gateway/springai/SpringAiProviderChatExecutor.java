@@ -28,15 +28,17 @@ public class SpringAiProviderChatExecutor implements LlmProviderChatExecutor {
                             request.temperature(),
                             request.maxTokens(),
                             request.toolChoiceRequired());
+            ChatClient.ChatClientRequestSpec requestSpecification =
+                    chatClient.prompt().system(request.systemPrompt()).user(request.userMessage());
+            if (!request.tools().isEmpty()) {
+                requestSpecification =
+                        requestSpecification.tools(
+                                toolSpec ->
+                                        toolSpec.callbacks(
+                                                chatSupport.translateTools(request.tools())));
+            }
             ChatResponse chatResponse =
-                    chatClient
-                            .prompt()
-                            .system(request.systemPrompt())
-                            .user(request.userMessage())
-                            .tools(
-                                    toolSpec ->
-                                            toolSpec.callbacks(
-                                                    chatSupport.translateTools(request.tools())))
+                    requestSpecification
                             .advisors(SpringAiRawToolCallSupport::preserveRawToolCalls)
                             .options(
                                     chatClientFactory.options(

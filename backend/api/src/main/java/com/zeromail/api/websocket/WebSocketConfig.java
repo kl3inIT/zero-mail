@@ -1,6 +1,6 @@
 package com.zeromail.api.websocket;
 
-import com.zeromail.api.config.ZeroMailApiProperties;
+import com.zeromail.api.config.ApiProperties;
 import java.util.List;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -14,12 +14,12 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    private final ZeroMailApiProperties properties;
+    private final ApiProperties properties;
     private final TenantHandshakeInterceptor tenantHandshakeInterceptor;
     private final TenantSubscriptionInterceptor tenantSubscriptionInterceptor;
 
     public WebSocketConfig(
-            ZeroMailApiProperties properties,
+            ApiProperties properties,
             TenantHandshakeInterceptor tenantHandshakeInterceptor,
             TenantSubscriptionInterceptor tenantSubscriptionInterceptor) {
         this.properties = properties;

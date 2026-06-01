@@ -2,9 +2,8 @@ package com.zeromail.core.llm.gateway.springai;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.LlmProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.config.LlmProperties;
+import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import com.zeromail.core.llm.usecases.LlmChatRequest;
 import com.zeromail.core.llm.usecases.LlmChatResult;
 import com.zeromail.core.llm.usecases.LlmCredentialSource;
@@ -22,7 +21,7 @@ class SpringAiProviderChatClientFactoryTest {
     @Test
     void google_format_required_tool_choice_is_route_configuration_failure_not_safety() {
         SpringAiProviderChatClientFactory factory =
-                new SpringAiProviderChatClientFactory(coreProperties(), RestClient.builder());
+                new SpringAiProviderChatClientFactory(llmProperties(), RestClient.builder());
 
         assertThatThrownBy(
                         () ->
@@ -47,7 +46,7 @@ class SpringAiProviderChatClientFactoryTest {
                         .getOrDefault("NINE_ROUTER_BASE_URL", "https://9router.zeromail.vn/v1");
         String model = System.getenv().getOrDefault("NINE_ROUTER_MODEL", "cx/gpt-5.5");
         SpringAiProviderChatClientFactory factory =
-                new SpringAiProviderChatClientFactory(coreProperties(), RestClient.builder());
+                new SpringAiProviderChatClientFactory(llmProperties(), RestClient.builder());
         SpringAiProviderChatExecutor executor = new SpringAiProviderChatExecutor(factory);
 
         LlmChatResult result =
@@ -97,22 +96,17 @@ class SpringAiProviderChatClientFactoryTest {
                         List.of("labelName", "matcherIntent")));
     }
 
-    private static ZeroMailCoreProperties coreProperties() {
-        return new ZeroMailCoreProperties(
-                null,
-                null,
-                null,
-                new LlmProperties(
-                        new ZeroMailLlmProperties(
-                                "openai",
-                                "https://openrouter.ai/api/v1",
-                                "test-platform-key",
-                                "openai/gpt-5.4-nano",
-                                "openai/gpt-5.4-nano",
-                                "openai/gpt-5.4-nano",
-                                "openai/gpt-5.4-nano",
-                                null,
-                                null),
+    private static LlmProperties llmProperties() {
+        return new LlmProperties(
+                new PlatformProperties(
+                        "openai",
+                        "https://openrouter.ai/api/v1",
+                        "test-platform-key",
+                        "openai/gpt-5.4-nano",
+                        "openai/gpt-5.4-nano",
+                        "openai/gpt-5.4-nano",
+                        "openai/gpt-5.4-nano",
+                        null,
                         null),
                 null);
     }

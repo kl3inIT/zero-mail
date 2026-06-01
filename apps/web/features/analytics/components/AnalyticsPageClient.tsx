@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -43,10 +43,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { AnalyticsWindow, DailyLoadResponse } from '@/features/analytics/api/analytics-api';
-import { normalizeAnalyticsWindow } from '@/features/analytics/components/WindowChips';
-import { formatTimeSaved } from '@/features/analytics/components/TimeSavedPanel';
+import { normalizeAnalyticsWindow } from '@/features/analytics/components/analytics-window';
 import {
   formatCompactCount,
+  formatTimeSaved,
   percentOf,
   safeCount,
   topDomainLoad,
@@ -79,21 +79,21 @@ export function AnalyticsPageClient() {
   const rawWindow = searchParams.get('window');
   const selectedWindow = normalizeAnalyticsWindow(rawWindow);
   const summaryQuery = useAnalyticsSummary(selectedWindow);
+  const previousSelectedWindowRef = useRef(selectedWindow);
   const [groupBy, setGroupBy] = useState<GroupByMode>('week');
   const [sourceMode, setSourceMode] = useState<SourceMode>('email');
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
-  const canonicalHref = useMemo(() => {
-    const nextSearchParams = new URLSearchParams(searchParams.toString());
-    nextSearchParams.set('window', selectedWindow);
-    return `${pathname}?${nextSearchParams.toString()}` as Route;
-  }, [pathname, searchParams, selectedWindow]);
-
   useEffect(() => {
-    if (rawWindow !== selectedWindow) {
-      router.replace(canonicalHref, { scroll: false });
+    if (previousSelectedWindowRef.current === selectedWindow) {
+      return;
     }
-  }, [canonicalHref, rawWindow, router, selectedWindow]);
+
+    previousSelectedWindowRef.current = selectedWindow;
+    if (rawWindow === selectedWindow) {
+      void summaryQuery.refetch();
+    }
+  }, [rawWindow, selectedWindow, summaryQuery]);
 
   const observed = safeCount(summaryQuery.data.volumeObserved);
   const applied = safeCount(summaryQuery.data.volumeApplied);
@@ -157,8 +157,10 @@ export function AnalyticsPageClient() {
 
   const ruleChartData = useMemo(() => {
     const ruleHits = summaryQuery.data.ruleHits ?? [];
-    return [...ruleHits]
-      .sort((firstRule, secondRule) => safeCount(secondRule.applied) - safeCount(firstRule.applied))
+    return ruleHits
+      .toSorted(
+        (firstRule, secondRule) => safeCount(secondRule.applied) - safeCount(firstRule.applied),
+      )
       .slice(0, 8)
       .map((rule) => ({
         name: (rule.ruleName ?? '').slice(0, 28) || '-',
@@ -516,10 +518,7 @@ function MetricCard({
   'data-testid'?: string;
 }) {
   return (
-    <div
-      data-testid={dataTestId}
-      className="border-border bg-card rounded-lg border px-5 py-5 shadow-sm"
-    >
+    <div data-testid={dataTestId} className="border-border bg-card rounded-lg border p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <p className="text-muted-foreground min-w-0 text-sm leading-5 font-medium">{label}</p>
         <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
@@ -845,26 +844,29 @@ function groupStartDate(date: Date, groupBy: GroupByMode): Date {
   return groupedDate;
 }
 
+const GROUP_LABEL_FORMAT_OPTIONS: Record<'year' | 'month' | 'day', Intl.DateTimeFormatOptions> = {
+  year: { year: 'numeric', timeZone: 'UTC' },
+  month: { month: 'short', year: 'numeric', timeZone: 'UTC' },
+  day: { day: 'numeric', month: 'short', timeZone: 'UTC' },
+};
+
+const groupLabelFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function getGroupLabelFormatter(
+  normalizedLocale: string,
+  scale: 'year' | 'month' | 'day',
+): Intl.DateTimeFormat {
+  const cacheKey = `${normalizedLocale}:${scale}`;
+  let formatter = groupLabelFormatterCache.get(cacheKey);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(normalizedLocale, GROUP_LABEL_FORMAT_OPTIONS[scale]);
+    groupLabelFormatterCache.set(cacheKey, formatter);
+  }
+  return formatter;
+}
+
 function formatGroupLabel(date: Date, groupBy: GroupByMode, locale: string): string {
   const normalizedLocale = locale === 'vi' ? 'vi-VN' : 'en-US';
-
-  if (groupBy === 'year') {
-    return new Intl.DateTimeFormat(normalizedLocale, { year: 'numeric', timeZone: 'UTC' }).format(
-      date,
-    );
-  }
-
-  if (groupBy === 'month') {
-    return new Intl.DateTimeFormat(normalizedLocale, {
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(date);
-  }
-
-  return new Intl.DateTimeFormat(normalizedLocale, {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  }).format(date);
+  const scale = groupBy === 'year' || groupBy === 'month' ? groupBy : 'day';
+  return getGroupLabelFormatter(normalizedLocale, scale).format(date);
 }

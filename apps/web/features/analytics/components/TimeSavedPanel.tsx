@@ -7,6 +7,7 @@ import type { AnalyticsWindow } from '@/features/analytics/api/analytics-api';
 import { ChartInfoAction } from '@/features/analytics/components/ChartInfoAction';
 import {
   formatPercent,
+  formatTimeSaved,
   percentOf,
   safeCount,
   windowDays,
@@ -20,26 +21,6 @@ type TimeSavedPanelProps = {
   className?: string;
 };
 
-function safeSeconds(value: number | undefined): number {
-  return safeCount(value);
-}
-
-export function formatTimeSaved(seconds: number | undefined): {
-  hours: number;
-  minutes: number;
-  label: string;
-} {
-  const totalMinutes = Math.floor(safeSeconds(seconds) / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours === 0) {
-    return { hours, minutes: totalMinutes, label: `${totalMinutes}m` };
-  }
-
-  return { hours, minutes, label: `${hours}h ${minutes.toString().padStart(2, '0')}m` };
-}
-
 export function TimeSavedPanel({
   seconds,
   applied,
@@ -48,7 +29,7 @@ export function TimeSavedPanel({
 }: TimeSavedPanelProps) {
   const t = useTranslations();
   const duration = formatTimeSaved(seconds);
-  const totalSeconds = safeSeconds(seconds);
+  const totalSeconds = safeCount(seconds);
   const empty = totalSeconds === 0;
   const days = windowDays(window);
   const averageMinutesPerDay = Math.round(totalSeconds / 60 / days);

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: — Admin Console + User Settings UI
-status: "Phase 10 planned (11 plans, plan-checker PASS) — ready for /gsd:execute-phase 10"
+status: "Phase 9 shipped — PR #74; Phase 10 planning complete (11 plans, plan-checker PASS) — ready for /gsd:execute-phase 10"
 stopped_at: Phase 10 planning complete
-last_updated: "2026-05-28T23:30:00.000Z"
-last_activity: "2026-05-26 - Completed quick task 260526-so3: tightened app shell gutter between sidebar and content"
+last_updated: "2026-06-01T00:00:00.000Z"
+last_activity: "2026-06-01 - Completed quick task 260601-cwr: make AI settings page content wider"
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 22
-  completed_plans: 14
-  percent: 25
+  completed_phases: 3
+  total_plans: 28
+  completed_plans: 27
+  percent: 75
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** Phase 08.1 — inbox-zero-style-rule-actions-and-admin-managed-examples-cat
+**Current focus:** Phase 08.1 — Inbox Zero-style Rule Actions & Admin-managed Examples Catalog
 
 ## Current Position
 
-Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
+Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
 Plan: 6 of 6
-Status: Phase 08.1 shipped — PR #60
-Last activity: 2026-05-26 - Completed quick task 260526-so3: tightened app shell gutter between sidebar and content
+Status: Phase 9 shipped — PR #74
+Last activity: 2026-06-01 - Completed quick task 260601-cwr: make AI settings page content wider
 
 ## Current Milestone Roadmap
 
@@ -36,7 +36,7 @@ Last activity: 2026-05-26 - Completed quick task 260526-so3: tightened app shell
 
 - **Phase 8** — Admin Console & Operator Tooling (WebAuthn admin auth + audit foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 42 requirements (OPS-INFRA-01..03, ADMIN-01..10, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
 - **Phase 08.1** — Inbox Zero-style Rule Actions & Admin-managed Examples Catalog (examples/personas seed, admin-managed examples/actions, user settings for outbound automation, send/reply/forward runtime safety gates, and outbound gateway architecture tests) — 12 requirements (RACT-01..12)
-- **Phase 9** — User Settings UI on Curated Catalog (4-tab Settings: Personalization, Behavior, Safety Net, AI Provider/Model — AI tab consumes curated catalog from Phase 8) — 19 requirements (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04)
+- **Phase 9** — User Settings UI on Curated Catalog (single `/ai` settings surface: voice, behavior, updates, safety net, and AI provider/BYOK) — completed 2026-05-29; 18 shipped requirements (SET-VOICE-01..07, SET-BEHV-01..05, SET-SAFE-01/04, SET-AI-01..04)
 
 See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
 
@@ -168,6 +168,13 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 08.1 P03 | multi-session | 3 tasks | 12 files |
 | Phase 08.1 P04 | 19min | 4 tasks | 26 files |
 | Phase 08.1 P05 | 34min | 3 tasks | 27 files |
+| Phase 09 P01 | 34 | 3 tasks | 45 files |
+| Phase 09 P02 | 74min | 3 tasks | 46 files |
+| Phase 09 P03 | 92min | 3 tasks | 23 files |
+| Phase 09 P04 | multi-session | 4 tasks | 39 files |
+| Phase 09 P05 | multi-session | 2 tasks | 22 files |
+| Phase 09 P06 | multi-session | 5 tasks | 71 files |
+| Phase 09 P07 | multi-session | 3 tasks | 23 app/test/planning files |
 
 ## Accumulated Context
 
@@ -360,6 +367,11 @@ Recent decisions affecting current work:
 - [Phase ?]: 8E uses three-layer privacy gate against payload exposure: DTO field-name regex (compile), explicit SELECT lists (review), JDBC Connection JDK-proxy SQL spy (runtime)
 - [Phase ?]: Phase 8F shipped /admin/spend dashboard with row-level credential_source classification
 - [Phase ?]: Phase 8F created llm_call_audit table from scratch (Liquibase 079); plan and research described it as pre-existing but no changeset existed — Rule 3 deviation
+- [Phase 09]: RefreshTokenCipher single-blob envelope for user BYOK — Verified cipher output includes key version, nonce, and ciphertext in one byte array, so Phase 9 stores only api_key_ciphertext.
+- [Phase 09]: Keep tenant_byok_credentials intact during Phase 9 — Wave 1 plans can run before 09-04 removes legacy mappings, so 097 forward-migrates rows without renaming or dropping the legacy table.
+- [Phase 09]: Assistant knowledge updated_at remains inherited — AssistantKnowledgeMemoryEntity already extends AbstractAuditableEntity, which maps created_at, updated_at, and version from changelog 046.
+- [Phase 09]: Phase 09-02: Triage reads assistant draft settings through the TriageDraftSettings port, and sensitive-data protection is exported from llm.usecases via SensitiveDataProtectionDecider. — Broad Modulith verification exposed a triage -> chat cycle and a dependency on a non-exported llm.redaction package. Ports keep draft runtime settings available without weakening module boundaries.
+- [Phase 09]: Phase 09-02: Draft confidence threshold mapping is implemented and tested, but runtime confidence gating is deferred until auto-draft execution exposes a draft confidence score. — The current runtime path can resolve LOW/MEDIUM/HIGH thresholds but has no reliable score input to compare. Adding fake normalization would weaken behavior; future draft scoring should wire into the existing resolver.
 
 ### Roadmap Evolution
 
@@ -396,6 +408,11 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260601-cwr | Make AI settings page content wider like other app sections | 2026-06-01 | pending | Verified | [260601-cwr-make-ai-settings-page-content-wider-like](./quick/260601-cwr-make-ai-settings-page-content-wider-like/) |
+| 260531-tkb | Fix rules test tabs (read-only-tx crash, LLM nodeMatches parse, always-semantic collapse, credit/Gmail/server error split) + Inbox-Zero-style Gmail tester: GET/POST /api/rules/test/{messages,message}, load 10/20 recent emails, test-all + per-row test/retest with inline verdict | 2026-05-31 | b3357a1f | Static-verified (live needs backend+web restart) | [260531-tkb-fix-rules-preview-test-tabs-read-only-tx](./quick/260531-tkb-fix-rules-preview-test-tabs-read-only-tx/) |
+| 260531-lpx | Flatten /settings to /ai-style section layout (no tabs), inline language+theme segmented controls, consolidate daily digest into /ai, remove duplicated cards (credit/pause/provider/notifications), delete /settings/privacy route + features/privacy + sidebar item | 2026-05-31 | 676e36b9 | Verified | [260531-lpx-flatten-settings-page](./quick/260531-lpx-flatten-settings-page/) |
+| 260530-w9t | Redesign backend config/properties to Spring Boot 4 best practices: unify zeromail→zero-mail prefix, split god-object into per-feature records, centralize Spring-AI privacy block via zero-mail-shared.yml, relocate CryptoProperties to shared.crypto | 2026-05-31 | 2bc7cd88 | Verified | [260530-w9t-redesign-backend-config-properties-to-20](./quick/260530-w9t-redesign-backend-config-properties-to-20/) |
+| 260530-vmp | Reorganize sidebar nav into 3 frequency/intent groups (Daily / Automation / Tools); move Rules + AI config into one Automation group | 2026-05-30 | aa0b7f05 | Verified | [260530-vmp-reorganize-sidebar-nav-into-3-frequency-](./quick/260530-vmp-reorganize-sidebar-nav-into-3-frequency-/) |
 | 260526-so3 | Tighten app shell content gutter near sidebar so protected content sits closer to the menu | 2026-05-26 | pending | Verified | [260526-so3-tighten-app-shell-content-gutter-near-si](./quick/260526-so3-tighten-app-shell-content-gutter-near-si/) |
 | 260526-s41 | Remove protected app page-level title/description headers while preserving local toolbars and content controls | 2026-05-26 | pending | Verified | [260526-s41-remove-protected-app-page-headers](./quick/260526-s41-remove-protected-app-page-headers/) |
 | 260526-rz0 | Tighten inbox row spacing and move unread/active dot beside sender name | 2026-05-26 | pending | Verified | [260526-rz0-tighten-inbox-row-spacing-and-move-activ](./quick/260526-rz0-tighten-inbox-row-spacing-and-move-activ/) |
@@ -524,8 +541,8 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-28T23:30:00.000Z
-Stopped at: Phase 10 planning complete (11 PLAN.md files, plan-checker PASS, 0 BLOCK / 0 FLAG)
+Last session: 2026-06-01T00:00:00.000Z
+Stopped at: Phase 10 planning complete (11 PLAN.md files, plan-checker PASS, 0 BLOCK / 0 FLAG) — Phase 9 already shipped on main via PR #74
 Resume file: .planning/phases/10-telegram-messaging-assistant/10-00-PLAN.md (first plan; Wave 0 foundation)
 
 ## Operator Next Steps

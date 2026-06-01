@@ -56,8 +56,9 @@ export function GenerateDraftButton({
   const Icon = pending ? Loader2 : isRegenerate ? RefreshCw : PenLine;
 
   useEffect(() => {
+    const timeoutRef = cooldownTimeout;
     return () => {
-      if (cooldownTimeout.current) clearTimeout(cooldownTimeout.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 

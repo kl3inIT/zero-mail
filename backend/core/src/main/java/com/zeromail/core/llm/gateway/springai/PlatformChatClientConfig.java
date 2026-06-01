@@ -1,6 +1,6 @@
 package com.zeromail.core.llm.gateway.springai;
 
-import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.llm.config.LlmProperties;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -11,9 +11,8 @@ import org.springframework.context.annotation.Configuration;
 class PlatformChatClientConfig {
 
     @Bean
-    OpenAiChatModel platformOpenAiChatModel(ZeroMailCoreProperties zeroMailCoreProperties) {
-        ZeroMailCoreProperties.ZeroMailLlmProperties llmProperties =
-                zeroMailCoreProperties.llm().platform();
+    OpenAiChatModel platformOpenAiChatModel(LlmProperties llmConfiguration) {
+        LlmProperties.PlatformProperties llmProperties = llmConfiguration.platform();
         return OpenAiChatModel.builder()
                 .options(
                         OpenAiChatOptions.builder()

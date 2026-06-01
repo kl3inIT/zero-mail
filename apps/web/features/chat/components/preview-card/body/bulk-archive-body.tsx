@@ -10,7 +10,10 @@ export function BulkArchiveBody({ action }: { action: PreviewCardAction }) {
   const threadIds = Array.isArray(action.input.threadIds) ? action.input.threadIds : [];
   const subjects = Array.isArray(action.input.sampleSubjects) ? action.input.sampleSubjects : [];
   const count = threadIds.length || Number(action.input.threadCount ?? 0);
-  const shownSubjects = subjects.slice(0, 5).map(textValue).filter(Boolean);
+  const shownSubjects = subjects.slice(0, 5).flatMap((subject) => {
+    const value = textValue(subject);
+    return value ? [value] : [];
+  });
 
   return (
     <div className="grid gap-2 text-sm">

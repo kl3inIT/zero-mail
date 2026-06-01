@@ -78,7 +78,7 @@ const unauthorizedRedirectMiddleware: Middleware = {
 const zmE2eShortCircuitMiddleware: Middleware = {
   async onRequest({ request }) {
     if (typeof window === 'undefined' && process.env.ZM_E2E === '1') {
-      throw new Error('ZM_E2E: skipping backend fetch in test mode');
+      return e2eServerResponse(request);
     }
     return request;
   },
@@ -121,6 +121,139 @@ export function xsrfHeader(): HeadersInit {
   if (typeof document === 'undefined') return {};
   const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
   return match ? { 'X-XSRF-TOKEN': decodeURIComponent(match[1]) } : {};
+}
+
+function e2eServerResponse(request: Request): Response {
+  const requestUrl = new URL(request.url);
+  const pathname = requestUrl.pathname;
+
+  if (pathname === '/api/me') {
+    return jsonResponse({
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      email: 'founder@example.com',
+      preferredLanguage: 'en',
+      onboardingStep: 'COMPLETE',
+      triagePaused: false,
+      gmailConnectionStatus: {
+        status: 'CONNECTED',
+        ingestionHealth: 'HEALTHY',
+        googleEmail: 'founder@example.com',
+      },
+    });
+  }
+
+  if (pathname === '/api/credits/balance') {
+    return jsonResponse({
+      availableCredits: 12,
+      heldCredits: 0,
+      currency: 'credits',
+      monthlyCredits: 12,
+      additionalCredits: 0,
+      monthlyCreditAllowance: 300,
+      resetsAt: '2026-06-01T00:00:00.000Z',
+    });
+  }
+
+  if (pathname === '/api/plan-upgrades/plans') {
+    return jsonResponse(e2eBillingPlans('PLUS'));
+  }
+
+  if (pathname === '/api/credits/ledger') {
+    return jsonResponse(e2eBillingLedgerPage(requestUrl.searchParams));
+  }
+
+  if (pathname === '/api/gmail/connection/status') {
+    return jsonResponse({ connectionStatus: 'CONNECTED' });
+  }
+
+  if (pathname === '/api/analytics/summary') {
+    return jsonResponse(e2eAnalyticsSummary(requestUrl.searchParams.get('window') ?? '7d'));
+  }
+
+  if (pathname === '/api/llm/byok') {
+    return jsonResponse(null, 204);
+  }
+
+  return jsonResponse({});
+}
+
+function e2eAnalyticsSummary(window: string) {
+  return {
+    window,
+    volumeObserved: 0,
+    volumeApplied: 0,
+    timeSavedSeconds: 0,
+    topSenders: [],
+    ruleHits: [],
+    dailyLoad: [],
+    actionMix: [],
+    domainLoad: [],
+    categoryLoad: [],
+    replyBuckets: [],
+    automationOpportunities: {
+      noRuleMatched: 0,
+      failedActions: 0,
+      pendingActions: 0,
+    },
+  };
+}
+
+function e2eBillingPlans(currentPlanCode: 'FREE' | 'PLUS' | 'PRO') {
+  return {
+    currentPlanCode,
+    plans: [
+      e2eBillingPlan('FREE', 'Free', 0, 0, 300),
+      e2eBillingPlan('PLUS', 'Plus', 1, 199000, 2000),
+      e2eBillingPlan('PRO', 'Pro', 2, 399000, 8000),
+    ],
+  };
+}
+
+function e2eBillingPlan(
+  code: 'FREE' | 'PLUS' | 'PRO',
+  displayName: string,
+  tierRank: number,
+  priceVnd: number,
+  monthlyCreditAllowance: number,
+) {
+  return {
+    code,
+    displayName,
+    tierRank,
+    billingCycle: code === 'FREE' ? 'NONE' : 'MONTH',
+    currency: 'VND',
+    priceVnd,
+    monthlyCreditAllowance,
+    sortOrder: tierRank * 10,
+    features: [],
+  };
+}
+
+function e2eBillingLedgerPage(searchParams: URLSearchParams) {
+  const cursor = searchParams.get('cursor');
+  const limit = Number(searchParams.get('limit') ?? '10');
+  const allEntries = Array.from({ length: 12 }, (_, index) => ({
+    id: `00000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+    timestamp: `2026-05-${String(28 - index).padStart(2, '0')}T08:00:00.000Z`,
+    type: index % 3 === 0 ? 'grant' : index % 3 === 1 ? 'settle' : 'release',
+    description:
+      index % 3 === 0 ? 'Credit grant' : index % 3 === 1 ? 'Credit spent' : 'Credit released',
+    amountCredits: index % 3 === 0 ? 300 : index % 3 === 1 ? -5 : 5,
+    balanceAfterCredits: 300 - index * 5,
+    reference: 'E2E',
+  }));
+  const start = cursor === 'page-2' ? 10 : 0;
+  const entries = allEntries.slice(start, start + limit);
+  const nextCursor = start + limit < allEntries.length ? 'page-2' : null;
+  return { entries, nextCursor };
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(status === 204 ? null : JSON.stringify(body), {
+    status,
+    headers: status === 204 ? undefined : { 'content-type': 'application/json' },
+  });
 }
 
 // IMPORTANT: do NOT re-export from ./errors here. errors.ts is "use client"

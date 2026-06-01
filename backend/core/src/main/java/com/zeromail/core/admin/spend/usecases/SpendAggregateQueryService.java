@@ -1,5 +1,6 @@
 package com.zeromail.core.admin.spend.usecases;
 
+import com.zeromail.core.admin.config.AdminProperties;
 import com.zeromail.core.admin.spend.persistence.lowlevel.SpendAggregateReadRepository;
 import com.zeromail.core.admin.spend.projection.FeatureDonutSlice;
 import com.zeromail.core.admin.spend.projection.FeatureSpendBucket;
@@ -9,7 +10,6 @@ import com.zeromail.core.admin.spend.projection.SpendKpis;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import com.zeromail.core.admin.spend.projection.TenantSpendBucket;
 import com.zeromail.core.admin.spend.projection.TopTenantRow;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -53,14 +53,14 @@ public class SpendAggregateQueryService {
     public SpendAggregateQueryService(
             SpendAggregateReadRepository spendAggregateReadRepository,
             Clock clock,
-            ZeroMailCoreProperties coreProperties) {
+            AdminProperties adminProperties) {
         this.spendAggregateReadRepository =
                 Objects.requireNonNull(
                         spendAggregateReadRepository,
                         "spendAggregateReadRepository must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
-        Objects.requireNonNull(coreProperties, "coreProperties must not be null");
-        this.kAnonymityThreshold = coreProperties.admin().spend().kAnonymityThreshold();
+        Objects.requireNonNull(adminProperties, "adminProperties must not be null");
+        this.kAnonymityThreshold = adminProperties.spend().kAnonymityThreshold();
     }
 
     @Transactional(readOnly = true)

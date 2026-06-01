@@ -17,13 +17,12 @@ import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.llm.byok.UserByokKeyEntity;
+import com.zeromail.core.llm.byok.UserByokKeyRepository;
 import com.zeromail.core.llm.domain.Action;
-import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.SanitizationException;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
-import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
-import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import io.micrometer.core.instrument.Counter;
@@ -48,11 +47,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 @Import(LlmGatewayCreditLifecycleTest.MeterRegistryTestConfiguration.class)
-@TestPropertySource(
-        properties = {
-            "zero-mail.billing.beta.enabled=false",
-            "spring.datasource.hikari.maximum-pool-size=12"
-        })
+@TestPropertySource(properties = {"spring.datasource.hikari.maximum-pool-size=12"})
 class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
 
     private static final int CONCURRENT_REQUESTS = 8;
@@ -63,7 +58,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
 
     @Autowired CreditLedgerEntryRepository creditLedgerEntryRepository;
 
-    @Autowired TenantByokCredentialsRepository tenantByokCredentialsRepository;
+    @Autowired UserByokKeyRepository userByokKeyRepository;
 
     @Autowired RefreshTokenCipher refreshTokenCipher;
 
@@ -248,7 +243,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
                                         UUID.randomUUID(),
                                         tenantId,
                                         startingCredits,
-                                        "TEST-SEED-" + tenantId)));
+                                        "SEPAY-SEED-" + tenantId)));
         clearInvocations(creditLedger);
         return tenantId;
     }
@@ -259,24 +254,66 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
                 "insert into tenants(id, display_name) values (?, ?)",
                 tenantId,
                 "llm-credit-" + tenantId);
+        attachZeroAllowancePlan(tenantId);
         clearInvocations(creditLedger);
         return tenantId;
+    }
+
+    private void attachZeroAllowancePlan(UUID tenantId) {
+        UUID planId = UUID.randomUUID();
+        String planCode = "TEST_ZERO_" + tenantId.toString().replace("-", "").substring(0, 16);
+        jdbcTemplate.update(
+                """
+                INSERT INTO billing_plan(
+                    id, code, display_name, tier_rank, billing_cycle, currency,
+                    price_vnd, monthly_credit_allowance, active, sort_order)
+                VALUES (?, ?, ?, 0, 'NONE', 'VND', 0, 0, true, 0)
+                """,
+                planId,
+                planCode,
+                "Test Zero");
+        jdbcTemplate.update(
+                """
+                INSERT INTO plan_feature_permission(id, plan_id, feature_code, enabled)
+                SELECT gen_random_uuid(), ?, code, true
+                  FROM feature_catalog
+                """,
+                planId);
+        jdbcTemplate.update(
+                """
+                INSERT INTO billing_plan_period(
+                    id, tenant_id, plan_id, status, provider,
+                    effective_at, expires_at, paid_at, amount_vnd, currency)
+                VALUES (
+                    ?, ?, ?, 'ACTIVE', 'ADMIN',
+                    CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    CURRENT_TIMESTAMP + INTERVAL '30 days',
+                    CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    0, 'VND')
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                planId);
     }
 
     private void seedByokCredentials(UUID tenantId) {
         byte[] encryptedEnvelope =
                 refreshTokenCipher.encrypt(
                         "byok-key".getBytes(StandardCharsets.UTF_8), tenantId.toString());
-        TenantByokCredentialsEntity credentials =
-                new TenantByokCredentialsEntity(
-                        UUID.randomUUID(),
+        UserByokKeyEntity userByokKey =
+                new UserByokKeyEntity(
                         tenantId,
-                        BYOKProvider.OPENAI,
+                        UserByokKeyEntity.Provider.OPENAI,
                         "https://openrouter.ai/api/v1",
-                        "openai/gpt-5.4-nano",
                         encryptedEnvelope,
-                        (short) 1);
-        underTenant(tenantId, () -> tenantByokCredentialsRepository.saveAndFlush(credentials));
+                        null);
+        userByokKey.recordConnectionTest(
+                UserByokKeyEntity.LastTestResult.OK,
+                java.time.Instant.parse("2026-05-20T00:00:00Z"),
+                "[\"openai/gpt-5.4-nano\"]");
+        userByokKey.selectModel("openai/gpt-5.4-nano");
+        userByokKey.activate();
+        underTenant(tenantId, () -> userByokKeyRepository.saveAndFlush(userByokKey));
         clearInvocations(creditLedger);
     }
 
