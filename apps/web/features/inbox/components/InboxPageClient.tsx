@@ -1014,12 +1014,18 @@ function InboxReplyComposer({
 
   const handleSentSuccess = useCallback(() => {
     const currentDraftId = draftId;
-    if (!currentDraftId) return;
-    deleteDraftMutation.mutate(
-      { draftId: currentDraftId, gmailThreadId: selectedMessage.gmailThreadId },
-      { onSuccess: () => setDraftId(null) },
-    );
-  }, [deleteDraftMutation, draftId, selectedMessage.gmailThreadId]);
+    if (currentDraftId) {
+      deleteDraftMutation.mutate(
+        { draftId: currentDraftId, gmailThreadId: selectedMessage.gmailThreadId },
+        { onSuccess: () => setDraftId(null) },
+      );
+    }
+    // Confirm success with a toast (composer is about to unmount, the in-card "Đã gửi" badge
+    // would only flash for one frame), then close the composer so the user gets the inbox
+    // back instead of staring at a stale form.
+    toast.success(t('inbox.composer.sentSuccess'));
+    onCancel();
+  }, [deleteDraftMutation, draftId, onCancel, selectedMessage.gmailThreadId, t]);
 
   function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.currentTarget.files ?? []);
@@ -1120,6 +1126,7 @@ function InboxReplyComposer({
       onSubmit={handleSubmit}
       data-testid="inbox-reply-composer"
     >
+      {previewSubmitted ? null : (
       <div className="bg-card overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2">
           <span className="text-muted-foreground w-12 shrink-0 text-sm">
@@ -1428,6 +1435,7 @@ function InboxReplyComposer({
           />
         </div>
       </div>
+      )}
 
       {generationFailed ? (
         <p className="text-destructive mx-3 mt-2 text-xs">
