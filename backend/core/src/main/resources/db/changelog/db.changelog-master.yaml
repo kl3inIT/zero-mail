@@ -284,3 +284,6 @@ databaseChangeLog:
   - include:
       file: changes/107-sepay-bank-transfer-plan-upgrades.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/108-gmail-inbox-projection.yaml
+      relativeToChangelogFile: true

@@ -104,6 +104,14 @@ zero-mail:
     # No GCP Secret Manager fallback — CLAUDE.md stack lock: secrets via Docker secret,
     # systemd credential, or locked-down env file on the VPS.
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+    # Separate AES-256 KEK for the Gmail inbox projection (subject / snippet / sender email +
+    # display name). Distinct from refresh-token-key-base64 to keep OAuth refresh tokens and
+    # mail metadata in different blast-radius compartments.
+    inbox-projection-key-base64: ${INBOX_PROJECTION_KEY_BASE64:?INBOX_PROJECTION_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+    # Separate HMAC-SHA256 key used to derive the deterministic sender_email_hash column on the
+    # inbox projection. Separate from inbox-projection-key-base64 so a leak of the field
+    # encryption key cannot be used to recompute sender hashes (and vice versa).
+    inbox-projection-sender-hash-key-base64: ${INBOX_PROJECTION_SENDER_HASH_KEY_BASE64:?INBOX_PROJECTION_SENDER_HASH_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
   billing:
     lemon-squeezy:
       # Optional in dev/test (record is fully-nullable). Required in prod for
