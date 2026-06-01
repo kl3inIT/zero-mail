@@ -14,6 +14,11 @@ import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
+import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
+import com.zeromail.core.inbox.usecases.InboxProjectionMessage;
+import com.zeromail.core.inbox.usecases.InboxProjectionPage;
+import com.zeromail.core.inbox.usecases.InboxProjectionReadService;
+import com.zeromail.core.inbox.usecases.InvalidProjectionCursorException;
 import com.zeromail.core.shared.crypto.CryptoProperties;
 import com.zeromail.core.shared.html.SafeHtmlSanitizer;
 import java.io.IOException;
@@ -34,6 +39,8 @@ import java.util.Objects;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +50,17 @@ public class RecentInboxReadService {
     public static final int DEFAULT_PAGE_SIZE = 20;
     public static final int MAX_PAGE_SIZE = 20;
     public static final int MAX_MESSAGES = 100;
+
+    /**
+     * Source tag prefix for Wave 1 orchestrator cursors. Pagination must stay on the source that
+     * issued the first page; the prefix lets {@link #fetchPage(UUID, String, int)} dispatch the
+     * follow-up cursor without parsing the inner payload twice.
+     */
+    private static final String PROJECTION_CURSOR_PREFIX = "P";
+
+    private static final String LIVE_GMAIL_CURSOR_PREFIX = "G";
+
+    private static final Logger log = LoggerFactory.getLogger(RecentInboxReadService.class);
 
     private static final Duration GMAIL_REQUEST_TIMEOUT = Duration.ofSeconds(6);
     private static final int SUBJECT_MAX_LENGTH = 200;
@@ -66,6 +84,7 @@ public class RecentInboxReadService {
     private final com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer inboxBackfillEnqueuer;
     private final com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository
             inboxSyncStateRepository;
+    private final InboxProjectionReadService inboxProjectionReadService;
 
     public RecentInboxReadService(
             GmailConnectionRepository gmailConnectionRepository,
@@ -74,7 +93,8 @@ public class RecentInboxReadService {
             SafeHtmlSanitizer safeHtmlSanitizer,
             com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer inboxBackfillEnqueuer,
             com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository
-                            inboxSyncStateRepository) {
+                            inboxSyncStateRepository,
+            InboxProjectionReadService inboxProjectionReadService) {
         this.gmailConnectionRepository =
                 Objects.requireNonNull(
                         gmailConnectionRepository, "gmailConnectionRepository must not be null");
@@ -94,22 +114,104 @@ public class RecentInboxReadService {
         this.inboxSyncStateRepository =
                 Objects.requireNonNull(
                         inboxSyncStateRepository, "inboxSyncStateRepository must not be null");
+        this.inboxProjectionReadService =
+                Objects.requireNonNull(
+                        inboxProjectionReadService,
+                        "inboxProjectionReadService must not be null");
     }
 
+    /**
+     * Wave 1 read orchestrator. Routes the request between three sources:
+     *
+     * <ol>
+     *   <li><b>First page (cursor null/blank)</b>: if the tenant has never finished a full sync
+     *       returns a {@code SYNCING} empty page so the frontend renders the loading banner. Else
+     *       queries the projection; a full page wins. A short or empty projection page falls back
+     *       to live Gmail (no mixed-source pages).
+     *   <li><b>Projection follow-up (cursor prefix {@code P})</b>: strips the prefix, hands the
+     *       inner keyset cursor to {@link InboxProjectionReadService}.
+     *   <li><b>Live Gmail follow-up (cursor prefix {@code G})</b>: strips the prefix, replays the
+     *       legacy pageToken-based path so an in-flight Gmail pagination stays consistent.
+     * </ol>
+     *
+     * <p>Cursor source is sticky: pagination cannot switch sources mid-flight. This avoids
+     * expires_at correctness issues and duplicate / skipped rows when stitching keysets against
+     * pageTokens.
+     */
     @Transactional(readOnly = true)
     public RecentInboxPage fetchPage(UUID tenantId, String cursor, int requestedLimit) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         // Lazy backfill trigger (Phase A wave 3): the first time a tenant fetches the inbox after
         // connecting, kick off an asynchronous backfill so the projection is ready by the time
-        // Phase B swaps the read path to the DB. Live Gmail still serves THIS response; enqueue
-        // is idempotent via processing_job dedup so concurrent fetches do not stack jobs.
+        // Phase B swaps the read path to the DB. Live Gmail still serves the fallback response;
+        // enqueue is idempotent via processing_job dedup so concurrent fetches do not stack jobs.
         enqueueBackfillIfFirstFetch(tenantId);
-        InboxCursor inboxCursor = inboxCursorCodec.decode(cursor);
-        if (inboxCursor.loadedCount() >= MAX_MESSAGES) {
-            return new RecentInboxPage(List.of(), null, inboxCursor.loadedCount(), MAX_MESSAGES);
+
+        if (cursor != null && !cursor.isBlank()) {
+            String trimmedCursor = cursor.trim();
+            String prefix = trimmedCursor.substring(0, 1);
+            String innerCursor = trimmedCursor.substring(1);
+            return switch (prefix) {
+                case PROJECTION_CURSOR_PREFIX ->
+                        fetchPageFromProjection(tenantId, innerCursor, requestedLimit);
+                case LIVE_GMAIL_CURSOR_PREFIX ->
+                        fetchPageFromLiveGmail(tenantId, innerCursor, requestedLimit);
+                default ->
+                        throw new RecentInboxUnavailableException(
+                                RecentInboxUnavailableReason.INVALID_CURSOR);
+            };
         }
 
-        int effectiveLimit = effectiveLimit(requestedLimit, inboxCursor.loadedCount());
+        if (needsFullSyncFirst(tenantId)) {
+            return RecentInboxPage.syncing(MAX_MESSAGES);
+        }
+
+        int firstPageLimit = effectiveLimit(requestedLimit, 0);
+        RecentInboxPage projectionPage = fetchPageFromProjection(tenantId, null, requestedLimit);
+        if (projectionPage.messages().size() == firstPageLimit && firstPageLimit > 0) {
+            return projectionPage;
+        }
+        log.info(
+                "event=inbox_read_fallback tenantId={} reason={} projectionRows={}",
+                tenantId,
+                projectionPage.messages().isEmpty() ? "projection_empty" : "projection_partial",
+                projectionPage.messages().size());
+        return fetchPageFromLiveGmail(tenantId, null, requestedLimit);
+    }
+
+    private RecentInboxPage fetchPageFromProjection(
+            UUID tenantId, String innerCursor, int requestedLimit) {
+        InboxProjectionPage projectionPage;
+        try {
+            projectionPage =
+                    inboxProjectionReadService.fetchInboxPage(
+                            tenantId, innerCursor, requestedLimit);
+        } catch (InvalidProjectionCursorException invalidProjectionCursorException) {
+            throw new RecentInboxUnavailableException(
+                    RecentInboxUnavailableReason.INVALID_CURSOR,
+                    invalidProjectionCursorException);
+        }
+        List<RecentInboxMessage> messages = toRecentInboxMessages(projectionPage.items());
+        String nextCursor =
+                projectionPage.nextCursor() == null
+                        ? null
+                        : PROJECTION_CURSOR_PREFIX + projectionPage.nextCursor();
+        return new RecentInboxPage(
+                messages, nextCursor, messages.size(), MAX_MESSAGES, projectionPage.dataSource());
+    }
+
+    private RecentInboxPage fetchPageFromLiveGmail(
+            UUID tenantId, String innerCursor, int requestedLimit) {
+        InboxCursor inboxCursor = inboxCursorCodec.decode(innerCursor);
+        if (inboxCursor.loadedCount() >= MAX_MESSAGES) {
+            return new RecentInboxPage(
+                    List.of(),
+                    null,
+                    inboxCursor.loadedCount(),
+                    MAX_MESSAGES,
+                    InboxProjectionDataSource.LIVE_GMAIL);
+        }
+        int gmailPageLimit = effectiveLimit(requestedLimit, inboxCursor.loadedCount());
         try {
             Gmail gmail = gmailForTenant(tenantId);
             ListMessagesResponse listResponse =
@@ -117,7 +219,7 @@ public class RecentInboxReadService {
                             .messages()
                             .list("me")
                             .setLabelIds(List.of("INBOX"))
-                            .setMaxResults((long) effectiveLimit)
+                            .setMaxResults((long) gmailPageLimit)
                             .setPageToken(inboxCursor.pageToken())
                             .setFields(MESSAGE_LIST_FIELDS)
                             .execute();
@@ -130,8 +232,15 @@ public class RecentInboxReadService {
             String nextCursor =
                     loadedCount >= MAX_MESSAGES || listResponse.getNextPageToken() == null
                             ? null
-                            : inboxCursorCodec.encode(listResponse.getNextPageToken(), loadedCount);
-            return new RecentInboxPage(messages, nextCursor, loadedCount, MAX_MESSAGES);
+                            : LIVE_GMAIL_CURSOR_PREFIX
+                                    + inboxCursorCodec.encode(
+                                            listResponse.getNextPageToken(), loadedCount);
+            return new RecentInboxPage(
+                    messages,
+                    nextCursor,
+                    loadedCount,
+                    MAX_MESSAGES,
+                    InboxProjectionDataSource.LIVE_GMAIL);
         } catch (InvalidGrantException invalidGrantException) {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.REVOKED, invalidGrantException);
@@ -142,6 +251,51 @@ public class RecentInboxReadService {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.GMAIL_UNAVAILABLE, ioException);
         }
+    }
+
+    private static List<RecentInboxMessage> toRecentInboxMessages(
+            List<InboxProjectionMessage> projectionItems) {
+        ArrayList<RecentInboxMessage> recentInboxMessages =
+                new ArrayList<>(projectionItems.size());
+        for (InboxProjectionMessage projectionItem : projectionItems) {
+            recentInboxMessages.add(
+                    new RecentInboxMessage(
+                            projectionItem.gmailMessageId(),
+                            projectionItem.gmailThreadId(),
+                            projectionItem.subject(),
+                            projectionItem.snippet(),
+                            projectionItem.from(),
+                            projectionItem.to(),
+                            projectionItem.cc(),
+                            projectionItem.receivedAt(),
+                            projectionItem.labelIds(),
+                            toRecentInboxLabels(projectionItem.labels()),
+                            projectionItem.unread(),
+                            projectionItem.hasAttachment()));
+        }
+        return List.copyOf(recentInboxMessages);
+    }
+
+    private static List<RecentInboxLabel> toRecentInboxLabels(
+            List<com.zeromail.core.inbox.usecases.InboxProjectionLabel> projectionLabels) {
+        ArrayList<RecentInboxLabel> recentInboxLabels = new ArrayList<>(projectionLabels.size());
+        for (com.zeromail.core.inbox.usecases.InboxProjectionLabel projectionLabel
+                : projectionLabels) {
+            recentInboxLabels.add(
+                    new RecentInboxLabel(projectionLabel.id(), projectionLabel.name()));
+        }
+        return List.copyOf(recentInboxLabels);
+    }
+
+    /**
+     * Freshness gate for the first-page orchestrator branch. Returns true when the tenant has not
+     * yet completed a full sync — equivalent to "no row in sync_state OR last_full_sync_at IS NULL".
+     */
+    private boolean needsFullSyncFirst(UUID tenantId) {
+        return inboxSyncStateRepository
+                .findById(tenantId)
+                .map(syncState -> syncState.getLastFullSyncAt() == null)
+                .orElse(true);
     }
 
     @Transactional(readOnly = true)
@@ -526,10 +680,44 @@ public class RecentInboxReadService {
             List<RecentInboxMessage> messages,
             String nextCursor,
             int loadedCount,
-            int maxMessages) {
+            int maxMessages,
+            com.zeromail.core.inbox.domain.InboxProjectionDataSource dataSource) {
 
         public RecentInboxPage {
             messages = List.copyOf(messages);
+            Objects.requireNonNull(dataSource, "dataSource must not be null");
+        }
+
+        /**
+         * Backwards-compatible constructor for the legacy LIVE_GMAIL path. Defaults the data source
+         * to {@link com.zeromail.core.inbox.domain.InboxProjectionDataSource#LIVE_GMAIL} so callers
+         * that have not yet been migrated to the orchestrator surface keep emitting the prior wire
+         * shape semantics.
+         */
+        public RecentInboxPage(
+                List<RecentInboxMessage> messages,
+                String nextCursor,
+                int loadedCount,
+                int maxMessages) {
+            this(
+                    messages,
+                    nextCursor,
+                    loadedCount,
+                    maxMessages,
+                    com.zeromail.core.inbox.domain.InboxProjectionDataSource.LIVE_GMAIL);
+        }
+
+        /**
+         * Empty page emitted by the Wave 1 orchestrator when the tenant has not finished its first
+         * full sync. The frontend renders a "đang đồng bộ" banner instead of the inbox list (Wave 3).
+         */
+        public static RecentInboxPage syncing(int maxMessages) {
+            return new RecentInboxPage(
+                    List.of(),
+                    null,
+                    0,
+                    maxMessages,
+                    com.zeromail.core.inbox.domain.InboxProjectionDataSource.SYNCING);
         }
     }
 
@@ -685,12 +873,7 @@ public class RecentInboxReadService {
      * enqueuer itself dedups via {@code processing_job} so a redundant call here is harmless.
      */
     private void enqueueBackfillIfFirstFetch(UUID tenantId) {
-        boolean needsBackfill =
-                inboxSyncStateRepository
-                        .findById(tenantId)
-                        .map(state -> state.getLastFullSyncAt() == null)
-                        .orElse(true);
-        if (needsBackfill) {
+        if (needsFullSyncFirst(tenantId)) {
             inboxBackfillEnqueuer.enqueueIfNotPending(tenantId);
         }
     }
