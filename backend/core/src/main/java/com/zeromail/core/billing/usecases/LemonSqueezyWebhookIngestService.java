@@ -36,6 +36,7 @@ public class LemonSqueezyWebhookIngestService {
     private final BillingPlanPeriodRepository billingPlanPeriodRepository;
     private final BillingWebhookEventRepository billingWebhookEventRepository;
     private final CreditGrantService creditGrantService;
+    private final CurrentBillingPlanResolver currentBillingPlanResolver;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
 
@@ -44,12 +45,14 @@ public class LemonSqueezyWebhookIngestService {
             BillingPlanPeriodRepository billingPlanPeriodRepository,
             BillingWebhookEventRepository billingWebhookEventRepository,
             CreditGrantService creditGrantService,
+            CurrentBillingPlanResolver currentBillingPlanResolver,
             ObjectMapper objectMapper,
             TransactionTemplate transactionTemplate) {
         this.billingPlanRepository = billingPlanRepository;
         this.billingPlanPeriodRepository = billingPlanPeriodRepository;
         this.billingWebhookEventRepository = billingWebhookEventRepository;
         this.creditGrantService = creditGrantService;
+        this.currentBillingPlanResolver = currentBillingPlanResolver;
         this.objectMapper = objectMapper;
         this.transactionTemplate = transactionTemplate;
     }
@@ -187,30 +190,41 @@ public class LemonSqueezyWebhookIngestService {
                                         new WebhookProcessingException(
                                                 "missing_lemon_squeezy_order_id"));
         String providerOrderId = Long.toString(orderId);
+        Optional<BillingPlanPeriodEntity> existingPlanPeriod =
+                billingPlanPeriodRepository.findByProviderOrderId(providerOrderId);
+        if (existingPlanPeriod.isPresent()) {
+            return;
+        }
         BillingPlanEntity billingPlan = resolveBillingPlan(orderWebhookPayload);
         validatePaidOrder(orderWebhookPayload);
         UUID tenantId =
                 orderWebhookPayload
                         .tenantId()
                         .orElseThrow(() -> new WebhookProcessingException("missing_tenant_id"));
+        ensureWebhookPlanAllowed(tenantId, billingPlan, Instant.now());
         Instant paidAt = orderWebhookPayload.createdAt().orElse(Instant.now());
 
         BillingPlanPeriodEntity billingPlanPeriod =
-                billingPlanPeriodRepository
-                        .findByProviderOrderId(providerOrderId)
-                        .orElseGet(
-                                () ->
-                                        createPlanPeriod(
-                                                tenantId,
-                                                billingPlan,
-                                                orderWebhookPayload,
-                                                providerEventId,
-                                                providerOrderId,
-                                                paidAt));
+                createPlanPeriod(
+                        tenantId,
+                        billingPlan,
+                        orderWebhookPayload,
+                        providerEventId,
+                        providerOrderId,
+                        paidAt);
 
         expireOverlappingPlanPeriods(billingPlanPeriod);
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(() -> creditGrantService.resetCurrentPlanAllowanceCredits(tenantId));
+    }
+
+    private void ensureWebhookPlanAllowed(
+            UUID tenantId, BillingPlanEntity selectedPlan, Instant now) {
+        BillingPlanEntity currentPlan =
+                currentBillingPlanResolver.resolveCurrentPlan(tenantId, now);
+        if (currentPlan.getTierRank() > selectedPlan.getTierRank()) {
+            throw new WebhookProcessingException("plan_downgrade_not_allowed");
+        }
     }
 
     private BillingPlanPeriodEntity createPlanPeriod(

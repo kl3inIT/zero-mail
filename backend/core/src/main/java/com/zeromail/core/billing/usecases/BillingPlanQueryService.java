@@ -68,7 +68,7 @@ public class BillingPlanQueryService {
         return new BillingPlanCatalogView(currentPlanCode, plans);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = BillingCheckoutUnavailableException.class)
     public String createCheckout(UUID tenantId, String planCode, String userEmail) {
         BillingPlanEntity plan =
                 billingPlanRepository

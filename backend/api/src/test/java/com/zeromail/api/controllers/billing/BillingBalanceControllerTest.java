@@ -6,6 +6,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.zeromail.api.dto.billing.BillingBalanceResponse;
@@ -47,6 +48,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -336,6 +338,43 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
     }
 
     @Test
+    void authenticated_checkout_persists_failed_session_when_provider_fails() {
+        Seed seed = seedUser("billing-checkout-failure");
+        BillingPlanEntity plusPlan = billingPlanRepository.findByCode("PLUS").orElseThrow();
+        plusPlan.updateLemonSqueezyIds(99L, 123456L);
+        billingPlanRepository.saveAndFlush(plusPlan);
+        lemonSqueezyServer
+                .expect(once(), requestTo("https://api.lemonsqueezy.com/v1/checkouts"))
+                .andRespond(withBadRequest());
+
+        ResponseEntity<String> response =
+                noRetryRestClient()
+                        .post()
+                        .uri("/api/plan-upgrades/plans/PLUS/checkout")
+                        .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, seed.email())
+                        .retrieve()
+                        .onStatus(HttpStatusCode::isError, (_, _) -> {})
+                        .toEntity(String.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(503);
+        assertThat(
+                        billingCheckoutSessionRepository.findByTenantIdOrderByCreatedAtDesc(
+                                seed.tenantId()))
+                .singleElement()
+                .satisfies(
+                        checkoutSession -> {
+                            assertThat(checkoutSession.getPlanCode()).isEqualTo("PLUS");
+                            assertThat(checkoutSession.getStatus()).isEqualTo("FAILED");
+                            assertThat(checkoutSession.getFailureReason()).isNotBlank();
+                            assertThat(checkoutSession.getCheckoutUrl()).isNull();
+                            assertThat(checkoutSession.getRequestJsonb())
+                                    .contains("\"enabled_variants\": [123456]");
+                        });
+        lemonSqueezyServer.verify();
+    }
+
+    @Test
     void lemon_squeezy_webhook_processes_paid_order_event() {
         Seed seed = seedUser("billing-webhook");
         BillingPlanEntity plusPlan = billingPlanRepository.findByCode("PLUS").orElseThrow();
@@ -524,6 +563,64 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
     }
 
     @Test
+    void lemon_squeezy_webhook_rejects_lower_plan_payment_when_higher_plan_still_active() {
+        Seed seed = seedUser("billing-webhook-downgrade");
+        BillingPlanEntity plusPlan = billingPlanRepository.findByCode("PLUS").orElseThrow();
+        plusPlan.updateLemonSqueezyIds(99L, 123456L);
+        billingPlanRepository.saveAndFlush(plusPlan);
+        BillingPlanEntity proPlan = billingPlanRepository.findByCode("PRO").orElseThrow();
+        seedActivePlanPeriod(seed.tenantId(), proPlan, "TEST-PRO-WEBHOOK-" + seed.tenantId());
+        String orderPayload =
+                """
+                        {
+                          "meta": {
+                            "event_name": "order_created",
+                            "custom_data": {
+                              "tenant_id": "%s",
+                              "plan": "PLUS"
+                            }
+                          },
+                          "data": {
+                            "type": "orders",
+                            "id": "222003",
+                            "attributes": {
+                              "customer_id": 111,
+                              "checkout_id": 333003,
+                              "product_id": 99,
+                              "variant_id": 123456,
+                              "status": "paid",
+                              "total": 199000,
+                              "currency": "VND",
+                              "created_at": "%s"
+                            }
+                          }
+                        }
+                        """
+                        .formatted(seed.tenantId(), Instant.now());
+
+        ResponseEntity<Void> response =
+                postLemonSqueezyWebhook("event-order-created-downgrade", orderPayload);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        BillingWebhookEventEntity webhookEvent =
+                billingWebhookEventRepository
+                        .findByProviderEventId("event-order-created-downgrade")
+                        .orElseThrow();
+        assertThat(webhookEvent.getProcessingStatus()).isEqualTo("FAILED");
+        assertThat(webhookEvent.getProcessingError()).isEqualTo("plan_downgrade_not_allowed");
+        assertThat(billingPlanPeriodRepository.findByProviderOrderId("222003")).isEmpty();
+        assertThat(
+                        billingPlanPeriodRepository.findCurrentTenantPlanPeriods(
+                                seed.tenantId(), Instant.now()))
+                .singleElement()
+                .satisfies(
+                        planPeriod -> {
+                            assertThat(planPeriod.getPlanId()).isEqualTo(proPlan.getId());
+                            assertThat(planPeriod.getStatus()).isEqualTo("ACTIVE");
+                        });
+    }
+
+    @Test
     void lemon_squeezy_webhook_ignores_events_that_do_not_create_plan_periods() {
         String payload =
                 """
@@ -687,6 +784,13 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                 .body(payload)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    private RestClient noRetryRestClient() {
+        return RestClient.builder()
+                .requestFactory(new SimpleClientHttpRequestFactory())
+                .baseUrl("http://localhost:" + port)
+                .build();
     }
 
     private String hmacSha256Hex(String signingSecret, String payload) {
