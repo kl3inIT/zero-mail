@@ -278,10 +278,10 @@ class LlmGatewayImpl implements LlmGateway {
         PlatformRoute primaryRoute = routes.getFirst();
         long startNanos = System.nanoTime();
         return Observation.createNotStarted("zero_mail.llm.gateway", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -348,10 +348,10 @@ class LlmGatewayImpl implements LlmGateway {
                         inboundSubject);
         long startNanos = System.nanoTime();
         return Observation.createNotStarted("zero_mail.llm.gateway.draft", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -415,10 +415,10 @@ class LlmGatewayImpl implements LlmGateway {
         long startNanos = System.nanoTime();
         return Observation.createNotStarted(
                         "zero_mail.llm.gateway.rule_compile", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -483,10 +483,10 @@ class LlmGatewayImpl implements LlmGateway {
         long startNanos = System.nanoTime();
         return Observation.createNotStarted(
                         "zero_mail.llm.gateway.preview_text", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -539,10 +539,10 @@ class LlmGatewayImpl implements LlmGateway {
         long startNanos = System.nanoTime();
         return Observation.createNotStarted(
                         "zero_mail.llm.gateway.semantic_intent", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -648,9 +648,9 @@ class LlmGatewayImpl implements LlmGateway {
         PlatformRoute primaryRoute = routes.getFirst();
         long startNanos = System.nanoTime();
         return Observation.createNotStarted("zero_mail.llm.gateway.drift", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -777,10 +777,7 @@ class LlmGatewayImpl implements LlmGateway {
         } catch (SafetyViolationException safetyViolation) {
             creditLedger.release(reservationId);
             meterRegistry
-                    .counter(
-                            "llm_safety_violation_cost_absorbed_total",
-                            "tenantId",
-                            tenantId.toString())
+                    .counter("llm_safety_violation_cost_absorbed_total", "callSite", callSite.id())
                     .increment();
             log.error(
                     "event=llm_safety_violation tenantId={} callSite={} reason={}",
@@ -949,10 +946,7 @@ class LlmGatewayImpl implements LlmGateway {
         } catch (SafetyViolationException safetyViolation) {
             creditLedger.release(reservationId);
             meterRegistry
-                    .counter(
-                            "llm_safety_violation_cost_absorbed_total",
-                            "tenantId",
-                            tenantId.toString())
+                    .counter("llm_safety_violation_cost_absorbed_total", "callSite", callSite.id())
                     .increment();
             log.error(
                     "event=llm_safety_violation tenantId={} callSite={} reason={}",

@@ -108,7 +108,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
         Counter absorbedCostCounter =
                 meterRegistry
                         .find("llm_safety_violation_cost_absorbed_total")
-                        .tag("tenantId", tenantId.toString())
+                        .tag("callSite", CallSite.PREVIEW.id())
                         .counter();
         assertThat(absorbedCostCounter).isNotNull();
         assertThat(absorbedCostCounter.count()).isEqualTo(1.0);

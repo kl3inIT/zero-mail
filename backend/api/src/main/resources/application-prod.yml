@@ -59,6 +59,29 @@ server:
 # the internal docker network; nginx-proxy-manager does not route /actuator/** publicly.
 # Health details hidden — readiness/liveness probes still return 200/503.
 management:
+  observations:
+    enabled: true
+  tracing:
+    enabled: ${ZERO_MAIL_TRACING_ENABLED:true}
+    sampling:
+      probability: ${ZERO_MAIL_TRACE_SAMPLING_PROBABILITY:0.10}
+    export:
+      otlp:
+        enabled: ${ZERO_MAIL_OTLP_TRACING_ENABLED:true}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${spring.application.name}
+      service.namespace: zeromail
+      service.version: ${ZERO_MAIL_RELEASE_VERSION:unknown}
+      deployment.environment.name: ${ZERO_MAIL_DEPLOYMENT_ENVIRONMENT:production}
+    tracing:
+      export:
+        otlp:
+          endpoint: ${ZERO_MAIL_OTLP_TRACES_ENDPOINT:http://zeromail-alloy:4318/v1/traces}
+          transport: http
+          compression: gzip
+          connect-timeout: ${ZERO_MAIL_OTLP_CONNECT_TIMEOUT:2s}
+          timeout: ${ZERO_MAIL_OTLP_TIMEOUT:10s}
   endpoints:
     web:
       exposure:

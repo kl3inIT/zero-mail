@@ -1,0 +1,55 @@
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["zeromail-prometheus:9090"]
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["zeromail-grafana:3000"]
+
+  - job_name: alloy
+    static_configs:
+      - targets: ["zeromail-alloy:12345"]
+
+  - job_name: loki
+    static_configs:
+      - targets: ["zeromail-loki:3100"]
+
+  - job_name: tempo
+    static_configs:
+      - targets: ["zeromail-tempo:3200"]
+
+  - job_name: zeromail-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["zeromail-api:8080"]
+        labels:
+          application: zeromail-api
+
+  - job_name: zeromail-worker
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["zeromail-worker:8081"]
+        labels:
+          application: zeromail-worker
+
+  - job_name: postgres
+    static_configs:
+      - targets: ["zeromail-postgres-exporter:9187"]
+
+  - job_name: redis
+    static_configs:
+      - targets: ["zeromail-redis-exporter:9121"]
+
+  - job_name: node
+    static_configs:
+      - targets: ["zeromail-node-exporter:9100"]
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["zeromail-cadvisor:8080"]

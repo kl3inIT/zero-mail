@@ -35,10 +35,33 @@ spring:
         log-completion: false
 
 management:
+  observations:
+    enabled: true
+  tracing:
+    enabled: ${ZERO_MAIL_TRACING_ENABLED:true}
+    sampling:
+      probability: ${ZERO_MAIL_TRACE_SAMPLING_PROBABILITY:0.10}
+    export:
+      otlp:
+        enabled: ${ZERO_MAIL_OTLP_TRACING_ENABLED:true}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${spring.application.name}
+      service.namespace: zeromail
+      service.version: ${ZERO_MAIL_RELEASE_VERSION:unknown}
+      deployment.environment.name: ${ZERO_MAIL_DEPLOYMENT_ENVIRONMENT:production}
+    tracing:
+      export:
+        otlp:
+          endpoint: ${ZERO_MAIL_OTLP_TRACES_ENDPOINT:http://zeromail-alloy:4318/v1/traces}
+          transport: http
+          compression: gzip
+          connect-timeout: ${ZERO_MAIL_OTLP_CONNECT_TIMEOUT:2s}
+          timeout: ${ZERO_MAIL_OTLP_TIMEOUT:10s}
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, info, prometheus
   endpoint:
     health:
       show-details: never
