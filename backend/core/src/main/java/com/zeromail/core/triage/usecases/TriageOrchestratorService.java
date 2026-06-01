@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -73,6 +74,16 @@ public class TriageOrchestratorService {
     private static final Logger log = LoggerFactory.getLogger(TriageOrchestratorService.class);
     private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
     private static final int REASON_MAX_LENGTH = 512;
+
+    // Admission control for triage. Virtual threads (spring.threads.virtual.enabled=true) make the
+    // @Async @ApplicationModuleListener concurrency effectively unbounded, so a TriageEventRetryJob
+    // burst can resubmit dozens of events at once. Each event holds TWO worker DB connections (the
+    // idle outer listener tx + the active inner REQUIRES_NEW tx), so unbounded concurrency starves
+    // the Hikari pool (CannotCreateTransactionException). Cap concurrent triage at worker_pool / 2;
+    // excess events park cheaply on virtual threads until a permit frees. Keep this ≤
+    // ZERO_MAIL_WORKER_DB_POOL_MAX / 2 (pool 16 → 8).
+    private static final int MAX_CONCURRENT_TRIAGE = 8;
+    private final Semaphore triageConcurrencyLimiter = new Semaphore(MAX_CONCURRENT_TRIAGE);
     private static final String AUTO_SEND_DISABLED = "AUTO_SEND_DISABLED";
     private static final String SENDER_SAFETY_NET = "SENDER_SAFETY_NET";
     private static final String LOW_TRUST_STATIC_FROM = "LOW_TRUST_STATIC_FROM";
@@ -139,11 +150,24 @@ public class TriageOrchestratorService {
         // tenantId"). Opening a REQUIRES_NEW transaction INSIDE TenantContext.runWith guarantees
         // the session — and thus the tenant resolution — happens with the tenant in scope.
         // (Removing this wrapper in commit 0675be1a broke multi-tenant triage entirely.)
-        TenantContext.runWith(
-                observedEvent.tenantId(),
-                () ->
-                        tenantScopedOrchestrationTransaction.executeWithoutResult(
-                                _ -> processObservedEvent(observedEvent)));
+        // Admission control: acquire a permit BEFORE opening any transaction so a resubmission
+        // burst can never demand more than 2 * MAX_CONCURRENT_TRIAGE pool connections at once.
+        try {
+            triageConcurrencyLimiter.acquire();
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Interrupted while awaiting a triage concurrency permit", interrupted);
+        }
+        try {
+            TenantContext.runWith(
+                    observedEvent.tenantId(),
+                    () ->
+                            tenantScopedOrchestrationTransaction.executeWithoutResult(
+                                    _ -> processObservedEvent(observedEvent)));
+        } finally {
+            triageConcurrencyLimiter.release();
+        }
     }
 
     public OrchestrationResult processObservedEvent(MailMessageObserved observedEvent) {

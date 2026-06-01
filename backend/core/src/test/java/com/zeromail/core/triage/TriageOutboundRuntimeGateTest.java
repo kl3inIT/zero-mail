@@ -40,6 +40,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.transaction.PlatformTransactionManager;
 
 class TriageOutboundRuntimeGateTest {
 
@@ -65,6 +66,10 @@ class TriageOutboundRuntimeGateTest {
     private final TriageDraftSettings triageDraftSettings = mock(TriageDraftSettings.class);
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService =
             mock(ClassifyThreadReplyStatusService.class);
+    // Bare mock: TransactionTemplate.getTransaction returns null and commit is a no-op, so the
+    // executeWithoutResult callback still runs synchronously in the test.
+    private final PlatformTransactionManager transactionManager =
+            mock(PlatformTransactionManager.class);
 
     @Test
     void global_auto_send_disabled_saves_draft_and_never_sends() throws Exception {
@@ -303,6 +308,7 @@ class TriageOutboundRuntimeGateTest {
                 draftBodyGenerator,
                 triageDraftSettings,
                 classifyThreadReplyStatusService,
+                transactionManager,
                 meterRegistryProvider);
     }
 

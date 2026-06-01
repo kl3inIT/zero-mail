@@ -12,8 +12,13 @@ spring:
   datasource:
     hikari:
       pool-name: zeromail-worker-pool
-      maximum-pool-size: ${ZERO_MAIL_WORKER_DB_POOL_MAX:8}
-      minimum-idle: ${ZERO_MAIL_WORKER_DB_POOL_MIN_IDLE:2}
+      # Triage runs an inner REQUIRES_NEW transaction (tenant-resolution boundary,
+      # see TriageOrchestratorService) so each event briefly holds TWO connections
+      # — the idle outer @ApplicationModuleListener tx + the active inner one.
+      # Sized at 16 so concurrent triage + the TriageEventRetryJob resubmission
+      # burst don't exhaust the pool (CannotCreateTransactionException).
+      maximum-pool-size: ${ZERO_MAIL_WORKER_DB_POOL_MAX:16}
+      minimum-idle: ${ZERO_MAIL_WORKER_DB_POOL_MIN_IDLE:8}
       connection-timeout: ${ZERO_MAIL_DB_CONNECTION_TIMEOUT_MS:3000}
       validation-timeout: ${ZERO_MAIL_DB_VALIDATION_TIMEOUT_MS:1000}
       keepalive-time: ${ZERO_MAIL_DB_KEEPALIVE_TIME_MS:120000}
