@@ -56,7 +56,11 @@ export function UpdatesSection() {
   const triagePaused = pauseState.data ?? false;
 
   return (
-    <section className="space-y-4" aria-labelledby="ai-section-updates">
+    <section
+      className="space-y-4"
+      aria-labelledby="ai-section-updates"
+      data-testid="notifications-section"
+    >
       <SectionHeader
         id="ai-section-updates"
         title={t('ai.sections.updates.title')}
@@ -144,7 +148,11 @@ export function UpdatesSection() {
               id="ai-pause-triage-switch"
               checked={triagePaused}
               aria-label={t('ai.updates.pauseTriage.title')}
-              disabled={pauseState.isLoading || togglePause.isPending}
+              // `pauseState` reads the shared, prefetched /me cache, so the value is
+              // available on first paint. Gating `disabled` on its `isLoading` makes the
+              // server (loading → disabled) and client (hydrated → enabled) render diverge,
+              // producing a hydration mismatch. Only the mutation should disable the switch.
+              disabled={togglePause.isPending}
               onCheckedChange={(paused) => {
                 if (paused) {
                   setPauseConfirmOpen(true);

@@ -55,8 +55,10 @@ test('app shell remains mounted across client navigation and hidden onboarding r
     .evaluate((contentElement) =>
       contentElement.setAttribute('data-preservation-check', 'before-settings'),
     );
-  await page.getByRole('link', { name: 'Settings' }).first().click();
-  await expect(page).toHaveURL(/\/settings$/);
+  // Settings moved into the user dropdown post-refactor; use a still-visible
+  // top-level sidebar link to exercise client-side navigation shell preservation.
+  await page.getByRole('link', { name: 'Analytics' }).first().click();
+  await expect(page).toHaveURL(/\/analytics$/);
   await expect(page.getByTestId('app-shell-content')).toHaveAttribute(
     'data-preservation-check',
     'before-settings',

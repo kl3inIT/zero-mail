@@ -321,6 +321,26 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
+    if (url.pathname === '/api/settings/voice' && request.method() === 'GET') {
+      await fulfillJson(route, voiceSettings());
+      return;
+    }
+
+    if (url.pathname === '/api/settings/behavior' && request.method() === 'GET') {
+      await fulfillJson(route, behaviorSettings());
+      return;
+    }
+
+    if (url.pathname === '/api/settings/ai/cost' && request.method() === 'GET') {
+      await fulfillJson(route, { usd: 0 });
+      return;
+    }
+
+    if (url.pathname === '/api/knowledge-snippets' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [] });
+      return;
+    }
+
     await route.fulfill({ status: 204, body: '' });
   });
 }
@@ -389,6 +409,7 @@ function planTier(planCode: BillingPlanCode): number {
 export async function openAuthenticatedRoute(
   page: Page,
   path:
+    | '/ai'
     | '/analytics'
     | '/rules'
     | '/settings'
@@ -511,6 +532,23 @@ function analyticsSummary(window: AnalyticsWindow) {
         reverted: 0,
       },
     ],
+  };
+}
+
+function voiceSettings() {
+  return {
+    writingStyle: '',
+    personalInstructions: '',
+    emailSignature: '',
+    aiOutputLanguage: 'en',
+  };
+}
+
+function behaviorSettings() {
+  return {
+    autoDraftReplies: false,
+    draftConfidence: 'MEDIUM',
+    sensitiveDataProtection: true,
   };
 }
 
