@@ -118,7 +118,11 @@ public class SecurityConfig {
     SecurityFilterChain lemonSqueezyWebhookChain(
             HttpSecurity http, BillingProperties billingProperties) throws Exception {
         http.securityMatcher("/api/plan-upgrades/webhooks/lemon-squeezy")
-                .csrf(csrf -> csrf.disable())
+                .csrf(
+                        csrf ->
+                                csrf.spa()
+                                        .ignoringRequestMatchers(
+                                                "/api/plan-upgrades/webhooks/lemon-squeezy"))
                 .authorizeHttpRequests(
                         authorizationRequests ->
                                 authorizationRequests
@@ -139,7 +143,11 @@ public class SecurityConfig {
     SecurityFilterChain sepayWebhookChain(HttpSecurity http, BillingProperties billingProperties)
             throws Exception {
         http.securityMatcher("/api/plan-upgrades/webhooks/sepay")
-                .csrf(csrf -> csrf.disable())
+                .csrf(
+                        csrf ->
+                                csrf.spa()
+                                        .ignoringRequestMatchers(
+                                                "/api/plan-upgrades/webhooks/sepay"))
                 .authorizeHttpRequests(
                         authorizationRequests ->
                                 authorizationRequests

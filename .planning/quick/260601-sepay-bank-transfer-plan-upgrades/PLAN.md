@@ -21,3 +21,8 @@ Add QR bank-transfer payment via SePay as a second payment method for plan upgra
 - Added a dedicated SE Pay API-key security filter for `/api/plan-upgrades/webhooks/sepay`.
 - Cleaned Lemon Squeezy product snapshots from plan periods and removed unused plan catalog product id.
 - Updated frontend plan actions to support card checkout and QR bank transfer.
+
+## Follow-up 2026-06-01
+- Address PR 80 review comments from CodeRabbit/Copilot/CodeQL.
+- Keep mobile QR popup compact, but expand desktop popup into a larger horizontal receipt-style layout with plan details.
+- Preserve Liquibase as-is.

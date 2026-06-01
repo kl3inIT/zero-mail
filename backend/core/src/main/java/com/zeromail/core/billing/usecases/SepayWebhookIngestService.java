@@ -65,36 +65,43 @@ public class SepayWebhookIngestService {
         this.transactionTemplate = transactionTemplate;
     }
 
-    public void ingest(String rawPayload) {
+    public SepayWebhookIngestResult ingest(String rawPayload) {
         String payload = rawPayload == null ? "" : rawPayload;
         JsonNode rootNode = readPayload(payload);
         SepayTransferPayload transferPayload = transferPayload(rootNode);
         Optional<BillingBankTransferIntentEntity> matchedIntent =
                 findMatchingIntent(transferPayload);
         if (matchedIntent.isPresent()) {
-            ScopedValue.where(TenantContext.TENANT, matchedIntent.get().getTenantId().toString())
-                    .run(
+            return ScopedValue.where(
+                            TenantContext.TENANT, matchedIntent.get().getTenantId().toString())
+                    .call(
                             () ->
-                                    transactionTemplate.executeWithoutResult(
+                                    transactionTemplate.execute(
                                             ignoredTransactionStatus ->
                                                     ingestInTransaction(
-                                                            payload, rootNode, transferPayload)));
-            return;
+                                                            payload,
+                                                            rootNode,
+                                                            transferPayload,
+                                                            matchedIntent)));
         }
-        transactionTemplate.executeWithoutResult(
+        return transactionTemplate.execute(
                 ignoredTransactionStatus ->
-                        ingestInTransaction(payload, rootNode, transferPayload));
+                        ingestInTransaction(payload, rootNode, transferPayload, Optional.empty()));
     }
 
-    private void ingestInTransaction(
-            String payload, JsonNode rootNode, SepayTransferPayload transferPayload) {
+    private SepayWebhookIngestResult ingestInTransaction(
+            String payload,
+            JsonNode rootNode,
+            SepayTransferPayload transferPayload,
+            Optional<BillingBankTransferIntentEntity> matchedIntent) {
         String payloadSha256 = sha256Hex(payload);
         String providerEventId = transferPayload.transactionId().map(Object::toString).orElse(null);
         String dedupeKey = dedupeKey(providerEventId, payloadSha256);
         Optional<BillingWebhookEventEntity> existingWebhookEvent =
                 billingWebhookEventRepository.findByDedupeKey(dedupeKey);
         if (existingWebhookEvent.isPresent()) {
-            return;
+            BillingWebhookEventEntity webhookEvent = existingWebhookEvent.get();
+            return result(webhookEvent);
         }
 
         BillingWebhookEventEntity webhookEvent =
@@ -112,18 +119,24 @@ public class SepayWebhookIngestService {
                                 Instant.now(),
                                 payloadSha256,
                                 redactedPayloadJson(rootNode)));
-        processWebhookEvent(webhookEvent, transferPayload);
+        processWebhookEvent(webhookEvent, transferPayload, matchedIntent);
+        return result(webhookEvent);
     }
 
     private void processWebhookEvent(
-            BillingWebhookEventEntity webhookEvent, SepayTransferPayload transferPayload) {
+            BillingWebhookEventEntity webhookEvent,
+            SepayTransferPayload transferPayload,
+            Optional<BillingBankTransferIntentEntity> matchedIntent) {
         webhookEvent.markProcessing();
         try {
+            matchedIntent.ifPresent(
+                    intent -> webhookEvent.setTenantIdForWebhookProcessing(intent.getTenantId()));
             if (!"in".equalsIgnoreCase(transferPayload.transferType().orElse(""))) {
                 webhookEvent.markSkipped(Instant.now(), "sepay_transfer_not_inbound");
                 return;
             }
-            BillingBankTransferIntentEntity intent = resolveMatchingIntent(transferPayload);
+            BillingBankTransferIntentEntity intent =
+                    matchedIntent.orElseGet(() -> resolveMatchingIntent(transferPayload));
             webhookEvent.setTenantIdForWebhookProcessing(intent.getTenantId());
             if (!"PENDING".equals(intent.getStatus())) {
                 webhookEvent.markSkipped(Instant.now(), "bank_transfer_intent_not_pending");
@@ -197,6 +210,14 @@ public class SepayWebhookIngestService {
                 | WebhookProcessingException processingException) {
             webhookEvent.markFailed(Instant.now(), processingException.getMessage());
         }
+    }
+
+    private SepayWebhookIngestResult result(BillingWebhookEventEntity webhookEvent) {
+        return new SepayWebhookIngestResult(
+                webhookEvent.getId(),
+                webhookEvent.getTenantId(),
+                webhookEvent.getEventName(),
+                webhookEvent.getPayloadJsonb());
     }
 
     private BillingBankTransferIntentEntity resolveMatchingIntent(

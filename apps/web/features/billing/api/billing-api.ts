@@ -1,5 +1,4 @@
-import { adaptFetchForOpenApi, api, xsrfHeader } from '@/lib/api/client';
-import { getApiBase } from '@/lib/api/base-url';
+import { adaptFetchForOpenApi, api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 /**
@@ -16,36 +15,10 @@ export type BillingLedgerHistoryResponse = components['schemas']['BillingLedgerH
 export type BillingPlanResponse = components['schemas']['BillingPlanResponse'];
 export type BillingPlanListResponse = components['schemas']['BillingPlanListResponse'];
 export type PlanFeatureSummaryResponse = components['schemas']['PlanFeatureSummaryResponse'];
-
-export type BillingPaymentMethod = 'LEMON_SQUEEZY' | 'SEPAY_BANK_TRANSFER';
-
-export type BankTransferIntentResponse = {
-  id: string;
-  code: string;
-  planCode: string;
-  amountVnd: number;
-  currency: string;
-  status: string;
-  expiresAt: string;
-  bankCode: string;
-  bankName?: string | null;
-  accountNumber: string;
-  accountName: string;
-  transferContent: string;
-  qrUrl: string;
-};
-
-export type BillingCheckoutResponse = {
-  paymentMethod: BillingPaymentMethod;
-  status: 'REDIRECT_REQUIRED' | 'WAITING_FOR_TRANSFER';
-  checkoutUrl?: string | null;
-  bankTransferIntent?: BankTransferIntentResponse | null;
-};
-
-export type BillingCheckoutRequest = {
-  planCode: BillingPlanResponse['code'];
-  paymentMethod: BillingPaymentMethod;
-};
+export type BankTransferIntentResponse = components['schemas']['BankTransferIntentResponse'];
+export type BillingCheckoutResponse = components['schemas']['BillingCheckoutResponse'];
+export type BillingCheckoutRequest = components['schemas']['BillingCheckoutRequest'];
+export type BillingPaymentMethod = BillingCheckoutRequest['paymentMethod'];
 
 export type LedgerHistoryPage = Omit<BillingLedgerHistoryResponse, 'nextCursor'> & {
   nextCursor: string | null;
@@ -126,38 +99,20 @@ export async function getBillingPlans({
 export async function createBillingCheckout(
   request: BillingCheckoutRequest,
 ): Promise<BillingCheckoutResponse> {
-  // TODO: switch back to openapi-fetch after generateOpenApiDocs can boot against the local
-  // dev database and regenerate schema.d.ts with /api/plan-upgrades/checkout.
-  const response = await fetch(`${getApiBase()}/api/plan-upgrades/checkout`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'content-type': 'application/json',
-      ...xsrfHeader(),
-    },
-    body: JSON.stringify(request),
+  const result = await api.POST('/api/plan-upgrades/checkout', {
+    body: request,
   });
-  if (!response.ok) {
-    throw new Error(`/api/plan-upgrades/checkout failed: ${response.status}`);
-  }
-  return (await response.json()) as BillingCheckoutResponse;
+  return unwrap(result, `/api/plan-upgrades/checkout failed: ${result.response.status}`);
 }
 
 export async function getBankTransferIntent(
   intentId: BankTransferIntentResponse['id'],
 ): Promise<BankTransferIntentResponse> {
-  // TODO: move to typed api.GET once OpenAPI schema is regenerated.
-  const response = await fetch(
-    `${getApiBase()}/api/plan-upgrades/bank-transfer-intents/${intentId}`,
-    {
-      credentials: 'include',
-      headers: xsrfHeader(),
-    },
+  const result = await api.GET('/api/plan-upgrades/bank-transfer-intents/{intentId}', {
+    params: { path: { intentId } },
+  });
+  return unwrap(
+    result,
+    `/api/plan-upgrades/bank-transfer-intents/${intentId} failed: ${result.response.status}`,
   );
-  if (!response.ok) {
-    throw new Error(
-      `/api/plan-upgrades/bank-transfer-intents/${intentId} failed: ${response.status}`,
-    );
-  }
-  return (await response.json()) as BankTransferIntentResponse;
 }

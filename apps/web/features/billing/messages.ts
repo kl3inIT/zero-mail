@@ -119,6 +119,14 @@ export const billingMessages = {
     vi: 'Quét QR để thanh toán. Gói sẽ tự kích hoạt sau khi SE Pay xác nhận.',
     en: 'Scan the QR to pay. Your plan activates after SE Pay confirms it.',
   },
+  'billing.bankTransfer.planLabel': {
+    vi: 'Gói thanh toán',
+    en: 'Selected plan',
+  },
+  'billing.bankTransfer.planPrice': {
+    vi: 'Giá gói',
+    en: 'Plan price',
+  },
   'billing.bankTransfer.qrAlt': {
     vi: 'Mã QR chuyển khoản',
     en: 'Bank transfer QR code',
@@ -158,6 +166,10 @@ export const billingMessages = {
   'billing.bankTransfer.paymentSuccess': {
     vi: 'Thanh toán thành công. Gói của bạn đã được kích hoạt.',
     en: 'Payment successful. Your plan has been activated.',
+  },
+  'billing.bankTransfer.pendingNote': {
+    vi: 'Sau khi chuyển khoản đúng nội dung, Zero Mail sẽ tự kích hoạt gói và chuyển bạn về trang tín dụng.',
+    en: 'After the matching transfer is confirmed, Zero Mail will activate the plan and take you back to Credits.',
   },
   'billing.balance.label': {
     vi: 'Tín dụng hiện có',

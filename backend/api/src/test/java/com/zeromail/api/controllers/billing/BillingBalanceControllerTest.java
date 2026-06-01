@@ -860,6 +860,62 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
     }
 
     @Test
+    void sepay_webhook_skips_non_inbound_transfer_but_keeps_matched_tenant() {
+        Seed seed = seedUser("billing-sepay-webhook-outbound");
+        BillingCheckoutResponse checkoutResponse =
+                RestClient.create("http://localhost:" + port)
+                        .post()
+                        .uri("/api/plan-upgrades/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, seed.email())
+                        .body(
+                                """
+                                        {
+                                          "planCode": "PLUS",
+                                          "paymentMethod": "SEPAY_BANK_TRANSFER"
+                                        }
+                                        """)
+                        .retrieve()
+                        .body(BillingCheckoutResponse.class);
+        String transferCode = checkoutResponse.bankTransferIntent().code();
+        String payload =
+                """
+                        {
+                          "id": 990003,
+                          "gateway": "MBBank",
+                          "transactionDate": "2026-06-01 10:05:00",
+                          "accountNumber": "123456789",
+                          "code": "%s",
+                          "content": "ZM %s PLUS",
+                          "transferType": "out",
+                          "transferAmount": 199000,
+                          "referenceCode": "%s",
+                          "description": "Outbound transfer"
+                        }
+                        """
+                        .formatted(transferCode, transferCode, transferCode);
+
+        ResponseEntity<String> response = postSepayWebhook("test-sepay-key", payload);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        BillingWebhookEventEntity webhookEvent =
+                billingWebhookEventRepository
+                        .findByProviderAndProviderEventId("SEPAY", "990003")
+                        .orElseThrow();
+        assertThat(webhookEvent.getTenantId()).isEqualTo(seed.tenantId());
+        assertThat(webhookEvent.getProcessingStatus()).isEqualTo("SKIPPED");
+        assertThat(webhookEvent.getProcessingError()).isEqualTo("sepay_transfer_not_inbound");
+        assertThat(
+                        billingBankTransferIntentRepository
+                                .findByIdAndTenantId(
+                                        checkoutResponse.bankTransferIntent().id(), seed.tenantId())
+                                .orElseThrow()
+                                .getStatus())
+                .isEqualTo("PENDING");
+    }
+
+    @Test
     void sepay_webhook_rejects_invalid_api_key_before_controller() {
         String payload =
                 """
