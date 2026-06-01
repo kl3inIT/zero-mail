@@ -49,6 +49,13 @@ zero-mail:
         topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
   crypto:
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+    # AES-256 KEK for the Gmail inbox projection field cipher (Phase A). Separate from the
+    # refresh-token KEK so a single leak does not cross-contaminate.
+    inbox-projection-key-base64: ${INBOX_PROJECTION_KEY_BASE64:?INBOX_PROJECTION_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+    # Dedicated HMAC-SHA256 key for the deterministic sender_email_hash column on the
+    # inbox projection. Separate from inbox-projection-key-base64 so a leak of the field
+    # KEK does not also expose deterministic sender hashes.
+    inbox-projection-sender-hash-key-base64: ${INBOX_PROJECTION_SENDER_HASH_KEY_BASE64:?INBOX_PROJECTION_SENDER_HASH_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
   llm:
     platform:
       # provider/base-url/models/timeouts default in LlmProperties; only api-key is deployment-supplied

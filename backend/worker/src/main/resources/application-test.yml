@@ -54,6 +54,8 @@ zero-mail:
         topic-name: projects/test-project/topics/zero-mail-gmail-test
   crypto:
     refresh-token-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    inbox-projection-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    inbox-projection-sender-hash-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
   llm:
     platform:
       api-key: test-platform-llm-key
