@@ -480,6 +480,7 @@
       "description": "Scan the QR or transfer the exact amount and memo so Zero Mail can activate the plan.",
       "expiresAt": "QR expires at {time}. After payment, the SE Pay webhook will update your plan automatically.",
       "expiresAtShort": "Expires at {time}",
+      "featuresLabel": "Plan features",
       "paymentSuccess": "Payment successful. Your plan has been activated.",
       "pendingNote": "After the matching transfer is confirmed, Zero Mail will activate the plan and take you back to Credits.",
       "planLabel": "Selected plan",

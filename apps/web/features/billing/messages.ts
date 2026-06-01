@@ -127,6 +127,10 @@ export const billingMessages = {
     vi: 'Giá gói',
     en: 'Plan price',
   },
+  'billing.bankTransfer.featuresLabel': {
+    vi: 'Tính năng trong gói',
+    en: 'Plan features',
+  },
   'billing.bankTransfer.qrAlt': {
     vi: 'Mã QR chuyển khoản',
     en: 'Bank transfer QR code',

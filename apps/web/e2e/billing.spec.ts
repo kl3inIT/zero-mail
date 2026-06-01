@@ -62,8 +62,9 @@ test('upgrade page disables tiers below the active plan', async ({ page }) => {
   await expect(bankTransferDialog.getByText('Gói thanh toán')).toBeVisible();
   await expect(bankTransferDialog.getByRole('heading', { name: 'Pro' })).toBeVisible();
   await expect(bankTransferDialog.getByText('8.000 tín dụng mỗi tháng')).toBeVisible();
-  await expect(bankTransferDialog.getByText('Giá gói')).toBeVisible();
-  await expect(bankTransferDialog.getByText('399.000₫')).toHaveCount(2);
+  await expect(bankTransferDialog.getByText('Tính năng trong gói')).toBeVisible();
+  await expect(bankTransferDialog.getByText('Soạn trả lời bằng mô hình cao cấp')).toBeVisible();
+  await expect(bankTransferDialog.getByText('399.000₫')).toHaveCount(1);
   await expect(bankTransferDialog.getByText('ZM ABCD2345 PRO')).toBeVisible();
 });
 

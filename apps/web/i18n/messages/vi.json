@@ -480,6 +480,7 @@
       "description": "Quét QR hoặc chuyển khoản đúng số tiền và nội dung để Zero Mail tự kích hoạt gói.",
       "expiresAt": "QR hết hạn lúc {time}. Sau khi chuyển khoản, webhook SE Pay sẽ tự cập nhật gói.",
       "expiresAtShort": "Hết hạn lúc {time}",
+      "featuresLabel": "Tính năng trong gói",
       "paymentSuccess": "Thanh toán thành công. Gói của bạn đã được kích hoạt.",
       "pendingNote": "Sau khi chuyển khoản đúng nội dung, Zero Mail sẽ tự kích hoạt gói và chuyển bạn về trang tín dụng.",
       "planLabel": "Gói thanh toán",

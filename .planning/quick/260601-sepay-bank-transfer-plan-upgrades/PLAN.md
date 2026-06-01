@@ -26,3 +26,4 @@ Add QR bank-transfer payment via SePay as a second payment method for plan upgra
 - Address PR 80 review comments from CodeRabbit/Copilot/CodeQL.
 - Keep mobile QR popup compact, but expand desktop popup into a larger horizontal receipt-style layout with plan details.
 - Preserve Liquibase as-is.
+- Refined the desktop QR popup right panel to show only price, selected plan, monthly credits, and plan features; bank/account details stay on the QR receipt side.

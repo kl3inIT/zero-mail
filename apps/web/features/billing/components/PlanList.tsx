@@ -421,7 +421,17 @@ function BankTransferDialog({
             <p className="text-muted-foreground text-xs font-medium">
               {t('billing.bankTransfer.planLabel')}
             </p>
-            <h3 className="mt-1 text-2xl font-semibold">{planName}</h3>
+            <div className="mt-2 flex items-start justify-between gap-4">
+              <h3 className="text-2xl font-semibold">{planName}</h3>
+              <div className="text-right">
+                <p className="text-2xl font-semibold">{formatVnd(intent.amountVnd)}₫</p>
+                {plan && (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t('billing.plans.perMonth')}
+                  </p>
+                )}
+              </div>
+            </div>
             {plan && (
               <p className="text-muted-foreground mt-2 text-sm">
                 {t('billing.plans.includedCredits', {
@@ -431,49 +441,31 @@ function BankTransferDialog({
             )}
           </div>
 
-          <div className="mt-5 space-y-3">
-            <PaymentSummaryRow
-              label={t('billing.bankTransfer.amount')}
-              value={`${formatVnd(intent.amountVnd)}₫`}
-              valueClassName="text-xl font-semibold"
-            />
-            {plan && (
-              <PaymentSummaryRow
-                label={t('billing.bankTransfer.planPrice')}
-                value={`${formatVnd(plan.priceVnd)}₫`}
-              />
-            )}
-            <PaymentSummaryRow label={t('billing.bankTransfer.bank')} value={intent.bankCode} />
-            <PaymentSummaryRow
-              label={t('billing.bankTransfer.accountNumber')}
-              value={intent.accountNumber}
-            />
-          </div>
-
-          <div className="text-muted-foreground mt-auto pt-5 text-sm">
-            {t('billing.bankTransfer.pendingNote')}
-          </div>
+          {plan && plan.features.length > 0 && (
+            <div className="mt-5 border-t pt-4">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t('billing.bankTransfer.featuresLabel')}
+              </p>
+              <ul className="mt-3 space-y-2">
+                {plan.features.map((feature) => (
+                  <li key={feature.code} className="flex items-start gap-2 text-sm">
+                    <Check className="text-primary mt-0.5 size-4 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium">{feature.displayName}</p>
+                      {feature.creditCost > 0 && (
+                        <p className="text-muted-foreground text-xs">
+                          {feature.creditCost} {t('billing.balance.unit')}{' '}
+                          {t('billing.plans.perInvocation')}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </DialogContent>
-  );
-}
-
-function PaymentSummaryRow({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  valueClassName?: string;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b pb-3 last:border-b-0 last:pb-0">
-      <span className="text-muted-foreground text-sm">{label}</span>
-      <span className={cn('text-right text-sm font-medium break-all', valueClassName)}>
-        {value}
-      </span>
-    </div>
   );
 }

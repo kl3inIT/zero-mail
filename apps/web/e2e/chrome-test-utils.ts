@@ -369,7 +369,41 @@ function billingPlan(
     priceVnd,
     monthlyCreditAllowance,
     sortOrder: tierRank * 10,
-    features: [],
+    features: billingPlanFeatures(code),
+  };
+}
+
+function billingPlanFeatures(code: BillingPlanCode) {
+  if (code === 'FREE') {
+    return [
+      billingPlanFeature('basic-triage', 'Phân loại AI cơ bản', 1),
+      billingPlanFeature('manual-rules', 'Quy tắc thủ công', 0),
+    ];
+  }
+  if (code === 'PLUS') {
+    return [
+      billingPlanFeature('smart-triage', 'Phân loại AI nâng cao', 1),
+      billingPlanFeature('reply-drafts', 'Gợi ý trả lời email', 3),
+      billingPlanFeature('automation-rules', 'Quy tắc tự động', 0),
+    ];
+  }
+  return [
+    billingPlanFeature('smart-triage', 'Phân loại AI nâng cao', 1),
+    billingPlanFeature('premium-reply-drafts', 'Soạn trả lời bằng mô hình cao cấp', 5),
+    billingPlanFeature('automation-rules', 'Quy tắc tự động không giới hạn', 0),
+    billingPlanFeature('analytics', 'Phân tích hộp thư nâng cao', 0),
+  ];
+}
+
+function billingPlanFeature(code: string, displayName: string, creditCost: number) {
+  return {
+    code,
+    displayName,
+    description: null,
+    category: 'TRIAGE',
+    creditCost,
+    dailyInvocationLimit: null,
+    monthlyInvocationLimit: null,
   };
 }
 
