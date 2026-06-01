@@ -105,4 +105,70 @@ class InboxProjectionArchTest {
                             "Allowed callers: GmailDeliveryProcessingService (Pub/Sub observed hook) and"
                                 + " InboxBackfillService. Phase B may add the read-swap path; any other caller"
                                 + " is scope creep.");
+
+    /**
+     * Phase B Wave 4 — the projection cipher's {@code encrypt} and {@code decrypt} entry points
+     * carry tenant + message-scoped AAD; any caller outside the dedicated read/write services
+     * would either reconstruct that AAD ad-hoc (drift risk) or skip it entirely (decrypt-anywhere
+     * risk). Tests are excluded by {@code ImportOption.DoNotIncludeTests} so cipher round-trip
+     * fixtures can still exercise the API directly.
+     */
+    @ArchTest
+    static final ArchRule only_read_and_write_services_call_projection_cipher_encrypt =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackage("com.zeromail.core.inbox.usecases")
+                    .should()
+                    .callMethod(
+                            "com.zeromail.core.inbox.usecases.InboxProjectionCipher",
+                            "encrypt",
+                            "java.lang.String",
+                            "java.util.UUID",
+                            "java.lang.String",
+                            "com.zeromail.core.inbox.domain.EncryptedField")
+                    .because(
+                            "InboxProjectionWriteService is the only production encrypt caller; any"
+                                + " other call site would bypass the AAD construction.");
+
+    @ArchTest
+    static final ArchRule only_read_and_write_services_call_projection_cipher_decrypt =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackage("com.zeromail.core.inbox.usecases")
+                    .should()
+                    .callMethod(
+                            "com.zeromail.core.inbox.usecases.InboxProjectionCipher",
+                            "decrypt",
+                            "byte[]",
+                            "java.util.UUID",
+                            "java.lang.String",
+                            "com.zeromail.core.inbox.domain.EncryptedField")
+                    .because(
+                            "InboxProjectionReadService is the only production decrypt caller; any"
+                                + " other call site would either reconstruct the AAD ad-hoc or skip"
+                                + " it entirely, both of which break the cipher boundary.");
+
+    /**
+     * Phase B Wave 4 — mark-read is the only projection mutator added in Wave 2; restrict callers
+     * to the single triage write helper so future code does not start mirroring Gmail label edits
+     * into the projection without going through the same Gmail-first / DB-second ordering and
+     * idempotency contract.
+     */
+    @ArchTest
+    static final ArchRule only_triage_gmail_writer_invokes_projection_mark_read =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackages(
+                            "com.zeromail.core.inbox.usecases",
+                            "com.zeromail.core.triage.usecases")
+                    .should()
+                    .callMethod(
+                            "com.zeromail.core.inbox.usecases.InboxProjectionWriteService",
+                            "markRead",
+                            "java.util.UUID",
+                            "java.lang.String")
+                    .because(
+                            "TriageGmailWriter is the single Gmail-write boundary that mirrors mark-read"
+                                + " into the projection. Any other caller would skip the Gmail label modify"
+                                + " step, leaving Gmail and the projection in divergent states.");
 }
