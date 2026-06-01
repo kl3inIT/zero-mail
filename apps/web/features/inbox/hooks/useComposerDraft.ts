@@ -41,6 +41,12 @@ export function useDeleteComposerDraft() {
   const queryClient = useQueryClient();
   return useMutation<void, ComposerDraftApiError, { draftId: string; gmailThreadId: string }>({
     mutationFn: ({ draftId }) => deleteComposerDraft(draftId),
+    // Clear the cache optimistically so reopening the composer immediately after a successful
+    // send (handleSentSuccess fires onCancel synchronously, then this mutation runs in the
+    // background) does not rehydrate the just-sent draft from the stale snapshot.
+    onMutate: (variables) => {
+      queryClient.setQueryData(inboxKeys.composerDraft(variables.gmailThreadId), null);
+    },
     onSuccess: (_void, variables) => {
       queryClient.setQueryData(inboxKeys.composerDraft(variables.gmailThreadId), null);
     },

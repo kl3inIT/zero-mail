@@ -40,16 +40,6 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/states/EmptyState';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -813,7 +803,6 @@ function InboxReplyComposer({
   const [showCc, setShowCc] = useState(() => Boolean(preset.cc));
   const [showBcc, setShowBcc] = useState(() => Boolean(preset.bcc));
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [autoConfirmRequested, setAutoConfirmRequested] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1119,14 +1108,14 @@ function InboxReplyComposer({
     });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  // Send the composed body straight through the assistant flow with autoConfirm. The chat
+  // preview card mounts (so the POST /confirm tool call still fires) but is hidden from view —
+  // the user sees only a "Đang gửi email..." spinner, then a success toast when handleSentSuccess
+  // unmounts the composer. The legacy two-step AlertDialog confirmation was redundant on top of
+  // the autoConfirm gate and added an extra modal users had to dismiss for every reply.
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (previewDisabled) return;
-    setConfirmDialogOpen(true);
-  }
-
-  async function handleConfirmDialogSend() {
-    setConfirmDialogOpen(false);
     setPreviewSubmitted(true);
     setAutoConfirmRequested(true);
     try {
@@ -1469,37 +1458,32 @@ function InboxReplyComposer({
           {t('inbox.composer.generateBodyError')}
         </p>
       ) : null}
-      {previewSubmitted || assistantBusy || assistantPreview.messages.length > 0 ? (
-        <InlineAssistantPreview
-          chatId={chatId}
-          messages={assistantPreview.messages}
-          persistenceAckCount={assistantPreview.persistenceAckCount}
-          streamReady={assistantPreview.status === 'ready'}
-          busy={assistantBusy}
-          autoConfirm={autoConfirmRequested}
-          onSent={handleSentSuccess}
-        />
+      {autoConfirmRequested ? (
+        <div
+          className="text-muted-foreground flex items-center gap-2 px-3 py-3 text-sm"
+          data-testid="inbox-composer-sending"
+        >
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          {t('inbox.composer.sendingNow')}
+        </div>
       ) : null}
-
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('inbox.composer.confirmSendTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('inbox.composer.confirmSendBody')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('inbox.composer.confirmSendCancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(event) => {
-                event.preventDefault();
-                void handleConfirmDialogSend();
-              }}
-            >
-              {t('inbox.composer.confirmSendConfirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {previewSubmitted || assistantBusy || assistantPreview.messages.length > 0 ? (
+        // Mount the assistant preview so the autoConfirm tool call still fires, but hide it
+        // visually when the user triggered the autoConfirm path — they should see a single
+        // "Đang gửi..." spinner and then the success toast on close, not the intermediate
+        // "Cần xác nhận / Xem trước trước khi gửi" preview card flash.
+        <div className={autoConfirmRequested ? 'sr-only' : undefined}>
+          <InlineAssistantPreview
+            chatId={chatId}
+            messages={assistantPreview.messages}
+            persistenceAckCount={assistantPreview.persistenceAckCount}
+            streamReady={assistantPreview.status === 'ready'}
+            busy={assistantBusy}
+            autoConfirm={autoConfirmRequested}
+            onSent={handleSentSuccess}
+          />
+        </div>
+      ) : null}
     </form>
   );
 }
