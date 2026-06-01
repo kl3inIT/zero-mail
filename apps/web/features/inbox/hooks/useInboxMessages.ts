@@ -85,10 +85,11 @@ export function useMarkInboxMessageRead() {
       }
     },
     onSuccess: async (_data, gmailMessageId) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: inboxKeys.pages() }),
-        queryClient.invalidateQueries({ queryKey: inboxKeys.detail(gmailMessageId) }),
-      ]);
+      // Phase B Wave 2: the backend mark-read now writes the projection row in the same flow as
+      // the Gmail label modify, so the optimistic cache already matches the next DB read. Skip
+      // the inbox pages refetch (would flash the read state away then back) and only invalidate
+      // the open message detail so the labels chip there reflects the UNREAD removal.
+      await queryClient.invalidateQueries({ queryKey: inboxKeys.detail(gmailMessageId) });
     },
   });
 }

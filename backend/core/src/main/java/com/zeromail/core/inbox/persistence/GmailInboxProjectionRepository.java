@@ -122,4 +122,33 @@ public interface GmailInboxProjectionRepository
             @Param("beforeReceivedAt") Instant beforeReceivedAt,
             @Param("beforeMessageId") String beforeMessageId,
             @Param("pageLimit") int pageLimit);
+
+    /**
+     * Mark a single projection row as read (Phase B Wave 2). Drops the {@code UNREAD} label from
+     * {@code label_ids} via {@code array_remove}, flips the denormalized {@code unread} flag to
+     * false, bumps {@code refreshed_at} and {@code version}.
+     *
+     * <p>Returns the affected row count: {@code 0} when the projection has no row for the message
+     * yet (e.g. backfill has not reached it). The caller treats {@code 0} as a no-op — the next
+     * Pub/Sub event will UPSERT the row with the up-to-date Gmail state anyway.
+     *
+     * <p>Ciphertext columns are untouched; the existing AAD bound to the original plaintext is
+     * still valid because the {@code (tenantId, gmailMessageId, fieldName)} triple has not changed.
+     */
+    @Modifying
+    @Query(
+            value =
+                    """
+                    UPDATE gmail_inbox_projection
+                    SET unread = false,
+                        label_ids = array_remove(label_ids, 'UNREAD'),
+                        refreshed_at = NOW(),
+                        version = version + 1
+                    WHERE tenant_id = :tenantId
+                      AND gmail_message_id = :gmailMessageId
+                    """,
+            nativeQuery = true)
+    @Transactional
+    int markRead(
+            @Param("tenantId") UUID tenantId, @Param("gmailMessageId") String gmailMessageId);
 }

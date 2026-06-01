@@ -48,7 +48,10 @@ class TriageGmailWriterLookupLabelIdTest {
                                                         .setId("Label_42")
                                                         .setName("Zero Mail/Unsubscribed"))));
 
-        TriageGmailWriter triageGmailWriter = new TriageGmailWriter(gmailApiClientFactory);
+        TriageGmailWriter triageGmailWriter =
+                new TriageGmailWriter(
+                        gmailApiClientFactory,
+                        mock(com.zeromail.core.inbox.usecases.InboxProjectionWriteService.class));
 
         @SuppressWarnings("unchecked")
         Optional<String> labelId =
@@ -80,7 +83,10 @@ class TriageGmailWriterLookupLabelIdTest {
                                                         .setId("Label_99")
                                                         .setName("Some Other Label"))));
 
-        TriageGmailWriter triageGmailWriter = new TriageGmailWriter(gmailApiClientFactory);
+        TriageGmailWriter triageGmailWriter =
+                new TriageGmailWriter(
+                        gmailApiClientFactory,
+                        mock(com.zeromail.core.inbox.usecases.InboxProjectionWriteService.class));
 
         @SuppressWarnings("unchecked")
         Optional<String> labelId =
@@ -105,7 +111,10 @@ class TriageGmailWriterLookupLabelIdTest {
         when(labels.list("me")).thenReturn(listLabelsRequest);
         when(listLabelsRequest.execute()).thenThrow(new IOException("simulated Gmail outage"));
 
-        TriageGmailWriter triageGmailWriter = new TriageGmailWriter(gmailApiClientFactory);
+        TriageGmailWriter triageGmailWriter =
+                new TriageGmailWriter(
+                        gmailApiClientFactory,
+                        mock(com.zeromail.core.inbox.usecases.InboxProjectionWriteService.class));
 
         assertThatThrownBy(
                         () ->

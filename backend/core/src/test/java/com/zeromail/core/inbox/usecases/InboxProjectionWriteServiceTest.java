@@ -153,6 +153,81 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
         assertThat(projection.getVersion()).isEqualTo(1);
     }
 
+    @Test
+    void markRead_drops_unread_label_and_flips_flag_and_bumps_version() {
+        UUID tenantId = seedTenant();
+        String gmailMessageId = "190000000000bb03";
+        Instant receivedAt = Instant.now();
+
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            inboxProjectionWriteService.upsert(
+                                    new InboxProjectionUpsertCommand(
+                                            tenantId,
+                                            gmailMessageId,
+                                            "thread-mark-read",
+                                            "carol@example.com",
+                                            "Carol Reader",
+                                            "Read me later",
+                                            "Snippet about the thing",
+                                            false,
+                                            receivedAt,
+                                            List.of("INBOX", "UNREAD", "Label_99"),
+                                            300L));
+                            inboxProjectionWriteService.markRead(tenantId, gmailMessageId);
+                        });
+
+        GmailInboxProjectionEntity projection =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        projectionRepository
+                                                .findById(
+                                                        new GmailInboxProjectionId(
+                                                                tenantId, gmailMessageId))
+                                                .orElseThrow());
+
+        assertThat(projection.isUnread()).isFalse();
+        assertThat(projection.getLabelIds())
+                .as("UNREAD must be dropped while other labels are preserved")
+                .containsExactlyInAnyOrder("INBOX", "Label_99");
+        assertThat(projection.getVersion())
+                .as("version bumps from initial upsert (0) → markRead (1)")
+                .isEqualTo(1);
+        // Ciphertext stays untouched — AAD invariants are unchanged, so the projection still
+        // decrypts the same plaintext for subject / snippet / sender fields.
+        assertThat(
+                        cipher.decrypt(
+                                projection.getSubjectCiphertext(),
+                                tenantId,
+                                gmailMessageId,
+                                EncryptedField.SUBJECT))
+                .isEqualTo("Read me later");
+    }
+
+    @Test
+    void markRead_is_noop_when_projection_row_does_not_exist() {
+        UUID tenantId = seedTenant();
+        String missingGmailMessageId = "190000000000bbff";
+
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> inboxProjectionWriteService.markRead(tenantId, missingGmailMessageId));
+
+        boolean rowPresent =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        projectionRepository
+                                                .findById(
+                                                        new GmailInboxProjectionId(
+                                                                tenantId, missingGmailMessageId))
+                                                .isPresent());
+        assertThat(rowPresent)
+                .as("missing projection row must remain absent — markRead does NOT insert")
+                .isFalse();
+    }
+
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(

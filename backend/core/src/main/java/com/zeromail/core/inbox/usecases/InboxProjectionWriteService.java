@@ -110,6 +110,26 @@ public class InboxProjectionWriteService {
                 expiresAt);
     }
 
+    /**
+     * Local mark-read write hook (Phase B Wave 2). Called by {@code TriageGmailWriter.markRead}
+     * after the corresponding Gmail {@code users.messages.modify} succeeds, so the projection row
+     * reflects the new state immediately and the next inbox-list fetch from the DB returns the
+     * same value the optimistic UI already shows.
+     *
+     * <p>Ciphertext columns and AAD are untouched — only {@code unread} and the {@code label_ids}
+     * UNREAD entry change. Returns silently when the projection has no row for the message yet;
+     * the next Pub/Sub UPSERT will reconcile.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markRead(UUID tenantId, String gmailMessageId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+        if (gmailMessageId.isBlank()) {
+            throw new IllegalArgumentException("gmailMessageId must not be blank");
+        }
+        projectionRepository.markRead(tenantId, gmailMessageId);
+    }
+
     private static InboxState deriveInboxState(List<String> labelIds) {
         return labelIds.contains(INBOX_LABEL) ? InboxState.INBOX : InboxState.OUT_OF_INBOX;
     }
