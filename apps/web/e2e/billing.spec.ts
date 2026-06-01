@@ -51,5 +51,14 @@ test('upgrade page disables tiers below the active plan', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Nâng cấp gói' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Bạn đã có toàn quyền' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Gói hiện tại' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Thanh toán ngay' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Thanh toán bằng thẻ' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Chuyển khoản QR' })).toBeEnabled();
+
+  await page.getByRole('button', { name: 'Chuyển khoản QR' }).click();
+
+  const bankTransferDialog = page.getByRole('dialog', { name: 'Chuyển khoản ngân hàng' });
+  await expect(bankTransferDialog).toBeVisible();
+  await expect(bankTransferDialog.getByRole('img', { name: 'Mã QR chuyển khoản' })).toBeVisible();
+  await expect(bankTransferDialog.getByText('399.000₫')).toBeVisible();
+  await expect(bankTransferDialog.getByText('ZM ABCD2345 PRO')).toBeVisible();
 });

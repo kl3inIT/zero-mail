@@ -476,15 +476,19 @@
       "amount": "Số tiền",
       "bank": "Ngân hàng",
       "content": "Nội dung chuyển khoản",
+      "copyContent": "Sao chép",
       "description": "Quét QR hoặc chuyển khoản đúng số tiền và nội dung để Zero Mail tự kích hoạt gói.",
       "expiresAt": "QR hết hạn lúc {time}. Sau khi chuyển khoản, webhook SE Pay sẽ tự cập nhật gói.",
+      "expiresAtShort": "Hết hạn lúc {time}",
       "qrAlt": "Mã QR chuyển khoản",
+      "shortDescription": "Quét QR để thanh toán. Gói sẽ tự kích hoạt sau khi SE Pay xác nhận.",
       "title": "Chuyển khoản ngân hàng"
     },
     "copy": {
       "aria": "Sao chép {label}",
       "cta": "Sao chép",
-      "done": "Đã sao chép"
+      "done": "Đã sao chép",
+      "failed": "Không thể sao chép"
     },
     "ledger": {
       "columns": {

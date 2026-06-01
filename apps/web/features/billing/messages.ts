@@ -115,6 +115,10 @@ export const billingMessages = {
     vi: 'Quét QR hoặc chuyển khoản đúng số tiền và nội dung để Zero Mail tự kích hoạt gói.',
     en: 'Scan the QR or transfer the exact amount and memo so Zero Mail can activate the plan.',
   },
+  'billing.bankTransfer.shortDescription': {
+    vi: 'Quét QR để thanh toán. Gói sẽ tự kích hoạt sau khi SE Pay xác nhận.',
+    en: 'Scan the QR to pay. Your plan activates after SE Pay confirms it.',
+  },
   'billing.bankTransfer.qrAlt': {
     vi: 'Mã QR chuyển khoản',
     en: 'Bank transfer QR code',
@@ -139,9 +143,17 @@ export const billingMessages = {
     vi: 'Nội dung chuyển khoản',
     en: 'Transfer memo',
   },
+  'billing.bankTransfer.copyContent': {
+    vi: 'Sao chép',
+    en: 'Copy',
+  },
   'billing.bankTransfer.expiresAt': {
     vi: 'QR hết hạn lúc {time}. Sau khi chuyển khoản, webhook SE Pay sẽ tự cập nhật gói.',
     en: 'QR expires at {time}. After payment, the SE Pay webhook will update your plan automatically.',
+  },
+  'billing.bankTransfer.expiresAtShort': {
+    vi: 'Hết hạn lúc {time}',
+    en: 'Expires at {time}',
   },
   'billing.balance.label': {
     vi: 'Tín dụng hiện có',
@@ -318,6 +330,10 @@ export const billingMessages = {
   'billing.copy.done': {
     vi: 'Đã sao chép',
     en: 'Copied',
+  },
+  'billing.copy.failed': {
+    vi: 'Không thể sao chép',
+    en: "Couldn't copy",
   },
   'billing.copy.aria': {
     vi: 'Sao chép {label}',
