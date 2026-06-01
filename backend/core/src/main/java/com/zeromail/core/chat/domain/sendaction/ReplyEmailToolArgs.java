@@ -13,7 +13,9 @@ public record ReplyEmailToolArgs(
         sourceMessageId = requireText(sourceMessageId, "sourceMessageId");
         to = requireText(to, "to");
         cc = optionalText(cc);
-        subject = requireText(subject, "subject");
+        // Blank-tolerant: Gmail renders an empty subject as "(no subject)". The model
+        // normally derives a "Re:" subject from the thread, but an empty value must send.
+        subject = blankToEmpty(subject);
         gmailThreadId = optionalText(gmailThreadId);
         body = requireText(body, "body");
     }
@@ -31,5 +33,9 @@ public record ReplyEmailToolArgs(
         }
         String trimmedText = text.trim();
         return trimmedText.isBlank() ? null : trimmedText;
+    }
+
+    private static String blankToEmpty(String text) {
+        return text == null ? "" : text.trim();
     }
 }

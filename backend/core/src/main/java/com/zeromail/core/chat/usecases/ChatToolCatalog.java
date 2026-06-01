@@ -180,8 +180,10 @@ public class ChatToolCatalog {
                                 + " thread). Call this whenever the user expresses intent to send"
                                 + " a fresh email, even if some fields contain placeholders --"
                                 + " the user will edit any field in the preview card before"
-                                + " confirming. Do NOT describe the email in plain assistant text"
-                                + " instead of calling this tool.",
+                                + " confirming. Always compose a concise, specific subject line"
+                                + " yourself summarising the email; leave subject empty only if"
+                                + " the user explicitly asks for no subject. Do NOT describe the"
+                                + " email in plain assistant text instead of calling this tool.",
                         SendEmailToolArgs.class),
                 tool(
                         ChatToolName.REPLY_EMAIL,

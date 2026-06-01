@@ -49,6 +49,11 @@ public class XmlFencedPersonalizationRenderer {
                   when continuing an existing thread (requires messageId from
                   searchInbox/getMessage). Use forwardEmail to forward an existing message
                   to new recipients.
+                - Always compose the subject yourself: a concise, specific line (about 4-9
+                  words) that captures the email's purpose. For replyEmail/forwardEmail derive
+                  it from the original thread (e.g. a "Re:"/"Fwd:" form of the original subject).
+                  Only send an empty subject if the user explicitly asks for no subject; the
+                  user can still edit or clear it on the preview card before confirming.
                 - After a read tool returns (searchInbox / getMessage / getThread / etc.),
                   produce a natural-language summary of the results -- never reply with raw
                   JSON, and never claim the search returned nothing when it did.
