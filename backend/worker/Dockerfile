@@ -40,24 +40,29 @@ RUN --mount=type=cache,id=gradle-cache,target=/cache/.gradle,sharing=locked \
     mkdir -p /app && \
     mv backend/worker/build/libs/*.jar /app/app.jar
 
-# Extract Spring Boot layers
-RUN java -Djarmode=layertools -jar /app/app.jar extract --destination /app/extracted
+# Extract Spring Boot layers with the SB 3.4+ `tools` jarmode (layertools is
+# deprecated). --launcher is REQUIRED so the spring-boot-loader layer keeps the
+# JarLauncher classes; without it the CMD below ClassNotFounds. With --launcher
+# the overlaid layout (BOOT-INF/ + META-INF/ + org/) is identical to the old
+# layertools output, so the stage-3 COPY paths + JarLauncher CMD stay unchanged.
+RUN java -Djarmode=tools -jar /app/app.jar extract --layers --launcher --destination /app/extracted
 
 # ============================================================================
-# STAGE 3: Runtime (eclipse-temurin:25-jre-noble — same glibc as builder)
+# STAGE 3: Runtime (BellSoft Liberica JRE 25 on Alpaquita glibc).
+# Alpaquita glibc keeps the same libc family as the Temurin builder, so the
+# extracted glibc-linked native libs (netty-tcnative, etc.) stay compatible —
+# no musl footguns — while dropping the base from Ubuntu Noble (~570MB) to
+# Alpaquita (~210MB). BellSoft ships monthly CVE rebuilds for LTS JDKs.
+# Package manager is apk (BusyBox userland), not apt.
 # ============================================================================
-FROM eclipse-temurin:25-jre-noble
+FROM bellsoft/liberica-runtime-container:jre-25-glibc
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      tini \
-      curl && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# apk has no persistent global cache config to fight; --no-cache keeps the layer
+# clean. tini for PID-1 signal handling, curl for the healthcheck probe.
+RUN apk add --no-cache tini curl
 
-RUN groupadd -g 1654 appgroup && \
-    useradd  -u 1654 -g appgroup -s /sbin/nologin appuser
+RUN addgroup -g 1654 -S appgroup && \
+    adduser  -u 1654 -S appuser -G appgroup
 
 WORKDIR /app
 
@@ -92,5 +97,5 @@ LABEL org.opencontainers.image.title="ZeroMail Worker" \
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
     CMD curl -f http://localhost:8081/actuator/health || exit 1
 
-ENTRYPOINT ["/usr/bin/tini", "--"]
+ENTRYPOINT ["/usr/sbin/tini", "--"]
 CMD ["java", "org.springframework.boot.loader.launch.JarLauncher"]

@@ -89,6 +89,11 @@ services:
     container_name: zeromail-worker
     restart: unless-stopped
     env_file: .env
+    # Cap above observed steady-state (~720MB) with ~38% headroom. memswap_limit
+    # = mem_limit disables swap usage (host has 0 swap anyway, this is explicit).
+    mem_limit: 1g
+    mem_reservation: 700m
+    memswap_limit: 1g
     networks:
       - zeromail-internal
     depends_on:
@@ -154,6 +159,11 @@ services:
     container_name: zeromail-api
     restart: unless-stopped
     env_file: .env
+    # Cap above observed steady-state (~1.17GB) with ~28% headroom. memswap_limit
+    # = mem_limit disables swap usage (host has 0 swap anyway, this is explicit).
+    mem_limit: 1500m
+    mem_reservation: 1g
+    memswap_limit: 1500m
     networks:
       - proxy-network
       - zeromail-internal
