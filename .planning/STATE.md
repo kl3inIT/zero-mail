@@ -539,10 +539,16 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 (Note: 9 directories on disk; SDK audit shows 7 with no SUMMARY.md — all carried forward, none archived as completed.)
 
+### v1.2-period quick tasks (in-progress)
+
+| Slug | Description |
+|------|-------------|
+| 260601-gmail-inbox-cqrs-projection-phase-a | Inbox CQRS-lite projection foundation (schema + crypto + write + backfill + ArchUnit) — complete |
+
 ## Session Continuity
 
-Last session: 2026-06-01T00:00:00.000Z
-Stopped at: Phase 10 planning complete (11 PLAN.md files, plan-checker PASS, 0 BLOCK / 0 FLAG) — Phase 9 already shipped on main via PR #74
+Last session: 2026-06-01T08:55:00.000Z
+Stopped at: Phase A of Gmail inbox CQRS-lite projection complete (5 waves, all green) — Phase 10 plans still pending
 Resume file: .planning/phases/10-telegram-messaging-assistant/10-00-PLAN.md (first plan; Wave 0 foundation)
 
 ## Operator Next Steps
