@@ -117,6 +117,14 @@ zero-mail:
       test-mode: ${LEMON_SQUEEZY_TEST_MODE:false}
       api-base-url: ${LEMON_SQUEEZY_API_BASE_URL:https://api.lemonsqueezy.com/v1}
       checkout-reuse-window: ${LEMON_SQUEEZY_CHECKOUT_REUSE_WINDOW:PT15M}
+    sepay:
+      webhook-api-key: ${SEPAY_WEBHOOK_API_KEY:}
+      bank-code: ${SEPAY_BANK_CODE:}
+      bank-name: ${SEPAY_BANK_NAME:}
+      account-number: ${SEPAY_ACCOUNT_NUMBER:}
+      account-name: ${SEPAY_ACCOUNT_NAME:}
+      qr-base-url: ${SEPAY_QR_BASE_URL:https://qr.sepay.vn/img}
+      intent-reuse-window: ${SEPAY_INTENT_REUSE_WINDOW:PT15M}
   llm:
     platform:
       # provider/base-url/models/timeouts default in LlmProperties; only api-key is deployment-supplied

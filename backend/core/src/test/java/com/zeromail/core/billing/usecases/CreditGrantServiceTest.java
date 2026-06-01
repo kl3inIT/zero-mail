@@ -92,10 +92,7 @@ class CreditGrantServiceTest extends PostgresContainerTest {
                         plusEffectiveAt.plusSeconds(2_592_000),
                         plusEffectiveAt,
                         0,
-                        "VND",
-                        null,
-                        null,
-                        null);
+                        "VND");
         billingPlanPeriodRepository.saveAndFlush(plusPlanPeriod);
 
         CreditGrantResult firstGrant =
@@ -136,10 +133,7 @@ class CreditGrantServiceTest extends PostgresContainerTest {
                         proEffectiveAt.plusSeconds(2_592_000),
                         proEffectiveAt,
                         0,
-                        "VND",
-                        null,
-                        null,
-                        null));
+                        "VND"));
         CreditGrantResult secondGrant =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                         .call(

@@ -1,8 +1,6 @@
 package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.persistence.BillingPlanEntity;
-import com.zeromail.core.billing.persistence.BillingPlanPeriodEntity;
-import com.zeromail.core.billing.persistence.BillingPlanPeriodRepository;
 import com.zeromail.core.billing.persistence.BillingPlanRepository;
 import com.zeromail.core.billing.persistence.BillingWebhookEventEntity;
 import com.zeromail.core.billing.persistence.BillingWebhookEventRepository;
@@ -10,7 +8,6 @@ import com.zeromail.core.tenant.TenantContext;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Optional;
@@ -29,30 +26,23 @@ public class LemonSqueezyWebhookIngestService {
     private static final String PROCESSING_STATUS_RECEIVED = "RECEIVED";
     private static final String REDACTED = "[redacted]";
     private static final String PROVIDER_LEMON_SQUEEZY = "LEMON_SQUEEZY";
-    private static final String PLAN_PERIOD_STATUS_ACTIVE = "ACTIVE";
     private static final Set<String> PLAN_PAYMENT_EVENTS = Set.of("order_created");
 
     private final BillingPlanRepository billingPlanRepository;
-    private final BillingPlanPeriodRepository billingPlanPeriodRepository;
     private final BillingWebhookEventRepository billingWebhookEventRepository;
-    private final CreditGrantService creditGrantService;
-    private final CurrentBillingPlanResolver currentBillingPlanResolver;
+    private final PaidPlanActivationService paidPlanActivationService;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
 
     public LemonSqueezyWebhookIngestService(
             BillingPlanRepository billingPlanRepository,
-            BillingPlanPeriodRepository billingPlanPeriodRepository,
             BillingWebhookEventRepository billingWebhookEventRepository,
-            CreditGrantService creditGrantService,
-            CurrentBillingPlanResolver currentBillingPlanResolver,
+            PaidPlanActivationService paidPlanActivationService,
             ObjectMapper objectMapper,
             TransactionTemplate transactionTemplate) {
         this.billingPlanRepository = billingPlanRepository;
-        this.billingPlanPeriodRepository = billingPlanPeriodRepository;
         this.billingWebhookEventRepository = billingWebhookEventRepository;
-        this.creditGrantService = creditGrantService;
-        this.currentBillingPlanResolver = currentBillingPlanResolver;
+        this.paidPlanActivationService = paidPlanActivationService;
         this.objectMapper = objectMapper;
         this.transactionTemplate = transactionTemplate;
     }
@@ -129,11 +119,12 @@ public class LemonSqueezyWebhookIngestService {
             String redactedPayloadJson) {
         return new BillingWebhookEventEntity(
                 UUID.randomUUID(),
+                PROVIDER_LEMON_SQUEEZY,
                 blankToNull(providerEventId),
                 dedupeKey,
                 eventName(rootNode),
                 tenantId(rootNode).orElse(null),
-                orderId(dataNode).orElse(null),
+                orderId(dataNode).map(Object::toString).orElse(null),
                 true,
                 PROCESSING_STATUS_RECEIVED,
                 Instant.now(),
@@ -155,6 +146,8 @@ public class LemonSqueezyWebhookIngestService {
                 createPlanPeriod(orderWebhookPayload, webhookEvent.getProviderEventId());
             }
             webhookEvent.markProcessed(Instant.now());
+        } catch (PaidPlanActivationService.PlanActivationException processingException) {
+            webhookEvent.markFailed(Instant.now(), processingException.getMessage());
         } catch (WebhookProcessingException processingException) {
             webhookEvent.markFailed(Instant.now(), processingException.getMessage());
         }
@@ -168,10 +161,7 @@ public class LemonSqueezyWebhookIngestService {
                 dataNode.path("type").asString(),
                 tenantId(rootNode),
                 longValue(dataNode.path("id")).or(() -> longValue(attributesNode.path("order_id"))),
-                longValue(attributesNode.path("customer_id")),
                 longValue(attributesNode.path("checkout_id")),
-                longValue(attributesNode.path("product_id"))
-                        .or(() -> longValue(firstOrderItemNode.path("product_id"))),
                 longValue(attributesNode.path("variant_id"))
                         .or(() -> longValue(firstOrderItemNode.path("variant_id"))),
                 textValue(rootNode.path("meta").path("custom_data").path("plan")),
@@ -190,90 +180,27 @@ public class LemonSqueezyWebhookIngestService {
                                         new WebhookProcessingException(
                                                 "missing_lemon_squeezy_order_id"));
         String providerOrderId = Long.toString(orderId);
-        Optional<BillingPlanPeriodEntity> existingPlanPeriod =
-                billingPlanPeriodRepository.findByProviderOrderId(providerOrderId);
-        if (existingPlanPeriod.isPresent()) {
-            return;
-        }
         BillingPlanEntity billingPlan = resolveBillingPlan(orderWebhookPayload);
         validatePaidOrder(orderWebhookPayload);
         UUID tenantId =
                 orderWebhookPayload
                         .tenantId()
                         .orElseThrow(() -> new WebhookProcessingException("missing_tenant_id"));
-        ensureWebhookPlanAllowed(tenantId, billingPlan, Instant.now());
         Instant paidAt = orderWebhookPayload.createdAt().orElse(Instant.now());
-
-        BillingPlanPeriodEntity billingPlanPeriod =
-                createPlanPeriod(
+        paidPlanActivationService.activate(
+                new PaidPlanActivationService.PaidPlanActivationCommand(
                         tenantId,
                         billingPlan,
-                        orderWebhookPayload,
-                        providerEventId,
-                        providerOrderId,
-                        paidAt);
-
-        expireOverlappingPlanPeriods(billingPlanPeriod);
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .run(() -> creditGrantService.resetCurrentPlanAllowanceCredits(tenantId));
-    }
-
-    private void ensureWebhookPlanAllowed(
-            UUID tenantId, BillingPlanEntity selectedPlan, Instant now) {
-        BillingPlanEntity currentPlan =
-                currentBillingPlanResolver.resolveCurrentPlan(tenantId, now);
-        if (currentPlan.getTierRank() > selectedPlan.getTierRank()) {
-            throw new WebhookProcessingException("plan_downgrade_not_allowed");
-        }
-    }
-
-    private BillingPlanPeriodEntity createPlanPeriod(
-            UUID tenantId,
-            BillingPlanEntity billingPlan,
-            OrderWebhookPayload orderWebhookPayload,
-            String providerEventId,
-            String providerOrderId,
-            Instant paidAt) {
-        Instant expiresAt =
-                paidAt.atZone(CreditGrantService.PLAN_ALLOWANCE_RESET_ZONE)
-                        .plusMonths(1)
-                        .toInstant();
-        BillingPlanPeriodEntity billingPlanPeriod =
-                new BillingPlanPeriodEntity(
-                        UUID.randomUUID(),
-                        tenantId,
-                        billingPlan.getId(),
-                        PLAN_PERIOD_STATUS_ACTIVE,
                         PROVIDER_LEMON_SQUEEZY,
                         providerOrderId,
                         orderWebhookPayload.checkoutId().map(Object::toString).orElse(null),
                         blankToNull(providerEventId),
-                        paidAt.truncatedTo(ChronoUnit.MILLIS),
-                        expiresAt.truncatedTo(ChronoUnit.MILLIS),
-                        paidAt.truncatedTo(ChronoUnit.MILLIS),
+                        paidAt,
                         orderWebhookPayload.totalAmount().orElse(billingPlan.getPriceVnd()),
                         orderWebhookPayload
                                 .currency()
                                 .map(currency -> currency.trim().toUpperCase(Locale.ROOT))
-                                .orElse(billingPlan.getCurrency()),
-                        orderWebhookPayload.customerId().orElse(null),
-                        orderWebhookPayload.productId().orElse(null),
-                        orderWebhookPayload.variantId().orElse(null));
-        return billingPlanPeriodRepository.save(billingPlanPeriod);
-    }
-
-    private void expireOverlappingPlanPeriods(BillingPlanPeriodEntity currentPlanPeriod) {
-        billingPlanPeriodRepository
-                .findOverlappingActiveTenantPlanPeriods(
-                        currentPlanPeriod.getTenantId(),
-                        currentPlanPeriod.getId(),
-                        currentPlanPeriod.getEffectiveAt(),
-                        currentPlanPeriod.getExpiresAt())
-                .forEach(
-                        overlappingPlanPeriod -> {
-                            overlappingPlanPeriod.markExpired();
-                            billingPlanPeriodRepository.save(overlappingPlanPeriod);
-                        });
+                                .orElse(billingPlan.getCurrency())));
     }
 
     private void validatePaidOrder(OrderWebhookPayload orderWebhookPayload) {
@@ -428,8 +355,8 @@ public class LemonSqueezyWebhookIngestService {
     private String dedupeKey(String providerEventId, String payloadSha256) {
         String normalizedProviderEventId = blankToNull(providerEventId);
         return normalizedProviderEventId == null
-                ? "payload_sha256:" + payloadSha256
-                : "provider_event_id:" + normalizedProviderEventId;
+                ? PROVIDER_LEMON_SQUEEZY + ":payload_sha256:" + payloadSha256
+                : PROVIDER_LEMON_SQUEEZY + ":provider_event_id:" + normalizedProviderEventId;
     }
 
     private String sha256Hex(String value) {
@@ -451,9 +378,7 @@ public class LemonSqueezyWebhookIngestService {
             String dataType,
             Optional<UUID> tenantId,
             Optional<Long> orderId,
-            Optional<Long> customerId,
             Optional<Long> checkoutId,
-            Optional<Long> productId,
             Optional<Long> variantId,
             Optional<String> planCode,
             Optional<String> status,

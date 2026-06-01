@@ -1,9 +1,12 @@
 package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.config.BillingProperties;
+import com.zeromail.core.billing.domain.BankTransferCodeGenerator;
 import com.zeromail.core.billing.exception.BillingCheckoutUnavailableException;
 import com.zeromail.core.billing.exception.BillingPlanDowngradeNotAllowedException;
 import com.zeromail.core.billing.exception.BillingPlanNotFoundException;
+import com.zeromail.core.billing.persistence.BillingBankTransferIntentEntity;
+import com.zeromail.core.billing.persistence.BillingBankTransferIntentRepository;
 import com.zeromail.core.billing.persistence.BillingCheckoutSessionEntity;
 import com.zeromail.core.billing.persistence.BillingCheckoutSessionRepository;
 import com.zeromail.core.billing.persistence.BillingPlanEntity;
@@ -11,9 +14,13 @@ import com.zeromail.core.billing.persistence.BillingPlanRepository;
 import com.zeromail.core.billing.persistence.FeatureCatalogEntity;
 import com.zeromail.core.billing.persistence.PlanFeaturePermissionEntity;
 import com.zeromail.core.billing.persistence.PlanFeaturePermissionRepository;
+import com.zeromail.core.billing.projection.BankTransferIntentView;
 import com.zeromail.core.billing.projection.BillingPlanCatalogView;
 import com.zeromail.core.billing.projection.BillingPlanView;
 import com.zeromail.core.billing.projection.PlanFeatureSummary;
+import com.zeromail.core.billing.projection.PlanUpgradeCheckoutView;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
@@ -28,16 +35,25 @@ public class BillingPlanQueryService {
 
     private static final String CHECKOUT_STATUS_CREATED = "CREATED";
     private static final String CHECKOUT_STATUS_FAILED = "FAILED";
+    private static final String PAYMENT_METHOD_LEMON_SQUEEZY = "LEMON_SQUEEZY";
+    private static final String PAYMENT_METHOD_SEPAY_BANK_TRANSFER = "SEPAY_BANK_TRANSFER";
+    private static final String BANK_TRANSFER_PROVIDER_SEPAY = "SEPAY";
+    private static final String BANK_TRANSFER_STATUS_PENDING = "PENDING";
 
+    private final BillingBankTransferIntentRepository billingBankTransferIntentRepository;
     private final BillingCheckoutSessionRepository billingCheckoutSessionRepository;
     private final BillingPlanRepository billingPlanRepository;
     private final LemonSqueezyCheckoutClient checkoutClient;
     private final Duration checkoutReuseWindow;
+    private final BillingProperties.SepayProperties sepay;
     private final PlanFeaturePermissionRepository planFeaturePermissionRepository;
     private final FeatureCatalogCache featureCatalogCache;
     private final CurrentBillingPlanResolver currentBillingPlanResolver;
+    private final BankTransferCodeGenerator bankTransferCodeGenerator =
+            new BankTransferCodeGenerator();
 
     public BillingPlanQueryService(
+            BillingBankTransferIntentRepository billingBankTransferIntentRepository,
             BillingCheckoutSessionRepository billingCheckoutSessionRepository,
             BillingPlanRepository billingPlanRepository,
             LemonSqueezyCheckoutClient checkoutClient,
@@ -45,10 +61,12 @@ public class BillingPlanQueryService {
             PlanFeaturePermissionRepository planFeaturePermissionRepository,
             FeatureCatalogCache featureCatalogCache,
             CurrentBillingPlanResolver currentBillingPlanResolver) {
+        this.billingBankTransferIntentRepository = billingBankTransferIntentRepository;
         this.billingCheckoutSessionRepository = billingCheckoutSessionRepository;
         this.billingPlanRepository = billingPlanRepository;
         this.checkoutClient = checkoutClient;
         this.checkoutReuseWindow = billingProperties.lemonSqueezy().checkoutReuseWindow();
+        this.sepay = billingProperties.sepay();
         this.planFeaturePermissionRepository = planFeaturePermissionRepository;
         this.featureCatalogCache = featureCatalogCache;
         this.currentBillingPlanResolver = currentBillingPlanResolver;
@@ -69,7 +87,8 @@ public class BillingPlanQueryService {
     }
 
     @Transactional(noRollbackFor = BillingCheckoutUnavailableException.class)
-    public String createCheckout(UUID tenantId, String planCode, String userEmail) {
+    public PlanUpgradeCheckoutView createCheckout(
+            UUID tenantId, String planCode, String paymentMethod, String userEmail) {
         BillingPlanEntity plan =
                 billingPlanRepository
                         .findByCode(planCode)
@@ -78,6 +97,24 @@ public class BillingPlanQueryService {
         String normalizedUserEmail = normalizeEmail(userEmail);
         Instant now = Instant.now();
         ensureCheckoutAllowed(tenantId, plan, now);
+        String normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
+        if (PAYMENT_METHOD_LEMON_SQUEEZY.equals(normalizedPaymentMethod)) {
+            return createLemonSqueezyCheckout(tenantId, plan, normalizedUserEmail, now);
+        }
+        if (PAYMENT_METHOD_SEPAY_BANK_TRANSFER.equals(normalizedPaymentMethod)) {
+            return createSepayBankTransferCheckout(tenantId, plan, normalizedUserEmail, now);
+        }
+        throw new IllegalArgumentException("Unsupported payment method: " + paymentMethod);
+    }
+
+    public Optional<BankTransferIntentView> findBankTransferIntent(UUID tenantId, UUID intentId) {
+        return billingBankTransferIntentRepository
+                .findByIdAndTenantId(intentId, tenantId)
+                .map(BankTransferIntentView::from);
+    }
+
+    private PlanUpgradeCheckoutView createLemonSqueezyCheckout(
+            UUID tenantId, BillingPlanEntity plan, String normalizedUserEmail, Instant now) {
         Optional<BillingCheckoutSessionEntity> reusableCheckoutSession =
                 billingCheckoutSessionRepository.findReusableCheckoutSession(
                         tenantId,
@@ -86,7 +123,8 @@ public class BillingPlanQueryService {
                         CHECKOUT_STATUS_CREATED,
                         now);
         if (reusableCheckoutSession.isPresent()) {
-            return reusableCheckoutSession.get().getCheckoutUrl();
+            return PlanUpgradeCheckoutView.lemonSqueezy(
+                    reusableCheckoutSession.get().getCheckoutUrl());
         }
         LemonSqueezyCheckoutCreation checkoutCreation =
                 checkoutClient.createCheckout(plan, tenantId, normalizedUserEmail);
@@ -95,7 +133,55 @@ public class BillingPlanQueryService {
         if (!checkoutCreation.created()) {
             throw new BillingCheckoutUnavailableException();
         }
-        return checkoutCreation.checkoutUrl();
+        return PlanUpgradeCheckoutView.lemonSqueezy(checkoutCreation.checkoutUrl());
+    }
+
+    private PlanUpgradeCheckoutView createSepayBankTransferCheckout(
+            UUID tenantId, BillingPlanEntity plan, String normalizedUserEmail, Instant now) {
+        if (!sepay.isConfigured()) {
+            throw new BillingCheckoutUnavailableException();
+        }
+        Optional<BillingBankTransferIntentEntity> reusableIntent =
+                billingBankTransferIntentRepository.findReusableBankTransferIntent(
+                        tenantId,
+                        plan.getId(),
+                        BANK_TRANSFER_PROVIDER_SEPAY,
+                        BANK_TRANSFER_STATUS_PENDING,
+                        now);
+        if (reusableIntent.isPresent()) {
+            return PlanUpgradeCheckoutView.sepay(BankTransferIntentView.from(reusableIntent.get()));
+        }
+        String code =
+                bankTransferCodeGenerator.generateUniqueCode(
+                        candidateCode ->
+                                billingBankTransferIntentRepository
+                                        .findByCode(candidateCode)
+                                        .isEmpty(),
+                        3);
+        Instant expiresAt = now.plus(sepay.intentReuseWindow());
+        String transferContent = buildTransferContent(code, plan.getCode());
+        String qrUrl = buildQrUrl(plan.getPriceVnd(), transferContent);
+        BillingBankTransferIntentEntity intent =
+                new BillingBankTransferIntentEntity(
+                        UUID.randomUUID(),
+                        tenantId,
+                        plan.getId(),
+                        plan.getCode(),
+                        normalizedUserEmail,
+                        BANK_TRANSFER_PROVIDER_SEPAY,
+                        code,
+                        plan.getPriceVnd(),
+                        plan.getCurrency(),
+                        BANK_TRANSFER_STATUS_PENDING,
+                        expiresAt,
+                        sepay.bankCode(),
+                        sepay.bankName(),
+                        sepay.accountNumber(),
+                        sepay.accountName(),
+                        transferContent,
+                        qrUrl);
+        billingBankTransferIntentRepository.saveAndFlush(intent);
+        return PlanUpgradeCheckoutView.sepay(BankTransferIntentView.from(intent));
     }
 
     private void ensureCheckoutAllowed(UUID tenantId, BillingPlanEntity selectedPlan, Instant now) {
@@ -129,6 +215,35 @@ public class BillingPlanQueryService {
 
     private String normalizeEmail(String userEmail) {
         return userEmail == null || userEmail.isBlank() ? null : userEmail.trim().toLowerCase();
+    }
+
+    private String normalizePaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            return PAYMENT_METHOD_LEMON_SQUEEZY;
+        }
+        return paymentMethod.trim().toUpperCase();
+    }
+
+    private String buildTransferContent(String code, String planCode) {
+        return "ZM " + code + " " + planCode;
+    }
+
+    private String buildQrUrl(long amountVnd, String transferContent) {
+        String separator = sepay.qrBaseUrl().toString().contains("?") ? "&" : "?";
+        return sepay.qrBaseUrl()
+                + separator
+                + "acc="
+                + urlEncode(sepay.accountNumber())
+                + "&bank="
+                + urlEncode(sepay.bankCode())
+                + "&amount="
+                + amountVnd
+                + "&des="
+                + urlEncode(transferContent);
+    }
+
+    private String urlEncode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     private BillingPlanView toView(BillingPlanEntity plan) {

@@ -281,3 +281,6 @@ databaseChangeLog:
   - include:
       file: changes/106-merge-assistant-memory-into-knowledge.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/107-sepay-bank-transfer-plan-upgrades.yaml
+      relativeToChangelogFile: true

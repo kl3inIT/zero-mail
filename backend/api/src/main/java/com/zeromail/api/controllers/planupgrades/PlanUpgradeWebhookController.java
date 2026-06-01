@@ -2,6 +2,7 @@ package com.zeromail.api.controllers.planupgrades;
 
 import com.zeromail.core.billing.usecases.LemonSqueezyWebhookIngestResult;
 import com.zeromail.core.billing.usecases.LemonSqueezyWebhookIngestService;
+import com.zeromail.core.billing.usecases.SepayWebhookIngestService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,10 +19,13 @@ public class PlanUpgradeWebhookController {
     private static final String LEMON_SQUEEZY_EVENT_ID_HEADER = "X-LemonSqueezy-Event-Id";
 
     private final LemonSqueezyWebhookIngestService lemonSqueezyWebhookIngestService;
+    private final SepayWebhookIngestService sepayWebhookIngestService;
 
     public PlanUpgradeWebhookController(
-            LemonSqueezyWebhookIngestService lemonSqueezyWebhookIngestService) {
+            LemonSqueezyWebhookIngestService lemonSqueezyWebhookIngestService,
+            SepayWebhookIngestService sepayWebhookIngestService) {
         this.lemonSqueezyWebhookIngestService = lemonSqueezyWebhookIngestService;
+        this.sepayWebhookIngestService = sepayWebhookIngestService;
     }
 
     @PostMapping("/lemon-squeezy")
@@ -37,6 +41,13 @@ public class PlanUpgradeWebhookController {
                         + " payload="
                         + ingestResult.redactedPayloadJson());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/sepay")
+    public ResponseEntity<java.util.Map<String, Boolean>> sepay(
+            @RequestBody(required = false) String payload) {
+        sepayWebhookIngestService.ingest(payload);
+        return ResponseEntity.ok(java.util.Map.of("success", true));
     }
 
     private String eventId(HttpHeaders headers) {

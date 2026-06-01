@@ -1,11 +1,16 @@
 'use client';
 
-import { Check, Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { Check, CreditCard, Landmark, Loader2, QrCode } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import type { BillingPlanResponse } from '@/features/billing/api/billing-api';
+import type {
+  BankTransferIntentResponse,
+  BillingPaymentMethod,
+  BillingPlanResponse,
+} from '@/features/billing/api/billing-api';
+import { CopyableField } from '@/features/billing/components/CopyableField';
 import { useBillingPlans } from '@/features/billing/hooks/useBillingPlans';
 import { useStartBillingCheckout } from '@/features/billing/hooks/useStartBillingCheckout';
 import { Button } from '@/components/ui/button';
@@ -22,7 +27,10 @@ export function PlanList() {
   const t = useTranslations();
   const plansQuery = useBillingPlans();
   const checkoutMutation = useStartBillingCheckout();
-  const [pendingPlanCode, setPendingPlanCode] = useState<BillingPlanResponse['code'] | null>(null);
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
+  const [bankTransferIntent, setBankTransferIntent] = useState<BankTransferIntentResponse | null>(
+    null,
+  );
 
   if (plansQuery.isLoading) {
     return (
@@ -44,13 +52,26 @@ export function PlanList() {
   const plans = plansQuery.data.plans.toSorted((a, b) => a.tierRank - b.tierRank);
   const currentPlanTier = plans.find((plan) => plan.code === currentPlanCode)?.tierRank ?? 0;
 
-  function startCheckout(plan: BillingPlanResponse): void {
-    setPendingPlanCode(plan.code);
-    checkoutMutation.mutate(plan.code, {
-      onSuccess: (response) => window.location.assign(response.checkoutUrl),
-      onError: () => toast.error(t('billing.plans.checkoutError')),
-      onSettled: () => setPendingPlanCode(null),
-    });
+  function startCheckout(plan: BillingPlanResponse, paymentMethod: BillingPaymentMethod): void {
+    setPendingPayment({ planCode: plan.code, paymentMethod });
+    checkoutMutation.mutate(
+      { planCode: plan.code, paymentMethod },
+      {
+        onSuccess: (response) => {
+          if (response.paymentMethod === 'LEMON_SQUEEZY' && response.checkoutUrl) {
+            window.location.assign(response.checkoutUrl);
+            return;
+          }
+          if (response.paymentMethod === 'SEPAY_BANK_TRANSFER' && response.bankTransferIntent) {
+            setBankTransferIntent(response.bankTransferIntent);
+            return;
+          }
+          toast.error(t('billing.plans.checkoutError'));
+        },
+        onError: () => toast.error(t('billing.plans.checkoutError')),
+        onSettled: () => setPendingPayment(null),
+      },
+    );
   }
 
   if (plans.length === 0) {
@@ -62,33 +83,44 @@ export function PlanList() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-      {plans.map((plan) => (
-        <PlanCard
-          key={plan.code}
-          plan={plan}
-          isCurrent={plan.code === currentPlanCode}
-          isLowerThanCurrent={plan.tierRank < currentPlanTier}
-          isCheckoutPending={pendingPlanCode === plan.code && checkoutMutation.isPending}
-          onStartCheckout={startCheckout}
-        />
-      ))}
+    <div className="space-y-6">
+      {bankTransferIntent && <BankTransferPanel intent={bankTransferIntent} />}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {plans.map((plan) => (
+          <PlanCard
+            key={plan.code}
+            plan={plan}
+            isCurrent={plan.code === currentPlanCode}
+            isLowerThanCurrent={plan.tierRank < currentPlanTier}
+            pendingPayment={pendingPayment}
+            isCheckoutPending={pendingPayment?.planCode === plan.code && checkoutMutation.isPending}
+            onStartCheckout={startCheckout}
+          />
+        ))}
+      </div>
     </div>
   );
 }
+
+type PendingPayment = {
+  planCode: BillingPlanResponse['code'];
+  paymentMethod: BillingPaymentMethod;
+};
 
 interface PlanCardProps {
   plan: BillingPlanResponse;
   isCurrent: boolean;
   isLowerThanCurrent: boolean;
+  pendingPayment: PendingPayment | null;
   isCheckoutPending: boolean;
-  onStartCheckout: (plan: BillingPlanResponse) => void;
+  onStartCheckout: (plan: BillingPlanResponse, paymentMethod: BillingPaymentMethod) => void;
 }
 
 function PlanCard({
   plan,
   isCurrent,
   isLowerThanCurrent,
+  pendingPayment,
   isCheckoutPending,
   onStartCheckout,
 }: PlanCardProps) {
@@ -130,6 +162,14 @@ function PlanCard({
     return t('billing.plans.checkoutCta');
   })();
   const isCheckoutDisabled = isCurrent || isFree || isLowerThanCurrent || isCheckoutPending;
+  const isLemonPending =
+    pendingPayment?.planCode === plan.code &&
+    pendingPayment.paymentMethod === 'LEMON_SQUEEZY' &&
+    isCheckoutPending;
+  const isSepayPending =
+    pendingPayment?.planCode === plan.code &&
+    pendingPayment.paymentMethod === 'SEPAY_BANK_TRANSFER' &&
+    isCheckoutPending;
 
   return (
     <Card
@@ -189,19 +229,107 @@ function PlanCard({
           ))}
         </ul>
 
-        <div className="mt-auto">
-          <Button
-            type="button"
-            variant={
-              isCurrent || isLowerThanCurrent ? 'outline' : isFeatured ? 'default' : 'outline'
-            }
-            className="w-full"
-            disabled={isCheckoutDisabled}
-            onClick={() => onStartCheckout(plan)}
-          >
-            {isCheckoutPending && <Loader2 className="size-4 animate-spin" />}
-            {ctaLabel}
-          </Button>
+        <div className="mt-auto space-y-2">
+          {isCheckoutDisabled ? (
+            <Button
+              type="button"
+              variant={
+                isCurrent || isLowerThanCurrent ? 'outline' : isFeatured ? 'default' : 'outline'
+              }
+              className="w-full"
+              disabled
+            >
+              {isCheckoutPending && <Loader2 className="size-4 animate-spin" />}
+              {ctaLabel}
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant={isFeatured ? 'default' : 'outline'}
+                className="w-full"
+                disabled={isCheckoutPending}
+                onClick={() => onStartCheckout(plan, 'LEMON_SQUEEZY')}
+              >
+                {isLemonPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <CreditCard className="size-4" />
+                )}
+                {isLemonPending
+                  ? t('billing.plans.checkoutPending')
+                  : t('billing.plans.cardPayment')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={isCheckoutPending}
+                onClick={() => onStartCheckout(plan, 'SEPAY_BANK_TRANSFER')}
+              >
+                {isSepayPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <QrCode className="size-4" />
+                )}
+                {isSepayPending
+                  ? t('billing.plans.bankTransferPending')
+                  : t('billing.plans.bankTransferPayment')}
+              </Button>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BankTransferPanel({ intent }: { intent: BankTransferIntentResponse }) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const expiresAt = new Intl.DateTimeFormat(locale, {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(intent.expiresAt));
+
+  return (
+    <Card className="border-primary/40">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Landmark className="text-primary size-5" />
+          <CardTitle className="text-xl">{t('billing.bankTransfer.title')}</CardTitle>
+        </div>
+        <CardDescription>{t('billing.bankTransfer.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="bg-background flex items-center justify-center rounded-lg border p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- QR URL is generated by SE Pay per intent. */}
+          <img
+            src={intent.qrUrl}
+            alt={t('billing.bankTransfer.qrAlt')}
+            className="aspect-square w-full max-w-[196px] rounded-md object-contain"
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <CopyableField label={t('billing.bankTransfer.bank')} value={intent.bankCode} />
+          <CopyableField
+            label={t('billing.bankTransfer.accountNumber')}
+            value={intent.accountNumber}
+          />
+          <CopyableField label={t('billing.bankTransfer.accountName')} value={intent.accountName} />
+          <CopyableField
+            label={t('billing.bankTransfer.amount')}
+            value={String(intent.amountVnd)}
+            displayValue={`${formatVnd(intent.amountVnd)}₫`}
+          />
+          <CopyableField
+            label={t('billing.bankTransfer.content')}
+            value={intent.transferContent}
+            className="sm:col-span-2"
+          />
+          <div className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-sm sm:col-span-2">
+            {t('billing.bankTransfer.expiresAt', { time: expiresAt })}
+          </div>
         </div>
       </CardContent>
     </Card>
