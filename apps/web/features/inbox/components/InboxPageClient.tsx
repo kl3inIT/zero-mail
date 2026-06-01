@@ -73,6 +73,7 @@ import {
 import type { InboxLabel, InboxMessage } from '@/features/inbox/api/inbox-api';
 import {
   flattenInboxMessages,
+  latestInboxDataSource,
   latestInboxLoadedCount,
   latestInboxMaxMessages,
   useInboxMessageDetail,
@@ -160,6 +161,16 @@ export function InboxPageClient() {
   );
   const loadedCount = latestInboxLoadedCount(inboxQuery.data);
   const maxMessages = latestInboxMaxMessages(inboxQuery.data);
+  const inboxDataSource = latestInboxDataSource(inboxQuery.data);
+  const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
+  // Wave 1 fallback observability — quietly log when the projection couldn't satisfy the page so
+  // ops can correlate FE behaviour with the backend `event=inbox_read_fallback` log line.
+  useEffect(() => {
+    if (inboxDataSource === 'LIVE_GMAIL') {
+      // eslint-disable-next-line no-console
+      console.debug('[inbox] data source: live gmail fallback');
+    }
+  }, [inboxDataSource]);
   const selectedMessage =
     messages.find((message) => message.gmailMessageId === requestedSelectedMessageId) ?? null;
   const selectedMessageId = selectedMessage?.gmailMessageId ?? null;
@@ -290,6 +301,24 @@ export function InboxPageClient() {
           >
             {inboxQuery.isPending ? (
               <InboxListSkeleton />
+            ) : isSyncing ? (
+              <div className="flex h-full items-center justify-center p-6">
+                <div
+                  className="flex max-w-sm flex-col items-center gap-2 text-center"
+                  data-testid="inbox-syncing-banner"
+                >
+                  <Loader2
+                    className="text-muted-foreground size-5 animate-spin"
+                    aria-hidden="true"
+                  />
+                  <p className="text-foreground text-sm font-medium">
+                    {t('inbox.state.syncing.title')}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {t('inbox.state.syncing.body')}
+                  </p>
+                </div>
+              </div>
             ) : messages.length === 0 ? (
               <div className="flex h-full items-center justify-center p-6">
                 <EmptyState

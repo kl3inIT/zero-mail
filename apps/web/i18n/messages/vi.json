@@ -1345,6 +1345,10 @@
         "title": "Chưa có email inbox"
       },
       "noBody": "Email này không có nội dung đọc được. Mở Gmail để xem đầy đủ.",
+      "syncing": {
+        "body": "Mục mới sẽ hiện trong giây lát.",
+        "title": "Đang đồng bộ hộp thư từ Gmail"
+      },
       "unselected": "Chọn một email để xem nội dung."
     }
   },

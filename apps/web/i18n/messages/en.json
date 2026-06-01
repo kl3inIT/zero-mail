@@ -1345,6 +1345,10 @@
         "title": "No inbox mail"
       },
       "noBody": "This message has no readable content. Open Gmail for the full version.",
+      "syncing": {
+        "body": "New messages will appear in a moment.",
+        "title": "Syncing your Gmail inbox"
+      },
       "unselected": "Select a message to read it."
     }
   },

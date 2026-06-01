@@ -24,11 +24,14 @@ export type GmailInboxLabelResponse = {
   name?: string;
 };
 
+export type InboxDataSource = 'PROJECTION' | 'LIVE_GMAIL' | 'SYNCING';
+
 export type GmailInboxPageResponse = {
   items?: GmailInboxMessageResponse[];
   nextCursor?: string | null;
   loadedCount?: number;
   maxMessages?: number;
+  dataSource?: InboxDataSource;
 };
 
 export type GmailInboxMessageDetailResponse = {
@@ -63,6 +66,7 @@ export type InboxPage = {
   nextCursor: string | null;
   loadedCount: number;
   maxMessages: number;
+  dataSource: InboxDataSource;
 };
 
 export type InboxMessageDetail = {
@@ -123,6 +127,8 @@ function normalizePage(response: GmailInboxPageResponse): InboxPage {
     nextCursor: response.nextCursor ?? null,
     loadedCount: response.loadedCount ?? 0,
     maxMessages: response.maxMessages ?? 100,
+    // Backend < Wave 3 omitted dataSource; legacy responses are effectively live Gmail.
+    dataSource: response.dataSource ?? 'LIVE_GMAIL',
   };
 }
 

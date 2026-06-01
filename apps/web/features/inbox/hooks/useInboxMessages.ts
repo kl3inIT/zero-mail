@@ -47,6 +47,13 @@ export function latestInboxMaxMessages(data: InfiniteData<InboxPage> | undefined
   return lastPage?.maxMessages ?? 100;
 }
 
+export function latestInboxDataSource(
+  data: InfiniteData<InboxPage> | undefined,
+): InboxPage['dataSource'] | null {
+  const lastPage = data?.pages.at(-1);
+  return lastPage?.dataSource ?? null;
+}
+
 export function useInboxMessageDetail(gmailMessageId: string | null) {
   return useQuery<InboxMessageDetail>({
     queryKey: inboxKeys.detail(gmailMessageId),
