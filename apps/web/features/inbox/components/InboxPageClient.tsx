@@ -74,7 +74,6 @@ import type { InboxLabel, InboxMessage } from '@/features/inbox/api/inbox-api';
 import {
   flattenInboxMessages,
   latestInboxDataSource,
-  latestInboxLoadedCount,
   latestInboxMaxMessages,
   useInboxMessageDetail,
   useInboxMessages,
@@ -159,7 +158,6 @@ export function InboxPageClient() {
     () => filterInboxMessages(messages, searchQuery),
     [messages, searchQuery],
   );
-  const loadedCount = latestInboxLoadedCount(inboxQuery.data);
   const maxMessages = latestInboxMaxMessages(inboxQuery.data);
   const inboxDataSource = latestInboxDataSource(inboxQuery.data);
   const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
@@ -251,7 +249,7 @@ export function InboxPageClient() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  {t('inbox.limit.caption', { loaded: loadedCount, max: maxMessages })}
+                  {t('inbox.limit.caption', { max: maxMessages })}
                 </span>
                 <Button
                   type="button"

@@ -1324,7 +1324,7 @@
       "title": "Couldn't load inbox"
     },
     "limit": {
-      "caption": "{loaded}/{max} messages"
+      "caption": "{max} messages"
     },
     "message": {
       "noSubject": "(no subject)",

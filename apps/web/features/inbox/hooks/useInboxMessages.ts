@@ -37,11 +37,6 @@ export function flattenInboxMessages(data: InfiniteData<InboxPage> | undefined):
   return data?.pages.flatMap((page) => page.items) ?? [];
 }
 
-export function latestInboxLoadedCount(data: InfiniteData<InboxPage> | undefined): number {
-  const lastPage = data?.pages.at(-1);
-  return lastPage?.loadedCount ?? 0;
-}
-
 export function latestInboxMaxMessages(data: InfiniteData<InboxPage> | undefined): number {
   const lastPage = data?.pages.at(-1);
   return lastPage?.maxMessages ?? 100;

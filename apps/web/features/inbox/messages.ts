@@ -368,7 +368,7 @@ export const inboxMessages = {
     en: 'Attachment',
   },
   'inbox.limit.caption': {
-    vi: '{loaded}/{max} email',
-    en: '{loaded}/{max} messages',
+    vi: '{max} email',
+    en: '{max} messages',
   },
 } as const;

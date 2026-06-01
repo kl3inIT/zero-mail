@@ -1324,7 +1324,7 @@
       "title": "Không tải được inbox"
     },
     "limit": {
-      "caption": "{loaded}/{max} email"
+      "caption": "{max} email"
     },
     "message": {
       "noSubject": "(không có chủ đề)",
