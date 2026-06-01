@@ -34,9 +34,17 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+    # Worker renders no web views; Open Session In View only holds DB connections
+    # longer and warns at startup. Disable it (mirrors backend/api).
+    open-in-view: false
     properties:
       hibernate:
         format_sql: false
+  thymeleaf:
+    # Email templates use a dedicated ClassLoaderTemplateResolver in
+    # DigestRendererConfig, not Spring Boot's default classpath:/templates/.
+    # Disable the default-location check to silence its startup WARN.
+    check-template-location: false
   ai:
     # spring.ai.model.*=none + chat[.client].observations.log-prompt/completion=false are
     # centralized in zero-mail-shared.yml (imported above). Only worker-specific keys remain here.

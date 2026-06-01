@@ -51,6 +51,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -91,6 +94,7 @@ public class TriageOrchestratorService {
     private final TriageDraftSettings triageDraftSettings;
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
     private final MeterRegistry meterRegistry;
+    private final TransactionTemplate tenantScopedOrchestrationTransaction;
 
     public TriageOrchestratorService(
             TenantService tenantService,
@@ -104,6 +108,7 @@ public class TriageOrchestratorService {
             TriageDraftBodyGenerator draftBodyGenerator,
             TriageDraftSettings triageDraftSettings,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
+            PlatformTransactionManager transactionManager,
             ObjectProvider<MeterRegistry> meterRegistryProvider) {
         this.tenantService = tenantService;
         this.triageRuleEvaluationInputFactory = triageRuleEvaluationInputFactory;
@@ -120,11 +125,25 @@ public class TriageOrchestratorService {
         this.triageDraftSettings = triageDraftSettings;
         this.classifyThreadReplyStatusService = classifyThreadReplyStatusService;
         this.meterRegistry = meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new);
+        this.tenantScopedOrchestrationTransaction = new TransactionTemplate(transactionManager);
+        this.tenantScopedOrchestrationTransaction.setPropagationBehavior(
+                TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @ApplicationModuleListener
     public void onMailMessageObserved(MailMessageObserved observedEvent) {
-        TenantContext.runWith(observedEvent.tenantId(), () -> processObservedEvent(observedEvent));
+        // The Hibernate @TenantId discriminator resolves the current tenant via
+        // ScopedValueTenantResolver when the JPA session OPENS. The session must therefore open
+        // AFTER TenantContext is set, or every tenant-owned query (e.g. gmail_connections) is
+        // filtered by the BOOTSTRAP_TENANT sentinel and returns empty ("No connection for
+        // tenantId"). Opening a REQUIRES_NEW transaction INSIDE TenantContext.runWith guarantees
+        // the session — and thus the tenant resolution — happens with the tenant in scope.
+        // (Removing this wrapper in commit 0675be1a broke multi-tenant triage entirely.)
+        TenantContext.runWith(
+                observedEvent.tenantId(),
+                () ->
+                        tenantScopedOrchestrationTransaction.executeWithoutResult(
+                                _ -> processObservedEvent(observedEvent)));
     }
 
     public OrchestrationResult processObservedEvent(MailMessageObserved observedEvent) {
