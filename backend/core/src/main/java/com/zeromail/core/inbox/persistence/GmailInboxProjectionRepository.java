@@ -1,6 +1,7 @@
 package com.zeromail.core.inbox.persistence;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -80,4 +81,45 @@ public interface GmailInboxProjectionRepository
             @Param("sourceHistoryId") long sourceHistoryId,
             @Param("refreshedAt") Instant refreshedAt,
             @Param("expiresAt") Instant expiresAt);
+
+    /**
+     * Read-side page query for the inbox list (Phase B Wave 0).
+     *
+     * <p>Hits the partial index {@code idx_gmail_inbox_projection_list (tenant_id, received_at DESC,
+     * gmail_message_id DESC) WHERE inbox_state = 'INBOX'} for a single range scan. Per-row
+     * {@code expires_at > NOW()} predicate is filtered after the index seek so stale rows drop out
+     * of the page and the orchestrator (Wave 1) can fall back to live Gmail for the gap.
+     *
+     * <p>Pagination is keyset: pass {@code (beforeReceivedAt, beforeMessageId)} extracted from the
+     * previous page's last row. The first page passes {@code null} for both — the {@code IS NULL}
+     * guard short-circuits the keyset predicate and returns the newest rows.
+     *
+     * <p>Native query because Hibernate's {@code @TenantId} resolver only applies to JPQL — we set
+     * {@code tenant_id = :tenantId} explicitly. Casts on the timestamp parameter let Postgres infer
+     * the bind type when the value is null.
+     */
+    @Query(
+            value =
+                    """
+                    SELECT * FROM gmail_inbox_projection
+                    WHERE tenant_id = :tenantId
+                      AND inbox_state = 'INBOX'
+                      AND expires_at > NOW()
+                      AND (
+                          CAST(:beforeReceivedAt AS timestamptz) IS NULL
+                          OR received_at < CAST(:beforeReceivedAt AS timestamptz)
+                          OR (
+                              received_at = CAST(:beforeReceivedAt AS timestamptz)
+                              AND gmail_message_id < :beforeMessageId
+                          )
+                      )
+                    ORDER BY received_at DESC, gmail_message_id DESC
+                    LIMIT :pageLimit
+                    """,
+            nativeQuery = true)
+    List<GmailInboxProjectionEntity> findInboxPage(
+            @Param("tenantId") UUID tenantId,
+            @Param("beforeReceivedAt") Instant beforeReceivedAt,
+            @Param("beforeMessageId") String beforeMessageId,
+            @Param("pageLimit") int pageLimit);
 }
