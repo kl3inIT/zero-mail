@@ -8,6 +8,20 @@ depends_on:
   - 260601-gmail-inbox-cqrs-projection-phase-a
 ---
 
+## Resume handoff (2026-06-01)
+
+**Phase B not started.** Resume from Wave 0. Working tree clean, `origin/integration` synced
+(branch up-to-date as of `661a049e`). No partial code committed; the 5-wave plan below is locked
+and ready for a fresh-context execution.
+
+Session-start invariant from operator: **Phase B must not cut Gmail live until the real
+Pub/Sub + Gmail smoke test passes.** Wave 0 only builds the standalone `InboxProjectionReadService`
+— it does NOT touch `RecentInboxReadService.fetchPage` or any controller. The orchestrator swap
+lands in Wave 1, after Wave 0 proves the DB read + decrypt path is correct in isolation.
+
+Session-start command: `Tiếp Phase B Wave 0 theo PLAN.md đã chốt`.
+
+
 # Phase B — Gmail Inbox Read Swap
 
 ## Goal
