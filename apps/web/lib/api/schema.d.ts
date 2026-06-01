@@ -468,6 +468,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plan-upgrades/webhooks/sepay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sepay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plan-upgrades/webhooks/lemon-squeezy": {
         parameters: {
             query?: never;
@@ -485,6 +501,22 @@ export interface paths {
         trace?: never;
     };
     "/api/plan-upgrades/plans/{planCode}/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["legacyLemonSqueezyCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plan-upgrades/checkout": {
         parameters: {
             query?: never;
             header?: never;
@@ -988,6 +1020,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["plans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plan-upgrades/bank-transfer-intents/{intentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["bankTransferIntent"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1508,14 +1556,19 @@ export interface components {
             clarification?: components["schemas"]["ClarificationResponse"];
             invalid?: components["schemas"]["InvalidCompileResponse"];
         };
+        /** @description Webhook acknowledgment response */
+        WebhookAcknowledgmentResponse: {
+            /** @description Whether the webhook was accepted */
+            success: boolean;
+        };
         ContentDisposition: {
             type?: string;
             name?: string;
             filename?: string;
             charset?: string;
             inline?: boolean;
-            attachment?: boolean;
             formData?: boolean;
+            attachment?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -1560,40 +1613,40 @@ export interface components {
             contentType?: components["schemas"]["MediaType"];
             origin?: string;
             range?: components["schemas"]["HttpRange"][];
+            contentDisposition?: components["schemas"]["ContentDisposition"];
+            acceptCharset?: string[];
+            acceptPatch?: components["schemas"]["MediaType"][];
+            basicAuth?: string;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
-            acceptPatch?: components["schemas"]["MediaType"][];
-            basicAuth?: string;
             acceptLanguageAsLocales?: string[];
             /** Format: int64 */
             accessControlMaxAge?: number;
-            contentDisposition?: components["schemas"]["ContentDisposition"];
+            ifNoneMatch?: string[];
             /** Format: int64 */
             ifUnmodifiedSince?: number;
-            acceptCharset?: string[];
-            ifNoneMatch?: string[];
             contentLanguage?: string;
-            cacheControl?: string;
-            accept?: components["schemas"]["MediaType"][];
+            bearerAuth?: string;
             allow?: components["schemas"]["HttpMethod"][];
-            /** Format: int64 */
-            expires?: number;
-            ifMatch?: string[];
-            etag?: string;
-            accessControlRequestHeaders?: string[];
+            cacheControl?: string;
+            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
             accessControlAllowCredentials?: boolean;
             accessControlExposeHeaders?: string[];
-            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
-            accessControlAllowOrigin?: string;
             accessControlAllowHeaders?: string[];
+            accessControlRequestHeaders?: string[];
+            accessControlAllowOrigin?: string;
             accessControlRequestMethod?: components["schemas"]["HttpMethod"];
-            pragma?: string;
+            accept?: components["schemas"]["MediaType"][];
             upgrade?: string;
+            /** Format: int64 */
+            expires?: number;
+            etag?: string;
             vary?: string[];
-            bearerAuth?: string;
+            ifMatch?: string[];
+            pragma?: string;
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -1608,12 +1661,55 @@ export interface components {
             charset?: string;
             concrete?: boolean;
             wildcardSubtype?: boolean;
-            subtypeSuffix?: string;
             wildcardType?: boolean;
+            subtypeSuffix?: string;
+        };
+        BankTransferIntentResponse: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            planCode: string;
+            /** Format: int64 */
+            amountVnd: number;
+            currency: string;
+            /** @enum {string} */
+            status: "PENDING" | "PAID" | "EXPIRED" | "VOIDED";
+            /** Format: date-time */
+            expiresAt: string;
+            bankCode: string;
+            bankName?: string | null;
+            accountNumber: string;
+            accountName: string;
+            transferContent: string;
+            qrUrl: string;
         };
         BillingCheckoutResponse: {
-            /** @description Hosted Lemon Squeezy checkout URL for the selected billing plan */
-            checkoutUrl: string;
+            /**
+             * @description Payment method used for this checkout
+             * @enum {string}
+             */
+            paymentMethod: "LEMON_SQUEEZY" | "SEPAY_BANK_TRANSFER";
+            /**
+             * @description Client action state
+             * @enum {string}
+             */
+            status: "REDIRECT_REQUIRED" | "WAITING_FOR_TRANSFER";
+            /** @description Hosted Lemon Squeezy checkout URL when redirect is required */
+            checkoutUrl?: string;
+            /** @description Bank transfer instructions when paymentMethod is SEPAY_BANK_TRANSFER */
+            bankTransferIntent?: components["schemas"]["BankTransferIntentResponse"];
+        };
+        BillingCheckoutRequest: {
+            /**
+             * @description Selected billing plan code
+             * @enum {string}
+             */
+            planCode: "PLUS" | "PRO";
+            /**
+             * @description Payment method for this checkout
+             * @enum {string}
+             */
+            paymentMethod: "LEMON_SQUEEZY" | "SEPAY_BANK_TRANSFER";
         };
         SelectTemplateRequest: {
             /** @enum {string} */
@@ -5095,6 +5191,84 @@ export interface operations {
             };
         };
     };
+    sepay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WebhookAcknowledgmentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     lemonSqueezy: {
         parameters: {
             query?: never;
@@ -5173,7 +5347,7 @@ export interface operations {
             };
         };
     };
-    checkout: {
+    legacyLemonSqueezyCheckout: {
         parameters: {
             query?: never;
             header?: never;
@@ -5183,6 +5357,84 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BillingCheckoutResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    checkout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingCheckoutRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -8151,6 +8403,82 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["BillingPlanListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    bankTransferIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                intentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BankTransferIntentResponse"];
                 };
             };
             /** @description Bad Request */

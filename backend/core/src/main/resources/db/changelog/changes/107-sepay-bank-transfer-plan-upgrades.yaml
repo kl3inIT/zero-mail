@@ -1,0 +1,258 @@
+databaseChangeLog:
+  - changeSet:
+      id: 107-sepay-bank-transfer-plan-upgrades
+      author: zeromail
+      comment: >-
+        Add SePay QR bank-transfer intents for one-time monthly plan upgrades.
+        Clean plan-period/provider webhook audit columns so payment providers share
+        generic provider ids instead of Lemon-Squeezy-only product/variant snapshots.
+        Drop Lemon Squeezy product id from plan catalog because checkout creation only
+        needs store id and variant id.
+      changes:
+        - createTable:
+            tableName: billing_bank_transfer_intent
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_bank_transfer_intent_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: plan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_bank_transfer_intent_plan
+                    references: billing_plan(id)
+              - column:
+                  name: plan_code_snapshot
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_email
+                  type: varchar(320)
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: code
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount_vnd
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: VND
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid_at
+                  type: timestamptz
+              - column:
+                  name: provider_transaction_id
+                  type: varchar(255)
+              - column:
+                  name: bank_code_snapshot
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: bank_name_snapshot
+                  type: varchar(120)
+              - column:
+                  name: account_number_snapshot
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: account_name_snapshot
+                  type: varchar(160)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: transfer_content_snapshot
+                  type: varchar(160)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: qr_url_snapshot
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE billing_bank_transfer_intent ADD CONSTRAINT ck_billing_bank_transfer_intent_provider CHECK (provider IN ('SEPAY'))
+        - sql:
+            sql: ALTER TABLE billing_bank_transfer_intent ADD CONSTRAINT ck_billing_bank_transfer_intent_status CHECK (status IN ('PENDING','PAID','EXPIRED','VOIDED'))
+        - sql:
+            sql: ALTER TABLE billing_bank_transfer_intent ADD CONSTRAINT ck_billing_bank_transfer_intent_amount_positive CHECK (amount_vnd > 0)
+        - sql:
+            sql: ALTER TABLE billing_bank_transfer_intent ADD CONSTRAINT ck_billing_bank_transfer_intent_currency CHECK (currency = 'VND')
+        - addUniqueConstraint:
+            tableName: billing_bank_transfer_intent
+            columnNames: code
+            constraintName: uq_billing_bank_transfer_intent_code
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_billing_bank_transfer_intent_provider_tx ON billing_bank_transfer_intent(provider, provider_transaction_id) WHERE provider_transaction_id IS NOT NULL
+        - createIndex:
+            tableName: billing_bank_transfer_intent
+            indexName: idx_billing_bank_transfer_intent_reuse
+            columns:
+              - column: { name: tenant_id }
+              - column: { name: plan_id }
+              - column: { name: provider }
+              - column: { name: status }
+              - column: { name: expires_at }
+        - createIndex:
+            tableName: billing_bank_transfer_intent
+            indexName: idx_billing_bank_transfer_intent_status_expires
+            columns:
+              - column: { name: status }
+              - column: { name: expires_at }
+        - sql:
+            sql: ALTER TABLE billing_plan_period DROP CONSTRAINT ck_billing_plan_period_provider
+        - sql:
+            sql: ALTER TABLE billing_plan_period ADD CONSTRAINT ck_billing_plan_period_provider CHECK (provider IN ('LEMON_SQUEEZY','SEPAY','ADMIN'))
+        - dropColumn:
+            tableName: billing_plan_period
+            columnName: lemon_squeezy_customer_id
+        - dropColumn:
+            tableName: billing_plan_period
+            columnName: lemon_squeezy_product_id
+        - dropColumn:
+            tableName: billing_plan_period
+            columnName: lemon_squeezy_variant_id
+        - dropColumn:
+            tableName: billing_plan
+            columnName: lemon_squeezy_product_id
+        - addColumn:
+            tableName: billing_webhook_event
+            columns:
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  defaultValue: LEMON_SQUEEZY
+                  constraints:
+                    nullable: false
+              - column:
+                  name: provider_order_id
+                  type: varchar(255)
+        - sql:
+            sql: UPDATE billing_webhook_event SET provider_order_id = lemon_squeezy_order_id::text WHERE lemon_squeezy_order_id IS NOT NULL
+        - dropIndex:
+            tableName: billing_webhook_event
+            indexName: idx_billing_webhook_event_order
+        - dropColumn:
+            tableName: billing_webhook_event
+            columnName: lemon_squeezy_order_id
+        - sql:
+            sql: DROP INDEX IF EXISTS uq_billing_webhook_event_provider_event_id
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_billing_webhook_event_provider_event_id ON billing_webhook_event(provider, provider_event_id) WHERE provider_event_id IS NOT NULL
+        - sql:
+            sql: ALTER TABLE billing_webhook_event ADD CONSTRAINT ck_billing_webhook_event_provider CHECK (provider IN ('LEMON_SQUEEZY','SEPAY'))
+        - createIndex:
+            tableName: billing_webhook_event
+            indexName: idx_billing_webhook_event_provider_order
+            columns:
+              - column: { name: provider }
+              - column: { name: provider_order_id }
+      rollback:
+        - dropTable:
+            tableName: billing_bank_transfer_intent
+            cascadeConstraints: true
+        - dropIndex:
+            tableName: billing_webhook_event
+            indexName: idx_billing_webhook_event_provider_order
+        - sql:
+            sql: ALTER TABLE billing_webhook_event DROP CONSTRAINT IF EXISTS ck_billing_webhook_event_provider
+        - sql:
+            sql: DROP INDEX IF EXISTS uq_billing_webhook_event_provider_event_id
+        - addColumn:
+            tableName: billing_webhook_event
+            columns:
+              - column:
+                  name: lemon_squeezy_order_id
+                  type: bigint
+        - sql:
+            sql: UPDATE billing_webhook_event SET lemon_squeezy_order_id = provider_order_id::bigint WHERE provider = 'LEMON_SQUEEZY' AND provider_order_id ~ '^[0-9]+$'
+        - dropColumn:
+            tableName: billing_webhook_event
+            columnName: provider_order_id
+        - dropColumn:
+            tableName: billing_webhook_event
+            columnName: provider
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_billing_webhook_event_provider_event_id ON billing_webhook_event(provider_event_id) WHERE provider_event_id IS NOT NULL
+        - createIndex:
+            tableName: billing_webhook_event
+            indexName: idx_billing_webhook_event_order
+            columns:
+              - column: { name: lemon_squeezy_order_id }
+        - addColumn:
+            tableName: billing_plan_period
+            columns:
+              - column:
+                  name: lemon_squeezy_customer_id
+                  type: bigint
+              - column:
+                  name: lemon_squeezy_product_id
+                  type: bigint
+              - column:
+                  name: lemon_squeezy_variant_id
+                  type: bigint
+        - addColumn:
+            tableName: billing_plan
+            columns:
+              - column:
+                  name: lemon_squeezy_product_id
+                  type: bigint
+        - sql:
+            sql: ALTER TABLE billing_plan_period DROP CONSTRAINT ck_billing_plan_period_provider
+        - sql:
+            sql: ALTER TABLE billing_plan_period ADD CONSTRAINT ck_billing_plan_period_provider CHECK (provider IN ('LEMON_SQUEEZY','ADMIN'))

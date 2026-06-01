@@ -12,6 +12,9 @@ public interface BillingPlanPeriodRepository extends JpaRepository<BillingPlanPe
 
     Optional<BillingPlanPeriodEntity> findByProviderOrderId(String providerOrderId);
 
+    Optional<BillingPlanPeriodEntity> findByProviderAndProviderOrderId(
+            String provider, String providerOrderId);
+
     @Query(
             """
             SELECT planPeriod

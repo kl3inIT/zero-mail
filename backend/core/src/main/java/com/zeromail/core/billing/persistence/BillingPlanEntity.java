@@ -10,9 +10,9 @@ import java.util.UUID;
  * Catalog row for a billing plan (FREE, PLUS, PRO). Global — not tenant-scoped. A tenant gets paid
  * plan access through active {@link BillingPlanPeriodEntity} rows; no active period means FREE.
  *
- * <p>{@code lemonSqueezyProductId} and {@code lemonSqueezyVariantId} are nullable because the FREE
- * plan has no Lemon Squeezy counterpart and because seeded paid rows are populated by operators
- * after creating the products on the LS dashboard.
+ * <p>{@code lemonSqueezyVariantId} is nullable because the FREE plan has no Lemon Squeezy
+ * counterpart and because seeded paid rows are populated by operators after creating the variants
+ * on the LS dashboard.
  */
 @Entity
 @Table(name = "billing_plan")
@@ -39,9 +39,6 @@ public class BillingPlanEntity extends AbstractAuditableEntity {
     @Column(name = "monthly_credit_allowance", nullable = false)
     private int monthlyCreditAllowance;
 
-    @Column(name = "lemon_squeezy_product_id")
-    private Long lemonSqueezyProductId;
-
     @Column(name = "lemon_squeezy_variant_id")
     private Long lemonSqueezyVariantId;
 
@@ -64,7 +61,6 @@ public class BillingPlanEntity extends AbstractAuditableEntity {
             String currency,
             long priceVnd,
             int monthlyCreditAllowance,
-            Long lemonSqueezyProductId,
             Long lemonSqueezyVariantId,
             boolean active,
             int sortOrder) {
@@ -76,7 +72,6 @@ public class BillingPlanEntity extends AbstractAuditableEntity {
         this.currency = currency;
         this.priceVnd = priceVnd;
         this.monthlyCreditAllowance = monthlyCreditAllowance;
-        this.lemonSqueezyProductId = lemonSqueezyProductId;
         this.lemonSqueezyVariantId = lemonSqueezyVariantId;
         this.active = active;
         this.sortOrder = sortOrder;
@@ -110,10 +105,6 @@ public class BillingPlanEntity extends AbstractAuditableEntity {
         return monthlyCreditAllowance;
     }
 
-    public Long getLemonSqueezyProductId() {
-        return lemonSqueezyProductId;
-    }
-
     public Long getLemonSqueezyVariantId() {
         return lemonSqueezyVariantId;
     }
@@ -126,8 +117,7 @@ public class BillingPlanEntity extends AbstractAuditableEntity {
         return sortOrder;
     }
 
-    public void updateLemonSqueezyIds(Long productId, Long variantId) {
-        this.lemonSqueezyProductId = productId;
+    public void updateLemonSqueezyVariantId(Long variantId) {
         this.lemonSqueezyVariantId = variantId;
     }
 

@@ -158,6 +158,25 @@ public class TestSessionSupport {
 
     @Bean
     @Order(3)
+    SecurityFilterChain testSepayWebhookChain(
+            HttpSecurity http, BillingProperties billingProperties) throws Exception {
+        return http.securityMatcher("/api/plan-upgrades/webhooks/sepay")
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(
+                        authorizationRequests ->
+                                authorizationRequests
+                                        .requestMatchers("/api/plan-upgrades/webhooks/sepay")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .denyAll())
+                .addFilterBefore(
+                        new SepayWebhookApiKeyFilter(billingProperties),
+                        UsernamePasswordAuthenticationFilter.class)
+                .build();
+    }
+
+    @Bean
+    @Order(4)
     SecurityFilterChain testSecurityChain(HttpSecurity http, OncePerRequestFilter testAuthFilter) {
         // Must not overlap with PubSubSecurityConfig @Order(1) (/internal/pubsub/**) — Spring
         // Security 7's WebSecurityFilterChainValidator throws UnreachableFilterChainException when

@@ -470,10 +470,30 @@
       "resetUnknown": "Chưa rõ",
       "unit": "tín dụng"
     },
+    "bankTransfer": {
+      "accountName": "Tên tài khoản",
+      "accountNumber": "Số tài khoản",
+      "amount": "Số tiền",
+      "bank": "Ngân hàng",
+      "content": "Nội dung chuyển khoản",
+      "copyContent": "Sao chép",
+      "description": "Quét QR hoặc chuyển khoản đúng số tiền và nội dung để Zero Mail tự kích hoạt gói.",
+      "expiresAt": "QR hết hạn lúc {time}. Sau khi chuyển khoản, webhook SE Pay sẽ tự cập nhật gói.",
+      "expiresAtShort": "Hết hạn lúc {time}",
+      "featuresLabel": "Tính năng trong gói",
+      "paymentSuccess": "Thanh toán thành công. Gói của bạn đã được kích hoạt.",
+      "pendingNote": "Sau khi chuyển khoản đúng nội dung, Zero Mail sẽ tự kích hoạt gói và chuyển bạn về trang tín dụng.",
+      "planLabel": "Gói thanh toán",
+      "planPrice": "Giá gói",
+      "qrAlt": "Mã QR chuyển khoản",
+      "shortDescription": "Quét QR để thanh toán. Gói sẽ tự kích hoạt sau khi SE Pay xác nhận.",
+      "title": "Chuyển khoản ngân hàng"
+    },
     "copy": {
       "aria": "Sao chép {label}",
       "cta": "Sao chép",
-      "done": "Đã sao chép"
+      "done": "Đã sao chép",
+      "failed": "Không thể sao chép"
     },
     "ledger": {
       "columns": {
@@ -520,6 +540,9 @@
       "title": "Tín dụng & lịch sử sử dụng"
     },
     "plans": {
+      "bankTransferPayment": "Chuyển khoản QR",
+      "bankTransferPending": "Đang tạo QR",
+      "cardPayment": "Thanh toán bằng thẻ",
       "checkoutCta": "Thanh toán ngay",
       "checkoutError": "Không thể mở trang thanh toán. Vui lòng thử lại sau.",
       "checkoutPending": "Đang mở checkout",

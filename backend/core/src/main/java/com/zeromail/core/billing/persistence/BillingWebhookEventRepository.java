@@ -13,7 +13,8 @@ public interface BillingWebhookEventRepository
 
     Optional<BillingWebhookEventEntity> findByDedupeKey(String dedupeKey);
 
-    Optional<BillingWebhookEventEntity> findByProviderEventId(String providerEventId);
+    Optional<BillingWebhookEventEntity> findByProviderAndProviderEventId(
+            String provider, String providerEventId);
 
     @Query(
             "SELECT event FROM BillingWebhookEventEntity event "

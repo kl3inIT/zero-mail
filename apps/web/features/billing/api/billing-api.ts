@@ -6,16 +6,19 @@ import type { components } from '@/lib/api/schema';
  * - GET /api/credits/balance returns plan allowance credit summary metadata.
  * - GET /api/credits/ledger returns recent credit activity.
  * - GET /api/plan-upgrades/plans returns active plans and feature list.
- * - POST /api/plan-upgrades/plans/{planCode}/checkout creates a hosted checkout URL.
+ * - POST /api/plan-upgrades/checkout creates a hosted or bank-transfer checkout.
  */
 
 export type BillingBalanceResponse = components['schemas']['BillingBalanceResponse'];
-export type BillingCheckoutResponse = components['schemas']['BillingCheckoutResponse'];
 export type BillingLedgerEntryResponse = components['schemas']['BillingLedgerEntryResponse'];
 export type BillingLedgerHistoryResponse = components['schemas']['BillingLedgerHistoryResponse'];
 export type BillingPlanResponse = components['schemas']['BillingPlanResponse'];
 export type BillingPlanListResponse = components['schemas']['BillingPlanListResponse'];
 export type PlanFeatureSummaryResponse = components['schemas']['PlanFeatureSummaryResponse'];
+export type BankTransferIntentResponse = components['schemas']['BankTransferIntentResponse'];
+export type BillingCheckoutResponse = components['schemas']['BillingCheckoutResponse'];
+export type BillingCheckoutRequest = components['schemas']['BillingCheckoutRequest'];
+export type BillingPaymentMethod = BillingCheckoutRequest['paymentMethod'];
 
 export type LedgerHistoryPage = Omit<BillingLedgerHistoryResponse, 'nextCursor'> & {
   nextCursor: string | null;
@@ -94,13 +97,22 @@ export async function getBillingPlans({
 }
 
 export async function createBillingCheckout(
-  planCode: BillingPlanResponse['code'],
+  request: BillingCheckoutRequest,
 ): Promise<BillingCheckoutResponse> {
-  const result = await api.POST('/api/plan-upgrades/plans/{planCode}/checkout', {
-    params: { path: { planCode } },
+  const result = await api.POST('/api/plan-upgrades/checkout', {
+    body: request,
+  });
+  return unwrap(result, `/api/plan-upgrades/checkout failed: ${result.response.status}`);
+}
+
+export async function getBankTransferIntent(
+  intentId: BankTransferIntentResponse['id'],
+): Promise<BankTransferIntentResponse> {
+  const result = await api.GET('/api/plan-upgrades/bank-transfer-intents/{intentId}', {
+    params: { path: { intentId } },
   });
   return unwrap(
     result,
-    `/api/plan-upgrades/plans/${planCode}/checkout failed: ${result.response.status}`,
+    `/api/plan-upgrades/bank-transfer-intents/${intentId} failed: ${result.response.status}`,
   );
 }

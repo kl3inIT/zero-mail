@@ -22,11 +22,13 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record BillingProperties(
         @Valid @NotNull BillingCostProperties cost,
-        @Valid @DefaultValue LemonSqueezyProperties lemonSqueezy) {
+        @Valid @DefaultValue LemonSqueezyProperties lemonSqueezy,
+        @Valid @DefaultValue SepayProperties sepay) {
 
     public BillingProperties {
         cost = cost == null ? BillingCostProperties.defaults() : cost;
         lemonSqueezy = lemonSqueezy == null ? LemonSqueezyProperties.defaults() : lemonSqueezy;
+        sepay = sepay == null ? SepayProperties.defaults() : sepay;
     }
 
     public record BillingCostProperties(@Min(0) @DefaultValue("0") int triageDeterministic) {
@@ -79,12 +81,61 @@ public record BillingProperties(
         }
     }
 
+    /**
+     * SePay bank-transfer configuration. API key authenticates inbound webhook delivery; bank
+     * fields generate a deterministic VietQR URL for a plan-upgrade payment intent.
+     */
+    public record SepayProperties(
+            String webhookApiKey,
+            String bankCode,
+            String bankName,
+            String accountNumber,
+            String accountName,
+            URI qrBaseUrl,
+            Duration intentReuseWindow) {
+
+        public SepayProperties {
+            webhookApiKey = blankToNull(webhookApiKey);
+            bankCode = blankToNull(bankCode);
+            bankName = blankToNull(bankName);
+            accountNumber = blankToNull(accountNumber);
+            accountName = blankToNull(accountName);
+            qrBaseUrl = qrBaseUrl == null ? URI.create("https://qr.sepay.vn/img") : qrBaseUrl;
+            intentReuseWindow =
+                    intentReuseWindow == null ? Duration.ofMinutes(15) : intentReuseWindow;
+        }
+
+        static SepayProperties defaults() {
+            return new SepayProperties(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    URI.create("https://qr.sepay.vn/img"),
+                    Duration.ofMinutes(15));
+        }
+
+        public boolean isConfigured() {
+            return webhookApiKey != null
+                    && bankCode != null
+                    && accountNumber != null
+                    && accountName != null;
+        }
+    }
+
     @Override
     public @NonNull String toString() {
         return "BillingProperties[cost="
                 + cost
                 + ", lemonSqueezy="
                 + (lemonSqueezy.isConfigured() ? "configured" : "not_configured")
+                + ", sepay="
+                + (sepay.isConfigured() ? "configured" : "not_configured")
                 + "]";
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 }

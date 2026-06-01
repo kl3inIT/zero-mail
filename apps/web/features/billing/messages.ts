@@ -67,6 +67,18 @@ export const billingMessages = {
     vi: 'Thanh toán ngay',
     en: 'Pay now',
   },
+  'billing.plans.cardPayment': {
+    vi: 'Thanh toán bằng thẻ',
+    en: 'Pay by card',
+  },
+  'billing.plans.bankTransferPayment': {
+    vi: 'Chuyển khoản QR',
+    en: 'Bank transfer QR',
+  },
+  'billing.plans.bankTransferPending': {
+    vi: 'Đang tạo QR',
+    en: 'Creating QR',
+  },
   'billing.plans.perMonth': {
     vi: '/tháng',
     en: '/month',
@@ -94,6 +106,74 @@ export const billingMessages = {
   'billing.plans.checkoutError': {
     vi: 'Không thể mở trang thanh toán. Vui lòng thử lại sau.',
     en: "Couldn't open checkout. Try again later.",
+  },
+  'billing.bankTransfer.title': {
+    vi: 'Chuyển khoản ngân hàng',
+    en: 'Bank transfer',
+  },
+  'billing.bankTransfer.description': {
+    vi: 'Quét QR hoặc chuyển khoản đúng số tiền và nội dung để Zero Mail tự kích hoạt gói.',
+    en: 'Scan the QR or transfer the exact amount and memo so Zero Mail can activate the plan.',
+  },
+  'billing.bankTransfer.shortDescription': {
+    vi: 'Quét QR để thanh toán. Gói sẽ tự kích hoạt sau khi SE Pay xác nhận.',
+    en: 'Scan the QR to pay. Your plan activates after SE Pay confirms it.',
+  },
+  'billing.bankTransfer.planLabel': {
+    vi: 'Gói thanh toán',
+    en: 'Selected plan',
+  },
+  'billing.bankTransfer.planPrice': {
+    vi: 'Giá gói',
+    en: 'Plan price',
+  },
+  'billing.bankTransfer.featuresLabel': {
+    vi: 'Tính năng trong gói',
+    en: 'Plan features',
+  },
+  'billing.bankTransfer.qrAlt': {
+    vi: 'Mã QR chuyển khoản',
+    en: 'Bank transfer QR code',
+  },
+  'billing.bankTransfer.bank': {
+    vi: 'Ngân hàng',
+    en: 'Bank',
+  },
+  'billing.bankTransfer.accountNumber': {
+    vi: 'Số tài khoản',
+    en: 'Account number',
+  },
+  'billing.bankTransfer.accountName': {
+    vi: 'Tên tài khoản',
+    en: 'Account name',
+  },
+  'billing.bankTransfer.amount': {
+    vi: 'Số tiền',
+    en: 'Amount',
+  },
+  'billing.bankTransfer.content': {
+    vi: 'Nội dung chuyển khoản',
+    en: 'Transfer memo',
+  },
+  'billing.bankTransfer.copyContent': {
+    vi: 'Sao chép',
+    en: 'Copy',
+  },
+  'billing.bankTransfer.expiresAt': {
+    vi: 'QR hết hạn lúc {time}. Sau khi chuyển khoản, webhook SE Pay sẽ tự cập nhật gói.',
+    en: 'QR expires at {time}. After payment, the SE Pay webhook will update your plan automatically.',
+  },
+  'billing.bankTransfer.expiresAtShort': {
+    vi: 'Hết hạn lúc {time}',
+    en: 'Expires at {time}',
+  },
+  'billing.bankTransfer.paymentSuccess': {
+    vi: 'Thanh toán thành công. Gói của bạn đã được kích hoạt.',
+    en: 'Payment successful. Your plan has been activated.',
+  },
+  'billing.bankTransfer.pendingNote': {
+    vi: 'Sau khi chuyển khoản đúng nội dung, Zero Mail sẽ tự kích hoạt gói và chuyển bạn về trang tín dụng.',
+    en: 'After the matching transfer is confirmed, Zero Mail will activate the plan and take you back to Credits.',
   },
   'billing.balance.label': {
     vi: 'Tín dụng hiện có',
@@ -270,6 +350,10 @@ export const billingMessages = {
   'billing.copy.done': {
     vi: 'Đã sao chép',
     en: 'Copied',
+  },
+  'billing.copy.failed': {
+    vi: 'Không thể sao chép',
+    en: "Couldn't copy",
   },
   'billing.copy.aria': {
     vi: 'Sao chép {label}',

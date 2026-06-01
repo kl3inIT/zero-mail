@@ -8,8 +8,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * One paid plan entitlement created from a successful one-time Lemon Squeezy order. Missing/expired
- * rows mean the tenant falls back to FREE.
+ * One paid plan entitlement created from a successful one-time payment. Missing/expired rows mean
+ * the tenant falls back to FREE.
  */
 @Entity
 @Table(name = "billing_plan_period")
@@ -51,15 +51,6 @@ public class BillingPlanPeriodEntity extends AbstractAuditableEntity {
     @Column(name = "currency", nullable = false, length = 3, updatable = false)
     private String currency;
 
-    @Column(name = "lemon_squeezy_customer_id")
-    private Long lemonSqueezyCustomerId;
-
-    @Column(name = "lemon_squeezy_product_id")
-    private Long lemonSqueezyProductId;
-
-    @Column(name = "lemon_squeezy_variant_id")
-    private Long lemonSqueezyVariantId;
-
     protected BillingPlanPeriodEntity() {
         // Hibernate
     }
@@ -77,10 +68,7 @@ public class BillingPlanPeriodEntity extends AbstractAuditableEntity {
             Instant expiresAt,
             Instant paidAt,
             long amountVnd,
-            String currency,
-            Long lemonSqueezyCustomerId,
-            Long lemonSqueezyProductId,
-            Long lemonSqueezyVariantId) {
+            String currency) {
         super(id);
         if (tenantId == null) {
             throw new IllegalArgumentException("tenantId is required");
@@ -109,9 +97,6 @@ public class BillingPlanPeriodEntity extends AbstractAuditableEntity {
         this.paidAt = paidAt;
         this.amountVnd = amountVnd;
         this.currency = currency;
-        this.lemonSqueezyCustomerId = lemonSqueezyCustomerId;
-        this.lemonSqueezyProductId = lemonSqueezyProductId;
-        this.lemonSqueezyVariantId = lemonSqueezyVariantId;
     }
 
     public UUID getTenantId() {
@@ -160,18 +145,6 @@ public class BillingPlanPeriodEntity extends AbstractAuditableEntity {
 
     public String getCurrency() {
         return currency;
-    }
-
-    public Long getLemonSqueezyCustomerId() {
-        return lemonSqueezyCustomerId;
-    }
-
-    public Long getLemonSqueezyProductId() {
-        return lemonSqueezyProductId;
-    }
-
-    public Long getLemonSqueezyVariantId() {
-        return lemonSqueezyVariantId;
     }
 
     public void markExpired() {

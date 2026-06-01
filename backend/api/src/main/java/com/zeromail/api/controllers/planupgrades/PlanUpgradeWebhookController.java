@@ -1,7 +1,12 @@
 package com.zeromail.api.controllers.planupgrades;
 
+import com.zeromail.api.dto.billing.WebhookAcknowledgmentResponse;
 import com.zeromail.core.billing.usecases.LemonSqueezyWebhookIngestResult;
 import com.zeromail.core.billing.usecases.LemonSqueezyWebhookIngestService;
+import com.zeromail.core.billing.usecases.SepayWebhookIngestResult;
+import com.zeromail.core.billing.usecases.SepayWebhookIngestService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,14 +19,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/plan-upgrades/webhooks")
 public class PlanUpgradeWebhookController {
 
+    private static final Logger log = LoggerFactory.getLogger(PlanUpgradeWebhookController.class);
+
     private static final String EVENT_ID_HEADER = "X-Event-Id";
     private static final String LEMON_SQUEEZY_EVENT_ID_HEADER = "X-LemonSqueezy-Event-Id";
 
     private final LemonSqueezyWebhookIngestService lemonSqueezyWebhookIngestService;
+    private final SepayWebhookIngestService sepayWebhookIngestService;
 
     public PlanUpgradeWebhookController(
-            LemonSqueezyWebhookIngestService lemonSqueezyWebhookIngestService) {
+            LemonSqueezyWebhookIngestService lemonSqueezyWebhookIngestService,
+            SepayWebhookIngestService sepayWebhookIngestService) {
         this.lemonSqueezyWebhookIngestService = lemonSqueezyWebhookIngestService;
+        this.sepayWebhookIngestService = sepayWebhookIngestService;
     }
 
     @PostMapping("/lemon-squeezy")
@@ -37,6 +47,19 @@ public class PlanUpgradeWebhookController {
                         + " payload="
                         + ingestResult.redactedPayloadJson());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/sepay")
+    public ResponseEntity<WebhookAcknowledgmentResponse> sepay(
+            @RequestBody(required = false) String payload) {
+        SepayWebhookIngestResult ingestResult = sepayWebhookIngestService.ingest(payload);
+        log.info(
+                "event=sepay_webhook_received tenantId={} eventId={} eventName={} payload={}",
+                ingestResult.tenantId(),
+                ingestResult.eventId(),
+                ingestResult.eventName(),
+                ingestResult.redactedPayloadJson());
+        return ResponseEntity.ok(new WebhookAcknowledgmentResponse(true));
     }
 
     private String eventId(HttpHeaders headers) {
