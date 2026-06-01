@@ -106,6 +106,10 @@ class RecentInboxReadServiceTest {
                 gmailConnectionRepository,
                 gmailApiClientFactory,
                 cryptoProperties(),
-                new JsoupSafeHtmlSanitizer());
+                new JsoupSafeHtmlSanitizer(),
+                org.mockito.Mockito.mock(
+                        com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer.class),
+                org.mockito.Mockito.mock(
+                        com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository.class));
     }
 }

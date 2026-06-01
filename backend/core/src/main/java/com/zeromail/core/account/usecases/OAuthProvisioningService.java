@@ -5,6 +5,7 @@ import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer;
 import com.zeromail.core.notification.domain.ChannelType;
 import com.zeromail.core.notification.usecases.NotificationPreferenceService;
 import com.zeromail.core.tenant.TenantContext;
@@ -44,6 +45,7 @@ public class OAuthProvisioningService {
     private final GmailConnectionService gmailConnectionService;
     private final NotificationPreferenceService notificationPreferenceService;
     private final RefreshTokenCipher refreshTokenCipher;
+    private final InboxBackfillEnqueuer inboxBackfillEnqueuer;
     private final TransactionTemplate bundledTransaction;
 
     public OAuthProvisioningService(
@@ -52,12 +54,14 @@ public class OAuthProvisioningService {
             GmailConnectionService gmailConnectionService,
             NotificationPreferenceService notificationPreferenceService,
             RefreshTokenCipher refreshTokenCipher,
+            InboxBackfillEnqueuer inboxBackfillEnqueuer,
             PlatformTransactionManager transactionManager) {
         this.userRepository = userRepository;
         this.tenantService = tenantService;
         this.gmailConnectionService = gmailConnectionService;
         this.notificationPreferenceService = notificationPreferenceService;
         this.refreshTokenCipher = refreshTokenCipher;
+        this.inboxBackfillEnqueuer = inboxBackfillEnqueuer;
         this.bundledTransaction = new TransactionTemplate(transactionManager);
         this.bundledTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
     }
@@ -131,6 +135,10 @@ public class OAuthProvisioningService {
                                                 // Reconnect MUST NOT regress onboarding_step (D-B4
                                                 // invariant).
                                             }));
+            // Enqueue an inbox-projection backfill so reconnect refreshes any stale projection
+            // rows that accumulated during the offline period. Idempotent via processing_job
+            // dedup so concurrent reconnects do not stack jobs.
+            inboxBackfillEnqueuer.enqueueIfNotPending(tenantId);
             return new BundledProvisioningResult(tenantId, userId, false);
         }
 
@@ -177,6 +185,9 @@ public class OAuthProvisioningService {
                                                 userRepository.save(savedUser);
                                             }));
             log.info("event=oauth_provisioning_complete tenantId={}", tenantId);
+            // First-login eager backfill: prepare the projection so the deferred Phase B read swap
+            // does not block on a cold first-fetch from Gmail.
+            inboxBackfillEnqueuer.enqueueIfNotPending(tenantId);
             return new BundledProvisioningResult(tenantId, userId, true);
         } catch (DataIntegrityViolationException dataIntegrityViolation) {
             // Concurrent first-login from same Google subject: first transaction rolled back (no

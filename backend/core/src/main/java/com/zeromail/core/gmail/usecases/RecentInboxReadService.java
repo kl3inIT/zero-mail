@@ -63,12 +63,18 @@ public class RecentInboxReadService {
     private final GmailApiClientFactory gmailApiClientFactory;
     private final SafeHtmlSanitizer safeHtmlSanitizer;
     private final InboxCursorCodec inboxCursorCodec;
+    private final com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer inboxBackfillEnqueuer;
+    private final com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository
+            inboxSyncStateRepository;
 
     public RecentInboxReadService(
             GmailConnectionRepository gmailConnectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
             CryptoProperties cryptoProperties,
-            SafeHtmlSanitizer safeHtmlSanitizer) {
+            SafeHtmlSanitizer safeHtmlSanitizer,
+            com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer inboxBackfillEnqueuer,
+            com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository
+                            inboxSyncStateRepository) {
         this.gmailConnectionRepository =
                 Objects.requireNonNull(
                         gmailConnectionRepository, "gmailConnectionRepository must not be null");
@@ -82,11 +88,22 @@ public class RecentInboxReadService {
                         Objects.requireNonNull(
                                         cryptoProperties, "cryptoProperties must not be null")
                                 .refreshTokenKeyBase64());
+        this.inboxBackfillEnqueuer =
+                Objects.requireNonNull(
+                        inboxBackfillEnqueuer, "inboxBackfillEnqueuer must not be null");
+        this.inboxSyncStateRepository =
+                Objects.requireNonNull(
+                        inboxSyncStateRepository, "inboxSyncStateRepository must not be null");
     }
 
     @Transactional(readOnly = true)
     public RecentInboxPage fetchPage(UUID tenantId, String cursor, int requestedLimit) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
+        // Lazy backfill trigger (Phase A wave 3): the first time a tenant fetches the inbox after
+        // connecting, kick off an asynchronous backfill so the projection is ready by the time
+        // Phase B swaps the read path to the DB. Live Gmail still serves THIS response; enqueue
+        // is idempotent via processing_job dedup so concurrent fetches do not stack jobs.
+        enqueueBackfillIfFirstFetch(tenantId);
         InboxCursor inboxCursor = inboxCursorCodec.decode(cursor);
         if (inboxCursor.loadedCount() >= MAX_MESSAGES) {
             return new RecentInboxPage(List.of(), null, inboxCursor.loadedCount(), MAX_MESSAGES);
@@ -659,6 +676,22 @@ public class RecentInboxReadService {
                 throw new IllegalStateException(
                         "Unable to sign Gmail inbox cursor", cryptoException);
             }
+        }
+    }
+
+    /**
+     * Idempotent lazy backfill enqueue. Triggers only when the tenant has never completed a full
+     * sync (no row in {@code gmail_inbox_sync_state}, or {@code last_full_sync_at IS NULL}). The
+     * enqueuer itself dedups via {@code processing_job} so a redundant call here is harmless.
+     */
+    private void enqueueBackfillIfFirstFetch(UUID tenantId) {
+        boolean needsBackfill =
+                inboxSyncStateRepository
+                        .findById(tenantId)
+                        .map(state -> state.getLastFullSyncAt() == null)
+                        .orElse(true);
+        if (needsBackfill) {
+            inboxBackfillEnqueuer.enqueueIfNotPending(tenantId);
         }
     }
 }
