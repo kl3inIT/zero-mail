@@ -167,6 +167,14 @@ springdoc:
     path: /swagger-ui.html
   packages-to-scan: com.zeromail.api.controllers
 management:
+  # micrometer-registry-otlp is on the classpath; without this it auto-pushes metrics to the
+  # default http://localhost:4318 (nothing listens there) on every profile, flooding WARN logs —
+  # including tests. Metrics are collected via Prometheus scrape of /actuator/prometheus; traces
+  # still export over OTLP to Alloy (prod). Disable the redundant OTLP metrics push everywhere.
+  otlp:
+    metrics:
+      export:
+        enabled: false
   endpoints:
     web:
       exposure:

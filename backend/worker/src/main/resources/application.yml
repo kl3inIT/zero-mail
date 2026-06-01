@@ -76,6 +76,12 @@ server:
 management:
   observations:
     enabled: true
+  # See backend/api/application.yml: disable the redundant OTLP metrics push (localhost:4318) on
+  # every profile; metrics go via Prometheus scrape, traces via OTLP→Alloy in prod.
+  otlp:
+    metrics:
+      export:
+        enabled: false
   tracing:
     sampling:
       probability: 1.0
