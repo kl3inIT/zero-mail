@@ -1,3 +1,17 @@
+# Zero Mail — self-hosted observability stack (Grafana + Prometheus + Loki +
+# Tempo + Alloy + exporters). NOT started by default.
+#
+# Bring up alongside the running app/infra (project zero-mail) when wanted:
+#   docker compose \
+#     -f docker/docker-compose.infra.yml \
+#     -f docker/docker-compose.yml \
+#     -f docker/docker-compose.observability.yml \
+#     --env-file .env --env-file docker/.env.observability up -d
+#
+# Config files live under docker/observability/. Volumes pinned by name so they
+# survive relocation. Project name pinned to `zero-mail`.
+name: zero-mail
+
 x-logging: &default-logging
   driver: json-file
   options:
@@ -22,9 +36,9 @@ services:
       - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      - ../../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
     networks:
-      - proxy-network
+      - zeromail-proxy
       - zeromail-internal
     mem_limit: ${GRAFANA_MEM_LIMIT:-512m}
     logging: *default-logging
@@ -42,7 +56,7 @@ services:
       - "--web.console.templates=/usr/share/prometheus/consoles"
     volumes:
       - prometheus_data:/prometheus
-      - ../../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       - zeromail-internal
     ports:
@@ -57,7 +71,7 @@ services:
     command: ["-config.file=/etc/loki/loki.yml"]
     volumes:
       - loki_data:/loki
-      - ../../observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - ./observability/loki/loki.yml:/etc/loki/loki.yml:ro
     networks:
       - zeromail-internal
     mem_limit: ${LOKI_MEM_LIMIT:-1024m}
@@ -70,7 +84,7 @@ services:
     command: ["-config.file=/etc/tempo/tempo.yml"]
     volumes:
       - tempo_data:/data/tempo
-      - ../../observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
     networks:
       - zeromail-internal
     mem_limit: ${TEMPO_MEM_LIMIT:-768m}
@@ -87,7 +101,7 @@ services:
       - "/etc/alloy/config.alloy"
     volumes:
       - alloy_data:/var/lib/alloy/data
-      - ../../observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - zeromail-internal
@@ -153,7 +167,7 @@ services:
     logging: *default-logging
 
 networks:
-  proxy-network:
+  zeromail-proxy:
     external: true
   zeromail-internal:
     external: true
