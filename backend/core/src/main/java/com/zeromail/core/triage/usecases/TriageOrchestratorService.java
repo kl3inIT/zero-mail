@@ -51,9 +51,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -94,7 +91,6 @@ public class TriageOrchestratorService {
     private final TriageDraftSettings triageDraftSettings;
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
     private final MeterRegistry meterRegistry;
-    private final TransactionTemplate tenantScopedOrchestrationTransaction;
 
     public TriageOrchestratorService(
             TenantService tenantService,
@@ -108,7 +104,6 @@ public class TriageOrchestratorService {
             TriageDraftBodyGenerator draftBodyGenerator,
             TriageDraftSettings triageDraftSettings,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
-            PlatformTransactionManager transactionManager,
             ObjectProvider<MeterRegistry> meterRegistryProvider) {
         this.tenantService = tenantService;
         this.triageRuleEvaluationInputFactory = triageRuleEvaluationInputFactory;
@@ -125,18 +120,11 @@ public class TriageOrchestratorService {
         this.triageDraftSettings = triageDraftSettings;
         this.classifyThreadReplyStatusService = classifyThreadReplyStatusService;
         this.meterRegistry = meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new);
-        this.tenantScopedOrchestrationTransaction = new TransactionTemplate(transactionManager);
-        this.tenantScopedOrchestrationTransaction.setPropagationBehavior(
-                TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @ApplicationModuleListener
     public void onMailMessageObserved(MailMessageObserved observedEvent) {
-        TenantContext.runWith(
-                observedEvent.tenantId(),
-                () ->
-                        tenantScopedOrchestrationTransaction.executeWithoutResult(
-                                _ -> processObservedEvent(observedEvent)));
+        TenantContext.runWith(observedEvent.tenantId(), () -> processObservedEvent(observedEvent));
     }
 
     public OrchestrationResult processObservedEvent(MailMessageObserved observedEvent) {

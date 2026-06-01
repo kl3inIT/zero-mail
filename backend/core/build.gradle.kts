@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.jtokkit)
     implementation(libs.jsoup)
     implementation(libs.google.re2j)
+    implementation("com.github.ben-manes.caffeine:caffeine")
     api(libs.jakarta.mail.api)
     api(libs.angus.mail)
     runtimeOnly("org.eclipse:yasson")

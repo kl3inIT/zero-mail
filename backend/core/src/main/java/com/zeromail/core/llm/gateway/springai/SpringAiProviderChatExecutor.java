@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class SpringAiProviderChatExecutor implements LlmProviderChatExecutor {
 
     private final SpringAiProviderChatClientFactory chatClientFactory;
-    private final SpringAiByokChatSupport chatSupport = new SpringAiByokChatSupport();
+    private final SpringAiLlmChatSupport chatSupport = new SpringAiLlmChatSupport();
 
     public SpringAiProviderChatExecutor(SpringAiProviderChatClientFactory chatClientFactory) {
         this.chatClientFactory = chatClientFactory;

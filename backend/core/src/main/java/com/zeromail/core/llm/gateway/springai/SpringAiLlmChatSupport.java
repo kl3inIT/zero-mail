@@ -13,7 +13,7 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 
-final class SpringAiByokChatSupport {
+final class SpringAiLlmChatSupport {
 
     List<ToolCallback> translateTools(List<LlmTool> tools) {
         return tools.stream().map(this::toToolCallback).toList();

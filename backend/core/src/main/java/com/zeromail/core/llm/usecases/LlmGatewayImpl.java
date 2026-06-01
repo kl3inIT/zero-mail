@@ -565,10 +565,10 @@ class LlmGatewayImpl implements LlmGateway {
                             Optional<ResolvedLlmProviderCredential> byok =
                                     resolveByokProviderCredential(tenantId, primaryRoute.model());
                             if (byok.isPresent()) {
-                                return evaluateSemanticIntentsWithoutCreditLedger(
+                                return evaluateSemanticIntentsWithByokCredential(
                                         tenantId,
                                         callSite,
-                                        routes,
+                                        byok.get(),
                                         sanitizedContext,
                                         intents,
                                         startNanos);
@@ -582,6 +582,62 @@ class LlmGatewayImpl implements LlmGateway {
                                     intents,
                                     startNanos);
                         });
+    }
+
+    private Map<String, Boolean> evaluateSemanticIntentsWithByokCredential(
+            UUID tenantId,
+            CallSite callSite,
+            ResolvedLlmProviderCredential resolvedCredential,
+            SanitizationContext sanitizedContext,
+            List<SemanticIntentRequest> intents,
+            long startNanos) {
+        try {
+            SemanticIntentEvaluationResult semanticIntentEvaluationResult =
+                    semanticIntentEvaluator.evaluate(
+                            callSite,
+                            resolvedCredential.modelId(),
+                            resolvedCredential.credential(),
+                            sanitizedContext.content(),
+                            intents);
+            LlmUsage usage = semanticIntentEvaluationResult.usage();
+            log.info(
+                    "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} promptTokens={} completionTokens={} truncated={}",
+                    tenantId,
+                    callSite,
+                    resolvedCredential.providerId(),
+                    resolvedCredential.modelId(),
+                    latencyMs(startNanos),
+                    intents.size(),
+                    usage.promptTokens(),
+                    usage.completionTokens(),
+                    sanitizedContext.truncated());
+            recordUsage(
+                    tenantId,
+                    callSite,
+                    resolvedCredential.providerId(),
+                    resolvedCredential.modelId(),
+                    "BYOK",
+                    usage,
+                    0);
+            return semanticIntentEvaluationResult.matches();
+        } catch (SafetyViolationException safetyViolation) {
+            log.error(
+                    "event=llm_safety_violation tenantId={} callSite={} reason={}",
+                    tenantId,
+                    callSite,
+                    safetyViolation.getClass().getSimpleName());
+            throw safetyViolation;
+        } catch (RuntimeException semanticEvaluationFailure) {
+            log.warn(
+                    "event=llm_semantic_eval_failed tenantId={} callSite={} intentCount={} errorClass={}",
+                    tenantId,
+                    callSite,
+                    intents.size(),
+                    semanticEvaluationFailure.getClass().getSimpleName());
+            throw new LlmEvaluationFailedException(semanticEvaluationFailure);
+        } finally {
+            resolvedCredential.credential().wipe();
+        }
     }
 
     @Override
@@ -975,56 +1031,6 @@ class LlmGatewayImpl implements LlmGateway {
                     callSite,
                     credentialSource,
                     usageRecordingFailure.getClass().getSimpleName());
-        }
-    }
-
-    private Map<String, Boolean> evaluateSemanticIntentsWithoutCreditLedger(
-            UUID tenantId,
-            CallSite callSite,
-            List<PlatformRoute> routes,
-            SanitizationContext sanitizedContext,
-            List<SemanticIntentRequest> intents,
-            long startNanos) {
-        try {
-            SemanticIntentRouteOutcome semanticIntentRouteOutcome =
-                    evaluateSemanticIntentRoutes(
-                            callSite, routes, sanitizedContext.content(), intents);
-            LlmUsage usage = semanticIntentRouteOutcome.result().usage();
-            log.info(
-                    "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} promptTokens={} completionTokens={} truncated={}",
-                    tenantId,
-                    callSite,
-                    semanticIntentRouteOutcome.route().provider(),
-                    semanticIntentRouteOutcome.route().model(),
-                    latencyMs(startNanos),
-                    intents.size(),
-                    usage.promptTokens(),
-                    usage.completionTokens(),
-                    sanitizedContext.truncated());
-            recordUsage(
-                    tenantId,
-                    callSite,
-                    semanticIntentRouteOutcome.route().provider(),
-                    semanticIntentRouteOutcome.route().model(),
-                    "PLATFORM",
-                    usage,
-                    0);
-            return semanticIntentRouteOutcome.result().matches();
-        } catch (SafetyViolationException safetyViolation) {
-            log.error(
-                    "event=llm_safety_violation tenantId={} callSite={} reason={}",
-                    tenantId,
-                    callSite,
-                    safetyViolation.getClass().getSimpleName());
-            throw safetyViolation;
-        } catch (RuntimeException semanticEvaluationFailure) {
-            log.warn(
-                    "event=llm_semantic_eval_failed tenantId={} callSite={} intentCount={} errorClass={}",
-                    tenantId,
-                    callSite,
-                    intents.size(),
-                    semanticEvaluationFailure.getClass().getSimpleName());
-            throw new LlmEvaluationFailedException(semanticEvaluationFailure);
         }
     }
 

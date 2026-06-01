@@ -125,13 +125,11 @@ public class RulePreviewService {
         return PreviewSampleSize.normalize(requestedSampleSize).value();
     }
 
-    @Transactional
     public RulePreviewResult previewSavedRule(
             UUID tenantId, UUID ruleId, Integer requestedSampleSize) {
         return previewSavedRule(tenantId, ruleId, requestedSampleSize, false);
     }
 
-    @Transactional
     public RulePreviewResult previewSavedRule(
             UUID tenantId,
             UUID ruleId,
@@ -142,7 +140,6 @@ public class RulePreviewService {
                         tenantId, ruleId, requestedSampleSize, evaluateSemanticIntents));
     }
 
-    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             MatcherNode matcherNode,
@@ -151,7 +148,6 @@ public class RulePreviewService {
         return previewDraft(tenantId, matcherNode, actionIntents, requestedSampleSize, false);
     }
 
-    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             MatcherNode matcherNode,
@@ -167,7 +163,6 @@ public class RulePreviewService {
                         evaluateSemanticIntents));
     }
 
-    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId, String matcherAst, String actionIntents, Integer requestedSampleSize) {
         return previewDraft(tenantId, matcherAst, actionIntents, requestedSampleSize, false);
@@ -178,13 +173,10 @@ public class RulePreviewService {
      * markPreviewSucceeded bookkeeping. Used by the rules /test tab where the user wants to see how
      * their current rule set behaves on real Gmail without first picking a rule.
      *
-     * <p>Read-write (not {@code readOnly = true}) on purpose: when {@code evaluateSemanticIntents}
-     * is set, the LLM gateway records credit-ledger consumption ({@code settle}/{@code release} run
-     * with {@code Propagation.REQUIRED}, joining this transaction). A read-only transaction would
-     * reject those INSERTs with "cannot execute INSERT in a read-only transaction". This matches
-     * the read-write {@link #previewSavedRule} entry points.
+     * <p>This method intentionally does not own a service-wide transaction. Gmail and LLM calls can
+     * take seconds, so repository reads and credit-ledger writes must use their own short
+     * transactions instead of holding one connection through the whole preview.
      */
-    @Transactional
     public RulePreviewResult previewAllEnabled(
             UUID tenantId, Integer requestedSampleSize, boolean evaluateSemanticIntents) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -247,10 +239,7 @@ public class RulePreviewService {
     /**
      * Evaluate every enabled rule against a single recent message, always resolving semantic
      * intents through the LLM. This is the billable per-row "Test" action of the test tab.
-     * Read-write because the LLM gateway records credit-ledger consumption (see {@link
-     * #previewAllEnabled}).
      */
-    @Transactional
     public RulePreviewResult previewSingleMessage(
             UUID tenantId, String gmailMessageId, String gmailThreadId) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -293,7 +282,6 @@ public class RulePreviewService {
                 semanticOverridesByMessage);
     }
 
-    @Transactional
     public RulePreviewResult previewDraft(
             UUID tenantId,
             String matcherAst,
@@ -308,7 +296,6 @@ public class RulePreviewService {
                 evaluateSemanticIntents);
     }
 
-    @Transactional
     public RuleCustomPreviewResult previewCustomMail(
             UUID tenantId, String subject, String body, List<UUID> requestedRuleIds) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -481,10 +468,8 @@ public class RulePreviewService {
                 .toList();
     }
 
-    // No @Transactional here on purpose: preview(...) is only invoked via
-    // self-invocation from previewSavedRule / previewDraft, so Spring's
-    // transactional proxy is bypassed and the annotation has no runtime
-    // effect. The active transaction is owned by the public entry points.
+    // No @Transactional here on purpose: this path can fetch Gmail data and call
+    // an LLM. Short repository/ledger writes are owned by their called services.
     public RulePreviewResult preview(RulePreviewCommand command) {
         Objects.requireNonNull(command, "command must not be null");
         PreviewSampleSize sampleSize = PreviewSampleSize.normalize(command.requestedSampleSize());

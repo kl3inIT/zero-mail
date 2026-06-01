@@ -17,6 +17,20 @@ spring:
     compose:
       enabled: false
 
+  datasource:
+    hikari:
+      pool-name: zeromail-api-pool
+      maximum-pool-size: ${ZERO_MAIL_API_DB_POOL_MAX:16}
+      minimum-idle: ${ZERO_MAIL_API_DB_POOL_MIN_IDLE:4}
+      connection-timeout: ${ZERO_MAIL_DB_CONNECTION_TIMEOUT_MS:3000}
+      validation-timeout: ${ZERO_MAIL_DB_VALIDATION_TIMEOUT_MS:1000}
+      keepalive-time: ${ZERO_MAIL_DB_KEEPALIVE_TIME_MS:120000}
+      max-lifetime: ${ZERO_MAIL_DB_MAX_LIFETIME_MS:600000}
+      leak-detection-threshold: ${ZERO_MAIL_DB_LEAK_DETECTION_THRESHOLD_MS:0}
+
+  lifecycle:
+    timeout-per-shutdown-phase: ${ZERO_MAIL_SHUTDOWN_PHASE_TIMEOUT:25s}
+
   ai:
     chat:
       # intentional defense-in-depth: also enforced by base + zero-mail-shared.yml — never drop
@@ -33,6 +47,7 @@ spring:
           include-completion: false
 
 server:
+  shutdown: graceful
   servlet:
     session:
       cookie:
