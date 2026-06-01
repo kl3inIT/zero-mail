@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 import {
   createChromeMockState,
@@ -62,3 +62,109 @@ test('upgrade page disables tiers below the active plan', async ({ page }) => {
   await expect(bankTransferDialog.getByText('399.000₫')).toBeVisible();
   await expect(bankTransferDialog.getByText('ZM ABCD2345 PRO')).toBeVisible();
 });
+
+test('bank transfer success notification redirects to credits', async ({ page }) => {
+  const state = createChromeMockState({ currentPlanCode: 'PLUS', preferredLanguage: 'vi' });
+
+  await installPlanUpgradePaymentWebSocketMock(page);
+  await seedAuthenticatedSession(page, 'vi');
+  await installChromeApiMock(page, state);
+
+  await page.goto('/upgrade-plan');
+  await page.getByRole('button', { name: 'Chuyển khoản QR' }).click();
+
+  await expect(page.getByRole('dialog', { name: 'Chuyển khoản ngân hàng' })).toBeVisible();
+  await expect(
+    page.getByText('Thanh toán thành công. Gói của bạn đã được kích hoạt.'),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/credits$/);
+});
+
+async function installPlanUpgradePaymentWebSocketMock(page: Page) {
+  await page.addInitScript(() => {
+    const NativeWebSocket = window.WebSocket;
+    const paymentFrameBody = JSON.stringify({
+      type: 'PLAN_UPGRADE_PAYMENT_COMPLETED',
+      bankTransferIntentId: '00000000-0000-0000-0000-000000000900',
+      bankTransferCode: 'ABCD2345',
+      planCode: 'PRO',
+      provider: 'SEPAY',
+      amountVnd: 399000,
+      currency: 'VND',
+      paidAt: '2026-06-01T10:00:00.000Z',
+    });
+
+    class FakePaymentWebSocket {
+      static readonly CONNECTING = 0;
+      static readonly OPEN = 1;
+      static readonly CLOSING = 2;
+      static readonly CLOSED = 3;
+
+      readonly url!: string;
+      readonly protocol = '';
+      readonly extensions = '';
+      binaryType: BinaryType = 'blob';
+      bufferedAmount = 0;
+      readyState = FakePaymentWebSocket.CONNECTING;
+      onopen: ((event: Event) => void) | null = null;
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+      onclose: ((event: CloseEvent) => void) | null = null;
+
+      constructor(url: string | URL, protocols?: string | string[]) {
+        const websocketUrl = String(url);
+        if (!websocketUrl.endsWith('/ws')) {
+          return (protocols === undefined
+            ? new NativeWebSocket(url)
+            : new NativeWebSocket(url, protocols)) as unknown as FakePaymentWebSocket;
+        }
+
+        this.url = websocketUrl;
+        window.setTimeout(() => {
+          this.readyState = FakePaymentWebSocket.OPEN;
+          this.onopen?.(new Event('open'));
+        }, 0);
+      }
+
+      send(frame: string | ArrayBufferLike | Blob | ArrayBufferView) {
+        const frameText = String(frame);
+        if (frameText.startsWith('CONNECT')) {
+          this.emitMessage('CONNECTED\nversion:1.2\n\n\0');
+          return;
+        }
+        if (frameText.startsWith('SUBSCRIBE')) {
+          window.setTimeout(() => {
+            this.emitMessage(
+              `MESSAGE\nsubscription:sub-0\nmessage-id:payment-1\ndestination:/topic/tenants/tenant-1/billing\ncontent-type:application/json\n\n${paymentFrameBody}\0`,
+            );
+          }, 200);
+        }
+      }
+
+      close() {
+        this.readyState = FakePaymentWebSocket.CLOSED;
+        this.onclose?.(new CloseEvent('close'));
+      }
+
+      addEventListener() {}
+
+      removeEventListener() {}
+
+      dispatchEvent() {
+        return true;
+      }
+
+      private emitMessage(data: string) {
+        window.setTimeout(() => {
+          this.onmessage?.(new MessageEvent('message', { data }));
+        }, 0);
+      }
+    }
+
+    Object.defineProperty(window, 'WebSocket', {
+      configurable: true,
+      writable: true,
+      value: FakePaymentWebSocket as unknown as typeof WebSocket,
+    });
+  });
+}

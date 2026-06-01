@@ -1,7 +1,9 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { Check, Copy, CreditCard, Loader2, QrCode } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -10,7 +12,10 @@ import type {
   BillingPaymentMethod,
   BillingPlanResponse,
 } from '@/features/billing/api/billing-api';
+import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { billingKeys } from '@/features/billing/query-keys';
 import { useBillingPlans } from '@/features/billing/hooks/useBillingPlans';
+import { usePlanUpgradePaymentWebSocket } from '@/features/billing/hooks/usePlanUpgradePaymentWebSocket';
 import { useStartBillingCheckout } from '@/features/billing/hooks/useStartBillingCheckout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,12 +36,28 @@ function formatVnd(value: number): string {
 
 export function PlanList() {
   const t = useTranslations();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const currentUserQuery = useCurrentUser();
   const plansQuery = useBillingPlans();
   const checkoutMutation = useStartBillingCheckout();
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
   const [bankTransferIntent, setBankTransferIntent] = useState<BankTransferIntentResponse | null>(
     null,
   );
+
+  usePlanUpgradePaymentWebSocket({
+    tenantId: currentUserQuery.data?.tenantId,
+    bankTransferIntentId: bankTransferIntent?.id,
+    bankTransferCode: bankTransferIntent?.code,
+    enabled: bankTransferIntent !== null,
+    onPaymentCompleted: () => {
+      setBankTransferIntent(null);
+      toast.success(t('billing.bankTransfer.paymentSuccess'));
+      void queryClient.invalidateQueries({ queryKey: billingKeys.all });
+      router.replace('/credits');
+    },
+  });
 
   if (plansQuery.isLoading) {
     return (

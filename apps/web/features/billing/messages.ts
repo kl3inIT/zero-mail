@@ -155,6 +155,10 @@ export const billingMessages = {
     vi: 'Hết hạn lúc {time}',
     en: 'Expires at {time}',
   },
+  'billing.bankTransfer.paymentSuccess': {
+    vi: 'Thanh toán thành công. Gói của bạn đã được kích hoạt.',
+    en: 'Payment successful. Your plan has been activated.',
+  },
   'billing.balance.label': {
     vi: 'Tín dụng hiện có',
     en: 'Available credits',

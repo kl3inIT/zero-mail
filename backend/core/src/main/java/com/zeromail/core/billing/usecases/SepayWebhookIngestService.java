@@ -1,5 +1,6 @@
 package com.zeromail.core.billing.usecases;
 
+import com.zeromail.core.billing.event.PlanUpgradePaymentCompleted;
 import com.zeromail.core.billing.persistence.BillingBankTransferIntentEntity;
 import com.zeromail.core.billing.persistence.BillingBankTransferIntentRepository;
 import com.zeromail.core.billing.persistence.BillingPlanEntity;
@@ -20,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
@@ -43,6 +45,7 @@ public class SepayWebhookIngestService {
     private final BillingWebhookEventRepository billingWebhookEventRepository;
     private final ObjectMapper objectMapper;
     private final PaidPlanActivationService paidPlanActivationService;
+    private final ApplicationEventPublisher applicationEventPublisher;
     private final TransactionTemplate transactionTemplate;
 
     public SepayWebhookIngestService(
@@ -51,12 +54,14 @@ public class SepayWebhookIngestService {
             BillingWebhookEventRepository billingWebhookEventRepository,
             ObjectMapper objectMapper,
             PaidPlanActivationService paidPlanActivationService,
+            ApplicationEventPublisher applicationEventPublisher,
             TransactionTemplate transactionTemplate) {
         this.bankTransferIntentRepository = bankTransferIntentRepository;
         this.billingPlanRepository = billingPlanRepository;
         this.billingWebhookEventRepository = billingWebhookEventRepository;
         this.objectMapper = objectMapper;
         this.paidPlanActivationService = paidPlanActivationService;
+        this.applicationEventPublisher = applicationEventPublisher;
         this.transactionTemplate = transactionTemplate;
     }
 
@@ -176,6 +181,17 @@ public class SepayWebhookIngestService {
                                                     paidAt,
                                                     transferAmountVnd,
                                                     intent.getCurrency())));
+            applicationEventPublisher.publishEvent(
+                    new PlanUpgradePaymentCompleted(
+                            intent.getTenantId(),
+                            intent.getId(),
+                            intent.getCode(),
+                            billingPlan.getCode(),
+                            PROVIDER_SEPAY,
+                            providerTransactionId,
+                            transferAmountVnd,
+                            intent.getCurrency(),
+                            paidAt));
             webhookEvent.markProcessed(Instant.now());
         } catch (PaidPlanActivationService.PlanActivationException
                 | WebhookProcessingException processingException) {
