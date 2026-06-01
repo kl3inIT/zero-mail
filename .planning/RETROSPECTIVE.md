@@ -117,6 +117,46 @@
 
 ---
 
+## Milestone: v1.2 — Admin Console + User Settings UI
+
+**Shipped:** 2026-06-01
+**Phases:** 4 (8, 08.1, 9, + 08-bulk-unsubscribe) | **Plans:** 28 | **Tasks:** 62
+**Requirements:** 70/73 complete (3 deferred to v1.3)
+**Git range:** v1.1..HEAD — 525 commits, 2057 files (+198k / −24k), ~15 days
+
+### What Was Built
+
+- **Admin console (Phase 8):** WebAuthn passkey auth on a dedicated `@Order(1)` SecurityFilterChain, HMAC-chained append-only audit (DB-trigger-enforced), `AdminContext`↔`TenantContext` mutex, a standalone `apps/admin` Vite + React 19 SPA, master-key management for 6 providers, a curated catalog with 3-step Sync-from-`/models`, and metadata-only tenant/queue/spend dashboards behind ArchUnit + `AdminResponseBodyBanFilter` leak guards.
+- **Rule actions (Phase 08.1):** DB-backed bilingual examples/personas catalog, expanded When/Then action schema, and runtime outbound execution of send/reply/forward behind one Auto-send setting + safety gates + a single ArchUnit-locked outbound gateway with fallback-to-draft.
+- **User settings (Phase 9):** the single `/ai` surface (voice/behavior/updates/safety-net/BYOK) on the curated catalog, with in-memory-only generate-from-Sent privacy gates.
+- **Bonus:** bulk-unsubscribe campaign (RFC 8058 + RFC 6068 gateways, throttled SKIP LOCKED dispatch, UNS-01..07).
+
+### What Worked
+
+- Parallel-agent execution landed real, verified code (08.1-06 outbound gateway shipped + verification PASS) even when the planning artifacts lagged — the code/tests were the source of truth.
+- The privacy-by-ArchUnit posture extended cleanly to the admin surface: body/prompt/completion bans, single-send-call-site, and response-body failsafe all carried over from v1.0/v1.1.
+
+### What Was Inefficient
+
+- **Planning drift was severe:** `.planning/` declared "v1.2 in planning, Phase 08.1 in progress" while git was tagged through **v1.4.5** (388 commits past v1.2.0). Milestone artifacts (SUMMARY checkboxes, ROADMAP status, REQUIREMENTS traceability) were never kept in sync with the real branch, so the close required reconstructing 08.1-06's SUMMARY retroactively and re-deriving requirement status from code.
+- **Runaway tagging:** an automated/parallel tag sequence inflated versions to v1.4.5 with no corresponding milestones; cleaned back to v1.2.0 at close.
+
+### Patterns Established
+
+- When a SUMMARY artifact is missing but the code + VERIFICATION exist, reconstruct the SUMMARY from commits/code rather than re-running the plan.
+- Milestone-close requirement status is verified against the codebase (grep for the feature), not trusted from stale checkboxes.
+
+### Key Lessons
+
+- Keep planning artifacts and git tags in lockstep with execution — a 388-commit / 2-minor-version drift made the milestone close an archaeology exercise instead of a checkpoint.
+- Tag discipline matters: auto-tagging without milestone gates produces meaningless version inflation.
+
+### Cost Observations
+
+- Long-running multi-session milestone with heavy parallel-agent work; exact model mix not instrumented. Notable: most rework at close was reconciliation overhead from planning drift, not feature work.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

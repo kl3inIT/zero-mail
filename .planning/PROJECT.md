@@ -8,17 +8,24 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 **Shipped:**
 - v1.0 MVP — `v1.0.0-rc1` tagged 2026-05-15.
-- v1.1 Email assistant chat — `v1.1` tagged 2026-05-19 (Phase 7 only; Phase 8 deferred to v1.2).
+- v1.1 Email assistant chat — `v1.1` tagged 2026-05-19 (Phase 7 only).
+- v1.2 Admin Console + User Settings UI — `v1.2` tagged 2026-06-01 (Phases 8, 08.1, 9, + bonus 08-bulk-unsubscribe campaign; 70/73 requirements complete, 3 deferred to v1.3; no GA tag this milestone).
 
-- **Backend:** ~18 phases (v1.0 + Phase 7), Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
-- **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary. Brand palette shifted teal `#0E5E5A` → purple `#867AEB` in PR #40 (2026-05-19) — user-page visual refresh queued for v1.2.
-- **Infra:** Single VPS — Postgres 17 + Redis 7 + reverse proxy + api + worker + web on one host. No GCP / Kafka / vector DB.
-- **Trust posture:** v1.0/v1.1 hard-blocked rule-triggered outbound sends; v1.2 Phase 08.1 replaces that hard ban with one default-ON global `Auto-send rules` setting, safety/rate/idempotency gates, draft fallback, audit, and a single outbound gateway boundary. No long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer (sanitizer + ArchUnit + Postgres trigger).
-- **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012). v1.1 chat surface ships **without** hostile-corpus eval gate (deferred to v1.2 hardening); v1.0 LAUNCH-GO-NOGO still applies; v1.1 GA tag annotated with deferred-eval caveat.
+- **Backend:** ~21 phases (v1.0 + Phase 7 + v1.2's 8/08.1/9/08-bulk-unsubscribe), Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
+- **Admin:** NEW separate `apps/admin` Vite + React 19 SPA on `admin.zeromail.com` — WebAuthn passkey auth (dedicated `@Order(1)` SecurityFilterChain), HMAC-chained append-only audit, master-key management for 6 LLM providers, curated catalog with Sync-from-`/models`, and metadata-only tenant/queue/spend dashboards.
+- **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary. Single `/ai` settings surface (voice, behavior, updates, safety net, BYOK) on the admin-curated catalog. Brand palette shifted teal `#0E5E5A` → purple `#867AEB` in PR #40 — user-page visual refresh deferred to v1.3.
+- **Infra:** Single VPS — Postgres 17 + Redis 7 + NPM reverse proxy + 9Router sidecar + api + worker + web + admin on one host. No GCP / Kafka / vector DB.
+- **Trust posture:** v1.2 Phase 08.1 replaced the v1.0/v1.1 hard ban on rule-triggered outbound sends with one default-ON global `Auto-send rules` setting, safety/rate/idempotency gates, draft fallback, audit, and a single ArchUnit-locked outbound gateway boundary (chat + rules runtime both route through it). No long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer; admin surfaces guarded by ArchUnit + `AdminResponseBodyBanFilter`.
+- **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012). v1.2 ships **without** a GA tag — hostile-corpus eval, Grafana dashboards, CASA refresh, visual refresh, and LAUNCH-GO-NOGO all deferred to v1.3+.
 
-## Current Milestone: v1.2 — Admin Console Foundation + Settings UI (Slice 2 capability)
+## Last Shipped Milestone: v1.2 — Admin Console + User Settings UI ✅ (2026-06-01)
 
-**Goal:** Ship admin console as the foundation (Phase 8), add Inbox Zero-style examples/actions with user-enabled outbound automation (Phase 08.1), then ship the user Settings UI on top of the admin-curated catalog (Phase 9). No GA tag this milestone — visual refresh, hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, and the formal GA tag are explicitly deferred to v1.3+.
+**Delivered:** Admin console foundation (Phase 8), Inbox Zero-style examples/actions with user-enabled outbound automation (Phase 08.1), the user Settings UI on the admin-curated catalog (Phase 9), and a bonus bulk-unsubscribe campaign phase. 70/73 requirements complete. No GA tag this milestone — visual refresh, hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, and the formal GA tag deferred to v1.3+.
+
+**Next milestone:** Not yet defined — run `/gsd-new-milestone` to scope v1.3. Likely v1.3 candidates: the 3 deferred settings reqs (SET-BEHV-05, SET-SAFE-02/03), VISUAL-REFRESH-01..06 (purple palette alignment), EVAL-01..05 (hostile-corpus aiEval), OPS-DASH-01..04 (Grafana), CASA-01, and a formal GA tag.
+
+<details>
+<summary>v1.2 target features (shipped)</summary>
 
 **Target features:**
 
@@ -39,6 +46,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - LAUNCH-GO-NOGO checklist
 - Formal **v1.2 GA tag**
 - Provider expansion (Bedrock/Azure/Groq/Perplexity/native OpenRouter/OpenAI-compatible/Vertex), waitlist OAuth provisioning, learned patterns, multi-rule selection, browser extension sync, image attachments in chat, CASA production verification (SEED-012).
+
+</details>
 
 ## Core Value
 
@@ -115,13 +124,38 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - ✓ In-product privacy page (no stored bodies, no auto-send, BYOK option) (WEB-03, v1.0)
 - ✓ Persistent chrome with global pause + credit balance + connection health (WEB-04, v1.0)
 
+**Email assistant chat** *(v1.1)*
+- ✓ Streaming chat assistant with 24-tool catalog, source-aware persistence, tenant-safe read tools, user-confirmed send/reply/forward via preview card (CHAT-*, ARCH-01..07, v1.1)
+
+**Admin console & operator tooling** *(v1.2)*
+- ✓ WebAuthn passkey admin auth, two-chain isolation, append-only HMAC-chained audit, separate `apps/admin` SPA (ADMIN-01..10, ARCH-08..12, OPS-INFRA-01..03, v1.2)
+- ✓ Master-key management for 6 providers — AES-GCM, masked-only, test/rotate + cache eviction, 9Router dual-mode (MKEY-01..08, v1.2)
+- ✓ Curated LLM catalog with 3-step Sync-from-`/models`, per-feature binding, Anthropic seed (CAT-01..07, v1.2)
+- ✓ Metadata-only tenant inspection, queue health, and LLM spend dashboards with leak failsafes (OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02, v1.2)
+
+**Inbox Zero-style rule actions** *(v1.2)*
+- ✓ Examples/personas catalog (admin-managed), expanded When/Then action schema, user-enabled outbound automation behind one Auto-send setting + safety gates + single outbound gateway with fallback-to-draft (RACT-01..12, v1.2)
+
+**User settings UI** *(v1.2)*
+- ✓ Single `/ai` surface — voice, behavior, updates, safety net, BYOK on curated catalog; generate-from-Sent with in-memory-only privacy gates (SET-VOICE-01..07, SET-BEHV-01/03/04, SET-SAFE-01/04, SET-AI-01..04, v1.2)
+
+**Bulk unsubscribe** *(v1.2 bonus)*
+- ✓ RFC 8058 one-click + RFC 6068 mailto send-as-self gateways, throttled SKIP LOCKED dispatch, full REST surface (UNS-01..07, v1.2)
+
 ### Active
+
+**v1.3 — not yet defined.** Run `/gsd-new-milestone` to scope. Carry-forward candidates: SET-BEHV-05 (shadow-mode toggle), SET-SAFE-02 (paste-import), SET-SAFE-03 (protect/escalate mode), VISUAL-REFRESH-01..06 (purple palette alignment), EVAL-01..05 (hostile-corpus aiEval), OPS-DASH-01..04 (Grafana), CASA-01, and a formal GA tag. Live outbound-send UAT (08.1 test #6) still needs a controlled Gmail tenant.
+
+<details>
+<summary>Prior Active note (pre-v1.2-close)</summary>
 
 <!-- Next milestone scope. Define via `/gsd:new-milestone`. -->
 
 **v1.2 in progress** (started 2026-05-19). Scope: Admin console foundation + Inbox Zero-style rule actions/examples + Settings UI on curated catalog (see "Current Milestone" section above). Requirements: `.planning/REQUIREMENTS.md`. Roadmap: `.planning/ROADMAP.md`.
 
-*Deferred from v1.1 candidate list:* CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans, waitlist OAuth provisioning.
+*Deferred from v1.1 candidate list:* CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, ~~bulk unsubscribe~~ (shipped in v1.2 as UNS-01..07), cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans, waitlist OAuth provisioning.
+
+</details>
 
 ### Out of Scope
 
@@ -177,7 +211,11 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 | Pub/Sub push over polling | Near-real-time triage; preserves API quota | ✓ Good — MAIL-01 verified |
 | OpenRouter default + BYOK via Spring AI | Model flexibility + user cost control | ✓ Good — LLM-01..04 shipped |
 | No auto-send in v1 | One bad auto-send is trust-ending | ✓ Good — TRG-03 + ArchUnit + grep gate |
-| User-enabled outbound rule automation in Phase 08.1 | Users expect a rule engine to send replies/forward/send email when explicitly configured; safety moves from hard ban to opt-in gates + audited gateway boundary | — Active — RACT-01..12 |
+| User-enabled outbound rule automation in Phase 08.1 | Users expect a rule engine to send replies/forward/send email when explicitly configured; safety moves from hard ban to opt-in gates + audited gateway boundary | ✓ Good — RACT-01..12 shipped v1.2; single ArchUnit-locked outbound gateway + fallback-to-draft |
+| WebAuthn passkey admin auth, not Google OAuth (v1.2 pivot) | Decouple admin identity from Google IdP; hardware-bound passkey + separate `admin_users` table; user-side RBAC removed entirely | ✓ Good — ADMIN-01..10 shipped; two-chain isolation ArchUnit-enforced |
+| Separate `apps/admin` Vite SPA on `admin.zeromail.com`, not a Next.js route group | Admin needs no SEO/SSR; DNS subdomain is the cognitive cue; admin schema types stay out of the public bundle | ✓ Good — shipped v1.2; `zeromail.com/admin` returns 404 |
+| Admin-curated LLM catalog with manual-confirm Sync-from-`/models` | Auto-apply is an anti-feature (providers ship preview/deprecated models); admin reviews diff before confirm | ✓ Good — CAT-01..07 shipped v1.2 |
+| No GA tag at v1.2 close | Hostile-corpus eval, visual refresh, Grafana, CASA refresh, LAUNCH-GO-NOGO not yet done; ship the capability, defer the GA gate | — Pending — v1.3 owns the GA tag |
 | Prepaid credits, pay-as-you-go | Aligns revenue with LLM cost; avoids freemium abuse | ✓ Good — BILL-01..07 shipped |
 | No long-term body/prompt/completion/embedding storage | Privacy is #1 install blocker | ✓ Good — repo-wide privacy sweeps green |
 | Next.js frontend separate module | Open frontend talent pool; clean API boundary | ✓ Good — WEB-01..04 shipped |
@@ -212,4 +250,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-19 — v1.2 milestone started (Admin Console Foundation + Settings UI)*
+*Last updated: 2026-06-01 after v1.2 milestone (Admin Console + User Settings UI shipped; 70/73 requirements; next milestone v1.3 not yet defined)*

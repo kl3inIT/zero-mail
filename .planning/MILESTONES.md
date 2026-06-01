@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.2 Admin Console + User Settings UI (Shipped: 2026-06-01)
+
+**Phases completed:** 4 phases (8, 08.1, 9, + 08-bulk-unsubscribe-campaign), 28 plans, 62 tasks
+**Requirements:** 70/73 v1.2 requirements complete (3 deferred to v1.3 — see Known Deferred Items)
+**Git range:** v1.1..HEAD — 525 commits, 2057 files changed (+198,412 / −23,849), ~15 days (2026-05-17 → 2026-06-01)
+
+**Key accomplishments:**
+
+- **Phase 8 — Admin console foundation:** WebAuthn passkey admin auth on a dedicated `@Order(1)` SecurityFilterChain, HMAC-chained append-only `admin_audit_event` (DB-trigger-enforced), `AdminContext`↔`TenantContext` mutex, a standalone `apps/admin` Vite + React 19 SPA, and the re-platformed NPM reverse-proxy + 9Router-sidecar operator runbook.
+- **Phase 8 — Master keys + catalog + ops surfaces:** AES-GCM-encrypted, masked-only master keys for all 6 providers with test/rotate + cache eviction; a 3-table curated catalog with the 3-step Sync-from-`/models` wizard; and metadata-only tenant inspection, queue-health, and LLM-spend dashboards — every surface guarded by ArchUnit + `AdminResponseBodyBanFilter` against body/prompt/completion leakage.
+- **Phase 08.1 — Inbox Zero-style rule actions:** DB-backed bilingual examples/personas catalog (admin-managed), expanded `When/Then` action schema, and runtime outbound execution of `send_reply`/`forward_email`/`send_email` behind one default-ON Auto-send setting, safety/rate/idempotency gates, and a single ArchUnit-locked outbound send gateway with fallback-to-draft on any gate failure.
+- **Phase 9 — User settings on curated catalog:** the single `/ai` settings surface (voice, behavior, updates, safety net, BYOK) on the admin-curated catalog, including generate-writing-style-from-Sent with in-memory-only privacy gates and a tenant-wide BYOK lifecycle sharing the admin `ProviderConnectionTester`.
+- **Bonus — Bulk unsubscribe campaign (Phase 08-bulk-unsubscribe):** RFC 8058 one-click HTTPS + RFC 6068 mailto send-as-self gateways (ArchUnit-locked, sender-domain-only logging), a virtual-thread SKIP LOCKED dispatch loop with Redis throttle + ShedLock reaper/purge, and the full UNS-01..07 REST surface — shipped alongside the formal v1.2 scope.
+
+**Known Deferred Items at close:** 3 requirements → v1.3 (SET-BEHV-05 shadow-mode toggle, SET-SAFE-02 paste-import, SET-SAFE-03 protect/escalate mode); 1 blocked verification (08.1 live Gmail outbound-send UAT — external tenant); plus open debug sessions, quick tasks, todos, and dormant seeds (see STATE.md → Deferred Items).
+
+---
+
 ## v1.1 Email assistant chat (Phase 7 only; Phase 8 deferred to v1.2) (Shipped: 2026-05-19)
 
 **Phases completed:** 1 phases, 6 plans, 31 tasks
