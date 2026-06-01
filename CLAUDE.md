@@ -59,7 +59,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Auth**: Spring Security OAuth2 Client (Google), **server-issued signed session cookie** (not stateless JWT). Same-origin to Next.js; `HttpOnly`, `SameSite=Lax`, `Secure`. Spring Session backed by Redis.
 - **Deploy**: **single VPS** hosting reverse proxy + `apps/web` + `backend/api` + `backend/worker` + PostgreSQL + Redis. Public HTTPS endpoint for Gmail Pub/Sub push, OIDC token verification in the controller.
 - **Container**: `eclipse-temurin:25-jre-noble` built via Spring Boot CDS + AOT layered images.
-- **Observability**: Micrometer + **OpenTelemetry Java agent 2.16.0**, OTLP → **Grafana Cloud** (Tempo/Loki/Mimir). Spring AI prompt/completion capture **disabled**.
+- **Observability**: Micrometer + **Spring Boot OpenTelemetry starter** (`spring-boot-starter-opentelemetry`, **agent-less** — no `-javaagent` attached). **Self-hosted LGTM+Prometheus on the VPS** (`docker/observability/`), not Grafana Cloud: **traces** via OTLP/HTTP → Alloy → **Tempo**; **logs** via Alloy Docker stdout scrape → **Loki** (JSON via Logstash encoder, traceId/spanId in MDC); **metrics** via Prometheus scraping `/actuator/prometheus` + node/cadvisor/postgres/redis exporters (**OTLP metrics push disabled** on all profiles). Grafana dashboards + Prometheus `alerts.yml` provisioned-as-code under `docker/observability/`. Actuator/Grafana/Prometheus bound to `127.0.0.1`, not publicly routed. Config is env-driven (`ZERO_MAIL_OTLP_*`) so Grafana Cloud stays a drop-in override later. Spring AI prompt/completion capture **disabled** (verified by `LlmGatewayObservabilityTest`).
 
 ### Hard "do not use" list
 
