@@ -162,24 +162,41 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
+    if (url.pathname === '/api/plan-upgrades/checkout' && request.method() === 'POST') {
+      const payload = request.postDataJSON() as {
+        planCode: BillingPlanCode;
+        paymentMethod: 'LEMON_SQUEEZY' | 'SEPAY_BANK_TRANSFER';
+      };
+      if (planTier(payload.planCode) < planTier(state.currentPlanCode)) {
+        await fulfillJson(route, planDowngradeProblem(), 409);
+        return;
+      }
+      if (payload.paymentMethod === 'SEPAY_BANK_TRANSFER') {
+        await fulfillJson(route, {
+          paymentMethod: 'SEPAY_BANK_TRANSFER',
+          status: 'WAITING_FOR_TRANSFER',
+          bankTransferIntent: bankTransferIntent(payload.planCode),
+        });
+        return;
+      }
+      await fulfillJson(route, {
+        paymentMethod: 'LEMON_SQUEEZY',
+        status: 'REDIRECT_REQUIRED',
+        checkoutUrl: `https://checkout.test/${payload.planCode.toLowerCase()}`,
+      });
+      return;
+    }
+
     const checkoutMatch = url.pathname.match(/^\/api\/plan-upgrades\/plans\/([^/]+)\/checkout$/);
     if (checkoutMatch && request.method() === 'POST') {
       const requestedPlanCode = checkoutMatch[1] as BillingPlanCode;
       if (planTier(requestedPlanCode) < planTier(state.currentPlanCode)) {
-        await fulfillJson(
-          route,
-          {
-            type: 'about:blank',
-            title: 'Plan downgrade is not allowed',
-            status: 409,
-            detail: 'The selected plan is lower than the tenant active paid plan.',
-            code: 'error.billing.plan.downgradeNotAllowed',
-          },
-          409,
-        );
+        await fulfillJson(route, planDowngradeProblem(), 409);
         return;
       }
       await fulfillJson(route, {
+        paymentMethod: 'LEMON_SQUEEZY',
+        status: 'REDIRECT_REQUIRED',
         checkoutUrl: `https://checkout.test/${requestedPlanCode.toLowerCase()}`,
       });
       return;
@@ -373,6 +390,35 @@ function billingLedgerPage(searchParams: URLSearchParams) {
   const entries = allEntries.slice(start, start + limit);
   const nextCursor = start + limit < allEntries.length ? 'page-2' : null;
   return { entries, nextCursor };
+}
+
+function bankTransferIntent(planCode: BillingPlanCode) {
+  const amountVnd = planCode === 'PRO' ? 399000 : 199000;
+  return {
+    id: '00000000-0000-0000-0000-000000000900',
+    code: 'ABCD2345',
+    planCode,
+    amountVnd,
+    currency: 'VND',
+    status: 'PENDING',
+    expiresAt: '2026-06-01T10:15:00.000Z',
+    bankCode: 'MBBANK',
+    bankName: 'MB Bank',
+    accountNumber: '123456789',
+    accountName: 'ZERO MAIL',
+    transferContent: `ZM ABCD2345 ${planCode}`,
+    qrUrl: `https://qr.sepay.vn/img?acc=123456789&bank=MBBANK&amount=${amountVnd}&des=ZM%20ABCD2345%20${planCode}`,
+  };
+}
+
+function planDowngradeProblem() {
+  return {
+    type: 'about:blank',
+    title: 'Plan downgrade is not allowed',
+    status: 409,
+    detail: 'The selected plan is lower than the tenant active paid plan.',
+    code: 'error.billing.plan.downgradeNotAllowed',
+  };
 }
 
 function planTier(planCode: BillingPlanCode): number {

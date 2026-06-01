@@ -470,6 +470,17 @@
       "resetUnknown": "Unknown",
       "unit": "credits"
     },
+    "bankTransfer": {
+      "accountName": "Account name",
+      "accountNumber": "Account number",
+      "amount": "Amount",
+      "bank": "Bank",
+      "content": "Transfer memo",
+      "description": "Scan the QR or transfer the exact amount and memo so Zero Mail can activate the plan.",
+      "expiresAt": "QR expires at {time}. After payment, the SE Pay webhook will update your plan automatically.",
+      "qrAlt": "Bank transfer QR code",
+      "title": "Bank transfer"
+    },
     "copy": {
       "aria": "Copy {label}",
       "cta": "Copy",
@@ -520,6 +531,9 @@
       "title": "Credits & usage history"
     },
     "plans": {
+      "bankTransferPayment": "Bank transfer QR",
+      "bankTransferPending": "Creating QR",
+      "cardPayment": "Pay by card",
       "checkoutCta": "Pay now",
       "checkoutError": "Couldn't open checkout. Try again later.",
       "checkoutPending": "Opening checkout",

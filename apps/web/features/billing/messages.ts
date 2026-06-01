@@ -67,6 +67,18 @@ export const billingMessages = {
     vi: 'Thanh toán ngay',
     en: 'Pay now',
   },
+  'billing.plans.cardPayment': {
+    vi: 'Thanh toán bằng thẻ',
+    en: 'Pay by card',
+  },
+  'billing.plans.bankTransferPayment': {
+    vi: 'Chuyển khoản QR',
+    en: 'Bank transfer QR',
+  },
+  'billing.plans.bankTransferPending': {
+    vi: 'Đang tạo QR',
+    en: 'Creating QR',
+  },
   'billing.plans.perMonth': {
     vi: '/tháng',
     en: '/month',
@@ -94,6 +106,42 @@ export const billingMessages = {
   'billing.plans.checkoutError': {
     vi: 'Không thể mở trang thanh toán. Vui lòng thử lại sau.',
     en: "Couldn't open checkout. Try again later.",
+  },
+  'billing.bankTransfer.title': {
+    vi: 'Chuyển khoản ngân hàng',
+    en: 'Bank transfer',
+  },
+  'billing.bankTransfer.description': {
+    vi: 'Quét QR hoặc chuyển khoản đúng số tiền và nội dung để Zero Mail tự kích hoạt gói.',
+    en: 'Scan the QR or transfer the exact amount and memo so Zero Mail can activate the plan.',
+  },
+  'billing.bankTransfer.qrAlt': {
+    vi: 'Mã QR chuyển khoản',
+    en: 'Bank transfer QR code',
+  },
+  'billing.bankTransfer.bank': {
+    vi: 'Ngân hàng',
+    en: 'Bank',
+  },
+  'billing.bankTransfer.accountNumber': {
+    vi: 'Số tài khoản',
+    en: 'Account number',
+  },
+  'billing.bankTransfer.accountName': {
+    vi: 'Tên tài khoản',
+    en: 'Account name',
+  },
+  'billing.bankTransfer.amount': {
+    vi: 'Số tiền',
+    en: 'Amount',
+  },
+  'billing.bankTransfer.content': {
+    vi: 'Nội dung chuyển khoản',
+    en: 'Transfer memo',
+  },
+  'billing.bankTransfer.expiresAt': {
+    vi: 'QR hết hạn lúc {time}. Sau khi chuyển khoản, webhook SE Pay sẽ tự cập nhật gói.',
+    en: 'QR expires at {time}. After payment, the SE Pay webhook will update your plan automatically.',
   },
   'billing.balance.label': {
     vi: 'Tín dụng hiện có',

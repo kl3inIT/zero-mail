@@ -9,10 +9,13 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/** Append-only audit + idempotency row for a single Lemon Squeezy webhook delivery. */
+/** Append-only audit + idempotency row for a billing provider webhook delivery. */
 @Entity
 @Table(name = "billing_webhook_event")
 public class BillingWebhookEventEntity extends AbstractEntity {
+
+    @Column(name = "provider", nullable = false, length = 32, updatable = false)
+    private String provider;
 
     @Column(name = "provider_event_id", length = 255)
     private String providerEventId;
@@ -26,8 +29,8 @@ public class BillingWebhookEventEntity extends AbstractEntity {
     @Column(name = "tenant_id")
     private UUID tenantId;
 
-    @Column(name = "lemon_squeezy_order_id")
-    private Long lemonSqueezyOrderId;
+    @Column(name = "provider_order_id", length = 255)
+    private String providerOrderId;
 
     @Column(name = "signature_verified", nullable = false, updatable = false)
     private boolean signatureVerified;
@@ -57,27 +60,33 @@ public class BillingWebhookEventEntity extends AbstractEntity {
 
     public BillingWebhookEventEntity(
             UUID id,
+            String provider,
             String providerEventId,
             String dedupeKey,
             String eventName,
             UUID tenantId,
-            Long lemonSqueezyOrderId,
+            String providerOrderId,
             boolean signatureVerified,
             String processingStatus,
             Instant receivedAt,
             String payloadSha256,
             String payloadJsonb) {
         super(id);
+        this.provider = provider;
         this.providerEventId = providerEventId;
         this.dedupeKey = dedupeKey;
         this.eventName = eventName;
         this.tenantId = tenantId;
-        this.lemonSqueezyOrderId = lemonSqueezyOrderId;
+        this.providerOrderId = providerOrderId;
         this.signatureVerified = signatureVerified;
         this.processingStatus = processingStatus;
         this.receivedAt = receivedAt;
         this.payloadSha256 = payloadSha256;
         this.payloadJsonb = payloadJsonb;
+    }
+
+    public String getProvider() {
+        return provider;
     }
 
     public String getProviderEventId() {
@@ -96,8 +105,12 @@ public class BillingWebhookEventEntity extends AbstractEntity {
         return tenantId;
     }
 
-    public Long getLemonSqueezyOrderId() {
-        return lemonSqueezyOrderId;
+    public void setTenantIdForWebhookProcessing(UUID tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public String getProviderOrderId() {
+        return providerOrderId;
     }
 
     public boolean isSignatureVerified() {

@@ -136,6 +136,26 @@ public class SecurityConfig {
 
     @Bean
     @Order(3)
+    SecurityFilterChain sepayWebhookChain(HttpSecurity http, BillingProperties billingProperties)
+            throws Exception {
+        http.securityMatcher("/api/plan-upgrades/webhooks/sepay")
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(
+                        authorizationRequests ->
+                                authorizationRequests
+                                        .requestMatchers(
+                                                HttpMethod.POST,
+                                                "/api/plan-upgrades/webhooks/sepay")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .denyAll())
+                .addFilterBefore(
+                        new SepayWebhookApiKeyFilter(billingProperties), AuthorizationFilter.class);
+        return http.build();
+    }
+
+    @Bean
+    @Order(4)
     SecurityFilterChain chain(
             HttpSecurity http,
             TenantBindingFilter tenantFilter,
@@ -144,9 +164,8 @@ public class SecurityConfig {
             GoogleAuthorizationRequestResolver authRequestResolver) {
         // Default catch-all for user-session traffic. Explicit securityMatcher excluding
         // chains owned by earlier @Order beans (PubSub @Order(1), AdminChain @Order(1),
-        // plan-upgrade webhook @Order(2)) so Spring Security 7's WebSecurityFilterChainValidator
-        // does not
-        // flag this chain as shadowing a more-specific matcher.
+        // plan-upgrade webhook @Order(2/3)) so Spring Security 7's WebSecurityFilterChainValidator
+        // does not flag this chain as shadowing a more-specific matcher.
         RequestMatcher userChainMatcher =
                 request -> {
                     String path = request.getServletPath();

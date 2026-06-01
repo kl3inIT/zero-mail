@@ -2,8 +2,13 @@
 
 import { useMutation } from '@tanstack/react-query';
 
-import { createBillingCheckout } from '@/features/billing/api/billing-api';
+import {
+  createBillingCheckout,
+  type BillingCheckoutRequest,
+} from '@/features/billing/api/billing-api';
 
 export function useStartBillingCheckout() {
-  return useMutation({ mutationFn: createBillingCheckout });
+  return useMutation({
+    mutationFn: (request: BillingCheckoutRequest) => createBillingCheckout(request),
+  });
 }
