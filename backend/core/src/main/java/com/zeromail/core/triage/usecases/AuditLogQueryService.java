@@ -5,6 +5,8 @@ import com.zeromail.core.triage.persistence.lowlevel.AuditLogReadRepository;
 import com.zeromail.core.triage.projection.AuditLogPage;
 import com.zeromail.core.triage.projection.AuditLogPageQuery;
 import com.zeromail.core.triage.projection.AuditLogRow;
+import com.zeromail.core.triage.projection.DigestSourceItem;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -46,5 +48,21 @@ public class AuditLogQueryService {
                                 pageItems.getLast().createdAt(), pageItems.getLast().auditId())
                         : null;
         return new AuditLogPage(pageItems, nextCursor);
+    }
+
+    /**
+     * Returns the messages a tenant's rules filed into the digest within {@code [since, until)},
+     * most-recent first, capped at {@code limit}. Privacy-clean: each item is sanitized audit
+     * metadata plus the Gmail message id the weekly digest re-fetches at send time. Never reads
+     * body content.
+     */
+    @Transactional(readOnly = true)
+    public List<DigestSourceItem> findDigestSourceItems(
+            UUID tenantId, Instant since, Instant until, int limit) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        if (limit < 1) {
+            return List.of();
+        }
+        return auditLogReadRepository.findDigestSourceItems(tenantId, since, until, limit);
     }
 }

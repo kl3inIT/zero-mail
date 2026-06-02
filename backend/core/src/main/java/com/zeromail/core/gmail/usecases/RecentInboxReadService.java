@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -165,6 +166,39 @@ public class RecentInboxReadService {
         } catch (IOException ioException) {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.GMAIL_UNAVAILABLE, ioException);
+        }
+    }
+
+    /**
+     * Best-effort fetch of a single message's body text for the weekly content digest. Prefers the
+     * decoded {@code text/plain} part and falls back to the raw {@code text/html} part (the LLM
+     * gateway strips HTML and prompt-injection-hardens before any model call). Returns {@link
+     * Optional#empty()} for any failure — message deleted, grant revoked, Gmail unavailable — so
+     * one unreadable message never fails the whole digest. The body is returned to the caller in
+     * memory only and is never persisted or logged.
+     */
+    public Optional<String> fetchPlainTextForDigest(UUID tenantId, String gmailMessageId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        if (gmailMessageId == null || gmailMessageId.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            Gmail gmail = gmailForTenant(tenantId);
+            Message gmailMessage =
+                    gmail.users()
+                            .messages()
+                            .get("me", gmailMessageId.trim())
+                            .setFormat("full")
+                            .setFields(FULL_FIELDS)
+                            .execute();
+            MessagePart payload = gmailMessage.getPayload();
+            String plainText = decodedMimeBody(payload, "text/plain", true);
+            String body =
+                    plainText.isBlank() ? decodedMimeBody(payload, "text/html", false) : plainText;
+            String capped = cap(body, RENDERED_TEXT_MAX_LENGTH);
+            return capped.isBlank() ? Optional.empty() : Optional.of(capped);
+        } catch (RuntimeException | IOException digestBodyFetchFailure) {
+            return Optional.empty();
         }
     }
 

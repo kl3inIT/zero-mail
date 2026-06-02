@@ -27,6 +27,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -53,6 +56,11 @@ class LlmGatewayImpl implements LlmGateway {
     private static final int TOOL_SCHEMA_OVERHEAD_TOKENS = 600;
     private static final int DRAFT_MAX_TOKENS = 700;
     private static final double DRAFT_TEMPERATURE = 0.5;
+    private static final int DIGEST_MAX_BATCH_ITEMS = 20;
+    private static final int DIGEST_PER_ITEM_CHAR_CAP = 600;
+    private static final int DIGEST_SUMMARY_MAX_CHARS = 200;
+    private static final Pattern DIGEST_SUMMARY_LINE =
+            Pattern.compile("^\\s*\\[(\\d+)]\\s*(.+?)\\s*$");
     private static final SemanticIntentEvaluator UNAVAILABLE_SEMANTIC_INTENT_EVALUATOR =
             (callSite, modelId, sanitizedMessageContent, intents) -> {
                 throw new IllegalStateException("Semantic intent evaluator is unavailable");
@@ -527,6 +535,144 @@ class LlmGatewayImpl implements LlmGateway {
                                     false,
                                     this::parseTextGeneration);
                         });
+    }
+
+    @Override
+    public List<DigestSummaryLine> summarizeDigestItems(List<DigestSummarySource> sources) {
+        if (sources == null || sources.isEmpty()) {
+            return List.of();
+        }
+        List<DigestSummarySource> batch =
+                sources.size() > DIGEST_MAX_BATCH_ITEMS
+                        ? List.copyOf(sources.subList(0, DIGEST_MAX_BATCH_ITEMS))
+                        : List.copyOf(sources);
+        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        List<PlatformRoute> routes =
+                platformRoutes(LlmRuntimeTask.CHAT_ASSISTANT, llmProperties.compileModel());
+        PlatformRoute primaryRoute = routes.getFirst();
+        long startNanos = System.nanoTime();
+        int maxTokens = Math.min(1024, 48 * batch.size() + 64);
+        return Observation.createNotStarted(
+                        "zero_mail.llm.gateway.digest_summary", observationRegistry)
+                .lowCardinalityKeyValue("callSite", CallSite.DIGEST.id())
+                .lowCardinalityKeyValue("provider", primaryRoute.provider())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
+                .observe(
+                        () -> {
+                            log.info(
+                                    "event=llm_digest_summary_started tenantId={} callSite={} provider={} model={} itemCount={} droppedOverCap={}",
+                                    tenantId,
+                                    CallSite.DIGEST,
+                                    primaryRoute.provider(),
+                                    primaryRoute.model(),
+                                    batch.size(),
+                                    Math.max(0, sources.size() - batch.size()));
+
+                            SanitizationContext sanitizedContext =
+                                    sanitizationPipeline.sanitize(buildDigestUserMessage(batch));
+
+                            String rawOutput;
+                            Optional<ResolvedLlmProviderCredential> byok =
+                                    resolveByokProviderCredential(tenantId, primaryRoute.model());
+                            if (byok.isPresent()) {
+                                rawOutput =
+                                        callViaResolvedProviderCredential(
+                                                byok.get(),
+                                                sanitizedContext,
+                                                CallSite.DIGEST,
+                                                SystemPrompts.DIGEST_SUMMARY_SYSTEM_PROMPT,
+                                                List.of(),
+                                                0.2,
+                                                maxTokens,
+                                                false,
+                                                this::parseTextGeneration);
+                            } else {
+                                rawOutput =
+                                        callPlatformModelClientWithCreditLedger(
+                                                tenantId,
+                                                CallSite.DIGEST,
+                                                routes,
+                                                sanitizedContext,
+                                                SystemPrompts.DIGEST_SUMMARY_SYSTEM_PROMPT,
+                                                List.of(),
+                                                startNanos,
+                                                0.2,
+                                                maxTokens,
+                                                false,
+                                                this::parseTextGeneration);
+                            }
+
+                            List<DigestSummaryLine> summaries =
+                                    parseDigestSummaries(batch, rawOutput);
+                            log.info(
+                                    "event=llm_digest_summary_succeeded tenantId={} callSite={} latencyMs={} itemCount={} summaryCount={}",
+                                    tenantId,
+                                    CallSite.DIGEST,
+                                    latencyMs(startNanos),
+                                    batch.size(),
+                                    summaries.size());
+                            return summaries;
+                        });
+    }
+
+    private static String buildDigestUserMessage(List<DigestSummarySource> batch) {
+        StringBuilder userMessageBuilder = new StringBuilder();
+        userMessageBuilder.append(
+                "Summarize each numbered message below. Output exactly one [n] line per message.\n\n");
+        int messageNumber = 1;
+        for (DigestSummarySource source : batch) {
+            String content = source.content() == null ? "" : source.content();
+            String truncatedContent =
+                    content.length() > DIGEST_PER_ITEM_CHAR_CAP
+                            ? content.substring(0, DIGEST_PER_ITEM_CHAR_CAP)
+                            : content;
+            userMessageBuilder
+                    .append('[')
+                    .append(messageNumber)
+                    .append("]\n<message>\n")
+                    .append(truncatedContent)
+                    .append("\n</message>\n\n");
+            messageNumber++;
+        }
+        return userMessageBuilder.toString();
+    }
+
+    private static List<DigestSummaryLine> parseDigestSummaries(
+            List<DigestSummarySource> batch, String rawOutput) {
+        if (rawOutput == null || rawOutput.isBlank()) {
+            return List.of();
+        }
+        Map<Integer, String> summaryByNumber = new LinkedHashMap<>();
+        for (String outputLine : rawOutput.split("\\R")) {
+            Matcher matcher = DIGEST_SUMMARY_LINE.matcher(outputLine);
+            if (!matcher.matches()) {
+                continue;
+            }
+            int messageNumber;
+            try {
+                messageNumber = Integer.parseInt(matcher.group(1));
+            } catch (NumberFormatException numberFormatException) {
+                continue;
+            }
+            if (messageNumber < 1 || messageNumber > batch.size()) {
+                continue;
+            }
+            String summary = matcher.group(2).strip();
+            if (summary.isEmpty()) {
+                continue;
+            }
+            if (summary.length() > DIGEST_SUMMARY_MAX_CHARS) {
+                summary = summary.substring(0, DIGEST_SUMMARY_MAX_CHARS - 1).strip() + "…";
+            }
+            summaryByNumber.putIfAbsent(messageNumber, summary);
+        }
+        List<DigestSummaryLine> summaries = new ArrayList<>(summaryByNumber.size());
+        for (Map.Entry<Integer, String> entry : summaryByNumber.entrySet()) {
+            DigestSummarySource source = batch.get(entry.getKey() - 1);
+            summaries.add(new DigestSummaryLine(source.ref(), entry.getValue()));
+        }
+        return summaries;
     }
 
     @Override
@@ -1273,7 +1419,7 @@ class LlmGatewayImpl implements LlmGateway {
 
     private String platformModelFor(CallSite callSite) {
         return switch (callSite) {
-            case PREVIEW -> llmProperties.compileModel();
+            case PREVIEW, DIGEST -> llmProperties.compileModel();
             case DRAFT -> llmProperties.draftModel();
             case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC -> llmProperties.triageModel();
         };
@@ -1310,6 +1456,10 @@ class LlmGatewayImpl implements LlmGateway {
             case PREVIEW -> LlmRuntimeTask.RULE_AUTHORING;
             case DRAFT -> LlmRuntimeTask.DRAFT_GENERATION;
             case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC -> LlmRuntimeTask.TRIAGE_ACTION;
+            // DIGEST is a plain text-generation call (summarizeDigestItems routes itself directly);
+            // it never issues tool/action calls, so reaching here is a routing bug.
+            case DIGEST ->
+                    throw new IllegalStateException("DIGEST does not issue action/tool calls");
         };
     }
 
@@ -1318,6 +1468,10 @@ class LlmGatewayImpl implements LlmGateway {
             case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC ->
                     LlmRuntimeTask.TRIAGE_SEMANTIC;
             case PREVIEW, DRAFT -> LlmRuntimeTask.RULE_PREVIEW_SEMANTIC;
+            // DIGEST never runs semantic-intent evaluation.
+            case DIGEST ->
+                    throw new IllegalStateException(
+                            "DIGEST does not run semantic-intent evaluation");
         };
     }
 

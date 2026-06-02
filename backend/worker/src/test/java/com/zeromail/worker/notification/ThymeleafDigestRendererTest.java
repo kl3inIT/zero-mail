@@ -25,8 +25,8 @@ class ThymeleafDigestRendererTest {
     void renders_vi_html_from_digest_message_source() {
         String html = renderer.renderHtml(activePayload(Locale.forLanguageTag("vi")));
 
-        assertThat(html).contains("24 giờ qua trên Zero Mail");
-        assertThat(html).contains("Đây là những gì Zero Mail đã làm cho bạn trong 24 giờ qua.");
+        assertThat(html).contains("Tuần qua trên Zero Mail");
+        assertThat(html).contains("Đây là những gì Zero Mail đã làm cho bạn trong tuần qua.");
         assertThat(html).contains("Xem chi tiết");
     }
 
@@ -34,8 +34,8 @@ class ThymeleafDigestRendererTest {
     void renders_en_html_from_same_template() {
         String html = renderer.renderHtml(activePayload(Locale.ENGLISH));
 
-        assertThat(html).contains("Last 24 hours on Zero Mail");
-        assertThat(html).contains("Zero Mail did for you in the last 24 hours.");
+        assertThat(html).contains("This week on Zero Mail");
+        assertThat(html).contains("Zero Mail did for you this week.");
         assertThat(html).contains("View details");
     }
 
@@ -45,7 +45,7 @@ class ThymeleafDigestRendererTest {
 
         assertThat(html).contains("No senders or rules to report. Your inbox stayed quiet");
         assertThat(renderer.subject(zeroActivityPayload(Locale.ENGLISH)))
-                .isEqualTo("Last 24 hours on Zero Mail · no activity");
+                .isEqualTo("This week on Zero Mail · no activity");
     }
 
     @Test

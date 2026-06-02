@@ -65,6 +65,23 @@
                 </table>
               </td>
             </tr>
+            <tr th:if="${payload.hasContentSections()}">
+              <td style="padding:0 28px 8px 28px;">
+                <div th:text="#{digest.content.eyebrow}" style="font-size:12px;line-height:18px;color:#6B7280;font-family:'Courier New',monospace;font-weight:700;letter-spacing:0;text-transform:uppercase;"></div>
+                <th:block th:each="section : ${payload.contentSections()}">
+                  <div th:text="${section.ruleName()}" style="margin:16px 0 4px 0;font-size:13px;line-height:20px;font-weight:700;color:#5849C9;"></div>
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                    <tr th:each="entry : ${section.entries()}">
+                      <td style="padding:8px 0;border-top:1px solid #E5E7EB;">
+                        <div th:text="${entry.subject()} ?: #{digest.content.noSubject}" style="font-size:14px;line-height:20px;font-weight:700;color:#1C1D21;"></div>
+                        <div th:text="${entry.senderEmail()}" style="font-size:12px;line-height:18px;color:#6B7280;max-width:46ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+                        <div th:if="${entry.hasSummary()}" th:text="${entry.summary()}" style="margin-top:4px;font-size:13px;line-height:20px;color:#1C1D21;"></div>
+                      </td>
+                    </tr>
+                  </table>
+                </th:block>
+              </td>
+            </tr>
             <tr th:if="${payload.zeroActivity()}">
               <td style="padding:0 28px 28px 28px;">
                 <p th:text="#{digest.zeroBody}" style="margin:0;font-size:14px;line-height:22px;color:#6B7280;"></p>

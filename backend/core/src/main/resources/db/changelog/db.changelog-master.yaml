@@ -290,3 +290,6 @@ databaseChangeLog:
   - include:
       file: changes/109-notification-preference-weekly-day.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/110-feature-catalog-digest.yaml
+      relativeToChangelogFile: true

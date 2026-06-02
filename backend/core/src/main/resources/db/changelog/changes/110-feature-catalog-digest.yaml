@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 110-feature-catalog-digest
+      author: zeromail
+      comment: >-
+        Seed the feature_catalog row for the new CallSite.DIGEST billable call site (the
+        weekly content-digest send-time summarizer). FeatureCatalogConsistencyChecker
+        enforces that every CallSite enum value has a row here, so the DIGEST enum value
+        added alongside this changeset would fail startup validation without it. Category
+        COMPOSE matches the draft/compose family; default_credit_cost 2 mirrors DRAFT
+        since one digest send issues one batched summarization call regardless of how many
+        messages it covers. Operators can re-tune the cost without a redeploy.
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM feature_catalog WHERE code = 'DIGEST'
+      changes:
+        - insert:
+            tableName: feature_catalog
+            columns:
+              - column: { name: code, value: DIGEST }
+              - column: { name: display_name, value: Weekly Digest }
+              - column: { name: description, value: "Send-time batched summarization for the weekly content digest." }
+              - column: { name: category, value: COMPOSE }
+              - column: { name: default_credit_cost, valueNumeric: 2 }
+              - column: { name: sort_order, valueNumeric: 60 }
+      rollback:
+        - delete:
+            tableName: feature_catalog
+            where: code = 'DIGEST'

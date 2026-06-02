@@ -47,7 +47,9 @@ public class DigestComposer {
             AnalyticsSummaryProjection summary =
                     analyticsSummaryQueryService.summarize(
                             tenantId,
-                            TimeWindow.between(sendMoment.minus(Duration.ofHours(24)), sendMoment));
+                            // Weekly digest: stats cover the same 7-day window as the content
+                            // sections and the analytics deep-link (window=7d).
+                            TimeWindow.between(sendMoment.minus(Duration.ofDays(7)), sendMoment));
             DigestTotals totals =
                     new DigestTotals(
                             summary.volumeObserved(),

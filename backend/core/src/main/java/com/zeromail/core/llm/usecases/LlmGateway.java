@@ -88,4 +88,20 @@ public interface LlmGateway {
      * credit reservation.
      */
     ToolCallResult driftCheck(String rawEmailFixture);
+
+    /**
+     * Weekly content-digest path. Summarizes a batch of messages in a single {@code
+     * CallSite.DIGEST} call: the gateway numbers the sources, sanitizes and truncates each one
+     * through the Phase 2C pipeline (email content is untrusted data, never instructions), owns the
+     * digest system prompt, reserves one platform credit, and returns one short summary per source
+     * it could parse.
+     *
+     * <p>Best-effort by contract: an empty input yields an empty result, and sources the model
+     * omits or returns unparseably simply have no {@link DigestSummaryLine}. Implementations keep
+     * both the source content and the generated summaries in memory only — never logged, never
+     * persisted.
+     */
+    default List<DigestSummaryLine> summarizeDigestItems(List<DigestSummarySource> sources) {
+        throw new UnsupportedOperationException("Digest summarization is unavailable");
+    }
 }

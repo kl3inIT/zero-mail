@@ -10,10 +10,10 @@ import java.util.stream.Stream;
  * Postgres table where it can be tuned without a redeploy. See {@code
  * com.zeromail.core.billing.usecases.FeatureCatalogCache} for the runtime lookup.
  *
- * <p><b>Locked membership (D-G3 + Phase 4 D-E1):</b> {@code TRIAGE}, {@code DRAFT}, {@code
- * PREVIEW}, {@code TRIAGE_PLATFORM_LLM}, {@code TRIAGE_DETERMINISTIC}. There is intentionally no
- * BYOK member because BYOK traffic bypasses the ledger entirely. The ledger service contract
- * documents the BYOK skip path.
+ * <p><b>Membership:</b> {@code TRIAGE}, {@code DRAFT}, {@code PREVIEW}, {@code
+ * TRIAGE_PLATFORM_LLM}, {@code TRIAGE_DETERMINISTIC} (D-G3 + Phase 4 D-E1), and {@code DIGEST} (the
+ * weekly content-digest send-time summarizer). There is intentionally no BYOK member because BYOK
+ * traffic bypasses the ledger entirely. The ledger service contract documents the BYOK skip path.
  *
  * <p><b>Cost source:</b> {@code feature_catalog.default_credit_cost} keyed by {@link #id()} (which
  * equals {@link #name()}). A {@code FeatureCatalogConsistencyChecker} startup validator enforces
@@ -25,7 +25,8 @@ public enum CallSite implements IdentifiedEnum {
     DRAFT,
     PREVIEW,
     TRIAGE_PLATFORM_LLM,
-    TRIAGE_DETERMINISTIC;
+    TRIAGE_DETERMINISTIC,
+    DIGEST;
 
     @Override
     public String id() {
