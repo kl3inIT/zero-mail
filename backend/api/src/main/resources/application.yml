@@ -80,6 +80,14 @@ zero-mail:
     bootstrap-emails: ${ZEROMAIL_ADMIN_BOOTSTRAP_EMAILS:}
     audit:
       hmac-kek-base64: ${ZEROMAIL_ADMIN_AUDIT_HMAC_KEK_BASE64:}
+    webauthn:
+      # Dev defaults: the admin SPA runs at http://localhost:5174, so the WebAuthn rpId MUST be
+      # `localhost` (a registrable suffix of the origin) or the browser rejects every ceremony with
+      # "The RP ID ... is invalid for this domain". The prod profile (application-prod.yml) sets the
+      # real admin.zeromail.vn values. Env vars override either.
+      rp-id: ${ZEROMAIL_ADMIN_WEBAUTHN_RP_ID:localhost}
+      rp-name: ${ZEROMAIL_ADMIN_WEBAUTHN_RP_NAME:Zero Mail Admin}
+      allowed-origins: ${ZEROMAIL_ADMIN_WEBAUTHN_ALLOWED_ORIGINS:http://localhost:5174}
   api:
     web:
       base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
