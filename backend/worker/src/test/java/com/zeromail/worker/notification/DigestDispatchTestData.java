@@ -52,12 +52,16 @@ final class DigestDispatchTestData {
 
     static void seedEmailPreference(
             JdbcTemplate jdbcTemplate, UUID tenantId, boolean enabled, int sendHourLocal) {
+        // digest_send_day_of_week = 3 (Wednesday, ISODOW) deliberately matches the digest tests'
+        // shared REFERENCE_INSTANT 2026-05-13 (a Wednesday in Asia/Ho_Chi_Minh) so the weekly
+        // dispatch predicate (EXTRACT(ISODOW) = digest_send_day_of_week) fires on the due tenant.
         jdbcTemplate.update(
                 """
                 INSERT INTO notification_preference(
-                  id, tenant_id, channel, digest_enabled, digest_send_hour_local
+                  id, tenant_id, channel, digest_enabled, digest_send_hour_local,
+                  digest_send_day_of_week
                 )
-                VALUES (?, ?, 'EMAIL', ?, ?)
+                VALUES (?, ?, 'EMAIL', ?, ?, 3)
                 """,
                 UUID.randomUUID(),
                 tenantId,

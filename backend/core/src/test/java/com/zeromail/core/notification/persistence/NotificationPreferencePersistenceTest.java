@@ -87,7 +87,7 @@ class NotificationPreferencePersistenceTest extends PostgresContainerTest {
                             notificationPreferenceService.insertDefaults(
                                     tenantId, ChannelType.EMAIL, true, 20);
                             notificationPreferenceService.updatePreference(
-                                    tenantId, ChannelType.EMAIL, false, 8);
+                                    tenantId, ChannelType.EMAIL, false, 8, 4);
                         });
 
         NotificationPreferenceEntity notificationPreference =
@@ -99,6 +99,7 @@ class NotificationPreferencePersistenceTest extends PostgresContainerTest {
                                                 .orElseThrow());
         assertThat(notificationPreference.isDigestEnabled()).isFalse();
         assertThat(notificationPreference.getDigestSendHourLocal()).isEqualTo(8);
+        assertThat(notificationPreference.getDigestSendDayOfWeek()).isEqualTo(4);
     }
 
     private UUID seedTenant() {

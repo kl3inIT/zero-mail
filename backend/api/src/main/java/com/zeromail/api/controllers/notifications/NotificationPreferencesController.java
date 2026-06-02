@@ -54,7 +54,8 @@ public class NotificationPreferencesController {
                         tenantId,
                         ChannelType.EMAIL,
                         request.digestEnabled(),
-                        request.digestSendHourLocal());
+                        request.digestSendHourLocal(),
+                        request.digestSendDayOfWeek());
         log.info("event=notification_preferences_updated tenantId={}", tenantId);
         return NotificationPreferencesResponse.from(
                 notificationPreference, tenantService.timeZoneFor(tenantId));

@@ -35,6 +35,8 @@ const DIGEST_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
   value: String(hour),
   label: `${hour.toString().padStart(2, '0')}:00`,
 }));
+// ISO day-of-week: Monday=1 .. Sunday=7 (matches the backend / Postgres ISODOW).
+const DIGEST_DAY_VALUES = [1, 2, 3, 4, 5, 6, 7];
 const DEFAULT_DIGEST_TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
 export function UpdatesSection() {
@@ -50,7 +52,22 @@ export function UpdatesSection() {
 
   const digestEnabled = notificationPreferences.data?.digestEnabled ?? true;
   const digestSendHourLocal = notificationPreferences.data?.digestSendHourLocal ?? 20;
+  const digestSendDayOfWeek = notificationPreferences.data?.digestSendDayOfWeek ?? 1;
   const digestTimeZone = notificationPreferences.data?.timeZone ?? DEFAULT_DIGEST_TIME_ZONE;
+  // next-intl's typed t() rejects template-literal keys, so map each day to its literal key.
+  const dayLabelByValue: Record<number, string> = {
+    1: t('settings.notifications.days.1'),
+    2: t('settings.notifications.days.2'),
+    3: t('settings.notifications.days.3'),
+    4: t('settings.notifications.days.4'),
+    5: t('settings.notifications.days.5'),
+    6: t('settings.notifications.days.6'),
+    7: t('settings.notifications.days.7'),
+  };
+  const digestDayOptions = DIGEST_DAY_VALUES.map((day) => ({
+    value: String(day),
+    label: dayLabelByValue[day],
+  }));
   const digestControlsDisabled =
     notificationPreferences.isPending || updateNotificationPreferences.isPending;
   const triagePaused = pauseState.data ?? false;
@@ -82,6 +99,7 @@ export function UpdatesSection() {
                 updateNotificationPreferences.mutate({
                   digestEnabled: checked,
                   digestSendHourLocal,
+                  digestSendDayOfWeek,
                 })
               }
               data-testid="ai-daily-digest-switch"
@@ -90,6 +108,46 @@ export function UpdatesSection() {
         >
           {digestEnabled ? (
             <div className="space-y-2">
+              <Label htmlFor="ai-digest-send-day" className="text-sm font-medium">
+                {t('settings.notifications.sendDay.label')}
+              </Label>
+              <Select
+                items={digestDayOptions}
+                value={String(digestSendDayOfWeek)}
+                disabled={digestControlsDisabled}
+                onValueChange={(nextValue) => {
+                  if (typeof nextValue !== 'string') return;
+                  const nextDay = Number.parseInt(nextValue, 10);
+                  if (Number.isInteger(nextDay) && nextDay >= 1 && nextDay <= 7) {
+                    updateNotificationPreferences.mutate({
+                      digestEnabled,
+                      digestSendHourLocal,
+                      digestSendDayOfWeek: nextDay,
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="ai-digest-send-day"
+                  disabled={digestControlsDisabled}
+                  className="min-h-11 w-full sm:w-48"
+                  data-testid="ai-digest-send-day-select"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {digestDayOptions.map((dayOption) => (
+                      <SelectItem key={dayOption.value} value={dayOption.value}>
+                        {dayOption.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {t('settings.notifications.sendDay.helper')}
+              </p>
               <Label htmlFor="ai-digest-send-hour" className="text-sm font-medium">
                 {t('settings.notifications.sendHour.label')}
               </Label>
@@ -104,6 +162,7 @@ export function UpdatesSection() {
                     updateNotificationPreferences.mutate({
                       digestEnabled,
                       digestSendHourLocal: nextHour,
+                      digestSendDayOfWeek,
                     });
                   }
                 }}

@@ -43,6 +43,11 @@ export function useUpdateNotificationPreferences() {
             currentPreferences?.digestSendHourLocal ??
             previousPreferences?.digestSendHourLocal ??
             20,
+          digestSendDayOfWeek:
+            nextPreferences.digestSendDayOfWeek ??
+            currentPreferences?.digestSendDayOfWeek ??
+            previousPreferences?.digestSendDayOfWeek ??
+            1,
         }),
       );
 

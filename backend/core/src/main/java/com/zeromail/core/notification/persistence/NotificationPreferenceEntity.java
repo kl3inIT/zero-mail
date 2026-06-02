@@ -29,6 +29,10 @@ public class NotificationPreferenceEntity extends AbstractTenantOwnedEntity {
     @Column(name = "digest_send_hour_local", nullable = false)
     private int digestSendHourLocal;
 
+    /** ISO day-of-week the weekly digest is sent on: Monday=1 .. Sunday=7 (Postgres ISODOW). */
+    @Column(name = "digest_send_day_of_week", nullable = false)
+    private int digestSendDayOfWeek = 1;
+
     protected NotificationPreferenceEntity() {}
 
     public NotificationPreferenceEntity(
@@ -41,6 +45,7 @@ public class NotificationPreferenceEntity extends AbstractTenantOwnedEntity {
         this.channel = channel;
         this.digestEnabled = digestEnabled;
         setDigestSendHourLocal(digestSendHourLocal);
+        this.digestSendDayOfWeek = 1;
     }
 
     public ChannelType getChannel() {
@@ -64,5 +69,17 @@ public class NotificationPreferenceEntity extends AbstractTenantOwnedEntity {
             throw new IllegalArgumentException("digestSendHourLocal must be between 0 and 23");
         }
         this.digestSendHourLocal = digestSendHourLocal;
+    }
+
+    public int getDigestSendDayOfWeek() {
+        return digestSendDayOfWeek;
+    }
+
+    public void setDigestSendDayOfWeek(int digestSendDayOfWeek) {
+        if (digestSendDayOfWeek < 1 || digestSendDayOfWeek > 7) {
+            throw new IllegalArgumentException(
+                    "digestSendDayOfWeek must be between 1 (Monday) and 7 (Sunday)");
+        }
+        this.digestSendDayOfWeek = digestSendDayOfWeek;
     }
 }

@@ -59,6 +59,7 @@ public class DigestDispatchScheduler {
                 WHERE np.digest_enabled = true
                   AND np.channel = 'EMAIL'
                   AND EXTRACT(HOUR FROM (?::timestamptz AT TIME ZONE t.time_zone))::int = np.digest_send_hour_local
+                  AND EXTRACT(ISODOW FROM (?::timestamptz AT TIME ZONE t.time_zone))::int = np.digest_send_day_of_week
 
                 UNION ALL
 
@@ -161,6 +162,10 @@ public class DigestDispatchScheduler {
                                 resultSet.getInt("digest_send_hour_local"),
                                 resultSet.getString("preferred_language"),
                                 resultSet.getObject("digest_day_local", LocalDate.class)),
+                // Param order matches the four ?-placeholders in DUE_TENANT_SQL, in textual order:
+                // (1) digest_day_local cast, (2) hour predicate, (3) ISODOW weekday predicate,
+                // (4) retry-branch next_attempt_at — all the same reference instant.
+                OffsetDateTime.ofInstant(referenceInstant, ZoneOffset.UTC),
                 OffsetDateTime.ofInstant(referenceInstant, ZoneOffset.UTC),
                 OffsetDateTime.ofInstant(referenceInstant, ZoneOffset.UTC),
                 OffsetDateTime.ofInstant(referenceInstant, ZoneOffset.UTC));

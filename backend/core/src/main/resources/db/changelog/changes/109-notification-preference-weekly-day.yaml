@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 109-notification-preference-weekly-day
+      author: zeromail
+      comment: >
+        Move the email digest from daily to weekly: add digest_send_day_of_week (ISO day-of-week,
+        Mon=1 .. Sun=7, matching Postgres EXTRACT(ISODOW)). The dispatch scheduler now fires only
+        when the tenant-local weekday AND hour both match. Existing rows default to Monday so every
+        tenant keeps getting a digest, just once a week instead of daily.
+      changes:
+        - addColumn:
+            tableName: notification_preference
+            columns:
+              - column:
+                  name: digest_send_day_of_week
+                  type: int
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: ISO day-of-week (Monday=1 .. Sunday=7) matches Postgres EXTRACT(ISODOW).
+            sql: ALTER TABLE notification_preference ADD CONSTRAINT ck_notification_preference_digest_dow CHECK (digest_send_day_of_week BETWEEN 1 AND 7)
+      rollback:
+        - sql:
+            sql: ALTER TABLE notification_preference DROP CONSTRAINT ck_notification_preference_digest_dow
+        - dropColumn:
+            tableName: notification_preference
+            columnName: digest_send_day_of_week

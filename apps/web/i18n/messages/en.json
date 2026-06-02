@@ -2379,11 +2379,24 @@
       "upgradePlan": "Upgrade plan"
     },
     "notifications": {
-      "description": "Manage your daily summary email.",
+      "description": "Manage your weekly summary email.",
       "sendHour": {
         "downtimeNote": "If the digest worker is offline during your selected hour, that day's digest is skipped — there is no automatic catch-up. Choose an hour when the system is reliably running.",
         "helper": "The digest is sent around this hour in your time zone.",
         "label": "Send hour (local time)"
+      },
+      "sendDay": {
+        "helper": "The digest is sent on this day each week.",
+        "label": "Day of week"
+      },
+      "days": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
       },
       "timeZone": {
         "label": "Time zone: {tz}",
