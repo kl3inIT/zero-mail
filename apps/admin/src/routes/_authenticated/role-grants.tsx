@@ -73,7 +73,6 @@ function RoleGrantsRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Audit và truy cập</p>
           <h1 className="text-xl font-semibold text-ink">Phân quyền admin</h1>
         </div>
         <Button onClick={() => dispatchGrantDialog({ type: 'opened' })}>

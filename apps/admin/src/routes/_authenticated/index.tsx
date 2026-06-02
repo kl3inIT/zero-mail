@@ -17,7 +17,6 @@ function DashboardRoute() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Tổng quan</p>
         <h1 className="text-xl font-semibold text-ink">Bảng điều khiển quản trị</h1>
       </header>
       <section className="grid gap-4 md:grid-cols-3">

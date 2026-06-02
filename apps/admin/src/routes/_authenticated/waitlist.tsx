@@ -148,9 +148,6 @@ function WaitlistRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
-            Hàng đợi đăng ký
-          </p>
           <h1 className="text-ink text-xl font-semibold">Danh sách email chờ duyệt</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Email người dùng gửi từ landing page. Duyệt sẽ kích hoạt worker gửi mail mời trong 1
