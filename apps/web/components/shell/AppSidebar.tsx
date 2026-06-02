@@ -18,6 +18,7 @@ import {
   PanelLeft,
   Plus,
   RefreshCw,
+  Reply,
   Settings,
   Sparkles,
 } from 'lucide-react';
@@ -61,6 +62,7 @@ type NavItem = {
   labelKey:
     | 'nav.chat'
     | 'nav.inbox'
+    | 'nav.needsReply'
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.rules'
@@ -76,6 +78,7 @@ type AccountNavItem = {
 
 const DAILY_NAV: NavItem[] = [
   { href: '/inbox' as Route, labelKey: 'nav.inbox', icon: Inbox },
+  { href: '/needs-reply' as Route, labelKey: 'nav.needsReply', icon: Reply },
   { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
 ];
 
