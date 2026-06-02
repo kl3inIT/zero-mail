@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 108-processing-job-cancelled-status
+      author: zeromail
+      comment: >
+        Add CANCELLED to the processing_job status CHECK so an operator can cancel a PENDING or
+        stuck-PROCESSING job from the admin console. CANCELLED is terminal and never claimed by the
+        worker (the pickup query filters status='PENDING'). Append-only roll-forward: drop and
+        recreate ck_processing_job_status (originally defined in 068-catalog-tables-prep) rather
+        than editing the prior changeset.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE processing_job DROP CONSTRAINT ck_processing_job_status;
+              ALTER TABLE processing_job
+                ADD CONSTRAINT ck_processing_job_status
+                CHECK (status IN ('PENDING','PROCESSING','COMPLETED','FAILED','DEAD_LETTER','CANCELLED'));
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE processing_job DROP CONSTRAINT ck_processing_job_status;
+              ALTER TABLE processing_job
+                ADD CONSTRAINT ck_processing_job_status
+                CHECK (status IN ('PENDING','PROCESSING','COMPLETED','FAILED','DEAD_LETTER'));

@@ -1,11 +1,14 @@
 package com.zeromail.api.controllers.admin;
 
 import com.zeromail.api.dto.admin.queue.DeadLetterPageResponse;
+import com.zeromail.api.dto.admin.queue.JobDetailResponse;
+import com.zeromail.api.dto.admin.queue.JobPageResponse;
 import com.zeromail.api.dto.admin.queue.QueueHealthResponse;
 import com.zeromail.api.dto.admin.queue.RequeueRequest;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.queue.usecases.DeadLetterRequeueService;
 import com.zeromail.core.admin.queue.usecases.QueueHealthQueryService;
+import com.zeromail.core.admin.queue.usecases.QueueJobActionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -30,22 +33,66 @@ public class AdminQueueController {
 
     private final QueueHealthQueryService queueHealthQueryService;
     private final DeadLetterRequeueService deadLetterRequeueService;
+    private final QueueJobActionService queueJobActionService;
 
     public AdminQueueController(
             QueueHealthQueryService queueHealthQueryService,
-            DeadLetterRequeueService deadLetterRequeueService) {
+            DeadLetterRequeueService deadLetterRequeueService,
+            QueueJobActionService queueJobActionService) {
         this.queueHealthQueryService =
                 Objects.requireNonNull(
                         queueHealthQueryService, "queueHealthQueryService must not be null");
         this.deadLetterRequeueService =
                 Objects.requireNonNull(
                         deadLetterRequeueService, "deadLetterRequeueService must not be null");
+        this.queueJobActionService =
+                Objects.requireNonNull(
+                        queueJobActionService, "queueJobActionService must not be null");
     }
 
     @GetMapping("/health")
     public QueueHealthResponse health() {
         AdminContext.currentOrThrow();
         return QueueHealthResponse.from(queueHealthQueryService.snapshot());
+    }
+
+    @GetMapping("/jobs")
+    public JobPageResponse jobs(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String jobType,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "25") int limit) {
+        AdminContext.currentOrThrow();
+        return JobPageResponse.from(
+                queueHealthQueryService.jobsPage(status, jobType, cursor, limit));
+    }
+
+    @GetMapping("/jobs/{jobId}")
+    public JobDetailResponse jobDetail(@PathVariable UUID jobId) {
+        AdminContext.currentOrThrow();
+        return JobDetailResponse.from(queueHealthQueryService.jobDetail(jobId));
+    }
+
+    @PostMapping("/jobs/{jobId}/force-retry")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void forceRetry(
+            @PathVariable UUID jobId,
+            @Valid @RequestBody RequeueRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        queueJobActionService.forceRetry(
+                jobId, request.reason(), httpServletRequest.getRemoteAddr(), UUID.randomUUID());
+    }
+
+    @PostMapping("/jobs/{jobId}/cancel")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancel(
+            @PathVariable UUID jobId,
+            @Valid @RequestBody RequeueRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        queueJobActionService.cancel(
+                jobId, request.reason(), httpServletRequest.getRemoteAddr(), UUID.randomUUID());
     }
 
     @GetMapping("/dead-letters")

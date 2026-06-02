@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.admin.queue.persistence.lowlevel.QueueHealthReadRepository;
 import com.zeromail.core.admin.queue.projection.DeadLetterPage;
+import com.zeromail.core.admin.queue.projection.JobPage;
 import com.zeromail.core.admin.queue.projection.QueueHealthSnapshot;
 import com.zeromail.core.admin.queue.usecases.QueueHealthQueryService;
 import com.zeromail.core.support.PostgresContainerTest;
@@ -58,9 +59,17 @@ class QueueHealthQueryServiceSqlSpyTest extends PostgresContainerTest {
 
         QueueHealthSnapshot snapshot = queueHealthQueryService.snapshot();
         DeadLetterPage deadLetterPage = queueHealthQueryService.deadLetterPage(null, 25);
+        // Exercise every unified-job-list SQL path: unfiltered, status+jobType filtered, the
+        // synthetic SCHEDULED filter, and per-job detail — each must avoid payload_json too.
+        JobPage jobPage = queueHealthQueryService.jobsPage(null, null, null, 25);
+        queueHealthQueryService.jobsPage("SCHEDULED", "CATALOG_SYNC", null, 25);
+        if (!jobPage.rows().isEmpty()) {
+            queueHealthQueryService.jobDetail(jobPage.rows().get(0).jobId());
+        }
 
         assertThat(snapshot).isNotNull();
         assertThat(deadLetterPage).isNotNull();
+        assertThat(jobPage).isNotNull();
 
         assertThat(capturedSql).as("at least one SQL statement was emitted").isNotEmpty();
         for (String emittedSql : capturedSql) {

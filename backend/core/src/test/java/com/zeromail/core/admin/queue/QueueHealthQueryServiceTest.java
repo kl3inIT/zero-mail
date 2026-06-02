@@ -97,6 +97,10 @@ class QueueHealthQueryServiceTest extends PostgresContainerTest {
         // Denominator is 100 rows created in the last 24h (5 FAILED + 95 COMPLETED), numerator is
         // the 5 FAILED rows; the 100 old PENDING rows are correctly excluded from both sides.
         assertThat(snapshot.failureRateLast24h()).isCloseTo(0.05, within(0.001));
+        // Small-sample guard inputs: the raw counts must be exposed so the UI can render "5/100"
+        // (or suppress the percentage entirely when the sample is tiny) instead of a bare ratio.
+        assertThat(snapshot.failedCountLast24h()).isEqualTo(5);
+        assertThat(snapshot.sampleSizeLast24h()).isEqualTo(100);
     }
 
     @Test

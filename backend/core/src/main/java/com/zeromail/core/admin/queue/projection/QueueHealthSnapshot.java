@@ -20,6 +20,8 @@ public record QueueHealthSnapshot(
         Duration oldestUnleasedJobAge,
         List<RetryDistributionBucket> retryHistogram,
         double failureRateLast24h,
+        int failedCountLast24h,
+        int sampleSizeLast24h,
         int deadLetterCount,
         int adminRequeuedLast24h,
         Instant snapshotAt) {

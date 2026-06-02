@@ -1,14 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { GaugeIcon, RefreshCwIcon } from 'lucide-react';
+import { GaugeIcon, RefreshCwIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { AutoRefreshIndicator } from '@/components/AutoRefreshIndicator';
 import { ConfirmTwiceDialog } from '@/components/ConfirmTwiceDialog';
-import { KpiCard } from '@/components/KpiCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -17,43 +29,88 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { shortJobToken, type DeadLetterRow, type QueueHealth } from '@/features/queue/queue-api';
-import { useDeadLetters } from '@/features/queue/use-dead-letters';
 import {
-  QUEUE_REFRESH_INTERVAL_MS,
-  useQueueHealth,
-} from '@/features/queue/use-queue-health';
+  shortJobToken,
+  type JobRow,
+  type QueueHealth,
+} from '@/features/queue/queue-api';
+import { useCancelJob, useForceRetryJob } from '@/features/queue/use-job-actions';
+import { useJobDetail } from '@/features/queue/use-job-detail';
+import { useJobs } from '@/features/queue/use-jobs';
+import { QUEUE_REFRESH_INTERVAL_MS, useQueueHealth } from '@/features/queue/use-queue-health';
 import { useRequeueDeadLetter } from '@/features/queue/use-requeue';
+import { useSchedulers } from '@/features/schedulers/use-schedulers';
+import type { Scheduler } from '@/features/schedulers/schedulers-api';
 
 export const Route = createFileRoute('/_authenticated/queue')({
   component: QueueRoute,
 });
 
+const SMALL_SAMPLE_THRESHOLD = 10;
+const STUCK_AFTER_MS = 5 * 60 * 1000;
+
+const STATUS_OPTIONS = [
+  { value: 'ALL', label: 'Mọi trạng thái' },
+  { value: 'SCHEDULED', label: 'Hẹn giờ' },
+  { value: 'PENDING', label: 'PENDING' },
+  { value: 'PROCESSING', label: 'PROCESSING' },
+  { value: 'COMPLETED', label: 'COMPLETED' },
+  { value: 'FAILED', label: 'FAILED' },
+  { value: 'DEAD_LETTER', label: 'DEAD_LETTER' },
+  { value: 'CANCELLED', label: 'CANCELLED' },
+];
+
+const TYPE_OPTIONS = [
+  { value: 'ALL', label: 'Mọi loại' },
+  { value: 'UNSUBSCRIBE_CAMPAIGN', label: 'UNSUBSCRIBE_CAMPAIGN' },
+  { value: 'CATALOG_SYNC', label: 'CATALOG_SYNC' },
+];
+
+type PendingAction = {
+  row: JobRow;
+  kind: 'force-retry' | 'cancel' | 'requeue';
+};
+
 function QueueRoute() {
   const [paused, setPaused] = useState(false);
-  const queueHealth = useQueueHealth({ paused });
-  const deadLetters = useDeadLetters(null, 25);
-  const requeueMutation = useRequeueDeadLetter();
-  const [rowPendingRequeue, setRowPendingRequeue] = useState<DeadLetterRow | null>(null);
+  const [tab, setTab] = useState('jobs');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
-  const lastUpdatedAt = useMemo(() => {
-    if (!queueHealth.data) return null;
-    // `snapshotAt` is an ISO-8601 string from the backend.
-    return new Date(queueHealth.data.snapshotAt);
-  }, [queueHealth.data]);
+  const queueHealth = useQueueHealth({ paused });
+  const jobs = useJobs(
+    {
+      status: statusFilter === 'ALL' ? null : statusFilter,
+      jobType: typeFilter === 'ALL' ? null : typeFilter,
+    },
+    cursor,
+    25,
+    { paused },
+  );
+  const schedulers = useSchedulers();
+  const forceRetry = useForceRetryJob();
+  const cancel = useCancelJob();
+  const requeue = useRequeueDeadLetter();
+
+  const lastUpdatedAt = useMemo(
+    () => (queueHealth.data ? new Date(queueHealth.data.snapshotAt) : null),
+    [queueHealth.data],
+  );
+
+  const rows = jobs.data?.rows ?? [];
+  const stuckRows = rows.filter(isStuck);
+
+  function resetPaging() {
+    setCursor(null);
+  }
 
   return (
     <div className="space-y-6">
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
-            Vận hành
-          </p>
-          <h1 className="text-ink text-xl font-semibold">Tình trạng hàng đợi</h1>
-          <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            Hàng đợi worker tổng hợp từ <code>processing_job</code>. Không hiển thị payload công việc trên giao diện quản trị.
-          </p>
-        </div>
+      <header className="flex items-center justify-between gap-4">
+        <h1 className="text-lg font-semibold text-ink">Hàng đợi &amp; Bộ định thời</h1>
         <AutoRefreshIndicator
           lastUpdatedAt={lastUpdatedAt}
           intervalMs={QUEUE_REFRESH_INTERVAL_MS}
@@ -62,163 +119,198 @@ function QueueRoute() {
         />
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiTiles queueHealth={queueHealth.data} loading={queueHealth.isLoading} />
-      </section>
+      <CounterStrip
+        queueHealth={queueHealth.data}
+        loading={queueHealth.isLoading}
+        schedulerCount={schedulers.data?.length ?? null}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Số lượng theo loại công việc</CardTitle>
-          <CardDescription>
-            Số bản ghi đang chờ và đang xử lý trong hàng đợi, nhóm theo loại công việc của worker.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {queueHealth.isLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : (
+      <Tabs value={tab} onValueChange={(value) => setTab(String(value))}>
+        <TabsList>
+          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+          <TabsTrigger value="jobs">Hàng đợi job</TabsTrigger>
+          <TabsTrigger value="schedulers">Bộ định thời</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="pt-2">
+          <OverviewTab queueHealth={queueHealth.data} loading={queueHealth.isLoading} />
+        </TabsContent>
+
+        <TabsContent value="jobs" className="space-y-4 pt-2">
+          {stuckRows.length > 0 && (
+            <div className="flex items-start gap-3 rounded-lg border border-amber/40 bg-amber-soft/50 px-4 py-3 text-sm">
+              <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-amber" />
+              <div>
+                <p className="font-semibold text-ink">
+                  {stuckRows.length} công việc nghi bị kẹt
+                </p>
+                <p className="text-ink-2">
+                  Đang PROCESSING nhưng không cập nhật quá 5 phút — worker có thể đã chết. Reaper sẽ
+                  reset, hoặc hủy thủ công bên dưới.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterSelect
+              value={statusFilter}
+              options={STATUS_OPTIONS}
+              prefix="Trạng thái"
+              onValueChange={(value) => {
+                setStatusFilter(value);
+                resetPaging();
+              }}
+            />
+            <FilterSelect
+              value={typeFilter}
+              options={TYPE_OPTIONS}
+              prefix="Loại"
+              onValueChange={(value) => {
+                setTypeFilter(value);
+                resetPaging();
+              }}
+            />
+          </div>
+
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Loại công việc</TableHead>
-                  <TableHead className="text-right">Đang chờ</TableHead>
-                  <TableHead className="text-right">Đang xử lý</TableHead>
+                  <TableHead>Công việc</TableHead>
+                  <TableHead>Nguồn</TableHead>
+                  <TableHead>Loại</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead className="text-right">Thử</TableHead>
+                  <TableHead>Cập nhật</TableHead>
+                  <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(queueHealth.data?.depthByType ?? []).length === 0 && (
+                {jobs.isLoading && (
                   <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      className="text-muted-foreground h-16 text-center"
-                    >
-                      Không có công việc đang hoạt động.
+                    <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
+                      Đang tải công việc.
                     </TableCell>
                   </TableRow>
                 )}
-                {queueHealth.data?.depthByType.map((row) => (
-                  <TableRow key={row.jobType}>
-                    <TableCell className="font-mono text-xs">{row.jobType}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.pendingCount}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.processingCount}
+                {!jobs.isLoading && rows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
+                      Không có công việc khớp bộ lọc.
                     </TableCell>
                   </TableRow>
+                )}
+                {rows.map((row) => (
+                  <JobTableRow
+                    key={row.jobId}
+                    row={row}
+                    onView={() => setSelectedJobId(row.jobId)}
+                    onAction={(kind) => setPendingAction({ row, kind })}
+                  />
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <GaugeIcon className="size-4" />
-              Công việc thất bại
-            </CardTitle>
-            <CardDescription>
-              Đưa lại vào hàng đợi sẽ cấp ngân sách retry mới (attempts=0) và ghi một bản audit. Hệ thống không đọc hay hiển thị nội dung công việc đã lưu.
-            </CardDescription>
+            <div className="flex items-center justify-between border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+              <span className="tabular-nums">
+                {rows.length} / ~{jobs.data?.totalEstimate ?? 0} công việc
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!jobs.data?.hasNextPage}
+                onClick={() => setCursor(jobs.data?.nextCursor ?? null)}
+              >
+                Tải thêm
+              </Button>
+            </div>
           </div>
-          {queueHealth.data && (
-            <Badge variant="secondary" className="tabular-nums">
-              {queueHealth.data.deadLetterCount} tổng
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Công việc</TableHead>
-                <TableHead>Loại</TableHead>
-                <TableHead>Lỗi</TableHead>
-                <TableHead className="text-right">Số lần retry</TableHead>
-                <TableHead className="text-right">Lần admin đưa lại</TableHead>
-                <TableHead>Thất bại gần nhất</TableHead>
-                <TableHead className="text-right">Hành động</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {deadLetters.isLoading && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
-                    Đang tải danh sách công việc thất bại.
-                  </TableCell>
-                </TableRow>
-              )}
-              {!deadLetters.isLoading && (deadLetters.data?.rows.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
-                    Không có công việc thất bại.
-                  </TableCell>
-                </TableRow>
-              )}
-              {deadLetters.data?.rows.map((row) => (
-                <TableRow key={row.jobId}>
-                  <TableCell className="font-mono text-xs">{shortJobToken(row.jobId)}</TableCell>
-                  <TableCell className="font-mono text-xs">{row.jobType}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {row.lastFailureReason ?? '—'}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{row.retryCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {row.adminRequeueCount}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {row.lastFailedAt ?? '—'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRowPendingRequeue(row)}
-                    >
-                      <RefreshCwIcon className="size-3.5" />
-                      Đưa lại
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          <p className="text-muted-foreground text-[11px]">
+            🔒 Không bao giờ hiển thị payload công việc. Bấm “Xem” chỉ xem metadata.
+          </p>
+        </TabsContent>
 
-      {rowPendingRequeue && (
-        <ConfirmTwiceDialog
-          open
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) setRowPendingRequeue(null);
+        <TabsContent value="schedulers" className="pt-2">
+          <SchedulersTab schedulers={schedulers.data} loading={schedulers.isLoading} />
+        </TabsContent>
+      </Tabs>
+
+      <JobDetailDialog jobId={selectedJobId} onClose={() => setSelectedJobId(null)} />
+
+      {pendingAction && (
+        <JobActionDialog
+          pendingAction={pendingAction}
+          onClose={() => setPendingAction(null)}
+          onConfirm={async (reason) => {
+            const input = { jobId: pendingAction.row.jobId, reason };
+            if (pendingAction.kind === 'force-retry') return forceRetry.mutateAsync(input);
+            if (pendingAction.kind === 'cancel') return cancel.mutateAsync(input);
+            return requeue.mutateAsync(input);
           }}
-          actionLabel="Đưa lại công việc thất bại vào hàng đợi"
-          targetLabel={`${rowPendingRequeue.jobType} • ${shortJobToken(rowPendingRequeue.jobId)}`}
-          consequences={[
-            'Bộ đếm số lần thử lại sẽ về 0 — worker được cấp ngân sách retry mới.',
-            'Bộ đếm admin đưa lại sẽ tăng — các công việc lặp lại sẽ hiện trên KPI.',
-            'Lần đưa lại được ghi vào chuỗi audit của quản trị viên (DEAD_LETTER_REQUEUED).',
-          ]}
-          confirmationToken={shortJobToken(rowPendingRequeue.jobId)}
-          finalButtonLabel="Đưa lại công việc"
-          variant="warning"
-          onConfirm={async (reason) =>
-            requeueMutation.mutateAsync({
-              jobId: rowPendingRequeue.jobId,
-              reason,
-            })
-          }
         />
       )}
     </div>
   );
 }
 
-function KpiTiles({
+function CounterStrip({
+  queueHealth,
+  loading,
+  schedulerCount,
+}: {
+  queueHealth: QueueHealth | undefined;
+  loading: boolean;
+  schedulerCount: number | null;
+}) {
+  if (loading || !queueHealth) {
+    return <Skeleton className="h-[68px] w-full rounded-lg" />;
+  }
+  const totalPending = queueHealth.depthByType.reduce((sum, row) => sum + row.pendingCount, 0);
+  const totalProcessing = queueHealth.depthByType.reduce((sum, row) => sum + row.processingCount, 0);
+  return (
+    <div className="flex flex-wrap items-stretch divide-x divide-border overflow-hidden rounded-lg border border-border bg-card">
+      <Counter label="Đang chờ" value={totalPending.toLocaleString()} />
+      <Counter label="Đang xử lý" value={totalProcessing.toLocaleString()} />
+      <FailureCounter queueHealth={queueHealth} />
+      <Counter label="Dead-letter" value={queueHealth.deadLetterCount.toLocaleString()} />
+      <Counter label="Admin đưa lại 24h" value={queueHealth.adminRequeuedLast24h.toLocaleString()} />
+      <Counter label="Bộ định thời" value={schedulerCount === null ? '—' : String(schedulerCount)} />
+    </div>
+  );
+}
+
+function Counter({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-5 py-3">
+      <p className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p>
+      <p className="text-xl font-semibold tabular-nums text-ink">{value}</p>
+    </div>
+  );
+}
+
+function FailureCounter({ queueHealth }: { queueHealth: QueueHealth }) {
+  const smallSample = queueHealth.sampleSizeLast24h < SMALL_SAMPLE_THRESHOLD;
+  return (
+    <div className="px-5 py-3" data-testid="counter-failure-rate">
+      <p className="text-[11px] tracking-wide text-muted-foreground uppercase">Thất bại 24h</p>
+      {smallSample ? (
+        <p className="flex items-baseline gap-1.5 text-xl font-semibold tabular-nums text-muted-foreground">
+          n/a
+          <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-ink-2">
+            {queueHealth.failedCountLast24h}/{queueHealth.sampleSizeLast24h}
+          </span>
+        </p>
+      ) : (
+        <p className="text-xl font-semibold tabular-nums text-ink">
+          {(queueHealth.failureRateLast24h * 100).toFixed(1)}%
+        </p>
+      )}
+    </div>
+  );
+}
+
+function OverviewTab({
   queueHealth,
   loading,
 }: {
@@ -226,62 +318,396 @@ function KpiTiles({
   loading: boolean;
 }) {
   if (loading || !queueHealth) {
+    return <Skeleton className="h-40 w-full" />;
+  }
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stat label="Chờ lâu nhất" value={formatDuration(queueHealth.oldestUnleasedJobAgeSeconds)} />
+        <Stat label="Tỷ lệ retry" value={formatRetryRate(queueHealth.retryHistogram)} />
+        <Stat
+          label="Mẫu 24h"
+          value={`${queueHealth.failedCountLast24h}/${queueHealth.sampleSizeLast24h}`}
+        />
+      </div>
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="border-b border-border px-5 py-3">
+          <h2 className="text-sm font-semibold text-ink">Số lượng theo loại công việc</h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Bản ghi PENDING / PROCESSING trong <code>processing_job</code>, nhóm theo loại.
+          </p>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Loại công việc</TableHead>
+              <TableHead className="text-right">Đang chờ</TableHead>
+              <TableHead className="text-right">Đang xử lý</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {queueHealth.depthByType.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="text-muted-foreground h-16 text-center">
+                  Không có công việc đang hoạt động.
+                </TableCell>
+              </TableRow>
+            )}
+            {queueHealth.depthByType.map((row) => (
+              <TableRow key={row.jobType}>
+                <TableCell className="font-mono text-xs">{row.jobType}</TableCell>
+                <TableCell className="text-right tabular-nums">{row.pendingCount}</TableCell>
+                <TableCell className="text-right tabular-nums">{row.processingCount}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      <p className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{value}</p>
+    </div>
+  );
+}
+
+function JobTableRow({
+  row,
+  onView,
+  onAction,
+}: {
+  row: JobRow;
+  onView: () => void;
+  onAction: (kind: PendingAction['kind']) => void;
+}) {
+  const stuck = isStuck(row);
+  return (
+    <TableRow className={stuck ? 'bg-amber-soft/30' : undefined}>
+      <TableCell className="font-mono text-xs">{shortJobToken(row.jobId)}</TableCell>
+      <TableCell className="text-muted-foreground font-mono text-[11px]">{row.source}</TableCell>
+      <TableCell className="font-mono text-xs">{row.jobType}</TableCell>
+      <TableCell>
+        <StatusBadge row={row} stuck={stuck} />
+      </TableCell>
+      <TableCell className="text-right tabular-nums">{row.attempts}</TableCell>
+      <TableCell className="text-muted-foreground font-mono text-xs">
+        {relativeTime(row.updatedAt ?? row.createdAt)}
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-end gap-1.5">
+          <Button type="button" variant="outline" size="sm" onClick={onView}>
+            Xem
+          </Button>
+          {row.status === 'FAILED' && (
+            <Button
+              type="button"
+              size="sm"
+              className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+              variant="outline"
+              onClick={() => onAction('force-retry')}
+            >
+              <RefreshCwIcon className="size-3.5" />
+              Chạy lại
+            </Button>
+          )}
+          {row.status === 'DEAD_LETTER' && (
+            <Button type="button" variant="outline" size="sm" onClick={() => onAction('requeue')}>
+              <RefreshCwIcon className="size-3.5" />
+              Đưa lại
+            </Button>
+          )}
+          {(row.status === 'PENDING' || (row.status === 'PROCESSING' && stuck)) && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-destructive/40 text-destructive hover:bg-destructive-soft/40"
+              onClick={() => onAction('cancel')}
+            >
+              Hủy
+            </Button>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function StatusBadge({ row, stuck }: { row: JobRow; stuck: boolean }) {
+  if (row.scheduled) {
     return (
-      <>
-        {Array.from({ length: 6 }).map((_, kpiIndex) => (
-          <Skeleton key={kpiIndex} className="h-24" />
-        ))}
-      </>
+      <Badge variant="secondary" className="bg-violet-soft text-violet">
+        SCHEDULED
+      </Badge>
     );
   }
-  const totalPending = queueHealth.depthByType.reduce(
-    (accumulator, row) => accumulator + row.pendingCount,
-    0,
-  );
-  const totalProcessing = queueHealth.depthByType.reduce(
-    (accumulator, row) => accumulator + row.processingCount,
-    0,
-  );
+  const toneByStatus: Record<string, string> = {
+    PENDING: 'bg-secondary text-ink-2',
+    PROCESSING: 'bg-blue-soft text-blue',
+    COMPLETED: 'bg-green-soft text-green',
+    FAILED: 'bg-amber-soft text-amber',
+    DEAD_LETTER: 'bg-destructive-soft text-destructive',
+    CANCELLED: 'bg-secondary text-muted-foreground',
+  };
   return (
-    <>
-      <KpiCard
-        testId="kpi-pending"
-        label="Đang chờ"
-        value={totalPending.toLocaleString()}
-        hint={`${totalProcessing.toLocaleString()} đang xử lý`}
-      />
-      <KpiCard
-        testId="kpi-oldest-age"
-        label="Chờ lâu nhất"
-        value={formatDuration(queueHealth.oldestUnleasedJobAgeSeconds)}
-        hint="Thời gian công việc PENDING lâu nhất đã chờ."
-      />
-      <KpiCard
-        testId="kpi-retry-rate"
-        label="Tỷ lệ retry"
-        value={formatRetryRate(queueHealth.retryHistogram)}
-        hint="Tỷ lệ bản ghi đã thử lại ít nhất 1 lần."
-      />
-      <KpiCard
-        testId="kpi-failure-rate"
-        label="Tỷ lệ thất bại (24h)"
-        value={`${(queueHealth.failureRateLast24h * 100).toFixed(1)}%`}
-        hint="FAILED chia cho số bản ghi tạo trong 24h qua."
-      />
-      <KpiCard
-        testId="kpi-dead-letter"
-        label="Công việc thất bại"
-        value={queueHealth.deadLetterCount.toLocaleString()}
-        hint="Bản ghi ở DEAD_LETTER. Đưa lại từ bảng bên dưới."
-      />
-      <KpiCard
-        testId="kpi-admin-requeued"
-        label="Admin đưa lại (24h)"
-        value={queueHealth.adminRequeuedLast24h.toLocaleString()}
-        hint="Công việc tái phát do can thiệp của quản trị viên."
-      />
-    </>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+        toneByStatus[row.status] ?? 'bg-secondary text-ink-2'
+      }`}
+    >
+      {row.status}
+      {stuck && (
+        <span className="rounded-full bg-amber px-1 text-[10px] font-semibold text-white">kẹt</span>
+      )}
+    </span>
   );
+}
+
+function JobDetailDialog({ jobId, onClose }: { jobId: string | null; onClose: () => void }) {
+  const detail = useJobDetail(jobId);
+  return (
+    <Dialog open={Boolean(jobId)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Chi tiết công việc</DialogTitle>
+            <DialogDescription className="sr-only">
+              Metadata của một công việc trong hàng đợi.
+            </DialogDescription>
+          </DialogHeader>
+          <Button type="button" variant="ghost" size="icon-sm" onClick={onClose}>
+            <XIcon className="size-4" />
+          </Button>
+        </div>
+        {detail.isLoading || !detail.data ? (
+          <div className="p-5">
+            <Skeleton className="h-48 w-full" />
+          </div>
+        ) : (
+          <>
+            <dl className="divide-y divide-border/60 px-5 text-sm">
+              <DetailRow label="ID" value={detail.data.jobId} mono />
+              <DetailRow label="Nguồn" value={detail.data.source} mono />
+              <DetailRow label="Loại" value={detail.data.jobType} mono />
+              <DetailRow
+                label="Trạng thái"
+                value={detail.data.scheduled ? `SCHEDULED (${detail.data.status})` : detail.data.status}
+              />
+              <DetailRow label="Số lần thử" value={String(detail.data.attempts)} />
+              <DetailRow label="Tạo lúc" value={formatTimestamp(detail.data.createdAt)} mono />
+              <DetailRow label="Lần chạy kế" value={formatTimestamp(detail.data.nextRunAt)} mono />
+              <DetailRow label="Bắt đầu" value={formatTimestamp(detail.data.startedAt)} mono />
+              <DetailRow label="Heartbeat" value={formatTimestamp(detail.data.heartbeatAt)} mono />
+              <DetailRow label="Hoàn tất" value={formatTimestamp(detail.data.completedAt)} mono />
+              <DetailRow label="Lý do lỗi" value={detail.data.lastFailureReason ?? '—'} mono />
+              <DetailRow label="Admin đưa lại" value={String(detail.data.adminRequeueCount)} />
+            </dl>
+            <div className="bg-secondary/60 text-muted-foreground rounded-b-lg px-5 py-3 text-[11px]">
+              🔒 Payload công việc không được đọc hay hiển thị (ràng buộc quyền riêng tư).
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex justify-between gap-4 py-2.5">
+      <dt className="text-muted-foreground shrink-0">{label}</dt>
+      <dd className={mono ? 'truncate font-mono text-xs text-ink' : 'text-ink'}>{value}</dd>
+    </div>
+  );
+}
+
+function JobActionDialog({
+  pendingAction,
+  onClose,
+  onConfirm,
+}: {
+  pendingAction: PendingAction;
+  onClose: () => void;
+  onConfirm: (reason: string) => Promise<{ auditId?: string | null }>;
+}) {
+  const { row, kind } = pendingAction;
+  const config = ACTION_CONFIG[kind];
+  return (
+    <ConfirmTwiceDialog
+      open
+      onOpenChange={(open) => !open && onClose()}
+      actionLabel={config.actionLabel}
+      targetLabel={`${row.jobType} • ${shortJobToken(row.jobId)}`}
+      consequences={config.consequences}
+      confirmationToken={shortJobToken(row.jobId)}
+      finalButtonLabel={config.finalButtonLabel}
+      variant={config.variant}
+      onConfirm={onConfirm}
+    />
+  );
+}
+
+const ACTION_CONFIG: Record<
+  PendingAction['kind'],
+  {
+    actionLabel: string;
+    consequences: string[];
+    finalButtonLabel: string;
+    variant: 'destructive' | 'warning';
+  }
+> = {
+  'force-retry': {
+    actionLabel: 'Chạy lại công việc thất bại',
+    consequences: [
+      'Bộ đếm số lần thử về 0 — worker được cấp ngân sách retry mới.',
+      'Bộ đếm admin đưa lại tăng, công việc sẽ chạy lại ngay.',
+      'Ghi một bản audit (JOB_RETRY_FORCED).',
+    ],
+    finalButtonLabel: 'Chạy lại',
+    variant: 'warning',
+  },
+  cancel: {
+    actionLabel: 'Hủy công việc',
+    consequences: [
+      'Công việc chuyển sang CANCELLED và sẽ không được worker nhặt nữa.',
+      'Chỉ áp dụng cho job PENDING hoặc PROCESSING đã kẹt (hết hạn heartbeat).',
+      'Ghi một bản audit (JOB_CANCELLED).',
+    ],
+    finalButtonLabel: 'Hủy công việc',
+    variant: 'destructive',
+  },
+  requeue: {
+    actionLabel: 'Đưa lại công việc thất bại',
+    consequences: [
+      'Bộ đếm số lần thử về 0 — worker được cấp ngân sách retry mới.',
+      'Bộ đếm admin đưa lại tăng — công việc lặp lại sẽ hiện trên KPI.',
+      'Ghi một bản audit (DEAD_LETTER_REQUEUED).',
+    ],
+    finalButtonLabel: 'Đưa lại công việc',
+    variant: 'warning',
+  },
+};
+
+function SchedulersTab({
+  schedulers,
+  loading,
+}: {
+  schedulers: Scheduler[] | undefined;
+  loading: boolean;
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="flex items-center gap-2 border-b border-border px-5 py-3">
+        <GaugeIcon className="size-4 text-muted-foreground" />
+        <div>
+          <h2 className="text-sm font-semibold text-ink">Bộ định thời nền</h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Mọi cron / vòng lặp nền của hệ thống (API + worker). Chỉ xem; “Chạy ngay” + trạng thái
+            chạy gần nhất sẽ thêm ở pha sau.
+          </p>
+        </div>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Bộ định thời</TableHead>
+            <TableHead>Lịch</TableHead>
+            <TableHead>Tiến trình</TableHead>
+            <TableHead>Nhóm</TableHead>
+            <TableHead>Lần chạy kế (UTC)</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading && (
+            <TableRow>
+              <TableCell colSpan={5} className="text-muted-foreground h-24 text-center">
+                Đang tải bộ định thời.
+              </TableCell>
+            </TableRow>
+          )}
+          {(schedulers ?? []).map((scheduler) => (
+            <TableRow key={scheduler.key}>
+              <TableCell>
+                <div className="text-ink">{scheduler.displayName}</div>
+                {scheduler.description && (
+                  <div className="text-muted-foreground text-xs">{scheduler.description}</div>
+                )}
+              </TableCell>
+              <TableCell className="font-mono text-xs">{scheduler.scheduleText}</TableCell>
+              <TableCell>
+                <Badge variant="secondary" className="font-mono text-[10px]">
+                  {scheduler.process}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-muted-foreground font-mono text-[11px]">
+                {scheduler.category}
+              </TableCell>
+              <TableCell className="text-muted-foreground font-mono text-xs">
+                {scheduler.nextRunAt ? formatTimestamp(scheduler.nextRunAt) : '—'}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function FilterSelect({
+  value,
+  options,
+  prefix,
+  onValueChange,
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  prefix: string;
+  onValueChange: (value: string) => void;
+}) {
+  const selected = options.find((option) => option.value === value);
+  return (
+    <Select value={value} onValueChange={(next) => onValueChange(String(next))}>
+      <SelectTrigger size="sm" className="text-xs">
+        <span className="text-muted-foreground">{prefix}:</span>
+        <span className="font-medium text-ink">{selected?.label ?? value}</span>
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function isStuck(row: JobRow): boolean {
+  if (row.status !== 'PROCESSING') return false;
+  const reference = row.updatedAt ?? row.createdAt;
+  if (!reference) return false;
+  return Date.now() - Date.parse(reference) > STUCK_AFTER_MS;
+}
+
+function relativeTime(iso: string | undefined): string {
+  if (!iso) return '—';
+  const deltaSeconds = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 1000));
+  if (deltaSeconds < 60) return `${deltaSeconds}s trước`;
+  const minutes = Math.floor(deltaSeconds / 60);
+  if (minutes < 60) return `${minutes}m trước`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h trước`;
+  return `${Math.floor(hours / 24)}d trước`;
+}
+
+function formatTimestamp(iso: string | undefined | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('vi-VN', { hour12: false });
 }
 
 function formatDuration(seconds: number): string {
@@ -293,13 +719,11 @@ function formatDuration(seconds: number): string {
   return `${hours}h ${minutes % 60}m`;
 }
 
-function formatRetryRate(
-  histogram: { attemptsBucket: number; rowCount: number }[],
-): string {
-  const total = histogram.reduce((accumulator, row) => accumulator + row.rowCount, 0);
+function formatRetryRate(histogram: { attemptsBucket: number; rowCount: number }[]): string {
+  const total = histogram.reduce((sum, row) => sum + row.rowCount, 0);
   if (total === 0) return '0%';
   const retried = histogram
     .filter((row) => row.attemptsBucket >= 1)
-    .reduce((accumulator, row) => accumulator + row.rowCount, 0);
+    .reduce((sum, row) => sum + row.rowCount, 0);
   return `${((retried / total) * 100).toFixed(1)}%`;
 }

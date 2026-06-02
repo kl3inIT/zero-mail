@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import { fetchQueueHealth } from './queue-api';
 import { queueQueryKeys } from './query-keys';
 
-export const QUEUE_REFRESH_INTERVAL_MS = 10_000;
+export const QUEUE_REFRESH_INTERVAL_MS = 5_000;
 
 /**
- * 10s auto-refreshing query for the queue health snapshot. Pauses when the document is hidden
- * (per UI-SPEC §Interaction Pattern 2) and when the caller passes `paused=true`.
+ * 5s auto-refreshing query for the queue health snapshot — tight enough to surface a stuck job
+ * quickly. Pauses when the document is hidden (per UI-SPEC §Interaction Pattern 2) and when the
+ * caller passes `paused=true`.
  */
 export function useQueueHealth(options: { paused: boolean }) {
   const documentHidden = useDocumentHidden();
