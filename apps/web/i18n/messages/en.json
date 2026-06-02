@@ -165,7 +165,7 @@
         "title": "Safety net"
       },
       "updates": {
-        "helper": "Daily digest and shadow mode",
+        "helper": "Weekly digest and shadow mode",
         "title": "Updates"
       },
       "voice": {
@@ -201,8 +201,8 @@
     },
     "updates": {
       "dailyDigest": {
-        "description": "Receive one daily email digest.",
-        "title": "Daily digest"
+        "description": "Receive one weekly email digest.",
+        "title": "Weekly digest"
       },
       "pauseTriage": {
         "description": "Pause automatic triage while keeping your configuration.",
@@ -1648,7 +1648,7 @@
           "heading": "Eligibility"
         },
         "gmailAuthorization": {
-          "body": "Zero Mail requests only the minimum Gmail OAuth scopes required to operate. With your consent, the service may perform the following actions on Gmail messages in your account: read incoming messages so that the AI can triage them; apply or remove Gmail labels; archive messages by removing them from your inbox; save Gmail drafts; mark messages as read or unread; star or unstar messages; flag messages as spam; and add messages to a daily digest you can review in one place.\n\nWith your explicit opt-in through the Auto-send rules setting, Zero Mail may additionally send replies on your behalf, forward messages on your behalf, and send new messages on your behalf, subject to the safety gates described in the next section.\n\nDestructive actions are NOT in scope. Zero Mail does not permanently delete messages from your Gmail account on your behalf, and it does not invoke arbitrary webhooks against external services on your behalf. If the service ever supports those actions, they will be gated by a separate, clearly-labeled administrative opt-in.",
+          "body": "Zero Mail requests only the minimum Gmail OAuth scopes required to operate. With your consent, the service may perform the following actions on Gmail messages in your account: read incoming messages so that the AI can triage them; apply or remove Gmail labels; archive messages by removing them from your inbox; save Gmail drafts; mark messages as read or unread; star or unstar messages; flag messages as spam; and add messages to a weekly digest you can review in one place.\n\nWith your explicit opt-in through the Auto-send rules setting, Zero Mail may additionally send replies on your behalf, forward messages on your behalf, and send new messages on your behalf, subject to the safety gates described in the next section.\n\nDestructive actions are NOT in scope. Zero Mail does not permanently delete messages from your Gmail account on your behalf, and it does not invoke arbitrary webhooks against external services on your behalf. If the service ever supports those actions, they will be gated by a separate, clearly-labeled administrative opt-in.",
           "heading": "Scope of Gmail authorization"
         },
         "governingLaw": {
@@ -2381,7 +2381,7 @@
     "notifications": {
       "description": "Manage your weekly summary email.",
       "sendHour": {
-        "downtimeNote": "If the digest worker is offline during your selected hour, that day's digest is skipped — there is no automatic catch-up. Choose an hour when the system is reliably running.",
+        "downtimeNote": "If the digest worker is offline during your selected hour, that week's digest is skipped — there is no automatic catch-up. Choose an hour when the system is reliably running.",
         "helper": "The digest is sent around this hour in your time zone.",
         "label": "Send hour (local time)"
       },
@@ -2410,8 +2410,8 @@
       },
       "toggle": {
         "helperOff": "Off — you'll receive no summary emails.",
-        "helperOn": "You'll receive a summary email each day at the chosen hour.",
-        "label": "Daily digest email"
+        "helperOn": "You'll receive a summary email each week on the chosen day and hour.",
+        "label": "Weekly digest email"
       }
     },
     "privacy": {

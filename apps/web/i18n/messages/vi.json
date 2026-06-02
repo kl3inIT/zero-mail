@@ -165,7 +165,7 @@
         "title": "Lưới an toàn"
       },
       "updates": {
-        "helper": "Tóm tắt hằng ngày và chế độ shadow",
+        "helper": "Tóm tắt hằng tuần và chế độ shadow",
         "title": "Cập nhật"
       },
       "voice": {
@@ -201,8 +201,8 @@
     },
     "updates": {
       "dailyDigest": {
-        "description": "Nhận một bản tóm tắt email hằng ngày.",
-        "title": "Tóm tắt hằng ngày"
+        "description": "Nhận một bản tóm tắt email hằng tuần.",
+        "title": "Tóm tắt hằng tuần"
       },
       "pauseTriage": {
         "description": "Tạm dừng tự động xử lý nhưng vẫn giữ dữ liệu cấu hình.",
@@ -1648,7 +1648,7 @@
           "heading": "Điều kiện sử dụng"
         },
         "gmailAuthorization": {
-          "body": "Zero Mail chỉ yêu cầu các scope OAuth Gmail tối thiểu cần để vận hành. Khi có sự đồng ý của bạn, dịch vụ có thể thực hiện các hành động sau trên thư Gmail trong tài khoản bạn: đọc thư đến để AI có thể triage; gán hoặc gỡ nhãn Gmail; lưu trữ (archive) thư bằng cách bỏ khỏi hộp thư đến; lưu Gmail draft; đánh dấu thư đã đọc/chưa đọc; star/un-star thư; gắn cờ spam; và thêm thư vào digest hằng ngày để bạn xem lại gọn ở một chỗ.\n\nKhi bạn chủ động opt-in qua tùy chọn Auto-send rules, Zero Mail còn có thể gửi trả lời thay bạn, forward thư thay bạn, và gửi thư mới thay bạn — đều phụ thuộc vào các safety gate mô tả ở mục kế tiếp.\n\nCác hành động phá hủy KHÔNG nằm trong scope. Zero Mail không xóa vĩnh viễn thư trong tài khoản Gmail của bạn thay bạn, và không gọi webhook tùy ý đến các dịch vụ ngoài thay bạn. Nếu dịch vụ từng hỗ trợ các hành động đó, chúng sẽ phải qua một opt-in riêng do admin gắn nhãn rõ ràng.",
+          "body": "Zero Mail chỉ yêu cầu các scope OAuth Gmail tối thiểu cần để vận hành. Khi có sự đồng ý của bạn, dịch vụ có thể thực hiện các hành động sau trên thư Gmail trong tài khoản bạn: đọc thư đến để AI có thể triage; gán hoặc gỡ nhãn Gmail; lưu trữ (archive) thư bằng cách bỏ khỏi hộp thư đến; lưu Gmail draft; đánh dấu thư đã đọc/chưa đọc; star/un-star thư; gắn cờ spam; và thêm thư vào digest hằng tuần để bạn xem lại gọn ở một chỗ.\n\nKhi bạn chủ động opt-in qua tùy chọn Auto-send rules, Zero Mail còn có thể gửi trả lời thay bạn, forward thư thay bạn, và gửi thư mới thay bạn — đều phụ thuộc vào các safety gate mô tả ở mục kế tiếp.\n\nCác hành động phá hủy KHÔNG nằm trong scope. Zero Mail không xóa vĩnh viễn thư trong tài khoản Gmail của bạn thay bạn, và không gọi webhook tùy ý đến các dịch vụ ngoài thay bạn. Nếu dịch vụ từng hỗ trợ các hành động đó, chúng sẽ phải qua một opt-in riêng do admin gắn nhãn rõ ràng.",
           "heading": "Phạm vi cấp quyền Gmail"
         },
         "governingLaw": {
@@ -2381,7 +2381,7 @@
     "notifications": {
       "description": "Quản lý email tóm tắt hàng tuần của bạn.",
       "sendHour": {
-        "downtimeNote": "Nếu trình gửi digest gặp sự cố đúng giờ bạn chọn, bản digest hôm đó sẽ bị bỏ qua — không có cơ chế gửi bù. Hãy chọn giờ mà hệ thống hoạt động ổn định.",
+        "downtimeNote": "Nếu trình gửi digest gặp sự cố đúng giờ bạn chọn, bản digest tuần đó sẽ bị bỏ qua — không có cơ chế gửi bù. Hãy chọn giờ mà hệ thống hoạt động ổn định.",
         "helper": "Email tóm tắt được gửi khoảng giờ này theo múi giờ của bạn.",
         "label": "Giờ gửi (giờ địa phương)"
       },
@@ -2410,8 +2410,8 @@
       },
       "toggle": {
         "helperOff": "Đã tắt — bạn sẽ không nhận email tóm tắt nào.",
-        "helperOn": "Bạn sẽ nhận email tóm tắt mỗi ngày vào giờ đã chọn.",
-        "label": "Email tóm tắt hàng ngày"
+        "helperOn": "Bạn sẽ nhận email tóm tắt mỗi tuần vào ngày và giờ đã chọn.",
+        "label": "Email tóm tắt hàng tuần"
       }
     },
     "privacy": {
