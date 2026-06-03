@@ -155,7 +155,6 @@ export function InboxPageClient() {
   // ops can correlate FE behaviour with the backend `event=inbox_read_fallback` log line.
   useEffect(() => {
     if (inboxDataSource === 'LIVE_GMAIL') {
-      // eslint-disable-next-line no-console
       console.debug('[inbox] data source: live gmail fallback');
     }
   }, [inboxDataSource]);
@@ -302,9 +301,7 @@ export function InboxPageClient() {
                   <p className="text-foreground text-sm font-medium">
                     {t('inbox.state.syncing.title')}
                   </p>
-                  <p className="text-muted-foreground text-xs">
-                    {t('inbox.state.syncing.body')}
-                  </p>
+                  <p className="text-muted-foreground text-xs">{t('inbox.state.syncing.body')}</p>
                 </div>
               </div>
             ) : messages.length === 0 ? (
@@ -387,7 +384,6 @@ function InboxMessageRow({
 }) {
   const t = useTranslations();
   const senderName = inboxSenderDisplayName(message.from) || t('inbox.message.unknownSender');
-  const senderInitial = senderName.trim().charAt(0).toUpperCase() || '?';
   const visibleLabels = visibleInboxLabels(message.labels);
   return (
     <button
@@ -403,14 +399,7 @@ function InboxMessageRow({
       onClick={onSelect}
       data-testid="inbox-message-row"
     >
-      <div
-        className={cn(
-          'bg-muted text-muted-foreground mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-          message.unread && 'bg-primary/10 text-primary',
-        )}
-      >
-        {senderInitial}
-      </div>
+      <InboxSenderAvatar from={message.from} size="sm" unread={message.unread} />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -530,7 +519,6 @@ function InboxMessageDetailPanel({
   const readableText = renderedText.trim() || selectedMessage.snippet;
   const senderDisplayName =
     inboxSenderDisplayName(selectedMessage.from) || selectedMessage.from || '?';
-  const senderInitial = senderDisplayName.trim().charAt(0).toUpperCase() || '?';
   const primaryRecipient =
     currentUserEmail && selectedMessage.to.includes(currentUserEmail)
       ? t('inbox.detail.you')
@@ -606,9 +594,7 @@ function InboxMessageDetailPanel({
             </div>
 
             <div className="mt-3 flex min-w-0 items-start gap-3">
-              <div className="bg-primary/10 text-primary mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                {senderInitial}
-              </div>
+              <InboxSenderAvatar from={selectedMessage.from} size="md" unread={false} />
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="text-foreground min-w-0 truncate text-sm font-medium">
@@ -1143,314 +1129,314 @@ function InboxReplyComposer({
       data-testid="inbox-reply-composer"
     >
       {previewSubmitted ? null : (
-      <div className="bg-card overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2">
-          <span className="text-muted-foreground w-12 shrink-0 text-sm">
-            {t('inbox.composer.to')}
-          </span>
-          <Input
-            value={toText}
-            onChange={(event) => setToText(event.currentTarget.value)}
-            placeholder={t('inbox.composer.toPlaceholder')}
-            className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-            data-testid="inbox-composer-to"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={() => setShowCc((value) => !value)}
-          >
-            {t('inbox.composer.cc')}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={() => setShowBcc((value) => !value)}
-          >
-            {t('inbox.composer.bcc')}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleCloseComposer}
-            aria-label={t('inbox.composer.close')}
-          >
-            <X className="size-3.5" aria-hidden="true" />
-          </Button>
-        </div>
-        {showCc ? (
+        <div className="bg-card overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-2">
             <span className="text-muted-foreground w-12 shrink-0 text-sm">
-              {t('inbox.composer.cc')}
+              {t('inbox.composer.to')}
             </span>
             <Input
-              value={ccText}
-              onChange={(event) => setCcText(event.currentTarget.value)}
-              placeholder={t('inbox.composer.ccPlaceholder')}
+              value={toText}
+              onChange={(event) => setToText(event.currentTarget.value)}
+              placeholder={t('inbox.composer.toPlaceholder')}
               className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-              data-testid="inbox-composer-cc"
+              data-testid="inbox-composer-to"
             />
-          </div>
-        ) : null}
-        {showBcc ? (
-          <div className="flex items-center gap-2 px-3 py-2">
-            <span className="text-muted-foreground w-12 shrink-0 text-sm">
-              {t('inbox.composer.bcc')}
-            </span>
-            <Input
-              value={bccText}
-              onChange={(event) => setBccText(event.currentTarget.value)}
-              placeholder={t('inbox.composer.bccPlaceholder')}
-              className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-            />
-          </div>
-        ) : null}
-        <div className="flex items-center gap-2 px-3 py-2">
-          <span className="text-muted-foreground w-12 shrink-0 text-sm">
-            {t('inbox.composer.subject')}
-          </span>
-          <Input
-            value={subjectText}
-            onChange={(event) => setSubjectText(event.currentTarget.value)}
-            placeholder={t('inbox.composer.subjectPlaceholder')}
-            className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-            data-testid="inbox-composer-subject"
-          />
-        </div>
-        <div className="flex items-center gap-1 px-3 py-2">
-          <ComposerToolbarButton
-            label={t('inbox.composer.bold')}
-            onClick={() => wrapSelection('**')}
-          >
-            <Bold className="size-3.5" aria-hidden="true" />
-          </ComposerToolbarButton>
-          <ComposerToolbarButton
-            label={t('inbox.composer.italic')}
-            onClick={() => wrapSelection('_')}
-          >
-            <Italic className="size-3.5" aria-hidden="true" />
-          </ComposerToolbarButton>
-          <ComposerToolbarButton
-            label={t('inbox.composer.link')}
-            onClick={() => wrapSelection('[', '](https://)')}
-          >
-            <Link className="size-3.5" aria-hidden="true" />
-          </ComposerToolbarButton>
-          <ComposerToolbarButton
-            label={t('inbox.composer.list')}
-            onClick={() => insertLinePrefix('- ')}
-          >
-            <List className="size-3.5" aria-hidden="true" />
-          </ComposerToolbarButton>
-        </div>
-        <Textarea
-          ref={bodyTextareaRef}
-          value={bodyText}
-          onChange={(event) => setBodyText(event.currentTarget.value)}
-          placeholder={t('inbox.composer.bodyPlaceholder')}
-          className="bg-card min-h-36 resize-y rounded-none border-0 p-3 shadow-none focus-visible:ring-0"
-          data-testid="inbox-composer-body"
-        />
-        <div className="bg-card flex flex-col gap-2 px-3 py-2">
-          {hasGenerated ? (
-            <div
-              className="flex flex-wrap items-center gap-1.5"
-              data-testid="inbox-composer-refine-chips"
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => setShowCc((value) => !value)}
             >
-              <span className="text-muted-foreground text-xs font-medium">
-                {t('inbox.composer.refineHeading')}:
+              {t('inbox.composer.cc')}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => setShowBcc((value) => !value)}
+            >
+              {t('inbox.composer.bcc')}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={handleCloseComposer}
+              aria-label={t('inbox.composer.close')}
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </Button>
+          </div>
+          {showCc ? (
+            <div className="flex items-center gap-2 px-3 py-2">
+              <span className="text-muted-foreground w-12 shrink-0 text-sm">
+                {t('inbox.composer.cc')}
               </span>
-              {(
-                [
-                  { id: 'shorter', key: 'inbox.composer.refineShorter' },
-                  { id: 'formal', key: 'inbox.composer.refineFormal' },
-                  { id: 'casual', key: 'inbox.composer.refineCasual' },
-                  { id: 'detailed', key: 'inbox.composer.refineDetailed' },
-                ] as const
-              ).map((chip) => {
-                const chipLabel = t(chip.key);
-                return (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    className="border-border bg-muted/30 hover:bg-muted text-foreground rounded-full border px-2.5 py-0.5 text-xs transition-colors"
-                    onClick={() => setUserHint(chipLabel)}
-                    data-testid={`inbox-composer-refine-${chip.id}`}
-                  >
-                    {chipLabel}
-                  </button>
-                );
-              })}
+              <Input
+                value={ccText}
+                onChange={(event) => setCcText(event.currentTarget.value)}
+                placeholder={t('inbox.composer.ccPlaceholder')}
+                className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                data-testid="inbox-composer-cc"
+              />
             </div>
           ) : null}
-          <Input
-            value={userHint}
-            onChange={(event) => setUserHint(event.currentTarget.value)}
-            placeholder={t(
-              hasGenerated
-                ? 'inbox.composer.hintRefinePlaceholder'
-                : 'inbox.composer.hintInitialPlaceholder',
-            )}
-            className="bg-muted/20 h-8 border-0 px-2 text-sm shadow-none focus-visible:ring-1"
-            data-testid="inbox-composer-hint"
-          />
-        </div>
-        <div className="bg-card flex flex-wrap items-center gap-2 px-3 py-2">
-          <Button
-            type="submit"
-            size="sm"
-            disabled={previewDisabled}
-            title={attachmentBlocked ? t('inbox.composer.attachmentNotice') : undefined}
-          >
-            {assistantBusy ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Send className="size-4" aria-hidden="true" />
-            )}
-            {t('inbox.composer.sendPreview')}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void handleGenerateBody()}
-            disabled={assistantGenerating}
-            data-testid="inbox-composer-generate"
-          >
-            {assistantGenerating ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Sparkles className="size-4" aria-hidden="true" />
-            )}
-            {assistantGenerating
-              ? t('inbox.composer.generateBodyLoading')
-              : hasGenerated
-                ? t('inbox.composer.generateBodyAgain')
-                : t('inbox.composer.generateBody')}
-          </Button>
-          <div
-            className="bg-muted/30 inline-flex h-8 items-center overflow-hidden rounded-md p-0.5"
-            aria-label={t('inbox.composer.generateLanguageLabel')}
-          >
-            {(['vi', 'en'] as const).map((language) => (
-              <button
-                key={language}
-                type="button"
-                className={cn(
-                  'h-7 rounded-sm px-2 text-xs font-medium transition-colors',
-                  generationLanguage === language
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-                onClick={() => setGenerationLanguage(language)}
-                aria-pressed={generationLanguage === language}
-              >
-                {t(
-                  language === 'vi'
-                    ? 'inbox.composer.generateLanguageVi'
-                    : 'inbox.composer.generateLanguageEn',
-                )}
-              </button>
-            ))}
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            title={attachments.map((file) => file.name).join('\n') || undefined}
-            data-testid="inbox-composer-attach"
-          >
-            <Paperclip className="size-4" aria-hidden="true" />
-            {t('inbox.composer.attach')}
-            {attachments.length > 0 ? (
-              <span className="bg-primary text-primary-foreground inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] leading-none font-semibold">
-                {attachments.length}
+          {showBcc ? (
+            <div className="flex items-center gap-2 px-3 py-2">
+              <span className="text-muted-foreground w-12 shrink-0 text-sm">
+                {t('inbox.composer.bcc')}
               </span>
-            ) : null}
-          </Button>
-          {attachments.length > 0 ? (
-            <div
-              className="flex max-w-full min-w-0 flex-wrap items-center gap-1"
-              data-testid="inbox-attachment-list"
+              <Input
+                value={bccText}
+                onChange={(event) => setBccText(event.currentTarget.value)}
+                placeholder={t('inbox.composer.bccPlaceholder')}
+                className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+              />
+            </div>
+          ) : null}
+          <div className="flex items-center gap-2 px-3 py-2">
+            <span className="text-muted-foreground w-12 shrink-0 text-sm">
+              {t('inbox.composer.subject')}
+            </span>
+            <Input
+              value={subjectText}
+              onChange={(event) => setSubjectText(event.currentTarget.value)}
+              placeholder={t('inbox.composer.subjectPlaceholder')}
+              className="h-7 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+              data-testid="inbox-composer-subject"
+            />
+          </div>
+          <div className="flex items-center gap-1 px-3 py-2">
+            <ComposerToolbarButton
+              label={t('inbox.composer.bold')}
+              onClick={() => wrapSelection('**')}
             >
-              {attachments.map((file, index) => (
-                <span
-                  key={`${file.name}-${index}`}
-                  className="bg-muted/50 inline-flex max-w-40 items-center gap-1 rounded-md px-2 py-1 text-xs"
-                >
-                  <span className="truncate">{file.name}</span>
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-foreground"
-                    onClick={() => removeAttachment(index)}
-                    aria-label={t('inbox.composer.removeAttachment', { name: file.name })}
-                  >
-                    <X className="size-3" aria-hidden="true" />
-                  </button>
+              <Bold className="size-3.5" aria-hidden="true" />
+            </ComposerToolbarButton>
+            <ComposerToolbarButton
+              label={t('inbox.composer.italic')}
+              onClick={() => wrapSelection('_')}
+            >
+              <Italic className="size-3.5" aria-hidden="true" />
+            </ComposerToolbarButton>
+            <ComposerToolbarButton
+              label={t('inbox.composer.link')}
+              onClick={() => wrapSelection('[', '](https://)')}
+            >
+              <Link className="size-3.5" aria-hidden="true" />
+            </ComposerToolbarButton>
+            <ComposerToolbarButton
+              label={t('inbox.composer.list')}
+              onClick={() => insertLinePrefix('- ')}
+            >
+              <List className="size-3.5" aria-hidden="true" />
+            </ComposerToolbarButton>
+          </div>
+          <Textarea
+            ref={bodyTextareaRef}
+            value={bodyText}
+            onChange={(event) => setBodyText(event.currentTarget.value)}
+            placeholder={t('inbox.composer.bodyPlaceholder')}
+            className="bg-card min-h-36 resize-y rounded-none border-0 p-3 shadow-none focus-visible:ring-0"
+            data-testid="inbox-composer-body"
+          />
+          <div className="bg-card flex flex-col gap-2 px-3 py-2">
+            {hasGenerated ? (
+              <div
+                className="flex flex-wrap items-center gap-1.5"
+                data-testid="inbox-composer-refine-chips"
+              >
+                <span className="text-muted-foreground text-xs font-medium">
+                  {t('inbox.composer.refineHeading')}:
                 </span>
+                {(
+                  [
+                    { id: 'shorter', key: 'inbox.composer.refineShorter' },
+                    { id: 'formal', key: 'inbox.composer.refineFormal' },
+                    { id: 'casual', key: 'inbox.composer.refineCasual' },
+                    { id: 'detailed', key: 'inbox.composer.refineDetailed' },
+                  ] as const
+                ).map((chip) => {
+                  const chipLabel = t(chip.key);
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      className="border-border bg-muted/30 hover:bg-muted text-foreground rounded-full border px-2.5 py-0.5 text-xs transition-colors"
+                      onClick={() => setUserHint(chipLabel)}
+                      data-testid={`inbox-composer-refine-${chip.id}`}
+                    >
+                      {chipLabel}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            <Input
+              value={userHint}
+              onChange={(event) => setUserHint(event.currentTarget.value)}
+              placeholder={t(
+                hasGenerated
+                  ? 'inbox.composer.hintRefinePlaceholder'
+                  : 'inbox.composer.hintInitialPlaceholder',
+              )}
+              className="bg-muted/20 h-8 border-0 px-2 text-sm shadow-none focus-visible:ring-1"
+              data-testid="inbox-composer-hint"
+            />
+          </div>
+          <div className="bg-card flex flex-wrap items-center gap-2 px-3 py-2">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={previewDisabled}
+              title={attachmentBlocked ? t('inbox.composer.attachmentNotice') : undefined}
+            >
+              {assistantBusy ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Send className="size-4" aria-hidden="true" />
+              )}
+              {t('inbox.composer.sendPreview')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleGenerateBody()}
+              disabled={assistantGenerating}
+              data-testid="inbox-composer-generate"
+            >
+              {assistantGenerating ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="size-4" aria-hidden="true" />
+              )}
+              {assistantGenerating
+                ? t('inbox.composer.generateBodyLoading')
+                : hasGenerated
+                  ? t('inbox.composer.generateBodyAgain')
+                  : t('inbox.composer.generateBody')}
+            </Button>
+            <div
+              className="bg-muted/30 inline-flex h-8 items-center overflow-hidden rounded-md p-0.5"
+              aria-label={t('inbox.composer.generateLanguageLabel')}
+            >
+              {(['vi', 'en'] as const).map((language) => (
+                <button
+                  key={language}
+                  type="button"
+                  className={cn(
+                    'h-7 rounded-sm px-2 text-xs font-medium transition-colors',
+                    generationLanguage === language
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                  onClick={() => setGenerationLanguage(language)}
+                  aria-pressed={generationLanguage === language}
+                >
+                  {t(
+                    language === 'vi'
+                      ? 'inbox.composer.generateLanguageVi'
+                      : 'inbox.composer.generateLanguageEn',
+                  )}
+                </button>
               ))}
             </div>
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t('inbox.composer.more')}
-                />
-              }
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              title={attachments.map((file) => file.name).join('\n') || undefined}
+              data-testid="inbox-composer-attach"
             >
-              <MoreHorizontal className="size-4" aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem
-                onClick={() => void copyBodyToClipboard()}
-                disabled={!bodyText.trim()}
+              <Paperclip className="size-4" aria-hidden="true" />
+              {t('inbox.composer.attach')}
+              {attachments.length > 0 ? (
+                <span className="bg-primary text-primary-foreground inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] leading-none font-semibold">
+                  {attachments.length}
+                </span>
+              ) : null}
+            </Button>
+            {attachments.length > 0 ? (
+              <div
+                className="flex max-w-full min-w-0 flex-wrap items-center gap-1"
+                data-testid="inbox-attachment-list"
               >
-                <Clipboard className="size-4" aria-hidden="true" />
-                {t('inbox.composer.copyBody')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={clearBody} disabled={!bodyText.trim()}>
-                <X className="size-4" aria-hidden="true" />
-                {t('inbox.composer.clearBody')}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setAttachments([])}
-                disabled={attachments.length === 0}
+                {attachments.map((file, index) => (
+                  <span
+                    key={`${file.name}-${index}`}
+                    className="bg-muted/50 inline-flex max-w-40 items-center gap-1 rounded-md px-2 py-1 text-xs"
+                  >
+                    <span className="truncate">{file.name}</span>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => removeAttachment(index)}
+                      aria-label={t('inbox.composer.removeAttachment', { name: file.name })}
+                    >
+                      <X className="size-3" aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t('inbox.composer.more')}
+                  />
+                }
               >
-                <Paperclip className="size-4" aria-hidden="true" />
-                {t('inbox.composer.clearAttachments')}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>
-                <List className="size-4" aria-hidden="true" />
-                {t('inbox.composer.saveTemplate')}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={onCancel}>
-                <Trash2 className="size-4" aria-hidden="true" />
-                {t('inbox.composer.discard')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            multiple
-            aria-label={t('inbox.composer.attach')}
-            onChange={handleAttachmentChange}
-            data-testid="inbox-composer-file-input"
-          />
+                <MoreHorizontal className="size-4" aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => void copyBodyToClipboard()}
+                  disabled={!bodyText.trim()}
+                >
+                  <Clipboard className="size-4" aria-hidden="true" />
+                  {t('inbox.composer.copyBody')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={clearBody} disabled={!bodyText.trim()}>
+                  <X className="size-4" aria-hidden="true" />
+                  {t('inbox.composer.clearBody')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setAttachments([])}
+                  disabled={attachments.length === 0}
+                >
+                  <Paperclip className="size-4" aria-hidden="true" />
+                  {t('inbox.composer.clearAttachments')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled>
+                  <List className="size-4" aria-hidden="true" />
+                  {t('inbox.composer.saveTemplate')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={onCancel}>
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {t('inbox.composer.discard')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              aria-label={t('inbox.composer.attach')}
+              onChange={handleAttachmentChange}
+              data-testid="inbox-composer-file-input"
+            />
+          </div>
         </div>
-      </div>
       )}
 
       {generationFailed ? (
@@ -2012,6 +1998,76 @@ function formatInboxListDate(value: string, locale: string): string {
     month: 'short',
     ...(sameYear ? {} : { year: 'numeric' }),
   }).format(receivedDate);
+}
+
+function InboxSenderAvatar({
+  from,
+  size,
+  unread,
+}: {
+  from: string;
+  size: 'sm' | 'md';
+  unread: boolean;
+}) {
+  const email = useMemo(() => extractEmailAddress(from), [from]);
+  const rootDomain = useMemo(() => {
+    const atIndex = email.lastIndexOf('@');
+    if (atIndex < 0) return null;
+    const domain = email
+      .slice(atIndex + 1)
+      .trim()
+      .toLowerCase();
+    if (!domain) return null;
+    const parts = domain.split('.');
+    if (parts.length <= 2) return domain;
+    return parts.slice(-2).join('.');
+  }, [email]);
+  const [iconFailed, setIconFailed] = useState(false);
+  // Reset the favicon-failed flag when the sender changes by adjusting state during
+  // render (React-recommended pattern) instead of an effect — the detail-header avatar
+  // does not unmount when switching messages, so a stale iconFailed would otherwise stick.
+  const [trackedRootDomain, setTrackedRootDomain] = useState(rootDomain);
+  if (trackedRootDomain !== rootDomain) {
+    setTrackedRootDomain(rootDomain);
+    setIconFailed(false);
+  }
+  const faviconUrl = rootDomain
+    ? `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(
+        `https://${rootDomain}`,
+      )}&size=64`
+    : null;
+  const displayName = inboxSenderDisplayName(from);
+  const initial = (displayName || email || '?').trim().charAt(0).toUpperCase() || '?';
+  const sizeClass = size === 'md' ? 'size-9 text-sm' : 'size-8 text-xs';
+  const showFavicon = Boolean(faviconUrl) && !iconFailed;
+  return (
+    <div
+      className={cn(
+        'mt-0.5 flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold',
+        sizeClass,
+        showFavicon
+          ? 'border-border bg-muted border'
+          : unread
+            ? 'bg-primary/10 text-primary'
+            : 'bg-muted text-muted-foreground',
+      )}
+      aria-hidden="true"
+    >
+      {showFavicon ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Inbox Zero-style sender favicon via Google faviconV2; not worth a next/image domain entry.
+        <img
+          src={faviconUrl!}
+          alt=""
+          className="size-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setIconFailed(true)}
+        />
+      ) : (
+        initial
+      )}
+    </div>
+  );
 }
 
 function inboxSenderDisplayName(value: string): string {
