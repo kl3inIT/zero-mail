@@ -197,6 +197,7 @@ class RulePreviewDataServiceTest {
                 "thread-1",
                 "billing@stripe.com",
                 "stripe.com",
+                "Stripe Billing",
                 List.of("founder@example.test"),
                 List.<String>of(),
                 "Receipt from Stripe",
