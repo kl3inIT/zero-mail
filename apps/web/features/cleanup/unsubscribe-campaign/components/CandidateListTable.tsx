@@ -52,6 +52,7 @@ export type CandidateRow = UnsubscribeCandidateResponse & {
 };
 
 const LOW_READ_THRESHOLD = 30;
+const HIGH_READ_THRESHOLD = 70;
 
 export function CandidateListTable({
   candidates,
@@ -140,7 +141,7 @@ export function CandidateListTable({
             const isChecked = selectedEmails.has(senderEmail);
             const isPending = pendingSenderEmails?.has(senderEmail) ?? false;
             const readPercentage = readRate(candidate);
-            const isLowReadRate = readPercentage < LOW_READ_THRESHOLD;
+            const readRateStyle = readRateBarClasses(readPercentage);
             const approved = candidate.status === 'APPROVED';
             const unsubscribed = candidate.status === 'UNSUBSCRIBED';
             const autoArchived = candidate.status === 'AUTO_ARCHIVED';
@@ -185,26 +186,13 @@ export function CandidateListTable({
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   <div className="flex items-center gap-2">
-                    <div
-                      className={cn(
-                        'h-1.5 w-16 overflow-hidden rounded-full',
-                        isLowReadRate ? 'bg-amber-100 dark:bg-amber-950' : 'bg-muted',
-                      )}
-                    >
+                    <div className="bg-muted h-1.5 w-16 overflow-hidden rounded-full">
                       <div
-                        className={cn(
-                          'h-full rounded-full',
-                          isLowReadRate ? 'bg-amber-400' : 'bg-slate-300 dark:bg-slate-500',
-                        )}
+                        className={cn('h-full rounded-full', readRateStyle.fill)}
                         style={{ width: `${readPercentage}%` }}
                       />
                     </div>
-                    <span
-                      className={cn(
-                        'text-sm font-medium tabular-nums',
-                        isLowReadRate ? 'text-amber-600 dark:text-amber-400' : 'text-foreground/80',
-                      )}
-                    >
+                    <span className={cn('text-sm font-medium tabular-nums', readRateStyle.text)}>
                       {Math.round(readPercentage)}%
                     </span>
                   </div>
@@ -453,6 +441,18 @@ function readRate(candidate: CandidateRow): number {
   const messageCount = candidate.messageCount ?? 0;
   if (messageCount <= 0) return 0;
   return ((candidate.readMessageCount ?? 0) / messageCount) * 100;
+}
+
+// Read-rate traffic light (design tokens only): <30% warning (rarely read → unsubscribe
+// candidate), 30–70% primary (mid), ≥70% chart-4 green (highly read → engaged sender).
+function readRateBarClasses(percentage: number): { fill: string; text: string } {
+  if (percentage < LOW_READ_THRESHOLD) {
+    return { fill: 'bg-warning', text: 'text-warning' };
+  }
+  if (percentage < HIGH_READ_THRESHOLD) {
+    return { fill: 'bg-primary', text: 'text-foreground/80' };
+  }
+  return { fill: 'bg-(--chart-4)', text: 'text-foreground/80' };
 }
 
 function primaryActionLabel(
