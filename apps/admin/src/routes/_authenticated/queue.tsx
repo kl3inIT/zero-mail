@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { AutoRefreshIndicator } from '@/components/AutoRefreshIndicator';
 import { ConfirmTwiceDialog } from '@/components/ConfirmTwiceDialog';
+import { KpiCard } from '@/components/KpiCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,21 +50,39 @@ export const Route = createFileRoute('/_authenticated/queue')({
 const SMALL_SAMPLE_THRESHOLD = 10;
 const STUCK_AFTER_MS = 5 * 60 * 1000;
 
+const STATUS_LABELS: Record<string, string> = {
+  SCHEDULED: 'Hẹn giờ',
+  PENDING: 'Đang chờ',
+  PROCESSING: 'Đang xử lý',
+  COMPLETED: 'Hoàn tất',
+  FAILED: 'Thất bại',
+  DEAD_LETTER: 'Hỏng (dead-letter)',
+  CANCELLED: 'Đã hủy',
+};
+
+function statusLabel(status: string): string {
+  return STATUS_LABELS[status] ?? status;
+}
+
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'Mọi trạng thái' },
-  { value: 'SCHEDULED', label: 'Hẹn giờ' },
-  { value: 'PENDING', label: 'PENDING' },
-  { value: 'PROCESSING', label: 'PROCESSING' },
-  { value: 'COMPLETED', label: 'COMPLETED' },
-  { value: 'FAILED', label: 'FAILED' },
-  { value: 'DEAD_LETTER', label: 'DEAD_LETTER' },
-  { value: 'CANCELLED', label: 'CANCELLED' },
+  ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })),
 ];
+
+const JOB_TYPE_LABELS: Record<string, string> = {
+  UNSUBSCRIBE_CAMPAIGN: 'Hủy đăng ký hàng loạt',
+  CATALOG_SYNC: 'Đồng bộ danh mục',
+  INBOX_PROJECTION_BACKFILL: 'Dựng lại hộp thư',
+};
+
+function jobTypeLabel(jobType: string): string {
+  return JOB_TYPE_LABELS[jobType] ?? jobType;
+}
 
 const TYPE_OPTIONS = [
   { value: 'ALL', label: 'Mọi loại' },
-  { value: 'UNSUBSCRIBE_CAMPAIGN', label: 'UNSUBSCRIBE_CAMPAIGN' },
-  { value: 'CATALOG_SYNC', label: 'CATALOG_SYNC' },
+  { value: 'UNSUBSCRIBE_CAMPAIGN', label: jobTypeLabel('UNSUBSCRIBE_CAMPAIGN') },
+  { value: 'CATALOG_SYNC', label: jobTypeLabel('CATALOG_SYNC') },
 ];
 
 type PendingAction = {
@@ -110,7 +129,7 @@ function QueueRoute() {
   return (
     <div className="space-y-6">
       <header className="flex items-center justify-between gap-4">
-        <h1 className="text-lg font-semibold text-ink">Hàng đợi &amp; Bộ định thời</h1>
+        <h1 className="text-lg font-semibold text-ink">Hàng đợi &amp; Tác vụ định kỳ</h1>
         <AutoRefreshIndicator
           lastUpdatedAt={lastUpdatedAt}
           intervalMs={QUEUE_REFRESH_INTERVAL_MS}
@@ -119,22 +138,20 @@ function QueueRoute() {
         />
       </header>
 
-      <CounterStrip
-        queueHealth={queueHealth.data}
-        loading={queueHealth.isLoading}
-        schedulerCount={schedulers.data?.length ?? null}
-      />
+      <CounterStrip queueHealth={queueHealth.data} loading={queueHealth.isLoading} />
 
       <Tabs value={tab} onValueChange={(value) => setTab(String(value))}>
         <TabsList>
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
           <TabsTrigger value="jobs">Hàng đợi job</TabsTrigger>
-          <TabsTrigger value="schedulers">Bộ định thời</TabsTrigger>
+          <TabsTrigger value="schedulers">
+            Tác vụ định kỳ
+            {schedulers.data ? (
+              <span className="text-muted-foreground ml-1.5 tabular-nums">
+                {schedulers.data.length}
+              </span>
+            ) : null}
+          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview" className="pt-2">
-          <OverviewTab queueHealth={queueHealth.data} loading={queueHealth.isLoading} />
-        </TabsContent>
 
         <TabsContent value="jobs" className="space-y-4 pt-2">
           {stuckRows.length > 0 && (
@@ -178,7 +195,6 @@ function QueueRoute() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Công việc</TableHead>
-                  <TableHead>Nguồn</TableHead>
                   <TableHead>Loại</TableHead>
                   <TableHead>Trạng thái</TableHead>
                   <TableHead className="text-right">Thử</TableHead>
@@ -189,14 +205,14 @@ function QueueRoute() {
               <TableBody>
                 {jobs.isLoading && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
+                    <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
                       Đang tải công việc.
                     </TableCell>
                   </TableRow>
                 )}
                 {!jobs.isLoading && rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
+                    <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
                       Không có công việc khớp bộ lọc.
                     </TableCell>
                   </TableRow>
@@ -226,9 +242,6 @@ function QueueRoute() {
               </Button>
             </div>
           </div>
-          <p className="text-muted-foreground text-[11px]">
-            🔒 Không bao giờ hiển thị payload công việc. Bấm “Xem” chỉ xem metadata.
-          </p>
         </TabsContent>
 
         <TabsContent value="schedulers" className="pt-2">
@@ -257,122 +270,44 @@ function QueueRoute() {
 function CounterStrip({
   queueHealth,
   loading,
-  schedulerCount,
 }: {
   queueHealth: QueueHealth | undefined;
   loading: boolean;
-  schedulerCount: number | null;
 }) {
   if (loading || !queueHealth) {
-    return <Skeleton className="h-[68px] w-full rounded-lg" />;
+    return (
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Skeleton key={index} className="h-[76px] w-full rounded-xl" />
+        ))}
+      </section>
+    );
   }
   const totalPending = queueHealth.depthByType.reduce((sum, row) => sum + row.pendingCount, 0);
   const totalProcessing = queueHealth.depthByType.reduce((sum, row) => sum + row.processingCount, 0);
-  return (
-    <div className="flex flex-wrap items-stretch divide-x divide-border overflow-hidden rounded-lg border border-border bg-card">
-      <Counter label="Đang chờ" value={totalPending.toLocaleString()} />
-      <Counter label="Đang xử lý" value={totalProcessing.toLocaleString()} />
-      <FailureCounter queueHealth={queueHealth} />
-      <Counter label="Dead-letter" value={queueHealth.deadLetterCount.toLocaleString()} />
-      <Counter label="Admin đưa lại 24h" value={queueHealth.adminRequeuedLast24h.toLocaleString()} />
-      <Counter label="Bộ định thời" value={schedulerCount === null ? '—' : String(schedulerCount)} />
-    </div>
-  );
-}
-
-function Counter({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="px-5 py-3">
-      <p className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p>
-      <p className="text-xl font-semibold tabular-nums text-ink">{value}</p>
-    </div>
-  );
-}
-
-function FailureCounter({ queueHealth }: { queueHealth: QueueHealth }) {
   const smallSample = queueHealth.sampleSizeLast24h < SMALL_SAMPLE_THRESHOLD;
+  const sampleText = `${queueHealth.failedCountLast24h}/${queueHealth.sampleSizeLast24h}`;
   return (
-    <div className="px-5 py-3" data-testid="counter-failure-rate">
-      <p className="text-[11px] tracking-wide text-muted-foreground uppercase">Thất bại 24h</p>
-      {smallSample ? (
-        <p className="flex items-baseline gap-1.5 text-xl font-semibold tabular-nums text-muted-foreground">
-          n/a
-          <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-ink-2">
-            {queueHealth.failedCountLast24h}/{queueHealth.sampleSizeLast24h}
-          </span>
-        </p>
-      ) : (
-        <p className="text-xl font-semibold tabular-nums text-ink">
-          {(queueHealth.failureRateLast24h * 100).toFixed(1)}%
-        </p>
-      )}
-    </div>
-  );
-}
-
-function OverviewTab({
-  queueHealth,
-  loading,
-}: {
-  queueHealth: QueueHealth | undefined;
-  loading: boolean;
-}) {
-  if (loading || !queueHealth) {
-    return <Skeleton className="h-40 w-full" />;
-  }
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Chờ lâu nhất" value={formatDuration(queueHealth.oldestUnleasedJobAgeSeconds)} />
-        <Stat label="Tỷ lệ retry" value={formatRetryRate(queueHealth.retryHistogram)} />
-        <Stat
-          label="Mẫu 24h"
-          value={`${queueHealth.failedCountLast24h}/${queueHealth.sampleSizeLast24h}`}
-        />
-      </div>
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        <div className="border-b border-border px-5 py-3">
-          <h2 className="text-sm font-semibold text-ink">Số lượng theo loại công việc</h2>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            Bản ghi PENDING / PROCESSING trong <code>processing_job</code>, nhóm theo loại.
-          </p>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Loại công việc</TableHead>
-              <TableHead className="text-right">Đang chờ</TableHead>
-              <TableHead className="text-right">Đang xử lý</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {queueHealth.depthByType.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="text-muted-foreground h-16 text-center">
-                  Không có công việc đang hoạt động.
-                </TableCell>
-              </TableRow>
-            )}
-            {queueHealth.depthByType.map((row) => (
-              <TableRow key={row.jobType}>
-                <TableCell className="font-mono text-xs">{row.jobType}</TableCell>
-                <TableCell className="text-right tabular-nums">{row.pendingCount}</TableCell>
-                <TableCell className="text-right tabular-nums">{row.processingCount}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card px-4 py-3">
-      <p className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{value}</p>
-    </div>
+    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <KpiCard testId="kpi-pending" label="Đang chờ" value={totalPending.toLocaleString()} />
+      <KpiCard label="Đang xử lý" value={totalProcessing.toLocaleString()} />
+      <KpiCard
+        label="Chờ lâu nhất"
+        value={formatDuration(queueHealth.oldestUnleasedJobAgeSeconds)}
+      />
+      <KpiCard label="Tỷ lệ thử lại" value={formatRetryRate(queueHealth.retryHistogram)} />
+      <KpiCard
+        testId="kpi-failure-rate"
+        label="Thất bại 24h"
+        value={smallSample ? '—' : `${(queueHealth.failureRateLast24h * 100).toFixed(1)}%`}
+        hint={smallSample ? `Chưa đủ mẫu · ${sampleText}` : `${sampleText} trong 24h`}
+      />
+      <KpiCard
+        testId="kpi-dead-letter"
+        label="Hỏng (dead-letter)"
+        value={queueHealth.deadLetterCount.toLocaleString()}
+      />
+    </section>
   );
 }
 
@@ -388,14 +323,16 @@ function JobTableRow({
   const stuck = isStuck(row);
   return (
     <TableRow className={stuck ? 'bg-amber-soft/30' : undefined}>
-      <TableCell className="font-mono text-xs">{shortJobToken(row.jobId)}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-[11px]">{row.source}</TableCell>
-      <TableCell className="font-mono text-xs">{row.jobType}</TableCell>
+      <TableCell className="font-mono text-sm">{shortJobToken(row.jobId)}</TableCell>
+      <TableCell>
+        <div className="text-ink text-sm">{jobTypeLabel(row.jobType)}</div>
+        <div className="text-muted-foreground font-mono text-[11px]">{row.jobType}</div>
+      </TableCell>
       <TableCell>
         <StatusBadge row={row} stuck={stuck} />
       </TableCell>
       <TableCell className="text-right tabular-nums">{row.attempts}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-xs">
+      <TableCell className="text-muted-foreground text-sm">
         {relativeTime(row.updatedAt ?? row.createdAt)}
       </TableCell>
       <TableCell>
@@ -442,7 +379,7 @@ function StatusBadge({ row, stuck }: { row: JobRow; stuck: boolean }) {
   if (row.scheduled) {
     return (
       <Badge variant="secondary" className="bg-violet-soft text-violet">
-        SCHEDULED
+        Hẹn giờ
       </Badge>
     );
   }
@@ -460,7 +397,7 @@ function StatusBadge({ row, stuck }: { row: JobRow; stuck: boolean }) {
         toneByStatus[row.status] ?? 'bg-secondary text-ink-2'
       }`}
     >
-      {row.status}
+      {statusLabel(row.status)}
       {stuck && (
         <span className="rounded-full bg-amber px-1 text-[10px] font-semibold text-white">kẹt</span>
       )}
@@ -472,7 +409,7 @@ function JobDetailDialog({ jobId, onClose }: { jobId: string | null; onClose: ()
   const detail = useJobDetail(jobId);
   return (
     <Dialog open={Boolean(jobId)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
+      <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
           <DialogHeader>
             <DialogTitle className="text-sm">Chi tiết công việc</DialogTitle>
@@ -490,13 +427,20 @@ function JobDetailDialog({ jobId, onClose }: { jobId: string | null; onClose: ()
           </div>
         ) : (
           <>
-            <dl className="divide-y divide-border/60 px-5 text-sm">
+            <dl className="divide-y divide-border/60 px-5 pb-4 text-sm">
               <DetailRow label="ID" value={detail.data.jobId} mono />
               <DetailRow label="Nguồn" value={detail.data.source} mono />
-              <DetailRow label="Loại" value={detail.data.jobType} mono />
+              <DetailRow
+                label="Loại"
+                value={`${jobTypeLabel(detail.data.jobType)} (${detail.data.jobType})`}
+              />
               <DetailRow
                 label="Trạng thái"
-                value={detail.data.scheduled ? `SCHEDULED (${detail.data.status})` : detail.data.status}
+                value={
+                  detail.data.scheduled
+                    ? `Hẹn giờ (${statusLabel(detail.data.status)})`
+                    : statusLabel(detail.data.status)
+                }
               />
               <DetailRow label="Số lần thử" value={String(detail.data.attempts)} />
               <DetailRow label="Tạo lúc" value={formatTimestamp(detail.data.createdAt)} mono />
@@ -507,9 +451,6 @@ function JobDetailDialog({ jobId, onClose }: { jobId: string | null; onClose: ()
               <DetailRow label="Lý do lỗi" value={detail.data.lastFailureReason ?? '—'} mono />
               <DetailRow label="Admin đưa lại" value={String(detail.data.adminRequeueCount)} />
             </dl>
-            <div className="bg-secondary/60 text-muted-foreground rounded-b-lg px-5 py-3 text-[11px]">
-              🔒 Payload công việc không được đọc hay hiển thị (ràng buộc quyền riêng tư).
-            </div>
           </>
         )}
       </DialogContent>
@@ -521,7 +462,7 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
   return (
     <div className="flex justify-between gap-4 py-2.5">
       <dt className="text-muted-foreground shrink-0">{label}</dt>
-      <dd className={mono ? 'truncate font-mono text-xs text-ink' : 'text-ink'}>{value}</dd>
+      <dd className={mono ? 'truncate font-mono text-sm text-ink' : 'text-ink'}>{value}</dd>
     </div>
   );
 }
@@ -605,17 +546,16 @@ function SchedulersTab({
       <div className="flex items-center gap-2 border-b border-border px-5 py-3">
         <GaugeIcon className="size-4 text-muted-foreground" />
         <div>
-          <h2 className="text-sm font-semibold text-ink">Bộ định thời nền</h2>
+          <h2 className="text-sm font-semibold text-ink">Tác vụ định kỳ</h2>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            Mọi cron / vòng lặp nền của hệ thống (API + worker). Chỉ xem; “Chạy ngay” + trạng thái
-            chạy gần nhất sẽ thêm ở pha sau.
+            Mọi cron / vòng lặp nền chạy theo lịch cố định (API + worker). Chỉ xem.
           </p>
         </div>
       </div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Bộ định thời</TableHead>
+            <TableHead>Tác vụ</TableHead>
             <TableHead>Lịch</TableHead>
             <TableHead>Tiến trình</TableHead>
             <TableHead>Nhóm</TableHead>
@@ -626,7 +566,7 @@ function SchedulersTab({
           {loading && (
             <TableRow>
               <TableCell colSpan={5} className="text-muted-foreground h-24 text-center">
-                Đang tải bộ định thời.
+                Đang tải tác vụ định kỳ.
               </TableCell>
             </TableRow>
           )}

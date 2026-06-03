@@ -3,7 +3,6 @@ package com.zeromail.core.admin.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
-import com.zeromail.core.admin.queue.projection.DeadLetterPage;
 import com.zeromail.core.admin.queue.projection.QueueDepthByType;
 import com.zeromail.core.admin.queue.projection.QueueHealthSnapshot;
 import com.zeromail.core.admin.queue.usecases.QueueHealthQueryService;
@@ -101,57 +100,6 @@ class QueueHealthQueryServiceTest extends PostgresContainerTest {
         // (or suppress the percentage entirely when the sample is tiny) instead of a bare ratio.
         assertThat(snapshot.failedCountLast24h()).isEqualTo(5);
         assertThat(snapshot.sampleSizeLast24h()).isEqualTo(100);
-    }
-
-    @Test
-    void dead_letter_page_excludes_payload_field_and_paginates() {
-        for (int rowIndex = 0; rowIndex < 30; rowIndex++) {
-            jdbcTemplate.update(
-                    "INSERT INTO processing_job(job_type, status, attempts, last_failure_reason,"
-                            + " last_failed_at, payload_json)"
-                            + " VALUES (?, 'DEAD_LETTER', ?, ?, NOW() - (? * INTERVAL '1 minute'),"
-                            + " CAST(? AS jsonb))",
-                    "TRIAGE_INCOMING",
-                    rowIndex + 1,
-                    "DOWNSTREAM_TIMEOUT",
-                    rowIndex,
-                    "{\"secret\":\"DO_NOT_LEAK\"}");
-        }
-
-        DeadLetterPage firstPage = queueHealthQueryService.deadLetterPage(null, 10);
-
-        assertThat(firstPage.rows()).hasSize(10);
-        assertThat(firstPage.hasNextPage()).isTrue();
-        assertThat(firstPage.nextCursor()).isEqualTo("10");
-        assertThat(firstPage.totalEstimate()).isEqualTo(30);
-        // Defense-in-depth: projection record has no payloadJson field, so it can't accidentally
-        // serialize one even if we wanted to.
-        assertThat(firstPage.rows().get(0).lastFailureReason()).isEqualTo("DOWNSTREAM_TIMEOUT");
-        assertThat(firstPage.rows().get(0).jobType()).isEqualTo("TRIAGE_INCOMING");
-    }
-
-    @Test
-    void admin_requeued_kpi_counts_recent_admin_interventions() {
-        // 2 rows requeued in the last 24h, 1 row requeued long ago.
-        UUID recentA = seedJob("DRAFT_REPLY", "PENDING", 0, 1).get(0);
-        UUID recentB = seedJob("DRAFT_REPLY", "PENDING", 0, 1).get(0);
-        UUID oldRequeue = seedJob("DRAFT_REPLY", "PENDING", 0, 1).get(0);
-        jdbcTemplate.update(
-                "UPDATE processing_job SET admin_requeue_count = 1, last_requeued_at = NOW()"
-                        + " - INTERVAL '1 hour' WHERE id = ?",
-                recentA);
-        jdbcTemplate.update(
-                "UPDATE processing_job SET admin_requeue_count = 2, last_requeued_at = NOW()"
-                        + " - INTERVAL '3 hours' WHERE id = ?",
-                recentB);
-        jdbcTemplate.update(
-                "UPDATE processing_job SET admin_requeue_count = 1, last_requeued_at = NOW()"
-                        + " - INTERVAL '5 days' WHERE id = ?",
-                oldRequeue);
-
-        QueueHealthSnapshot snapshot = queueHealthQueryService.snapshot();
-
-        assertThat(snapshot.adminRequeuedLast24h()).isEqualTo(2);
     }
 
     private java.util.List<UUID> seedJob(String jobType, String status, int attempts, int count) {

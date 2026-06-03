@@ -1,6 +1,5 @@
 package com.zeromail.core.admin.queue.persistence.lowlevel;
 
-import com.zeromail.core.admin.queue.projection.DeadLetterRow;
 import com.zeromail.core.admin.queue.projection.FailureWindow24h;
 import com.zeromail.core.admin.queue.projection.JobDetail;
 import com.zeromail.core.admin.queue.projection.JobRow;
@@ -145,44 +144,6 @@ public class QueueHealthReadRepository {
                         new MapSqlParameterSource(),
                         Integer.class);
         return count == null ? 0 : count;
-    }
-
-    public int findAdminRequeuedLast24h() {
-        Integer count =
-                namedParameterJdbcTemplate.queryForObject(
-                        """
-                        SELECT COUNT(*)::int
-                        FROM processing_job
-                        WHERE admin_requeue_count > 0
-                          AND last_requeued_at >= NOW() - INTERVAL '24 hours'
-                        """,
-                        new MapSqlParameterSource(),
-                        Integer.class);
-        return count == null ? 0 : count;
-    }
-
-    public List<DeadLetterRow> findDeadLetterPage(int offset, int fetchSize) {
-        MapSqlParameterSource parameters =
-                new MapSqlParameterSource().addValue("limit", fetchSize).addValue("offset", offset);
-        return namedParameterJdbcTemplate.query(
-                """
-                SELECT id, job_type, last_failure_reason, attempts,
-                       admin_requeue_count, last_failed_at, created_at
-                FROM processing_job
-                WHERE status = 'DEAD_LETTER'
-                ORDER BY last_failed_at DESC NULLS LAST, id DESC
-                LIMIT :limit OFFSET :offset
-                """,
-                parameters,
-                (resultSet, _) ->
-                        new DeadLetterRow(
-                                (UUID) resultSet.getObject("id"),
-                                resultSet.getString("job_type"),
-                                resultSet.getString("last_failure_reason"),
-                                resultSet.getInt("attempts"),
-                                resultSet.getInt("admin_requeue_count"),
-                                toInstant(resultSet.getTimestamp("last_failed_at")),
-                                toInstant(resultSet.getTimestamp("created_at"))));
     }
 
     /**

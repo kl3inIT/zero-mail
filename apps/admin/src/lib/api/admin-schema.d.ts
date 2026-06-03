@@ -916,22 +916,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/queue/dead-letters": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["deadLetters"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/admin/me": {
         parameters: {
             query?: never;
@@ -1584,8 +1568,6 @@ export interface components {
             sampleSizeLast24h: number;
             /** Format: int32 */
             deadLetterCount: number;
-            /** Format: int32 */
-            adminRequeuedLast24h: number;
             /** Format: date-time */
             snapshotAt: string;
         };
@@ -1594,27 +1576,6 @@ export interface components {
             attemptsBucket: number;
             /** Format: int32 */
             rowCount: number;
-        };
-        DeadLetterPageResponse: {
-            rows: components["schemas"]["DeadLetterRowResponse"][];
-            nextCursor?: string;
-            /** Format: int32 */
-            totalEstimate: number;
-            hasNextPage: boolean;
-        };
-        DeadLetterRowResponse: {
-            /** Format: uuid */
-            jobId: string;
-            jobType: string;
-            lastFailureReason?: string;
-            /** Format: int32 */
-            retryCount: number;
-            /** Format: int32 */
-            adminRequeueCount: number;
-            /** Format: date-time */
-            lastFailedAt?: string;
-            /** Format: date-time */
-            createdAt: string;
         };
         /** @description Authenticated admin's identity, returned by GET /api/admin/me. */
         AdminMeResponse: {
@@ -6620,83 +6581,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["QueueHealthResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    deadLetters: {
-        parameters: {
-            query?: {
-                cursor?: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["DeadLetterPageResponse"];
                 };
             };
             /** @description Bad Request */

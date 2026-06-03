@@ -1,6 +1,5 @@
 package com.zeromail.api.controllers.admin;
 
-import com.zeromail.api.dto.admin.queue.DeadLetterPageResponse;
 import com.zeromail.api.dto.admin.queue.JobDetailResponse;
 import com.zeromail.api.dto.admin.queue.JobPageResponse;
 import com.zeromail.api.dto.admin.queue.QueueHealthResponse;
@@ -93,14 +92,6 @@ public class AdminQueueController {
         AdminContext.currentOrThrow();
         queueJobActionService.cancel(
                 jobId, request.reason(), httpServletRequest.getRemoteAddr(), UUID.randomUUID());
-    }
-
-    @GetMapping("/dead-letters")
-    public DeadLetterPageResponse deadLetters(
-            @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "25") int limit) {
-        AdminContext.currentOrThrow();
-        return DeadLetterPageResponse.from(queueHealthQueryService.deadLetterPage(cursor, limit));
     }
 
     @PostMapping("/dead-letters/{jobId}/requeue")

@@ -4,8 +4,6 @@ import type { components } from '@/lib/api/admin-schema';
 export type QueueHealth = components['schemas']['QueueHealthResponse'];
 export type QueueDepthByType = NonNullable<QueueHealth['depthByType']>[number];
 export type RetryDistributionBucket = NonNullable<QueueHealth['retryHistogram']>[number];
-export type DeadLetterRow = components['schemas']['DeadLetterRowResponse'];
-export type DeadLetterPage = components['schemas']['DeadLetterPageResponse'];
 export type JobRow = components['schemas']['JobRowResponse'];
 export type JobPage = components['schemas']['JobPageResponse'];
 export type JobDetail = components['schemas']['JobDetailResponse'];
@@ -33,24 +31,6 @@ export async function fetchQueueHealth(): Promise<QueueHealth> {
   const { data, error } = await api.GET('/api/admin/queue/health');
   if (error || !data) {
     throw new Error('Không thể tải tình trạng hàng đợi.');
-  }
-  return data;
-}
-
-export async function fetchDeadLetters(
-  cursor: string | null,
-  limit = 25,
-): Promise<DeadLetterPage> {
-  const { data, error } = await api.GET('/api/admin/queue/dead-letters', {
-    params: {
-      query: {
-        cursor: cursor ?? undefined,
-        limit,
-      },
-    },
-  });
-  if (error || !data) {
-    throw new Error('Không thể tải danh sách dead-letter.');
   }
   return data;
 }

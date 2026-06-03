@@ -43,7 +43,7 @@ export function AutoRefreshIndicator({
       />
       <span
         aria-live="polite"
-        className="text-muted-foreground font-mono tabular-nums"
+        className="text-muted-foreground tabular-nums"
       >
         {lastUpdatedAt
           ? paused

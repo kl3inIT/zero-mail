@@ -16,7 +16,6 @@ import java.util.List;
             "failedCountLast24h",
             "sampleSizeLast24h",
             "deadLetterCount",
-            "adminRequeuedLast24h",
             "snapshotAt"
         })
 public record QueueHealthResponse(
@@ -37,7 +36,6 @@ public record QueueHealthResponse(
                                         + " percentage — 1/1 = 100% alarms without informing.")
                 int sampleSizeLast24h,
         int deadLetterCount,
-        int adminRequeuedLast24h,
         Instant snapshotAt) {
 
     public QueueHealthResponse {
@@ -56,7 +54,6 @@ public record QueueHealthResponse(
                 snapshot.failedCountLast24h(),
                 snapshot.sampleSizeLast24h(),
                 snapshot.deadLetterCount(),
-                snapshot.adminRequeuedLast24h(),
                 snapshot.snapshotAt());
     }
 
