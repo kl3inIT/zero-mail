@@ -3,7 +3,7 @@ package com.zeromail.core.admin.queue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.admin.queue.persistence.lowlevel.QueueHealthReadRepository;
-import com.zeromail.core.admin.queue.projection.DeadLetterPage;
+import com.zeromail.core.admin.queue.projection.JobPage;
 import com.zeromail.core.admin.queue.projection.QueueHealthSnapshot;
 import com.zeromail.core.admin.queue.usecases.QueueHealthQueryService;
 import com.zeromail.core.support.PostgresContainerTest;
@@ -26,8 +26,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DelegatingDataSource;
 
 /**
- * R-8E-H4 gate: spy on every SQL string emitted during {@link QueueHealthQueryService#snapshot()}
- * and {@link QueueHealthQueryService#deadLetterPage(String, int)} and assert NONE references {@code
+ * R-8E-H4 gate: spy on every SQL string emitted during {@link QueueHealthQueryService#snapshot()},
+ * {@link QueueHealthQueryService#jobsPage(String, String, String, int)}, and {@link
+ * QueueHealthQueryService#jobDetail(java.util.UUID)} and assert NONE references {@code
  * payload_json} or {@code payloadJson}.
  *
  * <p>This is the runtime contract test that complements the static grep gate and the {@link
@@ -48,7 +49,7 @@ class QueueHealthQueryServiceSqlSpyTest extends PostgresContainerTest {
     }
 
     @Test
-    void snapshot_and_dead_letter_page_never_select_payload_json() {
+    void snapshot_jobs_and_detail_never_select_payload_json() {
         List<String> capturedSql = Collections.synchronizedList(new ArrayList<>());
         DataSource spyingDataSource = new SqlCapturingDataSource(dataSource, capturedSql);
         QueueHealthReadRepository queueHealthReadRepository =
@@ -57,10 +58,16 @@ class QueueHealthQueryServiceSqlSpyTest extends PostgresContainerTest {
                 new QueueHealthQueryService(queueHealthReadRepository, Clock.systemUTC());
 
         QueueHealthSnapshot snapshot = queueHealthQueryService.snapshot();
-        DeadLetterPage deadLetterPage = queueHealthQueryService.deadLetterPage(null, 25);
+        // Exercise every unified-job-list SQL path: unfiltered, status+jobType filtered, the
+        // synthetic SCHEDULED filter, and per-job detail — each must avoid payload_json too.
+        JobPage jobPage = queueHealthQueryService.jobsPage(null, null, null, 25);
+        queueHealthQueryService.jobsPage("SCHEDULED", "CATALOG_SYNC", null, 25);
+        if (!jobPage.rows().isEmpty()) {
+            queueHealthQueryService.jobDetail(jobPage.rows().get(0).jobId());
+        }
 
         assertThat(snapshot).isNotNull();
-        assertThat(deadLetterPage).isNotNull();
+        assertThat(jobPage).isNotNull();
 
         assertThat(capturedSql).as("at least one SQL statement was emitted").isNotEmpty();
         for (String emittedSql : capturedSql) {

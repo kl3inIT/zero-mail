@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
  * and gmail_scope_required (partial grant). Both redirect here with ?error=.
  */
 
-const KNOWN_ERROR_CODES = ['consent_denied', 'gmail_scope_required'] as const;
+const KNOWN_ERROR_CODES = ['consent_denied', 'gmail_scope_required', 'signin_failed'] as const;
 type LoginErrorCode = (typeof KNOWN_ERROR_CODES)[number];
 
 function isKnownError(value: unknown): value is LoginErrorCode {
@@ -87,12 +87,6 @@ export default async function LoginPage({
                 {tLogin('workEmail')}
               </Button>
               <LegalFooter className="zm-signin-terms text-left" />
-            </div>
-            <div className="zm-signin-foot">
-              <span>{tLogin('newUser')}</span>
-              <Link href="/#waitlist" className="text-(--ink)">
-                {tLogin('waitlist')}
-              </Link>
             </div>
           </div>
         </div>

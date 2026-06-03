@@ -212,6 +212,25 @@ public class TriageOrchestratorService {
         }
     }
 
+    /**
+     * Classification-only entry point for the needs-reply backfill: fetches the same metadata-only
+     * triage input as the live path and runs reply-status classification (LLM needs-reply +
+     * persist), but never evaluates rules and never writes to Gmail. Caller binds {@link
+     * TenantContext}. Safe to re-run (the classifier is idempotent per message id).
+     */
+    public void classifyReplyStatusForBackfill(MailMessageObserved observedEvent) {
+        Objects.requireNonNull(observedEvent, "observedEvent must not be null");
+        triageRuleEvaluationInputFactory
+                .fetch(observedEvent)
+                .ifPresent(
+                        triageRuleEvaluationInput ->
+                                classifyInboundReplyStatus(
+                                        observedEvent,
+                                        triageRuleEvaluationInput,
+                                        DispatchOutcome.none(),
+                                        true));
+    }
+
     public OrchestrationResult processObservedEvent(MailMessageObserved observedEvent) {
         Objects.requireNonNull(observedEvent, "observedEvent must not be null");
         UUID tenantId = observedEvent.tenantId();
@@ -232,10 +251,26 @@ public class TriageOrchestratorService {
         }
 
         TriageRuleEvaluationInput triageRuleEvaluationInput = triageInput.get();
+
+        // Run the rules pipeline (which may early-exit when there are no rules / no matches), then
+        // ALWAYS classify this inbound message's reply status. Reply-status tracking is a separate
+        // concern from the rules engine: the "Cần trả lời" inbox must surface incoming mail even
+        // when no rule matched, so classification cannot live behind the rules early-returns.
+        DispatchOutcome dispatchOutcome =
+                runRulesPipeline(tenantId, observedEvent, triageRuleEvaluationInput);
+        classifyInboundReplyStatus(
+                observedEvent, triageRuleEvaluationInput, dispatchOutcome, false);
+        return new OrchestrationResult(dispatchOutcome.appliedActions());
+    }
+
+    private DispatchOutcome runRulesPipeline(
+            UUID tenantId,
+            MailMessageObserved observedEvent,
+            TriageRuleEvaluationInput triageRuleEvaluationInput) {
         RuleEvaluationInput ruleEvaluationInput = triageRuleEvaluationInput.evaluationInput();
         List<RuleExecutionCandidate> ruleExecutionCandidates = loadEnabledCandidates(tenantId);
         if (ruleExecutionCandidates.isEmpty()) {
-            return OrchestrationResult.empty();
+            return DispatchOutcome.none();
         }
         boolean autoSendRulesEnabled =
                 ruleAutomationSettingsService.readOrDefault(tenantId).autoSendRulesEnabled();
@@ -254,7 +289,7 @@ public class TriageOrchestratorService {
         ActionProposalMerger.ActionProposalMergeResult mergeResult =
                 actionProposalMerger.merge(orderedProposals, ruleEvaluationInput);
         if (mergeResult.proposals().isEmpty()) {
-            return OrchestrationResult.empty();
+            return DispatchOutcome.none();
         }
 
         SafetyNetEvaluation safetyNetEvaluation =
@@ -269,8 +304,7 @@ public class TriageOrchestratorService {
                         safetyNetEvaluation.matchedPattern(),
                         autoSendRulesEnabled,
                         senderAnchoredByRuleId);
-        int appliedActions = handleProposals(dispatchContext, mergeResult.proposals());
-        return new OrchestrationResult(appliedActions);
+        return handleProposals(dispatchContext, mergeResult.proposals());
     }
 
     /**
@@ -336,9 +370,11 @@ public class TriageOrchestratorService {
         return List.copyOf(orderedProposals);
     }
 
-    private int handleProposals(
+    private DispatchOutcome handleProposals(
             TriageDispatchContext dispatchContext, List<ActionProposal> actionProposals) {
         int appliedActions = 0;
+        boolean draftSaved = false;
+        String savedDraftId = null;
         for (ActionProposal actionProposal : actionProposals) {
             RuleActionType actionType;
             try {
@@ -378,8 +414,17 @@ public class TriageOrchestratorService {
                 triageAuditSaga.finalizePhase(
                         dispatchContext.tenantId(), auditId, gmailWriteResult);
                 if (gmailWriteResult.applied()
-                        && command.preWriteIntent() instanceof TriageActionResult.SaveDraft) {
-                    classifyAfterDraftSaved(dispatchContext, gmailWriteResult.externalRef());
+                        && command.preWriteIntent() instanceof TriageActionResult.SaveDraft
+                        && gmailWriteResult.externalRef() != null
+                        && !gmailWriteResult.externalRef().isBlank()) {
+                    // A reply draft was saved for this inbound message; the single
+                    // classifyInboundReplyStatus call at the end of processObservedEvent records
+                    // the
+                    // draft and keeps the thread in TO_REPLY (no separate classify call here, so
+                    // the
+                    // observed-message id is classified exactly once).
+                    draftSaved = true;
+                    savedDraftId = gmailWriteResult.externalRef();
                 }
                 appliedActions++;
             } catch (IOException | RuntimeException gmailWriteFailure) {
@@ -389,7 +434,7 @@ public class TriageOrchestratorService {
                         GmailWriteResult.failed(gmailWriteFailure.getClass().getSimpleName()));
             }
         }
-        return appliedActions;
+        return new DispatchOutcome(appliedActions, draftSaved, savedDraftId);
     }
 
     private boolean shouldSkipDraftWrite(
@@ -569,21 +614,100 @@ public class TriageOrchestratorService {
                 triageRuleEvaluationInput.gmailThreadId());
     }
 
-    private void classifyAfterDraftSaved(TriageDispatchContext dispatchContext, String draftId) {
-        classifyThreadReplyStatusService.classify(
+    /**
+     * Runs once per observed inbound message (every {@link #processObservedEvent} call that fetched
+     * a message), so the "Cần trả lời" inbox tracks all incoming mail — not only threads a rule
+     * drafted a reply for. {@code MailMessageObserved} fires for INBOX messages, so the last
+     * message is inbound ({@code lastMessageFromIsTenant=false}); the SENT half is classified by
+     * {@link ClassifyThreadReplyStatusService}'s {@code MailOutboundObserved} listener.
+     */
+    private void classifyInboundReplyStatus(
+            MailMessageObserved observedEvent,
+            TriageRuleEvaluationInput triageRuleEvaluationInput,
+            DispatchOutcome dispatchOutcome,
+            boolean forceReclassify) {
+        RuleEvaluationInput ruleEvaluationInput = triageRuleEvaluationInput.evaluationInput();
+        boolean inboundReplyNeeded =
+                resolveInboundReplyNeeded(
+                        observedEvent.tenantId(), ruleEvaluationInput, dispatchOutcome);
+        ThreadReplyClassificationInput classificationInput =
                 new ThreadReplyClassificationInput(
-                        dispatchContext.tenantId(),
-                        dispatchContext.gmailThreadId(),
-                        dispatchContext.gmailMessageId(),
+                        observedEvent.tenantId(),
+                        triageRuleEvaluationInput.gmailThreadId(),
+                        observedEvent.gmailMessageId(),
                         false,
-                        dispatchContext
-                                .triageRuleEvaluationInput()
-                                .evaluationInput()
-                                .gmailLabelIds()
-                                .contains("SENT"),
-                        true,
-                        draftId,
-                        false));
+                        ruleEvaluationInput.gmailLabelIds().contains("SENT"),
+                        dispatchOutcome.draftSaved(),
+                        dispatchOutcome.draftId(),
+                        false,
+                        inboundReplyNeeded);
+        if (forceReclassify) {
+            classifyThreadReplyStatusService.reclassify(classificationInput);
+        } else {
+            classifyThreadReplyStatusService.classify(classificationInput);
+        }
+    }
+
+    /**
+     * Resolves the needs-reply-vs-FYI signal for an inbound message. A drafted reply implies a
+     * reply is needed; obvious bulk/no-reply mail is FYI without an LLM call; everything else asks
+     * the LLM. On any LLM failure we fail open to TO_REPLY so a real message is never silently
+     * hidden in FYI.
+     */
+    private boolean resolveInboundReplyNeeded(
+            UUID tenantId,
+            RuleEvaluationInput ruleEvaluationInput,
+            DispatchOutcome dispatchOutcome) {
+        if (dispatchOutcome.draftSaved()) {
+            return true;
+        }
+        if (ruleEvaluationInput.newsletterIndicatorPresent()
+                || ruleEvaluationInput.listUnsubscribePresent()
+                || isNoReplySender(ruleEvaluationInput.sanitizedSenderEmail())) {
+            // Bulk / no-reply / automated mail is FYI; skip the LLM call entirely.
+            return false;
+        }
+        try {
+            return llmGateway.classifyReplyNeeded(
+                    CallSite.NEEDS_REPLY, buildSemanticEvalContent(ruleEvaluationInput));
+        } catch (RuntimeException needsReplyClassificationFailure) {
+            log.warn(
+                    "event=needs_reply_classification_failed tenantId={} reason={}",
+                    tenantId,
+                    needsReplyClassificationFailure.getClass().getSimpleName());
+            return true;
+        }
+    }
+
+    // local-part markers for automated senders that never expect a personal reply. Matched against
+    // RuleEvaluationInput.sanitizedSenderEmail, which is already canonicalized to lower case.
+    private static final List<String> NO_REPLY_LOCAL_PART_MARKERS =
+            List.of(
+                    "noreply",
+                    "no-reply",
+                    "no_reply",
+                    "donotreply",
+                    "do-not-reply",
+                    "do_not_reply");
+
+    private static boolean isNoReplySender(String sanitizedSenderEmail) {
+        if (sanitizedSenderEmail == null || sanitizedSenderEmail.isBlank()) {
+            return false;
+        }
+        int atIndex = sanitizedSenderEmail.indexOf('@');
+        String localPart =
+                atIndex > 0 ? sanitizedSenderEmail.substring(0, atIndex) : sanitizedSenderEmail;
+        return NO_REPLY_LOCAL_PART_MARKERS.stream().anyMatch(localPart::contains);
+    }
+
+    /**
+     * Outcome of the rules pipeline for one observed message: how many actions applied, and whether
+     * a reply draft was saved (so the single reply-status classification can record it).
+     */
+    private record DispatchOutcome(int appliedActions, boolean draftSaved, String draftId) {
+        static DispatchOutcome none() {
+            return new DispatchOutcome(0, false, null);
+        }
     }
 
     private SafetyNetEvaluation safetyNetEvaluation(

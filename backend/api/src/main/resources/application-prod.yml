@@ -111,3 +111,12 @@ springdoc:
     enabled: false
   api-docs:
     enabled: true
+
+# Production WebAuthn relying party — overrides the localhost dev defaults in application.yml so
+# the prod admin SPA at https://admin.zeromail.vn passes the browser's rpId/origin check. Env vars
+# still win for environment-specific overrides.
+zero-mail:
+  admin:
+    webauthn:
+      rp-id: ${ZEROMAIL_ADMIN_WEBAUTHN_RP_ID:admin.zeromail.vn}
+      allowed-origins: ${ZEROMAIL_ADMIN_WEBAUTHN_ALLOWED_ORIGINS:https://admin.zeromail.vn}

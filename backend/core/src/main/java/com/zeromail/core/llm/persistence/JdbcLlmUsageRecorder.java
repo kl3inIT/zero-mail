@@ -70,8 +70,13 @@ public class JdbcLlmUsageRecorder implements LlmUsageRecorder {
 
     private String featureIdFor(CallSite callSite) {
         return switch (callSite) {
-            case DRAFT -> "DRAFT";
-            case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC -> "TRIAGE";
+            // DIGEST is a content-generation workload in the same COMPOSE family as DRAFT; it
+            // shares
+            // the DRAFT usage bucket here (the coarse llm_usage.feature label, CHECK
+            // IN ('CHAT','TRIAGE','DRAFT')). Per-call billing stays exact via feature_catalog
+            // keyed on CallSite.id()='DIGEST'.
+            case DRAFT, DIGEST -> "DRAFT";
+            case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC, NEEDS_REPLY -> "TRIAGE";
             case PREVIEW -> "CHAT";
         };
     }

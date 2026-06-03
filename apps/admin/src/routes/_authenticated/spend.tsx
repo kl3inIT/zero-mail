@@ -129,9 +129,6 @@ function SpendRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
-            Vận hành
-          </p>
           <h1 className="text-ink text-xl font-semibold">Bảng chi phí</h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
             Chỉ tổng hợp chi phí từ <code>llm_call_audit</code>. Trang này không bao giờ đọc văn bản prompt và completion.

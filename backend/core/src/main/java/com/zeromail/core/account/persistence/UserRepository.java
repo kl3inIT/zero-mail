@@ -28,15 +28,4 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
                     "SELECT email FROM users WHERE tenant_id = :tenantId ORDER BY created_at ASC LIMIT 1",
             nativeQuery = true)
     Optional<String> findEmailByTenantId(@Param("tenantId") UUID tenantId);
-
-    /**
-     * Pre-tenant existence check used by the public waitlist endpoint. Native SQL bypasses
-     * Hibernate's {@code @TenantId} filter because waitlist subscribers have no bound tenant. The
-     * comparison is case-insensitive to match the waitlist normalization rule (lowercase email
-     * before lookup or INSERT).
-     */
-    @Query(
-            value = "SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(email) = LOWER(:email))",
-            nativeQuery = true)
-    boolean existsByEmailGlobal(@Param("email") String email);
 }

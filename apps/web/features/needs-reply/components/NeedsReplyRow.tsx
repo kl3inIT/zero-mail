@@ -1,12 +1,13 @@
 'use client';
 
-import { Check, Clock, ExternalLink, FileText, Mail } from 'lucide-react';
+import { Check, Clock, Eye, ExternalLink, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
+import { SenderAvatar } from '@/features/needs-reply/components/SenderAvatar';
 import { useMarkResolved } from '@/features/needs-reply/hooks/useMarkResolved';
 import type {
   DraftStatus,
@@ -18,12 +19,13 @@ import { cn } from '@/lib/utils';
 type NeedsReplyRowProps = {
   row: NeedsReplyRowModel;
   activeBucket: NeedsReplyBucket;
+  onOpen?: () => void;
   now?: Date;
 };
 
 type Urgency = 'high' | 'med' | 'low';
 
-export function NeedsReplyRow({ row, activeBucket, now = new Date() }: NeedsReplyRowProps) {
+export function NeedsReplyRow({ row, activeBucket, onOpen, now = new Date() }: NeedsReplyRowProps) {
   const t = useTranslations();
   const ageMs = ageInMilliseconds(row.lastActivityAt, now);
   const urgency = ageUrgency(ageMs);
@@ -36,7 +38,7 @@ export function NeedsReplyRow({ row, activeBucket, now = new Date() }: NeedsRepl
       data-testid="needs-reply-row"
     >
       <UrgencyBar urgency={urgency} />
-      <SenderAvatar name={row.otherParty} />
+      <SenderAvatar sender={row.otherParty} />
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-muted-foreground truncate text-xs">{senderLabel}</span>
@@ -44,12 +46,36 @@ export function NeedsReplyRow({ row, activeBucket, now = new Date() }: NeedsRepl
           <AgeChip ageMs={ageMs} urgency={urgency} lastActivityAt={row.lastActivityAt} />
         </div>
 
-        <p className="text-foreground truncate text-sm font-medium">{subjectLabel}</p>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="group block w-full min-w-0 cursor-pointer text-left"
+          data-testid="needs-reply-open"
+        >
+          <p className="text-foreground truncate text-sm font-medium group-hover:underline">
+            {subjectLabel}
+          </p>
+
+          {row.snippet ? (
+            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">{row.snippet}</p>
+          ) : null}
+        </button>
 
         <div className="flex flex-wrap items-center gap-1">
           {activeBucket !== 'awaiting-their-reply' ? (
             <GenerateDraftButton gmailThreadId={row.gmailThreadId} draftStatus={row.draftStatus} />
           ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-1.5"
+            onClick={onOpen}
+            data-testid="needs-reply-view"
+          >
+            <Eye className="size-3.5" aria-hidden="true" />
+            {t('needsReply.action.viewContent')}
+          </Button>
           <ResolveButton gmailThreadId={row.gmailThreadId} />
           <a
             href={row.openInGmailUrl}
@@ -79,19 +105,6 @@ function UrgencyBar({ urgency }: { urgency: Urgency }) {
       })}
       aria-hidden="true"
     />
-  );
-}
-
-function SenderAvatar({ name }: { name: string }) {
-  const initials = senderInitials(name);
-  const isUnknown = initials === '?';
-  return (
-    <div
-      className="bg-muted text-muted-foreground mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold"
-      aria-hidden="true"
-    >
-      {isUnknown ? <Mail className="size-3.5" /> : initials}
-    </div>
   );
 }
 
@@ -175,19 +188,6 @@ function ResolveButton({ gmailThreadId }: { gmailThreadId: string }) {
       {t('needsReply.action.markResolved')}
     </Button>
   );
-}
-
-export function DraftStatusBadge({ draftStatus }: { draftStatus: DraftStatus }) {
-  return <DraftBadge draftStatus={draftStatus} />;
-}
-
-function senderInitials(name: string): string {
-  if (!name) return '?';
-  const cleaned = name.split('<')[0]?.trim() ?? name;
-  const parts = cleaned.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
 function ageInMilliseconds(value: string, now: Date): number {

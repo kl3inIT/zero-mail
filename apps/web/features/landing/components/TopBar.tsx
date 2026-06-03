@@ -64,24 +64,27 @@ export default async function TopBar() {
             currentTheme={theme}
             label={theme === 'dark' ? t('nav.themeToLight') : t('nav.themeToDark')}
           />
-          <Link
-            href={ctaHref}
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'h-8 px-3 text-(--text-muted) hover:text-(--ink)',
-            )}
-          >
-            {t(ctaKey)}
-          </Link>
-          <a
-            href="#waitlist"
-            className={cn(
-              buttonVariants({ variant: 'ink', size: 'sm' }),
-              'hidden h-8 px-4 sm:inline-flex',
-            )}
-          >
-            {t('nav.waitlist')}
-          </a>
+          {/* Bundled Google OAuth = login is signup, so logged-out visitors see a
+              single CTA. The ghost link only appears once authenticated, where it
+              carries a distinct destination (open app / continue setup). */}
+          {ctaKey === 'nav.signIn' ? (
+            <Link
+              href="/login"
+              className={cn(buttonVariants({ variant: 'ink', size: 'sm' }), 'h-8 px-4')}
+            >
+              {t('nav.getStarted')}
+            </Link>
+          ) : (
+            <Link
+              href={ctaHref}
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'h-8 px-3 text-(--text-muted) hover:text-(--ink)',
+              )}
+            >
+              {t(ctaKey)}
+            </Link>
+          )}
         </div>
       </nav>
     </header>

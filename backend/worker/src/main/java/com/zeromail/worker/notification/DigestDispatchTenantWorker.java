@@ -2,6 +2,7 @@ package com.zeromail.worker.notification;
 
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.notification.domain.ChannelType;
+import com.zeromail.core.notification.domain.DigestContentSection;
 import com.zeromail.core.notification.domain.DigestPayload;
 import com.zeromail.core.notification.exception.DigestAlreadyClaimedException;
 import com.zeromail.core.notification.usecases.DigestClaimRecord;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,11 +29,13 @@ import org.springframework.stereotype.Component;
 public class DigestDispatchTenantWorker {
 
     private static final Duration TRANSIENT_RETRY_DELAY = Duration.ofMinutes(15);
+    private static final Duration CONTENT_DIGEST_WINDOW = Duration.ofDays(7);
 
     private static final Logger log = LoggerFactory.getLogger(DigestDispatchTenantWorker.class);
 
     private final DigestDeliveryService digestDeliveryService;
     private final DigestComposer digestComposer;
+    private final DigestContentBuilder digestContentBuilder;
     private final NotificationChannel notificationChannel;
     private final UserRepository userRepository;
     private final NotificationProperties notificationProperties;
@@ -39,6 +43,7 @@ public class DigestDispatchTenantWorker {
     public DigestDispatchTenantWorker(
             DigestDeliveryService digestDeliveryService,
             DigestComposer digestComposer,
+            DigestContentBuilder digestContentBuilder,
             NotificationChannel notificationChannel,
             UserRepository userRepository,
             NotificationProperties notificationProperties) {
@@ -47,6 +52,9 @@ public class DigestDispatchTenantWorker {
                         digestDeliveryService, "digestDeliveryService must not be null");
         this.digestComposer =
                 Objects.requireNonNull(digestComposer, "digestComposer must not be null");
+        this.digestContentBuilder =
+                Objects.requireNonNull(
+                        digestContentBuilder, "digestContentBuilder must not be null");
         this.notificationChannel =
                 Objects.requireNonNull(notificationChannel, "notificationChannel must not be null");
         this.userRepository =
@@ -95,6 +103,12 @@ public class DigestDispatchTenantWorker {
                         digestDayLocal,
                         sendMoment,
                         notificationProperties.appBaseUrl());
+        List<DigestContentSection> contentSections =
+                digestContentBuilder.buildSections(
+                        dueTenant.tenantId(), sendMoment.minus(CONTENT_DIGEST_WINDOW), sendMoment);
+        if (!contentSections.isEmpty()) {
+            payload = payload.withContentSections(contentSections);
+        }
         DispatchOutcome outcome;
         try {
             outcome = notificationChannel.dispatch(payload, emailAddress.orElseThrow());

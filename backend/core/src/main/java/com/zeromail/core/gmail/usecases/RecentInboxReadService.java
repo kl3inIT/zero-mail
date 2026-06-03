@@ -2,6 +2,7 @@ package com.zeromail.core.gmail.usecases;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.ListMessagesResponse;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -140,22 +142,7 @@ public class RecentInboxReadService {
                             .setFormat("full")
                             .setFields(FULL_FIELDS)
                             .execute();
-            RecentInboxMessage message =
-                    toRecentInboxMessage(gmailMessage, fetchLabelNamesById(gmail));
-            MessagePart payload = gmailMessage.getPayload();
-            String renderedText =
-                    cap(decodedMimeBody(payload, "text/plain", true), RENDERED_TEXT_MAX_LENGTH);
-            String decodedHtml =
-                    cap(decodedMimeBody(payload, "text/html", false), RENDERED_HTML_MAX_LENGTH);
-            String renderedHtml =
-                    decodedHtml.isBlank()
-                            ? ""
-                            : safeHtmlSanitizer.sanitizeEmailHtml(
-                                    cap(
-                                            inlineCidImageSources(
-                                                    gmail, messageId, payload, decodedHtml),
-                                            RENDERED_HTML_MAX_LENGTH));
-            return new RecentInboxMessageDetail(message, renderedText, renderedHtml);
+            return renderMessageDetail(gmail, gmailMessage);
         } catch (InvalidGrantException invalidGrantException) {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.REVOKED, invalidGrantException);
@@ -165,6 +152,98 @@ public class RecentInboxReadService {
         } catch (IOException ioException) {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.GMAIL_UNAVAILABLE, ioException);
+        }
+    }
+
+    /**
+     * Fetch and render the saved Gmail reply draft for a thread. The draft body is user-authored
+     * draft data (the user owns it, reviews it, decides whether to send it), not extracted email
+     * content received from Gmail — so it may be shown in-place (privacy carve-out). It is rendered
+     * live and never persisted. Reuses the same decode + sanitize pipeline as {@link
+     * #fetchMessageDetail}.
+     */
+    @Transactional(readOnly = true)
+    public RecentInboxMessageDetail fetchDraftDetail(UUID tenantId, String gmailDraftId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        if (gmailDraftId == null || gmailDraftId.isBlank()) {
+            throw new IllegalArgumentException("gmailDraftId must not be blank");
+        }
+        try {
+            Gmail gmail = gmailForTenant(tenantId);
+            Draft draft =
+                    gmail.users()
+                            .drafts()
+                            .get("me", gmailDraftId.trim())
+                            .setFormat("full")
+                            .execute();
+            Message draftMessage = draft.getMessage();
+            if (draftMessage == null) {
+                throw new RecentInboxUnavailableException(
+                        RecentInboxUnavailableReason.MESSAGE_NOT_FOUND);
+            }
+            return renderMessageDetail(gmail, draftMessage);
+        } catch (InvalidGrantException invalidGrantException) {
+            throw new RecentInboxUnavailableException(
+                    RecentInboxUnavailableReason.REVOKED, invalidGrantException);
+        } catch (GoogleJsonResponseException googleResponseException) {
+            throw new RecentInboxUnavailableException(
+                    mapGoogleResponse(googleResponseException), googleResponseException);
+        } catch (IOException ioException) {
+            throw new RecentInboxUnavailableException(
+                    RecentInboxUnavailableReason.GMAIL_UNAVAILABLE, ioException);
+        }
+    }
+
+    private RecentInboxMessageDetail renderMessageDetail(Gmail gmail, Message gmailMessage)
+            throws IOException {
+        String messageId = gmailMessage.getId();
+        RecentInboxMessage message = toRecentInboxMessage(gmailMessage, fetchLabelNamesById(gmail));
+        MessagePart payload = gmailMessage.getPayload();
+        String renderedText =
+                cap(decodedMimeBody(payload, "text/plain", true), RENDERED_TEXT_MAX_LENGTH);
+        String decodedHtml =
+                cap(decodedMimeBody(payload, "text/html", false), RENDERED_HTML_MAX_LENGTH);
+        String renderedHtml =
+                decodedHtml.isBlank()
+                        ? ""
+                        : safeHtmlSanitizer.sanitizeEmailHtml(
+                                cap(
+                                        inlineCidImageSources(
+                                                gmail, messageId, payload, decodedHtml),
+                                        RENDERED_HTML_MAX_LENGTH));
+        return new RecentInboxMessageDetail(message, renderedText, renderedHtml);
+    }
+
+    /**
+     * Best-effort fetch of a single message's body text for the weekly content digest. Prefers the
+     * decoded {@code text/plain} part and falls back to the raw {@code text/html} part (the LLM
+     * gateway strips HTML and prompt-injection-hardens before any model call). Returns {@link
+     * Optional#empty()} for any failure — message deleted, grant revoked, Gmail unavailable — so
+     * one unreadable message never fails the whole digest. The body is returned to the caller in
+     * memory only and is never persisted or logged.
+     */
+    public Optional<String> fetchPlainTextForDigest(UUID tenantId, String gmailMessageId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        if (gmailMessageId == null || gmailMessageId.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            Gmail gmail = gmailForTenant(tenantId);
+            Message gmailMessage =
+                    gmail.users()
+                            .messages()
+                            .get("me", gmailMessageId.trim())
+                            .setFormat("full")
+                            .setFields(FULL_FIELDS)
+                            .execute();
+            MessagePart payload = gmailMessage.getPayload();
+            String plainText = decodedMimeBody(payload, "text/plain", true);
+            String body =
+                    plainText.isBlank() ? decodedMimeBody(payload, "text/html", false) : plainText;
+            String capped = cap(body, RENDERED_TEXT_MAX_LENGTH);
+            return capped.isBlank() ? Optional.empty() : Optional.of(capped);
+        } catch (RuntimeException | IOException digestBodyFetchFailure) {
+            return Optional.empty();
         }
     }
 

@@ -31,7 +31,11 @@ import org.springframework.web.util.UriComponentsBuilder;
  *       GoogleOAuthSuccessHandler}) → same redirect.
  *   <li>{@code gmail_scope_required} — {@code gmail.modify} not granted; best-effort {@code
  *       removeAuthorizedClient} + {@code /login?error=gmail_scope_required}.
- *   <li>Anything else — {@code super.onAuthenticationFailure} (Spring default).
+ *   <li>Anything else (lost authorization request, bad state, provider error, etc.) — {@code
+ *       super.onAuthenticationFailure} using the {@code defaultFailureUrl} set in the constructor
+ *       ({@code /login?error=signin_failed}). Without that default, {@code
+ *       SimpleUrlAuthenticationFailureHandler} would call {@code sendError(401)} and the browser
+ *       would land on Spring's raw Whitelabel error page (WR-OAUTH fix).
  * </ul>
  *
  * <p><b>Privacy contract (D-E1, T-01.5-01-03):</b> log statements emit ONLY opaque event names —
@@ -52,6 +56,9 @@ public class LoginRedirectAuthenticationFailureHandler
             OAuth2AuthorizedClientService authorizedClientService, ApiProperties properties) {
         this.authorizedClientService = authorizedClientService;
         this.properties = properties;
+        // Default for any unmapped failure: redirect to the styled frontend login page instead of
+        // SimpleUrlAuthenticationFailureHandler's sendError(401) → Spring Whitelabel error page.
+        setDefaultFailureUrl(buildLoginUrl("signin_failed"));
     }
 
     @Override

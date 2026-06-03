@@ -284,3 +284,27 @@ databaseChangeLog:
   - include:
       file: changes/107-sepay-bank-transfer-plan-upgrades.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/108-processing-job-cancelled-status.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/109-notification-preference-weekly-day.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/110-feature-catalog-digest.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/111-feature-catalog-needs-reply.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/112-drop-waitlist-email.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/113-default-rule-templates-seed.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/114-default-rule-templates-vi-seed.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/115-system-default-rule-template-status.yaml
+      relativeToChangelogFile: true

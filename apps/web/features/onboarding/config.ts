@@ -1,7 +1,9 @@
 import type { Route } from 'next';
 
 export const BETA_ONBOARDING_ENABLED = false;
-export const ONBOARDING_BYPASS_ROUTE = '/rules';
+// Where "enter the app" lands (onboarding-bypass redirects + logged-in landing CTAs): the AI
+// assistant is the primary daily surface, so it is the default home.
+export const ONBOARDING_BYPASS_ROUTE = '/chat';
 
 export function shouldShowBetaOnboarding(onboardingStep: string | undefined | null): boolean {
   return BETA_ONBOARDING_ENABLED && Boolean(onboardingStep && onboardingStep !== 'COMPLETE');

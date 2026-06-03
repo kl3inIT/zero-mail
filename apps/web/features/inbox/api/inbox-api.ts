@@ -190,6 +190,25 @@ export async function getInboxMessageDetail(gmailMessageId: string): Promise<Inb
   return normalizeDetail(result.data);
 }
 
+/**
+ * Fetch the rendered body of a saved Gmail reply draft. The draft body is user-authored draft data
+ * (owned/reviewed/sent by the user), rendered live and never persisted — distinct from extracted
+ * inbox email content. Used by the needs-reply reader to preview "your draft reply" in-place.
+ */
+export async function getGmailDraftDetail(gmailDraftId: string): Promise<InboxMessageDetail> {
+  const result = await getJson<GmailInboxMessageDetailResponse>(
+    `/api/gmail/inbox/drafts/${encodeURIComponent(gmailDraftId)}`,
+  );
+
+  if (!result.response.ok || result.data === undefined) {
+    throwApiError(
+      result,
+      `/api/gmail/inbox/drafts/${gmailDraftId} failed: ${result.response.status}`,
+    );
+  }
+  return normalizeDetail(result.data);
+}
+
 export async function markInboxMessageRead(gmailMessageId: string): Promise<void> {
   const response = await postNoContent(
     `/api/gmail/inbox/${encodeURIComponent(gmailMessageId)}/read`,

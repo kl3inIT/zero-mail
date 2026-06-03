@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 
 function CheckIcon() {
@@ -59,12 +60,12 @@ export default async function Pricing() {
               <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$18</span>
               <span className="text-sm text-(--text-muted)">{t('perPersonMonth')}</span>
             </div>
-            <a
-              href="#waitlist"
+            <Link
+              href="/login"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl border border-(--line-strong) text-base font-semibold text-(--ink) hover:bg-(--bg-subtle)"
             >
-              {t('ctaTrial')}
-            </a>
+              {t('ctaStart')}
+            </Link>
             <div className="flex-1">
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
                 {starterBullets.map((text) => (
@@ -98,12 +99,12 @@ export default async function Pricing() {
               <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$28</span>
               <span className="text-sm text-(--text-muted)">{t('perPersonMonth')}</span>
             </div>
-            <a
-              href="#waitlist"
+            <Link
+              href="/login"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl bg-[#3367D6] text-base font-semibold text-white shadow-md transition-all hover:bg-[#2851A8] hover:shadow-lg"
             >
-              {t('ctaTrial')}
-            </a>
+              {t('ctaStart')}
+            </Link>
             <div className="flex-1">
               <p className="mb-4 text-sm font-semibold text-(--ink)">{t('plus.includesIntro')}</p>
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
@@ -132,12 +133,12 @@ export default async function Pricing() {
               <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$42</span>
               <span className="text-sm text-(--text-muted)">{t('perPersonMonth')}</span>
             </div>
-            <a
-              href="#waitlist"
+            <Link
+              href="/login"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl border border-(--line-strong) text-base font-semibold text-(--ink) hover:bg-(--bg-subtle)"
             >
-              {t('ctaTrial')}
-            </a>
+              {t('ctaStart')}
+            </Link>
             <div className="flex-1">
               <p className="mb-4 text-sm font-semibold text-(--ink)">{t('pro.includesIntro')}</p>
               <ul className="space-y-4 text-[15px] text-(--text-muted)">

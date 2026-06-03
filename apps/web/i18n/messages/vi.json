@@ -427,6 +427,10 @@
       "gmail_scope_required": {
         "body": "Đăng nhập thành công nhưng quyền Gmail chưa được cấp. Nhấn Đăng nhập với Google và cấp quyền Gmail để tiếp tục.",
         "title": "Thiếu quyền Gmail"
+      },
+      "signin_failed": {
+        "body": "Quá trình đăng nhập bị gián đoạn trước khi hoàn tất. Nhấn Đăng nhập với Google để thử lại.",
+        "title": "Đăng nhập chưa hoàn tất"
       }
     },
     "everywhere": "Đầu-cuối · Đang xin SOC 2 Type II",
@@ -438,14 +442,12 @@
       "headline": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
       "headlineA": "Đăng nhập để bắt đầu",
       "headlineB": "dọn hộp thư.",
-      "newUser": "Lần đầu sử dụng?",
       "noCard": "Không cần thẻ thanh toán",
       "privacy": "Chính sách bảo mật",
       "terms": "Điều khoản",
       "termsAnd": "và",
       "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
       "title": "Đăng nhập",
-      "waitlist": "Đăng ký trải nghiệm Zero Mail →",
       "workEmail": "Đăng nhập bằng Gmail công ty"
     }
   },
@@ -861,37 +863,6 @@
     "disconnected": "Mất kết nối",
     "notConnected": "Chưa kết nối",
     "reconnectPrompt": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail để tiếp tục thiết lập."
-  },
-  "cta": {
-    "b1": "Miễn phí trong giai đoạn beta",
-    "b2": "Không cần thẻ",
-    "b3": "Hủy đăng ký bằng một cú nhấp",
-    "button": "Đăng ký trải nghiệm",
-    "closeAria": "Đóng hộp thoại danh sách chờ",
-    "closeCta": "Đóng",
-    "desc": "Hãy đăng ký chờ. Mỗi tuần chúng tôi đón thêm 50 nhà sáng lập và quản lý vận hành theo thứ tự. Bạn sẽ nhận lời mời để cài đặt Zero Mail với tài khoản Gmail thật của mình.",
-    "emailPlaceholder": "ban@congty.com",
-    "eyebrow": "Truy cập sớm",
-    "note": {
-      "body": "Chúng tôi đào sâu vào Gmail trước khi mở rộng sang Outlook hay IMAP. Nếu bạn dùng hộp thư khác, để lại email và chúng tôi sẽ báo khi có hỗ trợ.",
-      "title": "Chỉ Gmail · v1"
-    },
-    "privacyNote": "Chúng tôi chỉ dùng email này để gửi lời mời Zero Mail.",
-    "stats": {
-      "s1": "trong danh sách chờ",
-      "s2": "lời mời mỗi tuần",
-      "s3": "giảm hộp thư trung bình",
-      "s4": "email tự động gửi"
-    },
-    "submitting": "Đang đăng ký...",
-    "success": {
-      "body": "Đã ghi nhận {email}. Chúng tôi sẽ liên hệ khi đến lượt bạn.",
-      "title": "Bạn đã vào danh sách chờ"
-    },
-    "title": {
-      "a": "Đăng ký trải nghiệm Zero Mail",
-      "b": "không còn lo lắng."
-    }
   },
   "dashboard": {
     "recentActivity": "Hoạt động gần đây",
@@ -1367,18 +1338,18 @@
     "secondaryCta": "Xem tính năng",
     "tagline": "Zero Mail tự động đọc, phân loại và soạn sẵn câu trả lời cho Gmail của bạn — theo quy tắc bạn viết bằng tiếng Việt. Không còn cảnh mỗi sáng mở hộp thư và ngồi lọc 30 phút.",
     "videoPlaceholder": "Video demo sẽ sớm có mặt",
-    "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
+    "getStartedCta": "Bắt đầu miễn phí"
   },
   "landingFaq": {
     "header": {
       "title": "Các câu hỏi thường gặp"
     },
     "items": {
-      "a1": "Chúng tôi hỗ trợ các tài khoản email Gmail, Google Workspace và Microsoft Outlook.",
+      "a1": "Chúng tôi hỗ trợ các tài khoản email Gmail và Google Workspace.",
       "a2": "Hãy gửi email cho chúng tôi. Chúng tôi luôn sẵn sàng lắng nghe để cải thiện trải nghiệm email của bạn.",
-      "a3": "Không! Zero Mail không phải là một ứng dụng email khách (email client). Nó được sử dụng song song với ứng dụng email hiện tại của bạn. Bạn vẫn sử dụng Google hoặc Outlook như bình thường.",
+      "a3": "Không! Zero Mail không phải là một ứng dụng email khách (email client). Nó được sử dụng song song với ứng dụng email hiện tại của bạn. Bạn vẫn sử dụng Gmail như bình thường.",
       "a4": "Có, nếu bạn cảm thấy chúng tôi không mang lại giá trị cho bạn, hãy gửi email cho chúng tôi trong vòng 14 ngày kể từ khi nâng cấp và chúng tôi sẽ hoàn tiền cho bạn.",
-      "a5": "Chắc chắn rồi, chúng tôi có bản dùng thử miễn phí 7 ngày cho tất cả các gói để bạn có thể trải nghiệm ngay lập tức, không cần thẻ tín dụng!",
+      "a5": "Được chứ! Zero Mail hiện hoàn toàn miễn phí trong giai đoạn đầu — không cần thẻ tín dụng, chưa thu phí gì cả.",
       "q1": "Zero Mail hỗ trợ các nhà cung cấp email nào?",
       "q2": "Làm thế nào tôi có thể yêu cầu tính năng mới?",
       "q3": "Zero Mail có thay thế ứng dụng email hiện tại của tôi không?",
@@ -1468,11 +1439,11 @@
     }
   },
   "landingPricing": {
-    "ctaTrial": "Dùng thử miễn phí 7 ngày",
+    "ctaStart": "Bắt đầu miễn phí",
     "header": {
-      "badge": "Giá theo năm, dùng thử miễn phí 7 ngày",
+      "badge": "Hiện đang miễn phí",
       "body": "Không có phí ẩn. Hủy bất cứ lúc nào.",
-      "title": "Dùng thử miễn phí, gói trả phí hợp lý"
+      "title": "Bảng giá đơn giản, gói hợp lý"
     },
     "perPersonMonth": " /người /tháng",
     "plus": {
@@ -1648,7 +1619,7 @@
           "heading": "Điều kiện sử dụng"
         },
         "gmailAuthorization": {
-          "body": "Zero Mail chỉ yêu cầu các scope OAuth Gmail tối thiểu cần để vận hành. Khi có sự đồng ý của bạn, dịch vụ có thể thực hiện các hành động sau trên thư Gmail trong tài khoản bạn: đọc thư đến để AI có thể triage; gán hoặc gỡ nhãn Gmail; lưu trữ (archive) thư bằng cách bỏ khỏi hộp thư đến; lưu Gmail draft; đánh dấu thư đã đọc/chưa đọc; star/un-star thư; gắn cờ spam; và thêm thư vào digest hằng ngày để bạn xem lại gọn ở một chỗ.\n\nKhi bạn chủ động opt-in qua tùy chọn Auto-send rules, Zero Mail còn có thể gửi trả lời thay bạn, forward thư thay bạn, và gửi thư mới thay bạn — đều phụ thuộc vào các safety gate mô tả ở mục kế tiếp.\n\nCác hành động phá hủy KHÔNG nằm trong scope. Zero Mail không xóa vĩnh viễn thư trong tài khoản Gmail của bạn thay bạn, và không gọi webhook tùy ý đến các dịch vụ ngoài thay bạn. Nếu dịch vụ từng hỗ trợ các hành động đó, chúng sẽ phải qua một opt-in riêng do admin gắn nhãn rõ ràng.",
+          "body": "Zero Mail chỉ yêu cầu các scope OAuth Gmail tối thiểu cần để vận hành. Khi có sự đồng ý của bạn, dịch vụ có thể thực hiện các hành động sau trên thư Gmail trong tài khoản bạn: đọc thư đến để AI có thể triage; gán hoặc gỡ nhãn Gmail; lưu trữ (archive) thư bằng cách bỏ khỏi hộp thư đến; lưu Gmail draft; đánh dấu thư đã đọc/chưa đọc; star/un-star thư; gắn cờ spam; và thêm thư vào digest hằng tuần để bạn xem lại gọn ở một chỗ.\n\nKhi bạn chủ động opt-in qua tùy chọn Auto-send rules, Zero Mail còn có thể gửi trả lời thay bạn, forward thư thay bạn, và gửi thư mới thay bạn — đều phụ thuộc vào các safety gate mô tả ở mục kế tiếp.\n\nCác hành động phá hủy KHÔNG nằm trong scope. Zero Mail không xóa vĩnh viễn thư trong tài khoản Gmail của bạn thay bạn, và không gọi webhook tùy ý đến các dịch vụ ngoài thay bạn. Nếu dịch vụ từng hỗ trợ các hành động đó, chúng sẽ phải qua một opt-in riêng do admin gắn nhãn rõ ràng.",
           "heading": "Phạm vi cấp quyền Gmail"
         },
         "governingLaw": {
@@ -1772,6 +1743,7 @@
     "dashboard": "Tổng quan",
     "faq": "FAQ",
     "features": "Tính năng",
+    "getStarted": "Bắt đầu miễn phí",
     "how": "Cách hoạt động",
     "inbox": "Hộp thư",
     "languageSelector": "Ngôn ngữ",
@@ -1792,8 +1764,7 @@
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
     "trust": "Tin cậy & an toàn",
-    "upgradePlan": "Nâng cấp gói",
-    "waitlist": "Đăng ký trải nghiệm Zero Mail"
+    "upgradePlan": "Nâng cấp gói"
   },
   "needsReply": {
     "action": {
@@ -1802,9 +1773,14 @@
       "markResolved": "Đánh dấu đã xử lý",
       "openInGmail": "Mở trong Gmail",
       "regenerateDraft": "Tạo lại bản nháp",
-      "regenerating": "Đang tạo lại…"
+      "regenerating": "Đang tạo lại…",
+      "resync": "Đồng bộ lại hộp thư",
+      "sync": "Đồng bộ hộp thư",
+      "syncing": "Đang đồng bộ…",
+      "viewContent": "Xem nội dung"
     },
     "banner": {
+      "syncing": "Đang đồng bộ hộp thư để phân loại email…",
       "updating": "Đang cập nhật danh sách cần trả lời…"
     },
     "columns": {
@@ -1834,6 +1810,7 @@
       },
       "toReply": {
         "body": "Hiện không có email nào cần trả lời.",
+        "syncHint": "Email mới đến sẽ tự được phân loại. Để phân loại các email đã có sẵn trong hộp thư, đồng bộ ngay.",
         "title": "Inbox zero 🎉"
       }
     },
@@ -1845,6 +1822,15 @@
     "page": {
       "description": "Các luồng email đang chờ phản hồi — từ bạn hoặc từ họ. Xem lại và gửi bản nháp trong Gmail.",
       "title": "Cần trả lời"
+    },
+    "reader": {
+      "draftHeading": "Bản nháp trả lời của bạn",
+      "draftUnavailable": "Chưa đọc được bản nháp. Mở trong Gmail để xem.",
+      "noBody": "Email này không có nội dung để hiển thị.",
+      "originalHeading": "Email gốc",
+      "to": "Đến",
+      "unavailableBody": "Mở email trong Gmail để xem nội dung đầy đủ.",
+      "unavailableTitle": "Không xem được nội dung tại đây"
     },
     "row": {
       "ageDays": "Đợi {count} ngày",
@@ -1866,6 +1852,8 @@
       "toReply": "Cần trả lời"
     },
     "toast": {
+      "backfillDone": "Đã đồng bộ hộp thư — danh sách cần trả lời đã được cập nhật.",
+      "backfillFailed": "Không đồng bộ được hộp thư. Hãy thử lại.",
       "draftSaved": "Đã lưu bản nháp trong Gmail — hãy xem lại và gửi ở đó."
     }
   },
@@ -2379,7 +2367,20 @@
       "upgradePlan": "Nâng cấp gói"
     },
     "notifications": {
+      "days": {
+        "1": "Thứ Hai",
+        "2": "Thứ Ba",
+        "3": "Thứ Tư",
+        "4": "Thứ Năm",
+        "5": "Thứ Sáu",
+        "6": "Thứ Bảy",
+        "7": "Chủ Nhật"
+      },
       "description": "Quản lý email tóm tắt hàng ngày của bạn.",
+      "sendDay": {
+        "helper": "Email tóm tắt được gửi vào ngày này mỗi tuần.",
+        "label": "Ngày gửi trong tuần"
+      },
       "sendHour": {
         "downtimeNote": "Nếu trình gửi digest gặp sự cố đúng giờ bạn chọn, bản digest hôm đó sẽ bị bỏ qua — không có cơ chế gửi bù. Hãy chọn giờ mà hệ thống hoạt động ổn định.",
         "helper": "Email tóm tắt được gửi khoảng giờ này theo múi giờ của bạn.",

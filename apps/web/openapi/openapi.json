@@ -1540,94 +1540,6 @@
         }
       }
     },
-    "/api/waitlist/subscribe": {
-      "post": {
-        "tags": ["waitlist-controller"],
-        "operationId": "subscribe",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WaitlistSubscribeRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/WaitlistSubscribeResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/unsubscribe/campaigns/{jobId}/undo": {
       "post": {
         "tags": ["cleanup"],
@@ -2255,6 +2167,96 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ThreadDraftResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/threads/backfill": {
+      "post": {
+        "tags": ["thread-inbox"],
+        "operationId": "backfill",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeedsReplyBackfillResponse"
                 }
               }
             }
@@ -6112,6 +6114,84 @@
         }
       }
     },
+    "/api/threads/counts": {
+      "get": {
+        "tags": ["thread-inbox"],
+        "operationId": "counts",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeedsReplyCountsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenant/connect-gmail": {
       "get": {
         "tags": ["connect-gmail-controller"],
@@ -7235,6 +7315,94 @@
         "parameters": [
           {
             "name": "gmailMessageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/GmailInboxMessageDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/inbox/drafts/{gmailDraftId}": {
+      "get": {
+        "tags": ["gmail-inbox"],
+        "operationId": "draftDetail",
+        "parameters": [
+          {
+            "name": "gmailDraftId",
             "in": "path",
             "required": true,
             "schema": {
@@ -8481,33 +8649,6 @@
         },
         "required": ["active"]
       },
-      "WaitlistSubscribeRequest": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "maxLength": 320,
-            "minLength": 0
-          },
-          "source": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 0
-          }
-        },
-        "required": ["email"]
-      },
-      "WaitlistSubscribeResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": ["ADDED", "ALREADY_REGISTERED", "ALREADY_USER"]
-          }
-        },
-        "required": ["status"]
-      },
       "CampaignPreviewRequest": {
         "type": "object",
         "properties": {
@@ -8667,6 +8808,24 @@
           }
         },
         "required": ["draftId", "gmailThreadId", "openInGmailUrl", "status"]
+      },
+      "NeedsReplyBackfillResponse": {
+        "type": "object",
+        "properties": {
+          "threadsScanned": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "threadsClassified": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "threadsFailed": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": ["threadsClassified", "threadsFailed", "threadsScanned"]
       },
       "GenerateFromSentRequest": {
         "type": "object",
@@ -9221,10 +9380,10 @@
           "inline": {
             "type": "boolean"
           },
-          "formData": {
+          "attachment": {
             "type": "boolean"
           },
-          "attachment": {
+          "formData": {
             "type": "boolean"
           }
         }
@@ -9340,6 +9499,22 @@
           "origin": {
             "type": "string"
           },
+          "ifNoneMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ifMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "range": {
             "type": "array",
             "items": {
@@ -9355,15 +9530,19 @@
               "type": "string"
             }
           },
-          "acceptPatch": {
+          "allow": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
+              "$ref": "#/components/schemas/HttpMethod"
+            },
+            "uniqueItems": true
           },
-          "basicAuth": {
+          "bearerAuth": {
             "type": "string",
             "writeOnly": true
+          },
+          "cacheControl": {
+            "type": "string"
           },
           "acceptLanguage": {
             "type": "array",
@@ -9380,59 +9559,30 @@
               }
             }
           },
+          "acceptPatch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "basicAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "accessControlMaxAge": {
+            "type": "integer",
+            "format": "int64"
+          },
           "acceptLanguageAsLocales": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
-          "accessControlMaxAge": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "ifNoneMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
           "contentLanguage": {
             "type": "string"
           },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
-          "allow": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpMethod"
-            },
-            "uniqueItems": true
-          },
-          "cacheControl": {
-            "type": "string"
-          },
-          "accessControlAllowMethods": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpMethod"
-            }
-          },
-          "accessControlAllowCredentials": {
-            "type": "boolean"
-          },
           "accessControlExposeHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlAllowHeaders": {
             "type": "array",
             "items": {
               "type": "string"
@@ -9444,20 +9594,32 @@
               "type": "string"
             }
           },
+          "accessControlRequestMethod": {
+            "$ref": "#/components/schemas/HttpMethod"
+          },
           "accessControlAllowOrigin": {
             "type": "string"
           },
-          "accessControlRequestMethod": {
-            "$ref": "#/components/schemas/HttpMethod"
+          "accessControlAllowMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            }
+          },
+          "accessControlAllowCredentials": {
+            "type": "boolean"
+          },
+          "accessControlAllowHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "accept": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MediaType"
             }
-          },
-          "upgrade": {
-            "type": "string"
           },
           "expires": {
             "type": "integer",
@@ -9472,13 +9634,10 @@
               "type": "string"
             }
           },
-          "ifMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "pragma": {
+            "type": "string"
+          },
+          "upgrade": {
             "type": "string"
           }
         }
@@ -9785,9 +9944,16 @@
             "format": "int32",
             "maximum": 23,
             "minimum": 0
+          },
+          "digestSendDayOfWeek": {
+            "type": "integer",
+            "format": "int32",
+            "description": "ISO day-of-week: Monday\u003d1 .. Sunday\u003d7.",
+            "maximum": 7,
+            "minimum": 1
           }
         },
-        "required": ["digestEnabled", "digestSendHourLocal"]
+        "required": ["digestEnabled", "digestSendDayOfWeek", "digestSendHourLocal"]
       },
       "NotificationPreferencesResponse": {
         "type": "object",
@@ -9802,11 +9968,22 @@
             "type": "integer",
             "format": "int32"
           },
+          "digestSendDayOfWeek": {
+            "type": "integer",
+            "format": "int32",
+            "description": "ISO day-of-week the weekly digest is sent: Monday\u003d1 .. Sunday\u003d7."
+          },
           "timeZone": {
             "type": "string"
           }
         },
-        "required": ["channel", "digestEnabled", "digestSendHourLocal", "timeZone"]
+        "required": [
+          "channel",
+          "digestEnabled",
+          "digestSendDayOfWeek",
+          "digestSendHourLocal",
+          "timeZone"
+        ]
       },
       "UpdateLanguageRequest": {
         "type": "object",
@@ -10113,6 +10290,18 @@
           },
           "openInGmailUrl": {
             "type": "string"
+          },
+          "snippet": {
+            "type": ["string", "null"],
+            "description": "Short preview of the latest message in the thread, fetched live from Gmail (never persisted)."
+          },
+          "latestMessageId": {
+            "type": ["string", "null"],
+            "description": "Gmail message id of the latest message in the thread, used to open an in-place reader. Null when the live Gmail display fetch was unavailable."
+          },
+          "draftId": {
+            "type": ["string", "null"],
+            "description": "Gmail draft id of the saved reply draft for this thread, used to preview the draft body in-place. Null when the thread has no draft."
           }
         },
         "required": [
@@ -10134,6 +10323,24 @@
           }
         },
         "required": ["toReplyCount"]
+      },
+      "NeedsReplyCountsResponse": {
+        "type": "object",
+        "properties": {
+          "toReplyCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "awaitingCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "draftedCount": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": ["awaitingCount", "draftedCount", "toReplyCount"]
       },
       "CuratedCatalogModelResponse": {
         "type": "object",

@@ -17,7 +17,7 @@ const ROUTES: OnboardingPath[] = [
 
 test.describe('hidden beta onboarding routes', () => {
   for (const path of ROUTES) {
-    test(`${path} redirects to rules`, async ({ request }) => {
+    test(`${path} redirects to chat`, async ({ request }) => {
       const response = await request.get(path, {
         headers: {
           Cookie: 'ZEROMAIL_SESSION=playwright-session; NEXT_LOCALE=en',
@@ -26,7 +26,8 @@ test.describe('hidden beta onboarding routes', () => {
       });
 
       expect([302, 303, 307, 308]).toContain(response.status());
-      expect(response.headers().location).toBe('/rules');
+      // ONBOARDING_BYPASS_ROUTE — the main app landing (Chat).
+      expect(response.headers().location).toBe('/chat');
     });
   }
 });

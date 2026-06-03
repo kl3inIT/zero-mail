@@ -1,0 +1,151 @@
+databaseChangeLog:
+  - changeSet:
+      id: 113-default-rule-templates-seed
+      author: zeromail
+      changes:
+        - sql:
+            splitStatements: false
+            comment: >-
+              Seed the Inbox-Zero-style default rule templates that are auto-materialized (enabled)
+              on first login so a new tenant lands on a populated Rules page instead of an empty one.
+              Each template is a single SEMANTIC_INTENT matcher with a DISTINCT nodeId (the template
+              key) — the triage orchestrator parses each rule independently and falls back to a
+              shared "matcher" nodeId when none is set, which would collapse all ten semantic
+              requests into one LLM result. The intent text is the classification instruction sent
+              to the platform LLM (kept under the 512-char matcher text bound). Marketing and Cold
+              Email also archive (skip inbox); the reply-status family (To Reply / Awaiting Reply /
+              FYI / Actioned) and the remaining categories only label.
+            sql: |
+              INSERT INTO rule_template_catalog (
+                id, template_key, template_version, display_name, source_text, source_language,
+                schema_version, matcher_ast, action_intents, status
+              )
+              VALUES
+                (
+                  '00000000-0000-0000-0000-000000003101'::uuid,
+                  'system-to-reply',
+                  1,
+                  'To Reply',
+                  'Label emails I personally need to respond to as "To Reply" and draft a reply for me to review.',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-to-reply","intent":"Emails I personally need to respond to — direct questions, requests, or messages awaiting my reply.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"To Reply"},{"type":"save_draft","instruction":"Draft a concise, professional reply for me to review before sending."}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003102'::uuid,
+                  'system-awaiting-reply',
+                  1,
+                  'Awaiting Reply',
+                  'Label emails where I am waiting for someone to get back to me as "Awaiting Reply".',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-awaiting-reply","intent":"Emails where I am waiting for someone else to get back to me after I already replied or reached out.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Awaiting Reply"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003103'::uuid,
+                  'system-fyi',
+                  1,
+                  'FYI',
+                  'Label informational emails I should know about but do not need to reply to as "FYI".',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-fyi","intent":"Important emails I should be aware of but that do not need any reply from me.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"FYI"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003104'::uuid,
+                  'system-actioned',
+                  1,
+                  'Actioned',
+                  'Label conversations that are done with nothing left to do as "Actioned".',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-actioned","intent":"Conversations that are already done or resolved, with nothing left for me to do.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Actioned"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003105'::uuid,
+                  'system-newsletter',
+                  1,
+                  'Newsletter',
+                  'Label newsletters and subscription content as "Newsletter".',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-newsletter","intent":"Newsletters: regular content from publications, blogs, or services I have subscribed to.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Newsletter"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003106'::uuid,
+                  'system-marketing',
+                  1,
+                  'Marketing',
+                  'Label promotional and marketing emails as "Marketing" and archive them.',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-marketing","intent":"Marketing: promotional emails about products, services, sales, discounts, or special offers.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Marketing"},{"type":"archive"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003107'::uuid,
+                  'system-calendar',
+                  1,
+                  'Calendar',
+                  'Label scheduling and calendar emails as "Calendar".',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-calendar","intent":"Calendar: scheduling messages, meeting invitations, event reminders, or calendar notifications.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Calendar"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003108'::uuid,
+                  'system-receipt',
+                  1,
+                  'Receipt',
+                  'Label receipts, invoices, and payment confirmations as "Receipt".',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-receipt","intent":"Receipts: purchase confirmations, payment receipts, transaction records, or invoices.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Receipt"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003109'::uuid,
+                  'system-notification',
+                  1,
+                  'Notification',
+                  'Label automated alerts and system messages as "Notification".',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-notification","intent":"Notifications: automated alerts, status updates, or system messages from apps and services.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Notification"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003110'::uuid,
+                  'system-cold-email',
+                  1,
+                  'Cold Email',
+                  'Label unsolicited cold outreach as "Cold Email" and archive it.',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-cold-email","intent":"Cold emails: unsolicited sales pitches, recruiting, or partnership requests from someone with no prior relationship. NOT cold: investors, friends, colleagues, intro emails, existing customers, newsletters, receipts, promotions, alerts, updates, calendar invites, password resets, or welcome emails.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Cold Email"},{"type":"archive"}]'::jsonb,
+                  'materializable'
+                )
+              ON CONFLICT (template_key, template_version) DO NOTHING
+      rollback:
+        - sql:
+            sql: >-
+              DELETE FROM rule_template_catalog WHERE template_key IN (
+                'system-to-reply','system-awaiting-reply','system-fyi','system-actioned',
+                'system-newsletter','system-marketing','system-calendar','system-receipt',
+                'system-notification','system-cold-email')

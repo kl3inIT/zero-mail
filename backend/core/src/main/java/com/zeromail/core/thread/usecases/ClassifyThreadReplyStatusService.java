@@ -66,7 +66,19 @@ public class ClassifyThreadReplyStatusService {
     public ThreadReplyStatus classify(ThreadReplyClassificationInput classificationInput) {
         Objects.requireNonNull(classificationInput, "classificationInput must not be null");
         return ScopedValue.where(TenantContext.TENANT, classificationInput.tenantId().toString())
-                .call(() -> classifyInTransaction(classificationInput));
+                .call(() -> classifyInTransaction(classificationInput, false));
+    }
+
+    /**
+     * Force re-classification even when the thread's latest message was already classified. Used by
+     * the operator-triggered backfill re-sync so improved classifier logic re-applies to threads
+     * seen before. Unlike a new message arriving, this preserves the existing {@code resolved}
+     * flag.
+     */
+    public ThreadReplyStatus reclassify(ThreadReplyClassificationInput classificationInput) {
+        Objects.requireNonNull(classificationInput, "classificationInput must not be null");
+        return ScopedValue.where(TenantContext.TENANT, classificationInput.tenantId().toString())
+                .call(() -> classifyInTransaction(classificationInput, true));
     }
 
     public Optional<String> currentDraftId(String gmailThreadId) {
@@ -86,20 +98,25 @@ public class ClassifyThreadReplyStatusService {
                         true,
                         false,
                         null,
+                        false,
+                        // Outbound: reader sent the latest message, so the needs-reply signal is
+                        // irrelevant (bucketFor takes the AWAITING_THEIR_REPLY branch).
                         false);
         TenantContext.runWith(
                 event.tenantId(), () -> classifyListenerEventInTransaction(classificationInput));
     }
 
     private ThreadReplyStatus classifyWithTenantBound(
-            ThreadReplyClassificationInput classificationInput) {
+            ThreadReplyClassificationInput classificationInput, boolean forceReclassify) {
         Optional<ThreadReplyStatusEntity> existingStatus =
                 threadReplyStatusRepository.findByGmailThreadId(
                         classificationInput.gmailThreadId());
-        if (existingStatus
-                .map(ThreadReplyStatusEntity::getLastClassifiedMessageId)
-                .filter(classificationInput.lastMessageId()::equals)
-                .isPresent()) {
+        boolean sameMessageAlreadyClassified =
+                existingStatus
+                        .map(ThreadReplyStatusEntity::getLastClassifiedMessageId)
+                        .filter(classificationInput.lastMessageId()::equals)
+                        .isPresent();
+        if (sameMessageAlreadyClassified && !forceReclassify) {
             return toDomain(existingStatus.orElseThrow());
         }
 
@@ -123,7 +140,10 @@ public class ClassifyThreadReplyStatusService {
         statusEntity.setLastClassifiedAt(classifiedAt);
         statusEntity.setHasDraft(classificationInput.hasZeroMailDraft());
         statusEntity.setDraftId(classificationInput.zeroMailDraftId());
-        if (existingStatus.isPresent()) {
+        if (existingStatus.isPresent() && !sameMessageAlreadyClassified) {
+            // A genuinely new message reopens the thread; a forced re-sync of the same message
+            // keeps
+            // whatever resolved state the reader already chose.
             statusEntity.setResolved(false);
         }
 
@@ -137,24 +157,24 @@ public class ClassifyThreadReplyStatusService {
     }
 
     private ThreadReplyStatus classifyInTransaction(
-            ThreadReplyClassificationInput classificationInput) {
+            ThreadReplyClassificationInput classificationInput, boolean forceReclassify) {
         if (classificationTransaction == null) {
-            return classifyWithTenantBound(classificationInput);
+            return classifyWithTenantBound(classificationInput, forceReclassify);
         }
         ThreadReplyStatus classifiedStatus =
                 classificationTransaction.execute(
-                        _ -> classifyWithTenantBound(classificationInput));
+                        _ -> classifyWithTenantBound(classificationInput, forceReclassify));
         return Objects.requireNonNull(classifiedStatus, "classifiedStatus must not be null");
     }
 
     private void classifyListenerEventInTransaction(
             ThreadReplyClassificationInput classificationInput) {
         if (listenerClassificationTransaction == null) {
-            classifyWithTenantBound(classificationInput);
+            classifyWithTenantBound(classificationInput, false);
             return;
         }
         listenerClassificationTransaction.executeWithoutResult(
-                _ -> classifyWithTenantBound(classificationInput));
+                _ -> classifyWithTenantBound(classificationInput, false));
     }
 
     private static TransactionTemplate classificationTransaction(
@@ -168,9 +188,22 @@ public class ClassifyThreadReplyStatusService {
         if (classificationInput.lastMessageFromIsTenant()
                 && classificationInput.threadHasSentLabel()
                 && !classificationInput.lastMessageIsAutoReply()) {
+            // The reader sent the latest message and is waiting on the other party.
             return ThreadReplyBucket.AWAITING_THEIR_REPLY;
         }
-        return ThreadReplyBucket.TO_REPLY;
+        if (!classificationInput.lastMessageFromIsTenant()
+                && classificationInput.lastMessageIsAutoReply()) {
+            // An inbound auto-reply (the counterparty's vacation responder / "do not reply" bounce)
+            // never needs the reader's attention regardless of the needs-reply signal — always FYI,
+            // per ThreadReplyClassificationInput's contract. An outbound auto-reply (the tenant's
+            // own responder) falls through: the counterparty still awaits the reader's real reply.
+            return ThreadReplyBucket.FYI;
+        }
+        // Otherwise the caller's needs-reply signal (LLM classification / no-reply pre-filter / "a
+        // reply was already drafted") decides between the TO_REPLY ("Cần trả lời") and FYI buckets.
+        return classificationInput.inboundReplyNeeded()
+                ? ThreadReplyBucket.TO_REPLY
+                : ThreadReplyBucket.FYI;
     }
 
     private static ThreadReplyStatus toDomain(ThreadReplyStatusEntity statusEntity) {

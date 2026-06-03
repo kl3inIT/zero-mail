@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 111-feature-catalog-needs-reply
+      author: zeromail
+      comment: >-
+        Seed the feature_catalog row for the new CallSite.NEEDS_REPLY billable call site (the
+        per-inbound-message needs-reply vs FYI classifier that populates the "Cần trả lời"
+        inbox). FeatureCatalogConsistencyChecker enforces that every CallSite enum value has a
+        row here, so the NEEDS_REPLY enum value added alongside this changeset would fail startup
+        validation without it. Category TRIAGE matches the triage-time classification family;
+        default_credit_cost 1 reflects one small structured-output classification per inbound
+        message (cheaper than a draft). Operators can re-tune the cost without a redeploy.
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM feature_catalog WHERE code = 'NEEDS_REPLY'
+      changes:
+        - insert:
+            tableName: feature_catalog
+            columns:
+              - column: { name: code, value: NEEDS_REPLY }
+              - column: { name: display_name, value: Needs-Reply Classification }
+              - column: { name: description, value: "Per-inbound-message needs-reply vs FYI classification for the needs-reply inbox." }
+              - column: { name: category, value: TRIAGE }
+              - column: { name: default_credit_cost, valueNumeric: 1 }
+              - column: { name: sort_order, valueNumeric: 70 }
+      rollback:
+        - delete:
+            tableName: feature_catalog
+            where: code = 'NEEDS_REPLY'

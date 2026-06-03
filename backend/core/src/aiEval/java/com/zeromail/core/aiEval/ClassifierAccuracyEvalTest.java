@@ -109,7 +109,11 @@ class ClassifierAccuracyEvalTest {
                         fixture.threadHasSentLabel(),
                         fixture.hasZeroMailDraft(),
                         fixture.hasZeroMailDraft() ? fixture.id() + "-draft" : null,
-                        fixture.lastMessageIsAutoReply()));
+                        fixture.lastMessageIsAutoReply(),
+                        // These fixtures hold out the deterministic direction/draft buckets; an
+                        // inbound message needs a reply (the LLM needs-reply-vs-FYI decision is
+                        // covered separately), so the FYI branch is not exercised here.
+                        true));
     }
 
     private static List<ClassifierFixture> loadFixtures() throws IOException, URISyntaxException {

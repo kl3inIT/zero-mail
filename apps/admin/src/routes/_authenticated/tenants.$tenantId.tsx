@@ -91,7 +91,6 @@ function TenantDetailRoute() {
             <ArrowLeftIcon className="size-4" />
             Khách hàng
           </Link>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Kiểm tra khách hàng</p>
           <h1 className="break-all text-xl font-semibold text-ink">{targetEmail || tenantId}</h1>
         </div>
         {overviewData && <StatusBadge status={overviewData.status} />}

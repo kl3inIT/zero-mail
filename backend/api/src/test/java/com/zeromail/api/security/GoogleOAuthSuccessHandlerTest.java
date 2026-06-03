@@ -10,10 +10,12 @@ import static org.mockito.Mockito.when;
 import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -45,9 +47,15 @@ class GoogleOAuthSuccessHandlerTest {
         var provisioning = mock(OAuthProvisioningService.class);
         var authorizedClients = mock(OAuth2AuthorizedClientService.class);
         var userRepo = mock(UserRepository.class);
+        var ruleTemplateMaterialization = mock(RuleTemplateMaterializationService.class);
 
         var handler =
-                new GoogleOAuthSuccessHandler(provisioning, authorizedClients, userRepo, PROPS);
+                new GoogleOAuthSuccessHandler(
+                        provisioning,
+                        authorizedClients,
+                        userRepo,
+                        ruleTemplateMaterialization,
+                        PROPS);
 
         String subject = "google-subject-bundled-test";
         String email = "bundled-test@example.com";
@@ -86,10 +94,11 @@ class GoogleOAuthSuccessHandlerTest {
                         new OAuth2AuthorizedClient(
                                 registration, token.getName(), accessToken, refreshToken));
 
+        UUID provisionedTenantId = UUID.randomUUID();
         when(provisioning.provisionBundledOAuth(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(
                         new OAuthProvisioningService.BundledProvisioningResult(
-                                java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), true));
+                                provisionedTenantId, UUID.randomUUID(), true));
 
         var request = new MockHttpServletRequest();
         var response = new MockHttpServletResponse();
@@ -98,6 +107,10 @@ class GoogleOAuthSuccessHandlerTest {
 
         verify(provisioning)
                 .provisionBundledOAuth(eq(subject), eq(email), anyString(), anyString());
+        // First login seeds the Inbox-Zero-style default rules (enabled) for the new tenant. The
+        // test OidcUser has no `locale` claim, so seeding falls back to Vietnamese (VN-first).
+        verify(ruleTemplateMaterialization)
+                .materializeDefaultRulesEnabled(provisionedTenantId, "vi");
         assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/onboarding");
     }
 }

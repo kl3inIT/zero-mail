@@ -50,6 +50,7 @@ class NotificationPreferencesControllerTest extends ApiPostgresTestBase {
                 .contains("\"channel\":\"EMAIL\"")
                 .contains("\"digestEnabled\":true")
                 .contains("\"digestSendHourLocal\":20")
+                .contains("\"digestSendDayOfWeek\":1")
                 .contains("\"timeZone\":\"Asia/Ho_Chi_Minh\"");
     }
 
@@ -75,14 +76,16 @@ class NotificationPreferencesControllerTest extends ApiPostgresTestBase {
                 patch(
                         "/api/me/notifications",
                         tenantA,
-                        "{\"digestEnabled\":false,\"digestSendHourLocal\":9}");
+                        "{\"digestEnabled\":false,\"digestSendHourLocal\":9,\"digestSendDayOfWeek\":3}");
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody())
                 .contains("\"digestEnabled\":false")
-                .contains("\"digestSendHourLocal\":9");
+                .contains("\"digestSendHourLocal\":9")
+                .contains("\"digestSendDayOfWeek\":3");
         assertThat(preferenceFor(tenantA.tenantId()).isDigestEnabled()).isFalse();
         assertThat(preferenceFor(tenantA.tenantId()).getDigestSendHourLocal()).isEqualTo(9);
+        assertThat(preferenceFor(tenantA.tenantId()).getDigestSendDayOfWeek()).isEqualTo(3);
         assertThat(preferenceFor(tenantB.tenantId()).isDigestEnabled()).isTrue();
         assertThat(preferenceFor(tenantB.tenantId()).getDigestSendHourLocal()).isEqualTo(6);
     }

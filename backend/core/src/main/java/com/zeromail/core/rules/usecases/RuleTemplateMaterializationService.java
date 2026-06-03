@@ -29,6 +29,31 @@ public class RuleTemplateMaterializationService {
     private static final Logger log =
             LoggerFactory.getLogger(RuleTemplateMaterializationService.class);
 
+    /**
+     * Inbox-Zero-style starter rules seeded (enabled) on first login so a new tenant lands on a
+     * populated Rules page. Keys mirror the {@code system-*} rows in {@code
+     * 113-default-rule-templates-seed.yaml} (English) and {@code
+     * 114-default-rule-templates-vi-seed.yaml} (Vietnamese, {@code -vi} suffix). Order here is the
+     * order the rules appear in the Rules list (reply-status family first, then content
+     * categories). First-login seeding picks the set matching the user's language; existing tenants
+     * are not re-seeded (first login only).
+     */
+    public static final List<String> DEFAULT_RULE_TEMPLATE_KEYS_EN =
+            List.of(
+                    "system-to-reply",
+                    "system-awaiting-reply",
+                    "system-fyi",
+                    "system-actioned",
+                    "system-newsletter",
+                    "system-marketing",
+                    "system-calendar",
+                    "system-receipt",
+                    "system-notification",
+                    "system-cold-email");
+
+    public static final List<String> DEFAULT_RULE_TEMPLATE_KEYS_VI =
+            DEFAULT_RULE_TEMPLATE_KEYS_EN.stream().map(key -> key + "-vi").toList();
+
     private final OnboardingService onboardingService;
     private final RuleTemplateCatalogService ruleTemplateCatalogService;
     private final RuleRepository ruleRepository;
@@ -49,14 +74,39 @@ public class RuleTemplateMaterializationService {
 
     public RuleTemplateMaterializationResult materializeSelectedTemplates(UUID tenantId) {
         Objects.requireNonNull(tenantId, "tenantId");
-        List<String> selectedTemplateKeys = onboardingService.selectedEnabledTemplateKeys(tenantId);
+        return materializeKeys(
+                tenantId, onboardingService.selectedEnabledTemplateKeys(tenantId), false);
+    }
+
+    /**
+     * Materializes the localized default rule set as ENABLED rules for a brand-new tenant
+     * (first-login seeding). {@code "en"} picks {@link #DEFAULT_RULE_TEMPLATE_KEYS_EN}; anything
+     * else (including {@code null}) falls back to Vietnamese ({@link
+     * #DEFAULT_RULE_TEMPLATE_KEYS_VI}) — the app is Vietnamese-first. Idempotent per template key:
+     * re-running skips any already-materialized key and preserves user-customized rules, so a
+     * re-login or retry never duplicates or overwrites. Runs each key in its own {@code
+     * REQUIRES_NEW} tenant-scoped transaction, so it is safe to call outside an ambient {@link
+     * TenantContext}.
+     */
+    public RuleTemplateMaterializationResult materializeDefaultRulesEnabled(
+            UUID tenantId, String language) {
+        Objects.requireNonNull(tenantId, "tenantId");
+        List<String> templateKeys =
+                "en".equalsIgnoreCase(language)
+                        ? DEFAULT_RULE_TEMPLATE_KEYS_EN
+                        : DEFAULT_RULE_TEMPLATE_KEYS_VI;
+        return materializeKeys(tenantId, templateKeys, true);
+    }
+
+    private RuleTemplateMaterializationResult materializeKeys(
+            UUID tenantId, List<String> templateKeys, boolean enableOnCreate) {
         List<RuleStatusProjection> createdRules = new ArrayList<>();
         List<SkippedTemplate> skippedTemplates = new ArrayList<>();
         int customizedPreservedCount = 0;
 
-        for (String selectedTemplateKey : selectedTemplateKeys) {
+        for (String templateKey : templateKeys) {
             TemplateMaterializationOutcome materializationOutcome =
-                    materializeTemplateWithRetry(tenantId, selectedTemplateKey);
+                    materializeTemplateWithRetry(tenantId, templateKey, enableOnCreate);
             materializationOutcome.createdRule().ifPresent(createdRules::add);
             materializationOutcome.skippedTemplate().ifPresent(skippedTemplates::add);
             if (materializationOutcome.customizedPreserved()) {
@@ -95,7 +145,7 @@ public class RuleTemplateMaterializationService {
             throw new IllegalArgumentException("templateKey must not be blank");
         }
         TemplateMaterializationOutcome materializationOutcome =
-                materializeTemplateWithRetry(tenantId, templateKey.trim());
+                materializeTemplateWithRetry(tenantId, templateKey.trim(), false);
         List<RuleStatusProjection> createdRules =
                 materializationOutcome.createdRule().map(List::of).orElseGet(List::of);
         List<SkippedTemplate> skippedTemplates =
@@ -109,10 +159,10 @@ public class RuleTemplateMaterializationService {
     }
 
     private TemplateMaterializationOutcome materializeTemplateWithRetry(
-            UUID tenantId, String templateKey) {
+            UUID tenantId, String templateKey, boolean enableOnCreate) {
         try {
             return executeInTenantTransaction(
-                    tenantId, () -> materializeTemplateOnce(tenantId, templateKey));
+                    tenantId, () -> materializeTemplateOnce(tenantId, templateKey, enableOnCreate));
         } catch (DataIntegrityViolationException dataIntegrityViolation) {
             return executeInTenantTransaction(
                     tenantId,
@@ -123,7 +173,7 @@ public class RuleTemplateMaterializationService {
     }
 
     private TemplateMaterializationOutcome materializeTemplateOnce(
-            UUID tenantId, String templateKey) {
+            UUID tenantId, String templateKey, boolean enableOnCreate) {
         Optional<RuleEntity> existingRule =
                 ruleRepository.findByTenantIdAndTemplateKey(tenantId, templateKey);
         if (existingRule.isPresent()) {
@@ -132,7 +182,7 @@ public class RuleTemplateMaterializationService {
         }
 
         Optional<RuleTemplateEntity> template =
-                ruleTemplateCatalogService.resolveLatestMaterializableTemplate(templateKey);
+                ruleTemplateCatalogService.resolveLatestSeedableTemplate(templateKey);
         if (template.isEmpty()) {
             return TemplateMaterializationOutcome.skipped(
                     templateKey, SkippedTemplateReason.UNKNOWN_OR_DEPRECATED, false);
@@ -153,6 +203,9 @@ public class RuleTemplateMaterializationService {
                         orderIndex,
                         ruleTemplateEntity.getTemplateKey(),
                         ruleTemplateEntity.getTemplateVersion());
+        if (enableOnCreate) {
+            ruleEntity.setEnabled(true);
+        }
 
         RuleEntity savedRule = ruleRepository.saveAndFlush(ruleEntity);
         return TemplateMaterializationOutcome.created(savedRule.toStatusProjection());

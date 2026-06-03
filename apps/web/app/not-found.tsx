@@ -1,47 +1,33 @@
 import { getTranslations } from 'next-intl/server';
 
 import { buttonVariants } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 /**
  * Root 404 fallback (Phase 01.4 D-D2). RSC default async export.
- * Phase 01.5 Plan 02 — deflated from PageShell/EmptyState to raw
- * <main>/<Card> composition (D-C1, D-C2).
  *
- * Inline SVG (AlertCircle) — NOT lucide-react (STATE.md line 149:
- * vitest React-dedupe boundary won't survive lucide imports).
+ * Inline content only — NOT lucide-react / next/link (STATE.md line 149: the
+ * vitest React-dedupe boundary won't survive those imports). The big "404"
+ * glyph is decorative (aria-hidden); the heading carries the accessible name.
  */
 export default async function NotFound() {
   const t = await getTranslations('errors.notFound');
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-          <div aria-hidden className="text-muted-foreground">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="size-12"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" x2="12" y1="8" y2="12" />
-              <line x1="12" x2="12.01" y1="16" y2="16" />
-            </svg>
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-foreground text-3xl font-semibold tracking-tight">{t('title')}</h2>
-            <p className="text-muted-foreground">{t('body')}</p>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- vitest React-dedupe boundary cannot import next/link (STATE.md line 149) */}
-          <a href="/" className={buttonVariants()}>
-            {t('backHome')}
-          </a>
-        </CardContent>
-      </Card>
+    <main className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-16 text-center">
+      <p
+        aria-hidden
+        className="text-muted-foreground/20 text-[7rem] leading-none font-bold tracking-tighter select-none sm:text-[9rem]"
+      >
+        404
+      </p>
+      <h1 className="text-foreground mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+        {t('title')}
+      </h1>
+      <p className="text-muted-foreground mt-3 max-w-md text-balance">{t('body')}</p>
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- vitest React-dedupe boundary cannot import next/link (STATE.md line 149) */}
+      <a href="/" className={cn(buttonVariants(), 'mt-8 h-11 rounded-full px-7')}>
+        {t('backHome')}
+      </a>
     </main>
   );
 }
