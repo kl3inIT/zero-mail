@@ -1,3 +1,4 @@
+import { getApiUrl } from '@/lib/api/base-url';
 import { api, xsrfHeader } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
@@ -75,7 +76,7 @@ export async function runSenderAction(
   // in lib/api/schema.d.ts. The backend CleanupSenderActionController already exposes this
   // endpoint; the committed OpenAPI spec is just stale. Fix: boot backend + run
   // `pnpm --filter web run generate:api`, then restore api.POST and drop this raw fetch.
-  const response = await fetch('/api/unsubscribe/senders/action', {
+  const response = await fetch(getApiUrl('/api/unsubscribe/senders/action'), {
     method: 'POST',
     credentials: 'include',
     headers: jsonHeaders(),
@@ -122,9 +123,10 @@ export async function fetchSenderTimeline(
     senderEmail,
     windowDays: String(windowDays),
   });
-  const response = await fetch(`/api/unsubscribe/stats/timeline?${searchParams.toString()}`, {
-    credentials: 'include',
-  });
+  const response = await fetch(
+    getApiUrl(`/api/unsubscribe/stats/timeline?${searchParams.toString()}`),
+    { credentials: 'include' },
+  );
   if (!response.ok) {
     throw new Error(`/api/unsubscribe/stats/timeline failed: ${response.status}`);
   }
@@ -141,9 +143,10 @@ export async function fetchSenderMessages(
     archivedOnly: String(archivedOnly),
     limit: String(limit),
   });
-  const response = await fetch(`/api/unsubscribe/stats/messages?${searchParams.toString()}`, {
-    credentials: 'include',
-  });
+  const response = await fetch(
+    getApiUrl(`/api/unsubscribe/stats/messages?${searchParams.toString()}`),
+    { credentials: 'include' },
+  );
   if (!response.ok) {
     throw new Error(`/api/unsubscribe/stats/messages failed: ${response.status}`);
   }
@@ -154,7 +157,7 @@ export async function fetchSenderMessageBody(
   gmailMessageId: string,
 ): Promise<SenderMessageBody | null> {
   const response = await fetch(
-    `/api/unsubscribe/stats/messages/${encodeURIComponent(gmailMessageId)}/body`,
+    getApiUrl(`/api/unsubscribe/stats/messages/${encodeURIComponent(gmailMessageId)}/body`),
     { credentials: 'include' },
   );
   if (response.status === 404) return null;
