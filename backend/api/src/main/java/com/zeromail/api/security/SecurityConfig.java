@@ -229,9 +229,14 @@ public class SecurityConfig {
                                         API_REQUEST_MATCHER))
                 .logout(
                         logout ->
+                                // Logout MUST live under /api so the production reverse proxy
+                                // (routes only /api, /oauth2, /login/oauth2 to Spring) forwards it
+                                // to the backend. A top-level /logout fell through to Next.js → 404
+                                // → "Không thể đăng xuất". Mirrors the admin chain's
+                                // /api/admin/logout.
                                 logout.logoutRequestMatcher(
                                                 PathPatternRequestMatcher.withDefaults()
-                                                        .matcher(HttpMethod.POST, "/logout"))
+                                                        .matcher(HttpMethod.POST, "/api/logout"))
                                         .logoutSuccessHandler(
                                                 new HttpStatusReturningLogoutSuccessHandler())
                                         .invalidateHttpSession(true)
