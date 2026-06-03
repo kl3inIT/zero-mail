@@ -296,3 +296,6 @@ databaseChangeLog:
   - include:
       file: changes/111-feature-catalog-needs-reply.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/112-drop-waitlist-email.yaml
+      relativeToChangelogFile: true

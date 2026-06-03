@@ -5,7 +5,6 @@ import Link from 'next/link';
 
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentUserCached } from '@/features/account/api/account-api';
-import InboxPreview from '@/features/landing/components/InboxPreview';
 import { ArrowRightIcon } from '@/features/landing/components/PrototypeIcons';
 import { ONBOARDING_BYPASS_ROUTE, shouldShowBetaOnboarding } from '@/features/onboarding/config';
 import type { AppLocale } from '@/i18n/routing';
@@ -15,9 +14,9 @@ export default async function Hero() {
   const t = await getTranslations();
   const locale = (await getLocale()) as AppLocale;
 
-  let ctaHref: Route = '#waitlist' as Route;
-  let ctaKey: 'landing.waitlistCta' | 'landing.continueSetupCta' | 'landing.openAppCta' =
-    'landing.waitlistCta';
+  let ctaHref: Route = '/login';
+  let ctaKey: 'landing.getStartedCta' | 'landing.continueSetupCta' | 'landing.openAppCta' =
+    'landing.getStartedCta';
   try {
     const headerStore = await headers();
     const cookieHeader = headerStore.get('cookie') ?? '';
@@ -75,10 +74,13 @@ export default async function Hero() {
         <div className="relative mt-20 w-full max-w-5xl">
           <div className="absolute -inset-4 -z-10 rounded-[3rem] bg-gradient-to-b from-(--accent-soft) to-transparent opacity-20 blur-3xl" />
           <div
-            className="relative w-full overflow-hidden rounded-2xl border border-(--line-strong) bg-(--bg-subtle) shadow-[0_24px_80px_-12px_rgba(0,0,0,0.1)]"
-            data-slot="hero-preview"
+            className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl border border-(--line-strong) bg-(--bg-subtle) shadow-[0_24px_80px_-12px_rgba(0,0,0,0.1)]"
+            data-slot="hero-video"
           >
-            <InboxPreview />
+            {/* Intro video placeholder — wire the real embed in later. */}
+            <span className="text-sm font-medium text-(--text-faint)">
+              {t('landing.videoPlaceholder')}
+            </span>
           </div>
         </div>
       </div>

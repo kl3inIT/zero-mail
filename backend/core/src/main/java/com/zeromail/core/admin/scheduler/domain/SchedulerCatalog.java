@@ -117,14 +117,6 @@ public final class SchedulerCatalog {
                             "TRIAGE",
                             "Xoá bản ghi audit triage quá hạn lưu trữ."),
                     new SchedulerDescriptor(
-                            "waitlist-invite-dispatch",
-                            "Gửi lời mời waitlist",
-                            "Mỗi phút",
-                            "0 * * * * *",
-                            SchedulerProcess.WORKER,
-                            "WAITLIST",
-                            "Drain hàng đợi gửi email mời cho waitlist đã duyệt."),
-                    new SchedulerDescriptor(
                             "credit-reserve-watchdog",
                             "Watchdog giữ tín dụng",
                             "Mỗi 60s",

@@ -205,8 +205,6 @@ public class SecurityConfig {
                                                 "/login/oauth2/**",
                                                 "/oauth2/**")
                                         .permitAll()
-                                        .requestMatchers(HttpMethod.POST, "/api/waitlist/subscribe")
-                                        .permitAll()
                                         .anyRequest()
                                         .authenticated())
                 .oauth2Login(
@@ -223,9 +221,7 @@ public class SecurityConfig {
                         csrf ->
                                 csrf.spa()
                                         .ignoringRequestMatchers(
-                                                "/login/oauth2/code/**",
-                                                "/oauth2/callback/**",
-                                                "/api/waitlist/subscribe"))
+                                                "/login/oauth2/code/**", "/oauth2/callback/**"))
                 .exceptionHandling(
                         exceptionHandling ->
                                 exceptionHandling.defaultAuthenticationEntryPointFor(

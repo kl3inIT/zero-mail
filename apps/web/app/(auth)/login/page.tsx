@@ -88,12 +88,6 @@ export default async function LoginPage({
               </Button>
               <LegalFooter className="zm-signin-terms text-left" />
             </div>
-            <div className="zm-signin-foot">
-              <span>{tLogin('newUser')}</span>
-              <Link href="/#waitlist" className="text-(--ink)">
-                {tLogin('waitlist')}
-              </Link>
-            </div>
           </div>
         </div>
       </main>

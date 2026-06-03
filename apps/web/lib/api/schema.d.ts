@@ -164,22 +164,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/waitlist/subscribe": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["subscribe"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/unsubscribe/campaigns/{jobId}/undo": {
         parameters: {
             query?: never;
@@ -1393,15 +1377,6 @@ export interface components {
         ByokActivateRequest: {
             active: boolean;
         };
-        WaitlistSubscribeRequest: {
-            /** Format: email */
-            email: string;
-            source?: string;
-        };
-        WaitlistSubscribeResponse: {
-            /** @enum {string} */
-            status: "ADDED" | "ALREADY_REGISTERED" | "ALREADY_USER";
-        };
         CampaignPreviewRequest: {
             senderEmails: string[];
         };
@@ -1623,8 +1598,8 @@ export interface components {
             filename?: string;
             charset?: string;
             inline?: boolean;
-            formData?: boolean;
             attachment?: boolean;
+            formData?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -1668,41 +1643,41 @@ export interface components {
             ifModifiedSince?: number;
             contentType?: components["schemas"]["MediaType"];
             origin?: string;
-            range?: components["schemas"]["HttpRange"][];
-            bearerAuth?: string;
-            contentDisposition?: components["schemas"]["ContentDisposition"];
-            acceptCharset?: string[];
-            allow?: components["schemas"]["HttpMethod"][];
             ifNoneMatch?: string[];
             /** Format: int64 */
             ifUnmodifiedSince?: number;
-            cacheControl?: string;
-            accessControlExposeHeaders?: string[];
-            accessControlRequestHeaders?: string[];
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
-            contentLanguage?: string;
-            etag?: string;
             ifMatch?: string[];
+            range?: components["schemas"]["HttpRange"][];
+            contentDisposition?: components["schemas"]["ContentDisposition"];
+            acceptCharset?: string[];
+            allow?: components["schemas"]["HttpMethod"][];
+            bearerAuth?: string;
+            cacheControl?: string;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
             acceptPatch?: components["schemas"]["MediaType"][];
-            acceptLanguageAsLocales?: string[];
             basicAuth?: string;
             /** Format: int64 */
             accessControlMaxAge?: number;
-            accessControlAllowHeaders?: string[];
+            acceptLanguageAsLocales?: string[];
+            contentLanguage?: string;
+            accessControlExposeHeaders?: string[];
+            accessControlRequestHeaders?: string[];
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
             accessControlAllowOrigin?: string;
-            accessControlAllowCredentials?: boolean;
             accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
+            accessControlAllowCredentials?: boolean;
+            accessControlAllowHeaders?: string[];
             accept?: components["schemas"]["MediaType"][];
             /** Format: int64 */
             expires?: number;
+            etag?: string;
+            vary?: string[];
             pragma?: string;
             upgrade?: string;
-            vary?: string[];
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -1716,9 +1691,9 @@ export interface components {
             qualityValue?: number;
             charset?: string;
             concrete?: boolean;
+            wildcardSubtype?: boolean;
             wildcardType?: boolean;
             subtypeSuffix?: string;
-            wildcardSubtype?: boolean;
         };
         BankTransferIntentResponse: {
             /** Format: uuid */
@@ -3680,84 +3655,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ByokResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    subscribe: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WaitlistSubscribeRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["WaitlistSubscribeResponse"];
                 };
             };
             /** @description Bad Request */

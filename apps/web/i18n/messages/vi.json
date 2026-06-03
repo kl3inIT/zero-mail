@@ -438,14 +438,12 @@
       "headline": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
       "headlineA": "Đăng nhập để bắt đầu",
       "headlineB": "dọn hộp thư.",
-      "newUser": "Lần đầu sử dụng?",
       "noCard": "Không cần thẻ thanh toán",
       "privacy": "Chính sách bảo mật",
       "terms": "Điều khoản",
       "termsAnd": "và",
       "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
       "title": "Đăng nhập",
-      "waitlist": "Đăng ký trải nghiệm Zero Mail →",
       "workEmail": "Đăng nhập bằng Gmail công ty"
     }
   },
@@ -861,37 +859,6 @@
     "disconnected": "Mất kết nối",
     "notConnected": "Chưa kết nối",
     "reconnectPrompt": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail để tiếp tục thiết lập."
-  },
-  "cta": {
-    "b1": "Miễn phí trong giai đoạn beta",
-    "b2": "Không cần thẻ",
-    "b3": "Hủy đăng ký bằng một cú nhấp",
-    "button": "Đăng ký trải nghiệm",
-    "closeAria": "Đóng hộp thoại danh sách chờ",
-    "closeCta": "Đóng",
-    "desc": "Hãy đăng ký chờ. Mỗi tuần chúng tôi đón thêm 50 nhà sáng lập và quản lý vận hành theo thứ tự. Bạn sẽ nhận lời mời để cài đặt Zero Mail với tài khoản Gmail thật của mình.",
-    "emailPlaceholder": "ban@congty.com",
-    "eyebrow": "Truy cập sớm",
-    "note": {
-      "body": "Chúng tôi đào sâu vào Gmail trước khi mở rộng sang Outlook hay IMAP. Nếu bạn dùng hộp thư khác, để lại email và chúng tôi sẽ báo khi có hỗ trợ.",
-      "title": "Chỉ Gmail · v1"
-    },
-    "privacyNote": "Chúng tôi chỉ dùng email này để gửi lời mời Zero Mail.",
-    "stats": {
-      "s1": "trong danh sách chờ",
-      "s2": "lời mời mỗi tuần",
-      "s3": "giảm hộp thư trung bình",
-      "s4": "email tự động gửi"
-    },
-    "submitting": "Đang đăng ký...",
-    "success": {
-      "body": "Đã ghi nhận {email}. Chúng tôi sẽ liên hệ khi đến lượt bạn.",
-      "title": "Bạn đã vào danh sách chờ"
-    },
-    "title": {
-      "a": "Đăng ký trải nghiệm Zero Mail",
-      "b": "không còn lo lắng."
-    }
   },
   "dashboard": {
     "recentActivity": "Hoạt động gần đây",
@@ -1367,18 +1334,18 @@
     "secondaryCta": "Xem tính năng",
     "tagline": "Zero Mail tự động đọc, phân loại và soạn sẵn câu trả lời cho Gmail của bạn — theo quy tắc bạn viết bằng tiếng Việt. Không còn cảnh mỗi sáng mở hộp thư và ngồi lọc 30 phút.",
     "videoPlaceholder": "Video demo sẽ sớm có mặt",
-    "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
+    "getStartedCta": "Bắt đầu miễn phí"
   },
   "landingFaq": {
     "header": {
       "title": "Các câu hỏi thường gặp"
     },
     "items": {
-      "a1": "Chúng tôi hỗ trợ các tài khoản email Gmail, Google Workspace và Microsoft Outlook.",
+      "a1": "Chúng tôi hỗ trợ các tài khoản email Gmail và Google Workspace.",
       "a2": "Hãy gửi email cho chúng tôi. Chúng tôi luôn sẵn sàng lắng nghe để cải thiện trải nghiệm email của bạn.",
-      "a3": "Không! Zero Mail không phải là một ứng dụng email khách (email client). Nó được sử dụng song song với ứng dụng email hiện tại của bạn. Bạn vẫn sử dụng Google hoặc Outlook như bình thường.",
+      "a3": "Không! Zero Mail không phải là một ứng dụng email khách (email client). Nó được sử dụng song song với ứng dụng email hiện tại của bạn. Bạn vẫn sử dụng Gmail như bình thường.",
       "a4": "Có, nếu bạn cảm thấy chúng tôi không mang lại giá trị cho bạn, hãy gửi email cho chúng tôi trong vòng 14 ngày kể từ khi nâng cấp và chúng tôi sẽ hoàn tiền cho bạn.",
-      "a5": "Chắc chắn rồi, chúng tôi có bản dùng thử miễn phí 7 ngày cho tất cả các gói để bạn có thể trải nghiệm ngay lập tức, không cần thẻ tín dụng!",
+      "a5": "Được chứ! Zero Mail hiện hoàn toàn miễn phí trong giai đoạn đầu — không cần thẻ tín dụng, chưa thu phí gì cả.",
       "q1": "Zero Mail hỗ trợ các nhà cung cấp email nào?",
       "q2": "Làm thế nào tôi có thể yêu cầu tính năng mới?",
       "q3": "Zero Mail có thay thế ứng dụng email hiện tại của tôi không?",
@@ -1468,11 +1435,11 @@
     }
   },
   "landingPricing": {
-    "ctaTrial": "Dùng thử miễn phí 7 ngày",
+    "ctaStart": "Bắt đầu miễn phí",
     "header": {
-      "badge": "Giá theo năm, dùng thử miễn phí 7 ngày",
+      "badge": "Hiện đang miễn phí",
       "body": "Không có phí ẩn. Hủy bất cứ lúc nào.",
-      "title": "Dùng thử miễn phí, gói trả phí hợp lý"
+      "title": "Bảng giá đơn giản, gói hợp lý"
     },
     "perPersonMonth": " /người /tháng",
     "plus": {
@@ -1772,6 +1739,7 @@
     "dashboard": "Tổng quan",
     "faq": "FAQ",
     "features": "Tính năng",
+    "getStarted": "Bắt đầu miễn phí",
     "how": "Cách hoạt động",
     "inbox": "Hộp thư",
     "languageSelector": "Ngôn ngữ",
@@ -1792,8 +1760,7 @@
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
     "trust": "Tin cậy & an toàn",
-    "upgradePlan": "Nâng cấp gói",
-    "waitlist": "Đăng ký trải nghiệm Zero Mail"
+    "upgradePlan": "Nâng cấp gói"
   },
   "needsReply": {
     "action": {

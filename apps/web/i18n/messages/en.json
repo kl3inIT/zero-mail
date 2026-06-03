@@ -438,14 +438,12 @@
       "headline": "Reach inbox zero without giving up control.",
       "headlineA": "Sign in to start",
       "headlineB": "clearing your inbox.",
-      "newUser": "First time here?",
       "noCard": "No card required",
       "privacy": "Privacy Policy",
       "terms": "Terms",
       "termsAnd": "and",
       "termsPrefix": "By signing in you agree to our",
       "title": "Sign in",
-      "waitlist": "Register to experience Zero Mail →",
       "workEmail": "Sign in with company Gmail"
     }
   },
@@ -861,37 +859,6 @@
     "disconnected": "Disconnected",
     "notConnected": "Not connected",
     "reconnectPrompt": "Google access was revoked or expired. Reconnect Gmail to continue setup."
-  },
-  "cta": {
-    "b1": "Free during beta",
-    "b2": "No card required",
-    "b3": "Unsubscribe in one click",
-    "button": "Register to experience",
-    "closeAria": "Close waitlist dialog",
-    "closeCta": "Close",
-    "desc": "Join the waitlist. We're onboarding 50 founders and operators a week, in order. You'll get an invite to set up Zero Mail with your real Gmail account.",
-    "emailPlaceholder": "you@company.com",
-    "eyebrow": "Early access",
-    "note": {
-      "body": "We're going deep on Gmail before adding Outlook or IMAP. If you live in another inbox, leave your email and we'll let you know when we expand.",
-      "title": "Gmail-only · v1"
-    },
-    "privacyNote": "We only use this email to send your Zero Mail invite.",
-    "stats": {
-      "s1": "on the waitlist",
-      "s2": "invites going out",
-      "s3": "avg inbox reduction",
-      "s4": "emails auto-sent"
-    },
-    "submitting": "Joining...",
-    "success": {
-      "body": "You're on the list as {email}. We'll reach out when your invite is ready.",
-      "title": "You're on the waitlist"
-    },
-    "title": {
-      "a": "Register to experience Zero Mail",
-      "b": "without the anxiety."
-    }
   },
   "dashboard": {
     "recentActivity": "Recent activity",
@@ -1367,18 +1334,18 @@
     "secondaryCta": "See features",
     "tagline": "Zero Mail reads, sorts, and drafts replies for your Gmail — by rules you write in plain English. No more 30-minute morning triage.",
     "videoPlaceholder": "Product demo coming soon",
-    "waitlistCta": "Register to experience Zero Mail"
+    "getStartedCta": "Get started free"
   },
   "landingFaq": {
     "header": {
       "title": "Frequently asked questions"
     },
     "items": {
-      "a1": "We support Gmail, Google Workspace, and Microsoft Outlook accounts.",
+      "a1": "We support Gmail and Google Workspace accounts.",
       "a2": "Email us. We're always listening to improve your email experience.",
-      "a3": "No! Zero Mail is not an email client. It runs alongside your existing email app. You still use Google or Outlook as normal.",
+      "a3": "No! Zero Mail is not an email client. It runs alongside your existing email app. You still use Gmail as normal.",
       "a4": "Yes — if you feel we haven't delivered value, email us within 14 days of upgrading and we'll refund you.",
-      "a5": "Absolutely. We offer a 7-day free trial across all plans so you can experience it right away — no credit card required!",
+      "a5": "Yes — Zero Mail is completely free to use right now during early access. No credit card, no charges yet.",
       "q1": "Which email providers does Zero Mail support?",
       "q2": "How can I request a new feature?",
       "q3": "Will Zero Mail replace my current email app?",
@@ -1468,9 +1435,9 @@
     }
   },
   "landingPricing": {
-    "ctaTrial": "Start 7-day free trial",
+    "ctaStart": "Get started free",
     "header": {
-      "badge": "Annual pricing, 7-day free trial",
+      "badge": "Free to use right now",
       "body": "No hidden fees. Cancel anytime.",
       "title": "Simple pricing, fair plans"
     },
@@ -1772,6 +1739,7 @@
     "dashboard": "Dashboard",
     "faq": "FAQ",
     "features": "Features",
+    "getStarted": "Get started free",
     "how": "How it works",
     "inbox": "Inbox",
     "languageSelector": "Language",
@@ -1792,8 +1760,7 @@
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
     "trust": "Trust & safety",
-    "upgradePlan": "Upgrade plan",
-    "waitlist": "Register to experience Zero Mail"
+    "upgradePlan": "Upgrade plan"
   },
   "needsReply": {
     "action": {

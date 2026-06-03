@@ -1540,94 +1540,6 @@
         }
       }
     },
-    "/api/waitlist/subscribe": {
-      "post": {
-        "tags": ["waitlist-controller"],
-        "operationId": "subscribe",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WaitlistSubscribeRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/WaitlistSubscribeResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/unsubscribe/campaigns/{jobId}/undo": {
       "post": {
         "tags": ["cleanup"],
@@ -8737,33 +8649,6 @@
         },
         "required": ["active"]
       },
-      "WaitlistSubscribeRequest": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "maxLength": 320,
-            "minLength": 0
-          },
-          "source": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 0
-          }
-        },
-        "required": ["email"]
-      },
-      "WaitlistSubscribeResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": ["ADDED", "ALREADY_REGISTERED", "ALREADY_USER"]
-          }
-        },
-        "required": ["status"]
-      },
       "CampaignPreviewRequest": {
         "type": "object",
         "properties": {
@@ -9495,10 +9380,10 @@
           "inline": {
             "type": "boolean"
           },
-          "formData": {
+          "attachment": {
             "type": "boolean"
           },
-          "attachment": {
+          "formData": {
             "type": "boolean"
           }
         }
@@ -9614,15 +9499,27 @@
           "origin": {
             "type": "string"
           },
+          "ifNoneMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ifMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "range": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HttpRange"
             }
-          },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
           },
           "contentDisposition": {
             "$ref": "#/components/schemas/ContentDisposition"
@@ -9640,45 +9537,12 @@
             },
             "uniqueItems": true
           },
-          "ifNoneMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
           },
           "cacheControl": {
             "type": "string"
-          },
-          "accessControlExposeHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlRequestHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlRequestMethod": {
-            "$ref": "#/components/schemas/HttpMethod"
-          },
-          "contentLanguage": {
-            "type": "string"
-          },
-          "etag": {
-            "type": "string"
-          },
-          "ifMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           },
           "acceptLanguage": {
             "type": "array",
@@ -9701,12 +9565,6 @@
               "$ref": "#/components/schemas/MediaType"
             }
           },
-          "acceptLanguageAsLocales": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "basicAuth": {
             "type": "string",
             "writeOnly": true
@@ -9715,22 +9573,46 @@
             "type": "integer",
             "format": "int64"
           },
-          "accessControlAllowHeaders": {
+          "acceptLanguageAsLocales": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
-          "accessControlAllowOrigin": {
+          "contentLanguage": {
             "type": "string"
           },
-          "accessControlAllowCredentials": {
-            "type": "boolean"
+          "accessControlExposeHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlRequestHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlRequestMethod": {
+            "$ref": "#/components/schemas/HttpMethod"
+          },
+          "accessControlAllowOrigin": {
+            "type": "string"
           },
           "accessControlAllowMethods": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HttpMethod"
+            }
+          },
+          "accessControlAllowCredentials": {
+            "type": "boolean"
+          },
+          "accessControlAllowHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           },
           "accept": {
@@ -9743,10 +9625,7 @@
             "type": "integer",
             "format": "int64"
           },
-          "pragma": {
-            "type": "string"
-          },
-          "upgrade": {
+          "etag": {
             "type": "string"
           },
           "vary": {
@@ -9754,6 +9633,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "pragma": {
+            "type": "string"
+          },
+          "upgrade": {
+            "type": "string"
           }
         }
       },
@@ -9784,14 +9669,14 @@
           "concrete": {
             "type": "boolean"
           },
+          "wildcardSubtype": {
+            "type": "boolean"
+          },
           "wildcardType": {
             "type": "boolean"
           },
           "subtypeSuffix": {
             "type": "string"
-          },
-          "wildcardSubtype": {
-            "type": "boolean"
           }
         }
       },
