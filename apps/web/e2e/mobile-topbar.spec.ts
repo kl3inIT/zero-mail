@@ -8,8 +8,9 @@ test.describe('mobile public topbar', () => {
     await expect(page.getByRole('group', { name: /language/i })).toBeVisible();
     // Bundled Google OAuth = login is signup, so logged-out visitors see a single
     // "Get started free" / "Bắt đầu miễn phí" CTA (nav.getStarted), not a Sign in link.
+    // Scope to the header — the hero CTA shares the same accessible name.
     await expect(
-      page.getByRole('link', { name: /bắt đầu miễn phí|get started free/i }),
+      page.getByRole('banner').getByRole('link', { name: /bắt đầu miễn phí|get started free/i }),
     ).toBeVisible();
   });
 });

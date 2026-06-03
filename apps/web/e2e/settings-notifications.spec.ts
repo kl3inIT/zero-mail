@@ -27,12 +27,16 @@ for (const viewport of [
     await expect(page.getByText(/no automatic catch-up/i)).toBeVisible();
 
     await page.getByTestId('ai-daily-digest-switch').click();
+    // objectContaining tolerates the weekly-digest `digestSendDayOfWeek` field the payload now
+    // carries — this test only asserts the enabled flag and send hour persist.
     await expect
       .poll(() => state.notificationPreferenceUpdates)
-      .toContainEqual({
-        digestEnabled: false,
-        digestSendHourLocal: 20,
-      });
+      .toContainEqual(
+        expect.objectContaining({
+          digestEnabled: false,
+          digestSendHourLocal: 20,
+        }),
+      );
     await expect(page.getByTestId('ai-daily-digest-switch')).not.toBeChecked();
     // When the digest is off the send-hour select is unmounted (not just disabled).
     await expect(page.getByTestId('ai-digest-send-hour-select')).toHaveCount(0);
@@ -47,10 +51,12 @@ for (const viewport of [
 
     await expect
       .poll(() => state.notificationPreferenceUpdates)
-      .toContainEqual({
-        digestEnabled: true,
-        digestSendHourLocal: 8,
-      });
+      .toContainEqual(
+        expect.objectContaining({
+          digestEnabled: true,
+          digestSendHourLocal: 8,
+        }),
+      );
     await expect(page.getByTestId('ai-digest-send-hour-select')).toContainText('08:00');
     await expectNoHorizontalOverflow(page);
   });
