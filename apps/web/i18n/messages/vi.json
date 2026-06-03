@@ -686,147 +686,112 @@
       "title": "Danh sách an toàn"
     },
     "unsubscribe": {
-      "list": {
-        "action": {
-          "collapse": "Đóng chi tiết người gửi",
-          "details": "Mở chi tiết người gửi",
-          "keep": "Thêm vào danh sách an toàn",
-          "unsubscribe": "Xem trước"
-        },
-        "clear": "Bỏ chọn",
-        "col": {
-          "actions": "Hành động",
-          "count": "Email 30 ngày",
-          "domain": "Tên miền",
-          "history": "Lịch sử",
-          "risk": "Trạng thái",
-          "sender": "Người gửi"
-        },
-        "counter": "{count} / 25 người gửi đã chọn",
-        "counterOver": "{count} / 25 người gửi - vượt giới hạn",
-        "detail": {
-          "archive": "Email sẽ xử lý",
-          "archiveValue": "Nếu hủy nhận thành công, Zero Mail sẽ lưu trữ {count} email gần đây.",
-          "disabled": "Gmail chưa cung cấp cách hủy nhận an toàn cho sender này.",
-          "lastSeen": "Lần thấy gần nhất",
-          "safe": "Không xóa email. Có thể hoàn tác lưu trữ trong 30 ngày.",
-          "safety": "An toàn",
-          "skip": "Đưa vào danh sách an toàn",
-          "skipDescription": "Ẩn khỏi các gợi ý hủy đăng ký sau này. Gmail không bị thay đổi."
-        },
-        "empty": {
-          "body": "Zero Mail kiểm tra 100 email Inbox gần nhất và chỉ hiện người gửi có cách hủy nhận an toàn.",
-          "link": "Tìm hiểu cách Zero Mail phát hiện bản tin →",
-          "title": "Chưa tìm thấy người gửi có thể hủy đăng ký"
-        },
-        "error": "Không tải được danh sách người gửi. Hãy thử lại sau một chút.",
-        "eyebrow": "Dọn dẹp Gmail",
-        "filter": {
-          "all": "Tất cả người gửi",
-          "mailto": "Gửi email hủy nhận",
-          "oneClick": "Hủy nhận an toàn",
-          "ready": "Có thể hủy nhận"
-        },
-        "filterLabel": "Lọc người gửi",
-        "helpBody": "Zero Mail chỉ hiển thị người gửi có tín hiệu hủy nhận an toàn từ Gmail. Bạn chọn người gửi, xem trước, rồi xác nhận. Email cũ chỉ được lưu trữ sau khi hủy nhận thành công và không bị xóa.",
-        "helpLabel": "Giải thích hủy đăng ký an toàn",
-        "helpTitle": "Cách hủy đăng ký hoạt động",
-        "historyCount": "{count} email",
-        "lead": "Zero Mail tìm các email có hỗ trợ hủy nhận từ Gmail. Khi bạn xác nhận, hệ thống gửi yêu cầu hủy nhận an toàn; nếu thành công mới lưu trữ email cũ. Không xóa email.",
-        "preview": "Xem trước",
-        "retry": "Thử lại",
-        "searchPlaceholder": "Tìm người gửi hoặc tên miền",
-        "selectAll": "Chọn tất cả người gửi đang hiển thị",
-        "selectedMail": "{count} email lịch sử trong lựa chọn",
-        "sort": {
-          "count": "Nhiều email nhất",
-          "recent": "Mới thấy gần đây",
-          "sender": "A-Z theo người gửi"
-        },
-        "sortLabel": "Sắp xếp người gửi",
-        "stats": {
-          "messages": "Email sẽ lưu trữ",
-          "oneClick": "Hủy nhận an toàn",
-          "ready": "Có thể hủy nhận",
-          "total": "Người gửi đã phát hiện"
-        },
-        "suppressionLink": "Danh sách an toàn",
-        "title": "Hủy đăng ký"
-      },
-      "method": {
-        "mailto": "Gửi email hủy nhận",
-        "mailtoTooltip": "Gửi một email hủy nhận tới địa chỉ được khai báo trong header Gmail.",
-        "none": "Không hỗ trợ",
-        "oneClick": "Hủy nhận an toàn",
-        "oneClickTooltip": "Dùng header Gmail chuẩn RFC 8058. Zero Mail gửi POST an toàn tới endpoint hủy nhận; không mở link trong nội dung email."
-      },
-      "preview": {
-        "cancel": "Quay lại",
-        "capMessage": "Đã vượt giới hạn 2.000 email lịch sử ({count}). Quay lại và bỏ chọn bớt.",
-        "capSender": "Đã vượt giới hạn 25 người gửi. Quay lại và bỏ chọn bớt.",
-        "confirm": "Hủy đăng ký",
-        "description": "Kiểm tra trước khi xác nhận. Zero Mail chỉ lưu trữ email cũ sau khi hủy nhận thành công. Không xóa email và có thể hoàn tác lưu trữ trong 30 ngày.",
-        "empty": "Không có người gửi nào đủ điều kiện hủy đăng ký trong lựa chọn hiện tại.",
+      "action": {
+        "approveOk": "Đã phê duyệt người gửi.",
+        "archiveOk": "Đã lưu trữ email cũ của người gửi này. Người gửi vẫn ở trong danh sách để bạn quyết định hủy đăng ký hoặc chặn.",
+        "autoArchiveOk": "Đã tạo quy tắc tự động lưu trữ cho người gửi này. Email cũ đã chuyển khỏi Hộp thư đến; email mới sẽ tự động bị lưu trữ.",
+        "blockOk": "Đã chặn người gửi: Zero Mail tạo quy tắc tự động lưu trữ. Email cũ đã chuyển khỏi Hộp thư đến; email mới sẽ tự động bị lưu trữ.",
+        "deleteOk": "Đã chuyển email lịch sử vào Thùng rác.",
         "errCapMessage": "Vượt giới hạn 2.000 email lịch sử. Hãy bỏ chọn bớt.",
         "errCapSender": "Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.",
         "errGeneric": "Không tạo được tác vụ hủy đăng ký. Hãy thử lại sau một chút.",
-        "submitOk": "Đã tạo tác vụ hủy đăng ký. Đang theo dõi tiến độ...",
-        "submitting": "Đang tạo...",
-        "title": "Xem trước hủy đăng ký",
-        "totalMail": "Email sẽ lưu trữ nếu thành công: {count}",
-        "totalSender": "Tổng người gửi: {count}",
-        "willArchive": "{count} email gần đây sẽ được lưu trữ nếu hủy nhận thành công",
-        "willNotArchive": "Không tự động xử lý sender này"
+        "genericError": "Không thực hiện được. Hãy thử lại sau một chút.",
+        "labelFutureOk": "Đã tạo quy tắc gắn nhãn cho email tương lai.",
+        "mailAffected": "{count} email đã được xử lý.",
+        "markUnsubscribedOk": "Đã đánh dấu đã hủy đăng ký.",
+        "submitDescription": "Zero Mail đang xử lý {count} người gửi trong nền.",
+        "submitOk": "Đang hủy đăng ký",
+        "unapproveOk": "Đã bỏ phê duyệt."
       },
-      "retry": {
-        "alreadyOk": "Người gửi này đã hủy đăng ký thành công, không cần thử lại.",
-        "generic": "Không thử lại được. Hãy thử lại sau một chút."
+      "confirm": {
+        "archiveBody": "Zero Mail sẽ chuyển toàn bộ email lịch sử của {count} người gửi này ra khỏi Hộp thư đến. Email không bị xóa và có thể tự kéo lại từ Gmail.",
+        "archiveTitle": "Lưu trữ toàn bộ email từ {count} người gửi?",
+        "cancel": "Hủy",
+        "deleteBody": "Zero Mail sẽ chuyển toàn bộ email lịch sử của {count} người gửi này vào Thùng rác Gmail. Bạn có 30 ngày để khôi phục từ Gmail trước khi Gmail xóa vĩnh viễn.",
+        "deleteOne": "Xóa toàn bộ email từ {sender}? Email sẽ chuyển vào Thùng rác Gmail.",
+        "deleteTitle": "Xóa toàn bộ email từ {count} người gửi?"
       },
-      "risk": {
-        "noHeader": "Không tự động",
-        "noHeaderTooltip": "Gmail không có header hủy nhận an toàn cho người gửi này.",
-        "safe": "Có thể hủy nhận",
-        "suppressed": "An toàn"
+      "filter": {
+        "all": "Tất cả người gửi",
+        "approved": "Đã phê duyệt",
+        "autoArchived": "Tự động lưu trữ",
+        "unhandled": "Chưa xử lý",
+        "unsubscribed": "Đã hủy đăng ký"
       },
-      "status": {
-        "breadcrumb": "Hủy đăng ký / #{shortId}",
+      "labelFuture": {
+        "body": "Zero Mail sẽ tạo quy tắc tự động gắn nhãn cho email mới từ {sender}. Email lịch sử không bị thay đổi.",
+        "placeholder": "Tên nhãn (ví dụ: Newsletters)",
+        "title": "Gắn nhãn cho email tương lai từ người gửi này"
+      },
+      "list": {
+        "action": {
+          "approve": "Phê duyệt",
+          "archive": "Lưu trữ",
+          "archiveAll": "Lưu trữ toàn bộ email từ người này",
+          "autoArchive": "Tự động lưu trữ",
+          "block": "Chặn",
+          "delete": "Xóa",
+          "deleteAll": "Xóa toàn bộ email từ người này",
+          "labelFuture": "Gắn nhãn cho email tương lai",
+          "menu": "Tùy chọn thêm",
+          "unapprove": "Bỏ phê duyệt",
+          "unsubscribe": "Hủy đăng ký",
+          "unsubscribeBlock": "Hủy đăng ký / Chặn",
+          "viewGmail": "Mở trong Gmail",
+          "viewStats": "Xem thống kê"
+        },
+        "clear": "Bỏ chọn",
         "col": {
-          "action": "Hành động",
-          "archived": "Email đã lưu trữ",
-          "sender": "Người gửi",
-          "state": "Trạng thái"
+          "emails": "Số email",
+          "from": "Người gửi",
+          "read": "Tỷ lệ đọc"
         },
-        "completed": "Hoàn tất",
-        "error": "Không tải được trạng thái hủy đăng ký. Hãy thử lại sau một chút.",
-        "errorBanner": "Lỗi hệ thống - chưa hoàn tất. Liên hệ bộ phận hỗ trợ nếu cần.",
-        "failed": "Lỗi - chưa hoàn tất",
-        "progress": "{percent}% ({okCount} thành công / {failedCount} lỗi / {totalCount} người gửi)",
-        "queued": "Đang chờ tiến trình nền nhận việc",
+        "counter": "{count} trong {total} người gửi đã chọn",
+        "counterOver": "{count} / 25 người gửi - vượt giới hạn",
+        "empty": {
+          "body": "Zero Mail sẽ hiển thị các người gửi đã quan sát được trong khoảng thời gian đã chọn.",
+          "title": "Chưa tìm thấy người gửi nào"
+        },
+        "error": "Không tải được danh sách người gửi. Hãy thử lại sau một chút.",
+        "loadMore": "Tải thêm",
         "retry": "Thử lại",
-        "retryOk": "Đã đưa {sender} vào hàng đợi thử lại.",
-        "running": "Đang chạy",
-        "state": {
-          "failed": "Thất bại",
-          "ok": "Thành công",
-          "pending": "Chờ",
-          "running": "Đang chạy"
-        },
-        "title": "Hủy đăng ký #{shortId}",
-        "undo": {
-          "body": "Bạn có thể hoàn tác trong {daysLeft} ngày tới: khôi phục email về Hộp thư đến và gỡ nhãn `Zero Mail/Unsubscribed`.",
-          "button": "Hoàn tác lưu trữ",
-          "title": "Tác vụ đã hoàn tất"
-        }
+        "searchPlaceholder": "Tìm người gửi hoặc tên miền",
+        "selectAll": "Chọn tất cả người gửi đang hiển thị",
+        "selectedMail": "{count} email lịch sử trong lựa chọn"
       },
-      "undo": {
-        "cancel": "Quay lại",
-        "confirmBody": "Sẽ khôi phục {count} email về Hộp thư đến và gỡ nhãn `Zero Mail/Unsubscribed`. Hành động này không thể đảo ngược thêm lần nữa.",
-        "confirmCta": "Đồng ý hoàn tác",
-        "confirmTitle": "Hoàn tác lưu trữ?",
-        "generic": "Không hoàn tác được. Hãy thử lại sau một chút.",
-        "ok": "Đã khôi phục {count} email về Hộp thư đến.",
-        "windowExpired": "Đã quá 30 ngày kể từ khi tác vụ chạy nên không thể hoàn tác nữa.",
-        "windowExpiredToast": "Quá thời hạn 30 ngày nên không thể hoàn tác nữa."
+      "method": {
+        "mailto": "Gửi email hủy nhận",
+        "none": "Không hỗ trợ",
+        "oneClick": "Hủy nhận an toàn"
+      },
+      "stats": {
+        "chartEmpty": "Chưa có dữ liệu trong 30 ngày qua.",
+        "chartError": "Không tải được biểu đồ. Hãy thử lại sau một chút.",
+        "chartLoading": "Đang tải biểu đồ…",
+        "closePreview": "Đóng phần xem trước",
+        "messagesEmpty": "Không có email nào trong tab này.",
+        "messagesError": "Không tải được danh sách email. Hãy thử lại sau một chút.",
+        "messagesLoading": "Đang tải email từ Gmail…",
+        "previewEmpty": "Email này không có nội dung hiển thị được.",
+        "previewError": "Không tải được nội dung email. Hãy thử lại.",
+        "previewHint": "Chọn một email ở bên trái để xem nội dung.",
+        "previewLoading": "Đang tải nội dung email…",
+        "tabs": {
+          "all": "Tất cả",
+          "unarchived": "Chưa lưu trữ"
+        },
+        "titleWith": "Thống kê cho {sender}"
+      },
+      "statusLabel": {
+        "approved": "Đã phê duyệt",
+        "autoArchived": "Tự động lưu trữ",
+        "unhandled": "Chưa xử lý",
+        "unsubscribed": "Đã hủy đăng ký"
+      },
+      "window": {
+        "30d": "30 ngày qua",
+        "7d": "7 ngày qua",
+        "90d": "3 tháng qua"
       }
     }
   },
@@ -969,11 +934,8 @@
     },
     "cleanup": {
       "campaign": {
-        "not_found": "Không tìm thấy tác vụ hủy đăng ký. Hãy quay lại danh sách.",
-        "retry_conflict": "Người gửi này đã hủy đăng ký thành công, không cần thử lại.",
         "too_many_messages": "Vượt giới hạn 2.000 email lịch sử. Hãy bỏ chọn bớt.",
-        "too_many_senders": "Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.",
-        "undo_window_expired": "Quá thời hạn 30 ngày nên không thể hoàn tác nữa."
+        "too_many_senders": "Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt."
       },
       "sender_suppressed": "Người gửi này đang nằm trong danh sách an toàn. Hãy gỡ khỏi danh sách trước khi xử lý."
     },

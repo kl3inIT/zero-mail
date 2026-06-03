@@ -4,13 +4,29 @@ import type { components } from '@/lib/api/schema';
 export type UnsubscribeCandidateResponse = components['schemas']['UnsubscribeCandidateResponse'];
 export type UnsubscribeCandidateListResponse =
   components['schemas']['UnsubscribeCandidateListResponse'];
-export type CampaignPreviewRequest = components['schemas']['CampaignPreviewRequest'];
-export type CampaignPreviewResponse = components['schemas']['CampaignPreviewResponse'];
-export type PerSenderPreviewResponse = components['schemas']['PerSenderPreviewResponse'];
 export type CampaignExecuteRequest = components['schemas']['CampaignExecuteRequest'];
 export type CampaignExecuteResponse = components['schemas']['CampaignExecuteResponse'];
-export type CampaignStatusResponse = components['schemas']['CampaignStatusResponse'];
-export type PerSenderStateResponse = components['schemas']['PerSenderStateResponse'];
+
+export type CleanupSenderAction =
+  | 'APPROVE'
+  | 'UNAPPROVE'
+  | 'MARK_UNSUBSCRIBED'
+  | 'AUTO_ARCHIVE'
+  | 'ARCHIVE'
+  | 'DELETE'
+  | 'LABEL_FUTURE';
+
+export type CleanupSenderActionRequest = {
+  action: CleanupSenderAction;
+  senderEmails: string[];
+  labelName?: string;
+};
+
+export type CleanupSenderActionResponse = {
+  senderCount: number;
+  affectedMessageCount: number;
+  failedMessageCount: number;
+};
 
 function jsonHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json', ...xsrfHeader() };
@@ -42,16 +58,6 @@ export async function fetchCandidates(
   return data.items ?? [];
 }
 
-export async function previewCampaign(
-  body: CampaignPreviewRequest,
-): Promise<CampaignPreviewResponse> {
-  const result = await api.POST('/api/unsubscribe/campaigns/preview', {
-    body,
-    headers: jsonHeaders(),
-  });
-  return unwrap(result, `/api/unsubscribe/campaigns/preview failed: ${result.response.status}`);
-}
-
 export async function executeCampaign(
   body: CampaignExecuteRequest,
 ): Promise<CampaignExecuteResponse> {
@@ -62,37 +68,89 @@ export async function executeCampaign(
   return unwrap(result, `/api/unsubscribe/campaigns/execute failed: ${result.response.status}`);
 }
 
-export async function fetchCampaignStatus(jobId: string): Promise<CampaignStatusResponse> {
-  const result = await api.GET('/api/unsubscribe/campaigns/{jobId}', {
-    params: { path: { jobId } },
+export async function runSenderAction(
+  body: CleanupSenderActionRequest,
+): Promise<CleanupSenderActionResponse> {
+  const result = await api.POST('/api/unsubscribe/senders/action', {
+    body,
+    headers: jsonHeaders(),
   });
-  return unwrap(result, `/api/unsubscribe/campaigns/${jobId} failed: ${result.response.status}`);
+  return unwrap(result, `/api/unsubscribe/senders/action failed: ${result.response.status}`);
 }
 
-export async function retrySender(jobId: string, senderEmail: string): Promise<void> {
-  const result = await api.POST('/api/unsubscribe/campaigns/{jobId}/senders/{senderEmail}/retry', {
-    params: { path: { jobId, senderEmail } },
-    headers: xsrfHeader(),
+// Stats dialog endpoints (UNS-stats-01/02/03). Types are hand-written here until the
+// OpenAPI regen sweeps them into `lib/api/schema.d.ts`.
+
+export type SenderTimelineEntry = {
+  date: string;
+  count: number;
+};
+
+export type SenderMessageSummary = {
+  gmailMessageId: string;
+  gmailThreadId: string;
+  subject: string;
+  snippet: string;
+  internalDate: string;
+  archived: boolean;
+  unread: boolean;
+};
+
+export type SenderMessageBody = {
+  gmailMessageId: string;
+  subject: string;
+  fromHeader: string;
+  internalDate: string;
+  htmlBody?: string | null;
+  plainBody?: string | null;
+};
+
+export async function fetchSenderTimeline(
+  senderEmail: string,
+  windowDays: number,
+): Promise<SenderTimelineEntry[]> {
+  const searchParams = new URLSearchParams({
+    senderEmail,
+    windowDays: String(windowDays),
   });
-  if (result.error || !result.response.ok) {
-    throw (
-      result.error ??
-      new Error(
-        `/api/unsubscribe/campaigns/${jobId}/senders/${senderEmail}/retry failed: ${result.response.status}`,
-      )
-    );
+  const response = await fetch(`/api/unsubscribe/stats/timeline?${searchParams.toString()}`, {
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`/api/unsubscribe/stats/timeline failed: ${response.status}`);
   }
+  return (await response.json()) as SenderTimelineEntry[];
 }
 
-export async function undoCampaign(jobId: string): Promise<void> {
-  const result = await api.POST('/api/unsubscribe/campaigns/{jobId}/undo', {
-    params: { path: { jobId } },
-    headers: xsrfHeader(),
+export async function fetchSenderMessages(
+  senderEmail: string,
+  archivedOnly: boolean,
+  limit: number,
+): Promise<SenderMessageSummary[]> {
+  const searchParams = new URLSearchParams({
+    senderEmail,
+    archivedOnly: String(archivedOnly),
+    limit: String(limit),
   });
-  if (result.error || !result.response.ok) {
-    throw (
-      result.error ??
-      new Error(`/api/unsubscribe/campaigns/${jobId}/undo failed: ${result.response.status}`)
-    );
+  const response = await fetch(`/api/unsubscribe/stats/messages?${searchParams.toString()}`, {
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`/api/unsubscribe/stats/messages failed: ${response.status}`);
   }
+  return (await response.json()) as SenderMessageSummary[];
+}
+
+export async function fetchSenderMessageBody(
+  gmailMessageId: string,
+): Promise<SenderMessageBody | null> {
+  const response = await fetch(
+    `/api/unsubscribe/stats/messages/${encodeURIComponent(gmailMessageId)}/body`,
+    { credentials: 'include' },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`/api/unsubscribe/stats/messages body failed: ${response.status}`);
+  }
+  return (await response.json()) as SenderMessageBody;
 }

@@ -231,7 +231,6 @@ public class ProcessingJobWorker {
         String simpleName = handlerFailure.getClass().getSimpleName();
         return switch (simpleName) {
             case "SuppressedSenderException" -> JobFailureReason.VALIDATION_FAILED;
-            case "CampaignNotFoundException" -> JobFailureReason.VALIDATION_FAILED;
             case "CampaignCapExceededException" -> JobFailureReason.VALIDATION_FAILED;
             default -> JobFailureReason.UNKNOWN;
         };

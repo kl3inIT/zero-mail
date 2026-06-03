@@ -30,8 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class UnsubscribeCandidateController {
 
     private static final Logger log = LoggerFactory.getLogger(UnsubscribeCandidateController.class);
-    private static final String DEFAULT_WINDOW_ID = "30d";
-    private static final int DEFAULT_LIMIT = 25;
+    private static final String DEFAULT_WINDOW_ID = "90d";
+    private static final int DEFAULT_LIMIT = 50;
 
     private final CandidateQueryService candidateQueryService;
 
@@ -42,11 +42,11 @@ public class UnsubscribeCandidateController {
     @GetMapping("/candidates")
     public UnsubscribeCandidateListResponse listCandidates(
             @RequestParam(value = "window", required = false) String rawWindow,
-            @RequestParam(value = "limit", required = false, defaultValue = "25") int limit) {
+            @RequestParam(value = "limit", required = false, defaultValue = "50") int limit) {
         UUID tenantId = TenantContext.currentTenantUuid();
         Duration window = resolveWindow(rawWindow);
         int effectiveLimit =
-                Math.min(Math.max(limit, 1), UnsubscribeCampaignPolicy.MAX_SENDERS_PER_CAMPAIGN);
+                Math.min(Math.max(limit, 1), UnsubscribeCampaignPolicy.MAX_CANDIDATE_SENDERS);
         List<UnsubscribeCandidateProjection> projections =
                 candidateQueryService.findCandidates(tenantId, window, effectiveLimit);
         log.info(

@@ -1,7 +1,6 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
@@ -27,30 +26,35 @@ function extractStatusAndCode(error: unknown): { status?: number; errorCode?: st
   return {};
 }
 
-export function useExecuteCampaign(window: string = '30d') {
+type ExecuteCampaignOptions = {
+  onSuccess?: (executeResponse: CampaignExecuteResponse, variables: CampaignExecuteRequest) => void;
+};
+
+export function useExecuteCampaign(window: string = '30d', options: ExecuteCampaignOptions = {}) {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const t = useTranslations();
 
   return useMutation<CampaignExecuteResponse, Error, CampaignExecuteRequest>({
     mutationFn: executeCampaign,
-    onSuccess: (executeResponse) => {
-      toast.success(t('cleanup.unsubscribe.preview.submitOk'));
+    onSuccess: (executeResponse, variables) => {
       void queryClient.invalidateQueries({
-        queryKey: unsubscribeCampaignKeys.candidates(window),
+        queryKey: [...unsubscribeCampaignKeys.all, 'candidates', window],
       });
-      if (executeResponse.jobId) {
-        router.push(`/cleanup/unsubscribe-campaign/${executeResponse.jobId}`);
-      }
+      toast.success(t('cleanup.unsubscribe.action.submitOk'), {
+        description: t('cleanup.unsubscribe.action.submitDescription', {
+          count: variables.senderEmails.length,
+        }),
+      });
+      options.onSuccess?.(executeResponse, variables);
     },
     onError: (mutationError) => {
       const { status, errorCode } = extractStatusAndCode(mutationError);
       if (status === 400 && errorCode === 'error.cleanup.campaign.too_many_senders') {
-        toast.error(t('cleanup.unsubscribe.preview.errCapSender'));
+        toast.error(t('cleanup.unsubscribe.action.errCapSender'));
       } else if (status === 400 && errorCode === 'error.cleanup.campaign.too_many_messages') {
-        toast.error(t('cleanup.unsubscribe.preview.errCapMessage'));
+        toast.error(t('cleanup.unsubscribe.action.errCapMessage'));
       } else {
-        toast.error(t('cleanup.unsubscribe.preview.errGeneric'));
+        toast.error(t('cleanup.unsubscribe.action.errGeneric'));
       }
     },
   });

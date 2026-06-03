@@ -255,6 +255,17 @@ public class TriageGmailWriter {
                 });
     }
 
+    public void moveToTrash(UUID tenantId, String gmailMessageId) throws IOException {
+        executeGmailWrite(
+                tenantId,
+                "moveToTrash",
+                gmail -> {
+                    gmail.users().messages().trash(USER_ID, gmailMessageId).execute();
+                    logMessageWrite(tenantId, gmailMessageId, "moveToTrash");
+                    return null;
+                });
+    }
+
     /**
      * H-2 — Look up the Gmail-side label id for a known label name. Returns {@link
      * Optional#empty()} when the label does not exist (e.g. user manually deleted the {@code "Zero

@@ -254,10 +254,17 @@ public class GmailDeliveryProcessingService {
             return 0;
         }
         String senderEmail = extractSanitizedSenderEmail(gmailMessage);
+        String senderName = extractSanitizedSenderName(gmailMessage);
         GmailPreviewReadService.ListUnsubscribeExtraction listUnsubscribeExtraction =
                 extractListUnsubscribeFromMessage(gmailMessage);
         return insertObservationAndPublishEvents(
-                tenantId, history, gmailMessage, labelIds, senderEmail, listUnsubscribeExtraction);
+                tenantId,
+                history,
+                gmailMessage,
+                labelIds,
+                senderEmail,
+                senderName,
+                listUnsubscribeExtraction);
     }
 
     private static GmailPreviewReadService.ListUnsubscribeExtraction
@@ -276,6 +283,7 @@ public class GmailDeliveryProcessingService {
             Message gmailMessage,
             List<String> labelIds,
             String senderEmail,
+            String senderName,
             GmailPreviewReadService.ListUnsubscribeExtraction listUnsubscribeExtraction) {
         long historyId = history.getId().longValueExact();
         Integer insertedCount =
@@ -290,6 +298,7 @@ public class GmailDeliveryProcessingService {
                                             labelIds.toArray(new String[0]),
                                             gmailMessage.getInternalDate(),
                                             senderEmail,
+                                            senderName,
                                             listUnsubscribeExtraction.url(),
                                             listUnsubscribeExtraction.mailto(),
                                             listUnsubscribeExtraction.oneClick());
@@ -347,6 +356,12 @@ public class GmailDeliveryProcessingService {
     private String extractSanitizedSenderEmail(Message gmailMessage) {
         return GmailMessageHeaders.firstValue(gmailMessage.getPayload(), "From")
                 .flatMap(this::canonicalizeSenderEmail)
+                .orElse(null);
+    }
+
+    private String extractSanitizedSenderName(Message gmailMessage) {
+        return GmailMessageHeaders.firstValue(gmailMessage.getPayload(), "From")
+                .flatMap(emailAddressCanonicalizer::extractDisplayName)
                 .orElse(null);
     }
 

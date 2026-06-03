@@ -87,6 +87,25 @@ public class RuleManagementService {
     }
 
     @Transactional
+    public RuleStatusProjection createOrEnable(RuleCreateCommand command) {
+        if (command.templateKey() != null) {
+            var existingRule =
+                    ruleRepository.findByTenantIdAndTemplateKey(
+                            command.tenantId(), command.templateKey());
+            if (existingRule.isPresent()) {
+                RuleEntity ruleEntity = existingRule.orElseThrow();
+                if (!ruleEntity.isEnabled()) {
+                    updateEnabled(command.tenantId(), ruleEntity, true);
+                }
+                return ruleEntity.toStatusProjection();
+            }
+        }
+
+        RuleStatusProjection createdRule = create(command);
+        return enable(command.tenantId(), createdRule.ruleId().value());
+    }
+
+    @Transactional
     public RuleStatusProjection update(RuleUpdateCommand command) {
         RuleEntity ruleEntity = findRuleOrThrow(command.tenantId(), command.ruleId());
         if (!Objects.equals(ruleEntity.getEntityVersion(), command.expectedEntityVersion())) {

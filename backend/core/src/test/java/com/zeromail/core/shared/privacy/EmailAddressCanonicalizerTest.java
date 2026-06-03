@@ -21,4 +21,30 @@ class EmailAddressCanonicalizerTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("senderEmail is malformed");
     }
+
+    @Test
+    void extractDisplayName_unquotes_and_trims_named_address() {
+        assertThat(canonicalizer.extractDisplayName("\"John Doe\" <john@example.com>"))
+                .contains("John Doe");
+        assertThat(canonicalizer.extractDisplayName("Alice Example <Alice@Example.COM>"))
+                .contains("Alice Example");
+    }
+
+    @Test
+    void extractDisplayName_returns_empty_for_bare_address() {
+        assertThat(canonicalizer.extractDisplayName("john@example.com")).isEmpty();
+        assertThat(canonicalizer.extractDisplayName("<john@example.com>")).isEmpty();
+    }
+
+    @Test
+    void extractDisplayName_returns_empty_for_null_or_blank_input() {
+        assertThat(canonicalizer.extractDisplayName(null)).isEmpty();
+        assertThat(canonicalizer.extractDisplayName("")).isEmpty();
+        assertThat(canonicalizer.extractDisplayName("   ")).isEmpty();
+    }
+
+    @Test
+    void extractDisplayName_strips_empty_quoted_name() {
+        assertThat(canonicalizer.extractDisplayName("\"\" <john@example.com>")).isEmpty();
+    }
 }

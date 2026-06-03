@@ -287,3 +287,9 @@ databaseChangeLog:
   - include:
       file: changes/108-gmail-inbox-projection.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/109-cleanup-sender-status.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/110-mail-message-observed-sender-name.yaml
+      relativeToChangelogFile: true

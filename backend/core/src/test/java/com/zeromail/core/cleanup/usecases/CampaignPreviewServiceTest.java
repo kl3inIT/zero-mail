@@ -44,9 +44,12 @@ class CampaignPreviewServiceTest extends PostgresContainerTest {
                                                 new SenderWorkingSet(
                                                         "newsletter@example.test",
                                                         "example.test",
+                                                        null,
+                                                        2,
                                                         2,
                                                         Instant.parse("2026-05-23T09:00:00Z"),
                                                         UnsubscribeMethod.ONE_CLICK,
+                                                        null,
                                                         List.of("gmail-1", "gmail-2"),
                                                         "https://example.test/unsubscribe",
                                                         null)))));

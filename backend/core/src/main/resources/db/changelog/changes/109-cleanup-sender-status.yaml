@@ -1,0 +1,61 @@
+databaseChangeLog:
+  - changeSet:
+      id: 109-cleanup-sender-status
+      author: zeromail
+      comment: >
+        Inbox Zero-style bulk unsubscribe needs a per-sender status independent from the
+        sender_suppression table. Suppression hides safe senders from cleanup; this table tracks
+        user-visible workflow state (approved, unsubscribed, auto-archived) so filters can show
+        Unhandled / Approved / Unsubscribed / Auto Archived without exposing campaigns.
+      changes:
+        - createTable:
+            tableName: cleanup_sender_status
+            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cleanup_sender_status_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: sender_email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: cleanup_sender_status
+            columnNames: tenant_id, sender_email
+            constraintName: pk_cleanup_sender_status
+        - sql:
+            comment: User-visible bulk unsubscribe sender statuses.
+            sql: ALTER TABLE cleanup_sender_status ADD CONSTRAINT ck_cleanup_sender_status CHECK (status IN ('APPROVED','UNSUBSCRIBED','AUTO_ARCHIVED'))
+        - createIndex:
+            tableName: cleanup_sender_status
+            indexName: idx_cleanup_sender_status_tenant_status
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: status
+      rollback:
+        - dropTable:
+            tableName: cleanup_sender_status

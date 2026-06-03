@@ -1,236 +1,66 @@
 export const unsubscribeCampaignMessages = {
-  // List page
-  'cleanup.unsubscribe.list.title': {
-    vi: 'Hủy đăng ký',
-    en: 'Unsubscribe',
+  // Filter menu (Inbox Zero-style table)
+  'cleanup.unsubscribe.filter.unhandled': {
+    vi: 'Chưa xử lý',
+    en: 'Unhandled',
   },
-  'cleanup.unsubscribe.list.eyebrow': {
-    vi: 'Dọn dẹp Gmail',
-    en: 'Gmail cleanup',
+  'cleanup.unsubscribe.filter.all': {
+    vi: 'Tất cả người gửi',
+    en: 'All senders',
   },
-  'cleanup.unsubscribe.list.lead': {
-    vi: 'Zero Mail tìm các email có hỗ trợ hủy nhận từ Gmail. Khi bạn xác nhận, hệ thống gửi yêu cầu hủy nhận an toàn; nếu thành công mới lưu trữ email cũ. Không xóa email.',
-    en: 'Zero Mail finds senders that support unsubscribe from Gmail. When you confirm, it sends a safe unsubscribe request and archives old mail only after that succeeds. It never deletes mail.',
+  'cleanup.unsubscribe.filter.unsubscribed': {
+    vi: 'Đã hủy đăng ký',
+    en: 'Unsubscribed',
   },
-  'cleanup.unsubscribe.list.helpLabel': {
-    vi: 'Giải thích hủy đăng ký an toàn',
-    en: 'Explain safe unsubscribe',
+  'cleanup.unsubscribe.filter.autoArchived': {
+    vi: 'Tự động lưu trữ',
+    en: 'Auto archived',
   },
-  'cleanup.unsubscribe.list.helpTitle': {
-    vi: 'Cách hủy đăng ký hoạt động',
-    en: 'How unsubscribe works',
+  'cleanup.unsubscribe.filter.approved': {
+    vi: 'Đã phê duyệt',
+    en: 'Approved',
   },
-  'cleanup.unsubscribe.list.helpBody': {
-    vi: 'Zero Mail chỉ hiển thị người gửi có tín hiệu hủy nhận an toàn từ Gmail. Bạn chọn người gửi, xem trước, rồi xác nhận. Email cũ chỉ được lưu trữ sau khi hủy nhận thành công và không bị xóa.',
-    en: 'Zero Mail only shows senders with a safe unsubscribe signal from Gmail. Select senders, preview the action, then confirm. Old mail is archived only after unsubscribe succeeds and is never deleted.',
+
+  // Time-window menu
+  'cleanup.unsubscribe.window.7d': {
+    vi: '7 ngày qua',
+    en: 'Last 7 days',
   },
-  'cleanup.unsubscribe.list.suppressionLink': {
-    vi: 'Danh sách an toàn',
-    en: 'Safe list',
+  'cleanup.unsubscribe.window.30d': {
+    vi: '30 ngày qua',
+    en: 'Last 30 days',
   },
+  'cleanup.unsubscribe.window.90d': {
+    vi: '3 tháng qua',
+    en: 'Last 3 months',
+  },
+
+  // Status pill + stats dialog
+  'cleanup.unsubscribe.statusLabel.unhandled': {
+    vi: 'Chưa xử lý',
+    en: 'Unhandled',
+  },
+  'cleanup.unsubscribe.statusLabel.approved': {
+    vi: 'Đã phê duyệt',
+    en: 'Approved',
+  },
+  'cleanup.unsubscribe.statusLabel.unsubscribed': {
+    vi: 'Đã hủy đăng ký',
+    en: 'Unsubscribed',
+  },
+  'cleanup.unsubscribe.statusLabel.autoArchived': {
+    vi: 'Tự động lưu trữ',
+    en: 'Auto archived',
+  },
+
+  // List header + toolbar
   'cleanup.unsubscribe.list.searchPlaceholder': {
     vi: 'Tìm người gửi hoặc tên miền',
     en: 'Search sender or domain',
   },
-  'cleanup.unsubscribe.list.filterLabel': {
-    vi: 'Lọc người gửi',
-    en: 'Filter senders',
-  },
-  'cleanup.unsubscribe.list.filter.all': {
-    vi: 'Tất cả người gửi',
-    en: 'All senders',
-  },
-  'cleanup.unsubscribe.list.filter.ready': {
-    vi: 'Có thể hủy nhận',
-    en: 'Ready to process',
-  },
-  'cleanup.unsubscribe.list.filter.oneClick': {
-    vi: 'Hủy nhận an toàn',
-    en: 'Safe unsubscribe',
-  },
-  'cleanup.unsubscribe.list.filter.mailto': {
-    vi: 'Gửi email hủy nhận',
-    en: 'Unsubscribe by email',
-  },
-  'cleanup.unsubscribe.list.sortLabel': {
-    vi: 'Sắp xếp người gửi',
-    en: 'Sort senders',
-  },
-  'cleanup.unsubscribe.list.sort.count': {
-    vi: 'Nhiều email nhất',
-    en: 'Most mail',
-  },
-  'cleanup.unsubscribe.list.sort.recent': {
-    vi: 'Mới thấy gần đây',
-    en: 'Recently seen',
-  },
-  'cleanup.unsubscribe.list.sort.sender': {
-    vi: 'A-Z theo người gửi',
-    en: 'A-Z sender',
-  },
-  'cleanup.unsubscribe.list.stats.total': {
-    vi: 'Người gửi đã phát hiện',
-    en: 'Detected senders',
-  },
-  'cleanup.unsubscribe.list.stats.ready': {
-    vi: 'Có thể hủy nhận',
-    en: 'Actionable',
-  },
-  'cleanup.unsubscribe.list.stats.messages': {
-    vi: 'Email sẽ lưu trữ',
-    en: 'Mail to archive',
-  },
-  'cleanup.unsubscribe.list.stats.oneClick': {
-    vi: 'Hủy nhận an toàn',
-    en: 'Safe unsubscribe',
-  },
-  'cleanup.unsubscribe.list.counter': {
-    vi: '{count} / 25 người gửi đã chọn',
-    en: '{count} / 25 senders selected',
-  },
-  'cleanup.unsubscribe.list.selectedMail': {
-    vi: '{count} email lịch sử trong lựa chọn',
-    en: '{count} history mail in selection',
-  },
-  'cleanup.unsubscribe.list.counterOver': {
-    vi: '{count} / 25 người gửi - vượt giới hạn',
-    en: '{count} / 25 senders — over the limit',
-  },
-  'cleanup.unsubscribe.list.preview': {
-    vi: 'Xem trước',
-    en: 'Preview',
-  },
-  'cleanup.unsubscribe.list.clear': {
-    vi: 'Bỏ chọn',
-    en: 'Clear selection',
-  },
-  'cleanup.unsubscribe.list.col.sender': {
-    vi: 'Người gửi',
-    en: 'Sender',
-  },
-  'cleanup.unsubscribe.list.col.domain': {
-    vi: 'Tên miền',
-    en: 'Domain',
-  },
-  'cleanup.unsubscribe.list.col.count': {
-    vi: 'Email 30 ngày',
-    en: 'Mail (30 days)',
-  },
-  'cleanup.unsubscribe.list.col.history': {
-    vi: 'Lịch sử',
-    en: 'History',
-  },
-  'cleanup.unsubscribe.list.col.risk': {
-    vi: 'Trạng thái',
-    en: 'Status',
-  },
-  'cleanup.unsubscribe.list.col.actions': {
-    vi: 'Hành động',
-    en: 'Actions',
-  },
-  'cleanup.unsubscribe.list.historyCount': {
-    vi: '{count} email',
-    en: '{count} mail',
-  },
-  'cleanup.unsubscribe.list.action.unsubscribe': {
-    vi: 'Xem trước',
-    en: 'Preview',
-  },
-  'cleanup.unsubscribe.list.action.keep': {
-    vi: 'Thêm vào danh sách an toàn',
-    en: 'Add to safe list',
-  },
-  'cleanup.unsubscribe.list.selectAll': {
-    vi: 'Chọn tất cả người gửi đang hiển thị',
-    en: 'Select all visible senders',
-  },
-  'cleanup.unsubscribe.list.action.details': {
-    vi: 'Mở chi tiết người gửi',
-    en: 'Open sender details',
-  },
-  'cleanup.unsubscribe.list.action.collapse': {
-    vi: 'Đóng chi tiết người gửi',
-    en: 'Close sender details',
-  },
-  'cleanup.unsubscribe.list.detail.lastSeen': {
-    vi: 'Lần thấy gần nhất',
-    en: 'Last seen',
-  },
-  'cleanup.unsubscribe.list.detail.archive': {
-    vi: 'Email sẽ xử lý',
-    en: 'Mail to process',
-  },
-  'cleanup.unsubscribe.list.detail.archiveValue': {
-    vi: 'Nếu hủy nhận thành công, Zero Mail sẽ lưu trữ {count} email gần đây.',
-    en: 'If unsubscribe succeeds, Zero Mail will archive {count} recent mail.',
-  },
-  'cleanup.unsubscribe.list.detail.safety': {
-    vi: 'An toàn',
-    en: 'Safety',
-  },
-  'cleanup.unsubscribe.list.detail.safe': {
-    vi: 'Không xóa email. Có thể hoàn tác lưu trữ trong 30 ngày.',
-    en: 'Does not delete mail. Archive can be undone for 30 days.',
-  },
-  'cleanup.unsubscribe.list.detail.disabled': {
-    vi: 'Gmail chưa cung cấp cách hủy nhận an toàn cho sender này.',
-    en: 'Gmail has not provided a safe unsubscribe method for this sender.',
-  },
-  'cleanup.unsubscribe.list.detail.skip': {
-    vi: 'Đưa vào danh sách an toàn',
-    en: 'Add to safe list',
-  },
-  'cleanup.unsubscribe.list.detail.skipDescription': {
-    vi: 'Ẩn khỏi các gợi ý hủy đăng ký sau này. Gmail không bị thay đổi.',
-    en: 'Hide it from future unsubscribe suggestions. Gmail is not changed.',
-  },
-  'cleanup.unsubscribe.method.oneClick': {
-    vi: 'Hủy nhận an toàn',
-    en: 'Safe unsubscribe',
-  },
-  'cleanup.unsubscribe.method.oneClickTooltip': {
-    vi: 'Dùng header Gmail chuẩn RFC 8058. Zero Mail gửi POST an toàn tới endpoint hủy nhận; không mở link trong nội dung email.',
-    en: 'Uses the standard Gmail RFC 8058 header. Zero Mail sends a safe POST to the unsubscribe endpoint and does not open links from the email body.',
-  },
-  'cleanup.unsubscribe.method.mailto': {
-    vi: 'Gửi email hủy nhận',
-    en: 'Unsubscribe by email',
-  },
-  'cleanup.unsubscribe.method.mailtoTooltip': {
-    vi: 'Gửi một email hủy nhận tới địa chỉ được khai báo trong header Gmail.',
-    en: 'Sends an unsubscribe email to the address declared in the Gmail header.',
-  },
-  'cleanup.unsubscribe.method.none': {
-    vi: 'Không hỗ trợ',
-    en: 'Unsupported',
-  },
-  'cleanup.unsubscribe.risk.safe': {
-    vi: 'Có thể hủy nhận',
-    en: 'Ready',
-  },
-  'cleanup.unsubscribe.risk.noHeader': {
-    vi: 'Không tự động',
-    en: 'Not supported',
-  },
-  'cleanup.unsubscribe.risk.noHeaderTooltip': {
-    vi: 'Gmail không có header hủy nhận an toàn cho người gửi này.',
-    en: 'Gmail has no safe unsubscribe header for this sender.',
-  },
-  'cleanup.unsubscribe.risk.suppressed': {
-    vi: 'An toàn',
-    en: 'Safe-listed',
-  },
-  'cleanup.unsubscribe.list.empty.title': {
-    vi: 'Chưa tìm thấy người gửi có thể hủy đăng ký',
-    en: 'No unsubscribe-ready senders found',
-  },
-  'cleanup.unsubscribe.list.empty.body': {
-    vi: 'Zero Mail kiểm tra 100 email Inbox gần nhất và chỉ hiện người gửi có cách hủy nhận an toàn.',
-    en: 'Zero Mail checks the 100 most recent Inbox emails and only shows senders with a safe unsubscribe method.',
-  },
-  'cleanup.unsubscribe.list.empty.link': {
-    vi: 'Tìm hiểu cách Zero Mail phát hiện bản tin →',
-    en: 'Learn how Zero Mail detects newsletters →',
+  'cleanup.unsubscribe.list.loadMore': {
+    vi: 'Tải thêm',
+    en: 'Load more',
   },
   'cleanup.unsubscribe.list.error': {
     vi: 'Không tải được danh sách người gửi. Hãy thử lại sau một chút.',
@@ -240,205 +70,282 @@ export const unsubscribeCampaignMessages = {
     vi: 'Thử lại',
     en: 'Retry',
   },
+  'cleanup.unsubscribe.list.empty.title': {
+    vi: 'Chưa tìm thấy người gửi nào',
+    en: 'No senders yet',
+  },
+  'cleanup.unsubscribe.list.empty.body': {
+    vi: 'Zero Mail sẽ hiển thị các người gửi đã quan sát được trong khoảng thời gian đã chọn.',
+    en: 'Zero Mail will show senders observed within the selected time window.',
+  },
+  'cleanup.unsubscribe.list.selectAll': {
+    vi: 'Chọn tất cả người gửi đang hiển thị',
+    en: 'Select all visible senders',
+  },
+  'cleanup.unsubscribe.list.clear': {
+    vi: 'Bỏ chọn',
+    en: 'Clear selection',
+  },
+  'cleanup.unsubscribe.list.counter': {
+    vi: '{count} trong {total} người gửi đã chọn',
+    en: '{count} of {total} senders selected',
+  },
+  'cleanup.unsubscribe.list.counterOver': {
+    vi: '{count} / 25 người gửi - vượt giới hạn',
+    en: '{count} / 25 senders — over the limit',
+  },
+  'cleanup.unsubscribe.list.selectedMail': {
+    vi: '{count} email lịch sử trong lựa chọn',
+    en: '{count} history mail in selection',
+  },
 
-  // Preview dialog
-  'cleanup.unsubscribe.preview.title': {
-    vi: 'Xem trước hủy đăng ký',
-    en: 'Preview unsubscribe',
+  // Columns
+  'cleanup.unsubscribe.list.col.from': {
+    vi: 'Người gửi',
+    en: 'From',
   },
-  'cleanup.unsubscribe.preview.description': {
-    vi: 'Kiểm tra trước khi xác nhận. Zero Mail chỉ lưu trữ email cũ sau khi hủy nhận thành công. Không xóa email và có thể hoàn tác lưu trữ trong 30 ngày.',
-    en: 'Review before confirming. Zero Mail archives old mail only after unsubscribe succeeds. It never deletes mail, and archive can be undone for 30 days.',
+  'cleanup.unsubscribe.list.col.emails': {
+    vi: 'Số email',
+    en: 'Emails',
   },
-  'cleanup.unsubscribe.preview.totalSender': {
-    vi: 'Tổng người gửi: {count}',
-    en: 'Total senders: {count}',
+  'cleanup.unsubscribe.list.col.read': {
+    vi: 'Tỷ lệ đọc',
+    en: 'Read',
   },
-  'cleanup.unsubscribe.preview.totalMail': {
-    vi: 'Email sẽ lưu trữ nếu thành công: {count}',
-    en: 'Mail to archive if successful: {count}',
-  },
-  'cleanup.unsubscribe.preview.capSender': {
-    vi: 'Đã vượt giới hạn 25 người gửi. Quay lại và bỏ chọn bớt.',
-    en: 'Sender limit of 25 exceeded. Go back and deselect some.',
-  },
-  'cleanup.unsubscribe.preview.capMessage': {
-    vi: 'Đã vượt giới hạn 2.000 email lịch sử ({count}). Quay lại và bỏ chọn bớt.',
-    en: 'History mail limit of 2,000 exceeded ({count}). Go back and deselect some.',
-  },
-  'cleanup.unsubscribe.preview.cancel': {
-    vi: 'Quay lại',
-    en: 'Back',
-  },
-  'cleanup.unsubscribe.preview.confirm': {
+
+  // Row + bulk actions
+  'cleanup.unsubscribe.list.action.unsubscribe': {
     vi: 'Hủy đăng ký',
     en: 'Unsubscribe',
   },
-  'cleanup.unsubscribe.preview.submitting': {
-    vi: 'Đang tạo...',
-    en: 'Creating…',
+  'cleanup.unsubscribe.list.action.unsubscribeBlock': {
+    vi: 'Hủy đăng ký / Chặn',
+    en: 'Unsubscribe / Block',
   },
-  'cleanup.unsubscribe.preview.empty': {
-    vi: 'Không có người gửi nào đủ điều kiện hủy đăng ký trong lựa chọn hiện tại.',
-    en: 'No selected sender is eligible for unsubscribe.',
+  'cleanup.unsubscribe.list.action.block': {
+    vi: 'Chặn',
+    en: 'Block',
   },
-  'cleanup.unsubscribe.preview.willArchive': {
-    vi: '{count} email gần đây sẽ được lưu trữ nếu hủy nhận thành công',
-    en: '{count} recent mail will be archived if unsubscribe succeeds',
+  'cleanup.unsubscribe.list.action.approve': {
+    vi: 'Phê duyệt',
+    en: 'Approve',
   },
-  'cleanup.unsubscribe.preview.willNotArchive': {
-    vi: 'Không tự động xử lý sender này',
-    en: 'This sender will not be processed automatically',
+  'cleanup.unsubscribe.list.action.unapprove': {
+    vi: 'Bỏ phê duyệt',
+    en: 'Unapprove',
   },
-  'cleanup.unsubscribe.preview.submitOk': {
-    vi: 'Đã tạo tác vụ hủy đăng ký. Đang theo dõi tiến độ...',
-    en: 'Unsubscribe task created. Tracking progress…',
+  'cleanup.unsubscribe.list.action.autoArchive': {
+    vi: 'Tự động lưu trữ',
+    en: 'Auto-archive',
   },
-  'cleanup.unsubscribe.preview.errCapSender': {
+  'cleanup.unsubscribe.list.action.archive': {
+    vi: 'Lưu trữ',
+    en: 'Archive',
+  },
+  'cleanup.unsubscribe.list.action.delete': {
+    vi: 'Xóa',
+    en: 'Delete',
+  },
+  'cleanup.unsubscribe.list.action.archiveAll': {
+    vi: 'Lưu trữ toàn bộ email từ người này',
+    en: 'Archive all mail from this sender',
+  },
+  'cleanup.unsubscribe.list.action.deleteAll': {
+    vi: 'Xóa toàn bộ email từ người này',
+    en: 'Delete all mail from this sender',
+  },
+  'cleanup.unsubscribe.list.action.labelFuture': {
+    vi: 'Gắn nhãn cho email tương lai',
+    en: 'Label future mail',
+  },
+  'cleanup.unsubscribe.list.action.viewStats': {
+    vi: 'Xem thống kê',
+    en: 'View stats',
+  },
+  'cleanup.unsubscribe.list.action.viewGmail': {
+    vi: 'Mở trong Gmail',
+    en: 'Open in Gmail',
+  },
+  'cleanup.unsubscribe.list.action.menu': {
+    vi: 'Tùy chọn thêm',
+    en: 'More options',
+  },
+
+  // Method labels (still used by stats dialog)
+  'cleanup.unsubscribe.method.oneClick': {
+    vi: 'Hủy nhận an toàn',
+    en: 'Safe unsubscribe',
+  },
+  'cleanup.unsubscribe.method.mailto': {
+    vi: 'Gửi email hủy nhận',
+    en: 'Unsubscribe by email',
+  },
+  'cleanup.unsubscribe.method.none': {
+    vi: 'Không hỗ trợ',
+    en: 'Unsupported',
+  },
+
+  // Sender stats dialog (Inbox Zero-style modal: chart + email list + body preview)
+  'cleanup.unsubscribe.stats.titleWith': {
+    vi: 'Thống kê cho {sender}',
+    en: 'Stats for {sender}',
+  },
+  'cleanup.unsubscribe.stats.chartLoading': {
+    vi: 'Đang tải biểu đồ…',
+    en: 'Loading chart…',
+  },
+  'cleanup.unsubscribe.stats.chartError': {
+    vi: 'Không tải được biểu đồ. Hãy thử lại sau một chút.',
+    en: 'Could not load the chart. Please try again shortly.',
+  },
+  'cleanup.unsubscribe.stats.chartEmpty': {
+    vi: 'Chưa có dữ liệu trong 30 ngày qua.',
+    en: 'No data in the last 30 days.',
+  },
+  'cleanup.unsubscribe.stats.tabs.unarchived': {
+    vi: 'Chưa lưu trữ',
+    en: 'Unarchived',
+  },
+  'cleanup.unsubscribe.stats.tabs.all': {
+    vi: 'Tất cả',
+    en: 'All',
+  },
+  'cleanup.unsubscribe.stats.messagesLoading': {
+    vi: 'Đang tải email từ Gmail…',
+    en: 'Loading mail from Gmail…',
+  },
+  'cleanup.unsubscribe.stats.messagesError': {
+    vi: 'Không tải được danh sách email. Hãy thử lại sau một chút.',
+    en: 'Could not load the mail list. Please try again shortly.',
+  },
+  'cleanup.unsubscribe.stats.messagesEmpty': {
+    vi: 'Không có email nào trong tab này.',
+    en: 'No mail in this tab.',
+  },
+  'cleanup.unsubscribe.stats.previewHint': {
+    vi: 'Chọn một email ở bên trái để xem nội dung.',
+    en: 'Pick an email on the left to read it.',
+  },
+  'cleanup.unsubscribe.stats.previewLoading': {
+    vi: 'Đang tải nội dung email…',
+    en: 'Loading mail body…',
+  },
+  'cleanup.unsubscribe.stats.previewError': {
+    vi: 'Không tải được nội dung email. Hãy thử lại.',
+    en: 'Could not load the mail body. Please try again.',
+  },
+  'cleanup.unsubscribe.stats.previewEmpty': {
+    vi: 'Email này không có nội dung hiển thị được.',
+    en: 'This mail has no displayable body.',
+  },
+  'cleanup.unsubscribe.stats.closePreview': {
+    vi: 'Đóng phần xem trước',
+    en: 'Close preview',
+  },
+
+  // Confirm dialogs (archive + delete)
+  'cleanup.unsubscribe.confirm.cancel': {
+    vi: 'Hủy',
+    en: 'Cancel',
+  },
+  'cleanup.unsubscribe.confirm.archiveTitle': {
+    vi: 'Lưu trữ toàn bộ email từ {count} người gửi?',
+    en: 'Archive all mail from {count} senders?',
+  },
+  'cleanup.unsubscribe.confirm.archiveBody': {
+    vi: 'Zero Mail sẽ chuyển toàn bộ email lịch sử của {count} người gửi này ra khỏi Hộp thư đến. Email không bị xóa và có thể tự kéo lại từ Gmail.',
+    en: 'Zero Mail will move every history mail from these {count} senders out of the Inbox. No mail is deleted and you can move it back from Gmail.',
+  },
+  'cleanup.unsubscribe.confirm.deleteTitle': {
+    vi: 'Xóa toàn bộ email từ {count} người gửi?',
+    en: 'Delete all mail from {count} senders?',
+  },
+  'cleanup.unsubscribe.confirm.deleteBody': {
+    vi: 'Zero Mail sẽ chuyển toàn bộ email lịch sử của {count} người gửi này vào Thùng rác Gmail. Bạn có 30 ngày để khôi phục từ Gmail trước khi Gmail xóa vĩnh viễn.',
+    en: 'Zero Mail will move every history mail from these {count} senders to Gmail Trash. You have 30 days to restore them from Gmail before they are permanently deleted.',
+  },
+  'cleanup.unsubscribe.confirm.deleteOne': {
+    vi: 'Xóa toàn bộ email từ {sender}? Email sẽ chuyển vào Thùng rác Gmail.',
+    en: 'Delete all mail from {sender}? Mail will be moved to Gmail Trash.',
+  },
+
+  // Label-future dialog
+  'cleanup.unsubscribe.labelFuture.title': {
+    vi: 'Gắn nhãn cho email tương lai từ người gửi này',
+    en: 'Label future mail from this sender',
+  },
+  'cleanup.unsubscribe.labelFuture.body': {
+    vi: 'Zero Mail sẽ tạo quy tắc tự động gắn nhãn cho email mới từ {sender}. Email lịch sử không bị thay đổi.',
+    en: 'Zero Mail will create a rule that auto-labels new mail from {sender}. History mail is left alone.',
+  },
+  'cleanup.unsubscribe.labelFuture.placeholder': {
+    vi: 'Tên nhãn (ví dụ: Newsletters)',
+    en: 'Label name (e.g. Newsletters)',
+  },
+
+  // Toasts from useSenderAction + useExecuteCampaign
+  'cleanup.unsubscribe.action.mailAffected': {
+    vi: '{count} email đã được xử lý.',
+    en: '{count} mail processed.',
+  },
+  'cleanup.unsubscribe.action.genericError': {
+    vi: 'Không thực hiện được. Hãy thử lại sau một chút.',
+    en: 'Action failed. Please try again shortly.',
+  },
+  'cleanup.unsubscribe.action.approveOk': {
+    vi: 'Đã phê duyệt người gửi.',
+    en: 'Sender approved.',
+  },
+  'cleanup.unsubscribe.action.unapproveOk': {
+    vi: 'Đã bỏ phê duyệt.',
+    en: 'Approval removed.',
+  },
+  'cleanup.unsubscribe.action.markUnsubscribedOk': {
+    vi: 'Đã đánh dấu đã hủy đăng ký.',
+    en: 'Marked as unsubscribed.',
+  },
+  'cleanup.unsubscribe.action.autoArchiveOk': {
+    vi: 'Đã tạo quy tắc tự động lưu trữ cho người gửi này. Email cũ đã chuyển khỏi Hộp thư đến; email mới sẽ tự động bị lưu trữ.',
+    en: 'Created an auto-archive rule for this sender. Old mail moved out of the Inbox; new mail will be archived automatically.',
+  },
+  'cleanup.unsubscribe.action.blockOk': {
+    vi: 'Đã chặn người gửi: Zero Mail tạo quy tắc tự động lưu trữ. Email cũ đã chuyển khỏi Hộp thư đến; email mới sẽ tự động bị lưu trữ.',
+    en: 'Sender blocked: Zero Mail created an auto-archive rule. Old mail moved out of the Inbox; new mail will be archived automatically.',
+  },
+  'cleanup.unsubscribe.action.archiveOk': {
+    vi: 'Đã lưu trữ email cũ của người gửi này. Người gửi vẫn ở trong danh sách để bạn quyết định hủy đăng ký hoặc chặn.',
+    en: 'Old mail from this sender archived. The sender stays in the list so you can still unsubscribe or block.',
+  },
+  'cleanup.unsubscribe.action.deleteOk': {
+    vi: 'Đã chuyển email lịch sử vào Thùng rác.',
+    en: 'History mail moved to Trash.',
+  },
+  'cleanup.unsubscribe.action.labelFutureOk': {
+    vi: 'Đã tạo quy tắc gắn nhãn cho email tương lai.',
+    en: 'Future-mail label rule created.',
+  },
+  'cleanup.unsubscribe.action.submitOk': {
+    vi: 'Đang hủy đăng ký',
+    en: 'Unsubscribe started',
+  },
+  'cleanup.unsubscribe.action.submitDescription': {
+    vi: 'Zero Mail đang xử lý {count} người gửi trong nền.',
+    en: 'Zero Mail is processing {count} senders in the background.',
+  },
+  'cleanup.unsubscribe.action.errCapSender': {
     vi: 'Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.',
     en: 'Sender limit of 25 exceeded. Please deselect some.',
   },
-  'cleanup.unsubscribe.preview.errCapMessage': {
+  'cleanup.unsubscribe.action.errCapMessage': {
     vi: 'Vượt giới hạn 2.000 email lịch sử. Hãy bỏ chọn bớt.',
     en: 'History mail limit of 2,000 exceeded. Please deselect some.',
   },
-  'cleanup.unsubscribe.preview.errGeneric': {
+  'cleanup.unsubscribe.action.errGeneric': {
     vi: 'Không tạo được tác vụ hủy đăng ký. Hãy thử lại sau một chút.',
     en: 'Could not create the unsubscribe task. Please try again shortly.',
   },
 
-  // Status page
-  'cleanup.unsubscribe.status.title': {
-    vi: 'Hủy đăng ký #{shortId}',
-    en: 'Unsubscribe #{shortId}',
-  },
-  'cleanup.unsubscribe.status.breadcrumb': {
-    vi: 'Hủy đăng ký / #{shortId}',
-    en: 'Unsubscribe / #{shortId}',
-  },
-  'cleanup.unsubscribe.status.queued': {
-    vi: 'Đang chờ tiến trình nền nhận việc',
-    en: 'Waiting for worker',
-  },
-  'cleanup.unsubscribe.status.running': {
-    vi: 'Đang chạy',
-    en: 'Running',
-  },
-  'cleanup.unsubscribe.status.completed': {
-    vi: 'Hoàn tất',
-    en: 'Completed',
-  },
-  'cleanup.unsubscribe.status.failed': {
-    vi: 'Lỗi - chưa hoàn tất',
-    en: 'Error — did not complete',
-  },
-  'cleanup.unsubscribe.status.progress': {
-    vi: '{percent}% ({okCount} thành công / {failedCount} lỗi / {totalCount} người gửi)',
-    en: '{percent}% ({okCount} OK / {failedCount} failed / {totalCount} senders)',
-  },
-  'cleanup.unsubscribe.status.col.sender': {
-    vi: 'Người gửi',
-    en: 'Sender',
-  },
-  'cleanup.unsubscribe.status.col.state': {
-    vi: 'Trạng thái',
-    en: 'State',
-  },
-  'cleanup.unsubscribe.status.col.archived': {
-    vi: 'Email đã lưu trữ',
-    en: 'Mail archived',
-  },
-  'cleanup.unsubscribe.status.col.action': {
-    vi: 'Hành động',
-    en: 'Action',
-  },
-  'cleanup.unsubscribe.status.state.pending': {
-    vi: 'Chờ',
-    en: 'Pending',
-  },
-  'cleanup.unsubscribe.status.state.running': {
-    vi: 'Đang chạy',
-    en: 'Running',
-  },
-  'cleanup.unsubscribe.status.state.ok': {
-    vi: 'Thành công',
-    en: 'OK',
-  },
-  'cleanup.unsubscribe.status.state.failed': {
-    vi: 'Thất bại',
-    en: 'Failed',
-  },
-  'cleanup.unsubscribe.status.retry': {
-    vi: 'Thử lại',
-    en: 'Retry',
-  },
-  'cleanup.unsubscribe.status.retryOk': {
-    vi: 'Đã đưa {sender} vào hàng đợi thử lại.',
-    en: 'Retry enqueued for {sender}.',
-  },
-  'cleanup.unsubscribe.status.errorBanner': {
-    vi: 'Lỗi hệ thống - chưa hoàn tất. Liên hệ bộ phận hỗ trợ nếu cần.',
-    en: 'System error — did not complete. Contact support if needed.',
-  },
-  'cleanup.unsubscribe.status.error': {
-    vi: 'Không tải được trạng thái hủy đăng ký. Hãy thử lại sau một chút.',
-    en: 'Could not load unsubscribe status. Please try again shortly.',
-  },
-  'cleanup.unsubscribe.status.undo.title': {
-    vi: 'Tác vụ đã hoàn tất',
-    en: 'Cleanup completed',
-  },
-  'cleanup.unsubscribe.status.undo.body': {
-    vi: 'Bạn có thể hoàn tác trong {daysLeft} ngày tới: khôi phục email về Hộp thư đến và gỡ nhãn `Zero Mail/Unsubscribed`.',
-    en: 'You can undo within the next {daysLeft} days: restore mail to INBOX and remove the `Zero Mail/Unsubscribed` label.',
-  },
-  'cleanup.unsubscribe.status.undo.button': {
-    vi: 'Hoàn tác lưu trữ',
-    en: 'Undo archive',
-  },
-  'cleanup.unsubscribe.retry.alreadyOk': {
-    vi: 'Người gửi này đã hủy đăng ký thành công, không cần thử lại.',
-    en: 'This sender has already unsubscribed — no retry needed.',
-  },
-  'cleanup.unsubscribe.retry.generic': {
-    vi: 'Không thử lại được. Hãy thử lại sau một chút.',
-    en: 'Retry failed. Please try again shortly.',
-  },
-  'cleanup.unsubscribe.undo.confirmTitle': {
-    vi: 'Hoàn tác lưu trữ?',
-    en: 'Undo archive?',
-  },
-  'cleanup.unsubscribe.undo.confirmBody': {
-    vi: 'Sẽ khôi phục {count} email về Hộp thư đến và gỡ nhãn `Zero Mail/Unsubscribed`. Hành động này không thể đảo ngược thêm lần nữa.',
-    en: 'This will restore {count} mail to INBOX and remove the `Zero Mail/Unsubscribed` label. This action cannot be reversed again.',
-  },
-  'cleanup.unsubscribe.undo.confirmCta': {
-    vi: 'Đồng ý hoàn tác',
-    en: 'Confirm undo',
-  },
-  'cleanup.unsubscribe.undo.cancel': {
-    vi: 'Quay lại',
-    en: 'Cancel',
-  },
-  'cleanup.unsubscribe.undo.windowExpired': {
-    vi: 'Đã quá 30 ngày kể từ khi tác vụ chạy nên không thể hoàn tác nữa.',
-    en: 'More than 30 days have passed since the cleanup ran — undo is no longer available.',
-  },
-  'cleanup.unsubscribe.undo.windowExpiredToast': {
-    vi: 'Quá thời hạn 30 ngày nên không thể hoàn tác nữa.',
-    en: 'Past the 30-day window — undo is no longer available.',
-  },
-  'cleanup.unsubscribe.undo.ok': {
-    vi: 'Đã khôi phục {count} email về Hộp thư đến.',
-    en: 'Restored {count} mail to INBOX.',
-  },
-  'cleanup.unsubscribe.undo.generic': {
-    vi: 'Không hoàn tác được. Hãy thử lại sau một chút.',
-    en: 'Undo failed. Please try again shortly.',
-  },
-
-  // Backend error-code translations (CONVENTIONS i18n parity gate - every
-  // ErrorCodes.java cleanup constant must have a matching `errors.cleanup.*` leaf).
+  // Backend error-code translations (CONVENTIONS i18n parity gate).
   'errors.cleanup.campaign.too_many_senders': {
     vi: 'Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.',
     en: 'Sender limit of 25 exceeded. Please deselect some.',
@@ -446,18 +353,6 @@ export const unsubscribeCampaignMessages = {
   'errors.cleanup.campaign.too_many_messages': {
     vi: 'Vượt giới hạn 2.000 email lịch sử. Hãy bỏ chọn bớt.',
     en: 'History mail limit of 2,000 exceeded. Please deselect some.',
-  },
-  'errors.cleanup.campaign.not_found': {
-    vi: 'Không tìm thấy tác vụ hủy đăng ký. Hãy quay lại danh sách.',
-    en: 'Unsubscribe task not found. Please return to the list.',
-  },
-  'errors.cleanup.campaign.undo_window_expired': {
-    vi: 'Quá thời hạn 30 ngày nên không thể hoàn tác nữa.',
-    en: 'Past the 30-day window — undo is no longer available.',
-  },
-  'errors.cleanup.campaign.retry_conflict': {
-    vi: 'Người gửi này đã hủy đăng ký thành công, không cần thử lại.',
-    en: 'This sender has already unsubscribed — no retry needed.',
   },
   'errors.cleanup.sender_suppressed': {
     vi: 'Người gửi này đang nằm trong danh sách an toàn. Hãy gỡ khỏi danh sách trước khi xử lý.',

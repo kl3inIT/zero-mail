@@ -79,6 +79,7 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
                         null,
                         null,
                         null,
+                        null,
                         false);
         int second =
                 observed.insertObservedIfAbsent(
@@ -88,6 +89,7 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
                         101L,
                         new String[] {"INBOX"},
                         1_700_000_000_001L,
+                        null,
                         null,
                         null,
                         null,
