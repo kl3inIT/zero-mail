@@ -1,0 +1,150 @@
+databaseChangeLog:
+  - changeSet:
+      id: 114-default-rule-templates-vi-seed
+      author: zeromail
+      changes:
+        - sql:
+            splitStatements: false
+            comment: >-
+              Vietnamese variants of the default rule templates seeded in 113. First-login seeding
+              picks the `-vi` keys for Vietnamese users and the base (English) keys for English
+              users, based on the Google OIDC locale claim. displayName, intent (the LLM
+              classification instruction), AND labelName (the real Gmail label the user sees) are
+              all localized. Distinct nodeId per template (the `-vi` key) — same reason as 113: the
+              triage parser falls back to a shared "matcher" nodeId, which would collapse the ten
+              semantic requests into one LLM result. Marketing + Cold Email archive; To Reply also
+              drafts a reply.
+            sql: |
+              INSERT INTO rule_template_catalog (
+                id, template_key, template_version, display_name, source_text, source_language,
+                schema_version, matcher_ast, action_intents, status
+              )
+              VALUES
+                (
+                  '00000000-0000-0000-0000-000000003201'::uuid,
+                  'system-to-reply-vi',
+                  1,
+                  'Cần trả lời',
+                  'Gắn nhãn "Cần trả lời" cho email tôi cần đích thân phản hồi và soạn sẵn câu trả lời để tôi xem lại.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-to-reply-vi","intent":"Email tôi cần đích thân trả lời — câu hỏi trực tiếp, yêu cầu, hoặc tin nhắn đang chờ tôi phản hồi.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Cần trả lời"},{"type":"save_draft","instruction":"Soạn một câu trả lời ngắn gọn, chuyên nghiệp để tôi xem lại trước khi gửi."}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003202'::uuid,
+                  'system-awaiting-reply-vi',
+                  1,
+                  'Chờ phản hồi',
+                  'Gắn nhãn "Chờ phản hồi" cho email tôi đang chờ người khác trả lời.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-awaiting-reply-vi","intent":"Email mà tôi đang chờ người khác phản hồi sau khi tôi đã trả lời hoặc liên hệ trước.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Chờ phản hồi"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003203'::uuid,
+                  'system-fyi-vi',
+                  1,
+                  'Để biết',
+                  'Gắn nhãn "Để biết" cho email quan trọng nhưng không cần trả lời.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-fyi-vi","intent":"Email quan trọng tôi nên biết nhưng không cần trả lời.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Để biết"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003204'::uuid,
+                  'system-actioned-vi',
+                  1,
+                  'Đã xử lý',
+                  'Gắn nhãn "Đã xử lý" cho cuộc trao đổi đã xong, không còn việc phải làm.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-actioned-vi","intent":"Cuộc trao đổi đã xong hoặc đã giải quyết, không còn việc gì để tôi làm.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Đã xử lý"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003205'::uuid,
+                  'system-newsletter-vi',
+                  1,
+                  'Bản tin',
+                  'Gắn nhãn "Bản tin" cho bản tin và nội dung đăng ký định kỳ.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-newsletter-vi","intent":"Bản tin: nội dung định kỳ từ ấn phẩm, blog, hoặc dịch vụ mà tôi đã đăng ký.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Bản tin"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003206'::uuid,
+                  'system-marketing-vi',
+                  1,
+                  'Tiếp thị',
+                  'Gắn nhãn "Tiếp thị" cho email quảng cáo, khuyến mãi và lưu trữ chúng.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-marketing-vi","intent":"Tiếp thị: email quảng cáo về sản phẩm, dịch vụ, khuyến mãi, giảm giá hoặc ưu đãi.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Tiếp thị"},{"type":"archive"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003207'::uuid,
+                  'system-calendar-vi',
+                  1,
+                  'Lịch',
+                  'Gắn nhãn "Lịch" cho email lịch hẹn và lời mời họp.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-calendar-vi","intent":"Lịch: tin nhắn về lịch hẹn, lời mời họp, nhắc sự kiện, hoặc thông báo lịch.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Lịch"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003208'::uuid,
+                  'system-receipt-vi',
+                  1,
+                  'Hóa đơn',
+                  'Gắn nhãn "Hóa đơn" cho biên lai, hóa đơn và xác nhận thanh toán.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-receipt-vi","intent":"Hóa đơn: xác nhận mua hàng, biên lai thanh toán, ghi nhận giao dịch, hoặc hóa đơn.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Hóa đơn"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003209'::uuid,
+                  'system-notification-vi',
+                  1,
+                  'Thông báo',
+                  'Gắn nhãn "Thông báo" cho cảnh báo tự động và tin nhắn hệ thống.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-notification-vi","intent":"Thông báo: cảnh báo tự động, cập nhật trạng thái, hoặc tin nhắn hệ thống từ ứng dụng và dịch vụ.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Thông báo"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003210'::uuid,
+                  'system-cold-email-vi',
+                  1,
+                  'Email chào hàng',
+                  'Gắn nhãn "Email chào hàng" cho email chào mời không mời mà đến và lưu trữ chúng.',
+                  'vi',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"SEMANTIC_INTENT","nodeId":"system-cold-email-vi","intent":"Email chào hàng: chào bán, tuyển dụng, hoặc đề nghị hợp tác không mời mà đến từ người chưa có quan hệ trước. KHÔNG phải chào hàng: nhà đầu tư, bạn bè, đồng nghiệp, email giới thiệu, khách hàng hiện tại, bản tin, hóa đơn, khuyến mãi, cảnh báo, cập nhật, lời mời lịch, đặt lại mật khẩu, hoặc email chào mừng.","deferred":true}'::jsonb,
+                  '[{"type":"label","labelName":"Email chào hàng"},{"type":"archive"}]'::jsonb,
+                  'materializable'
+                )
+              ON CONFLICT (template_key, template_version) DO NOTHING
+      rollback:
+        - sql:
+            sql: >-
+              DELETE FROM rule_template_catalog WHERE template_key IN (
+                'system-to-reply-vi','system-awaiting-reply-vi','system-fyi-vi','system-actioned-vi',
+                'system-newsletter-vi','system-marketing-vi','system-calendar-vi','system-receipt-vi',
+                'system-notification-vi','system-cold-email-vi')

@@ -3,6 +3,8 @@ package com.zeromail.api.security;
 import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
+import com.zeromail.core.account.usecases.OAuthProvisioningService.BundledProvisioningResult;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -61,15 +63,18 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final OAuthProvisioningService provisioningService;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final UserRepository userRepository;
+    private final RuleTemplateMaterializationService ruleTemplateMaterializationService;
 
     public GoogleOAuthSuccessHandler(
             OAuthProvisioningService provisioningService,
             OAuth2AuthorizedClientService authorizedClientService,
             UserRepository userRepository,
+            RuleTemplateMaterializationService ruleTemplateMaterializationService,
             ApiProperties properties) {
         this.provisioningService = provisioningService;
         this.authorizedClientService = authorizedClientService;
         this.userRepository = userRepository;
+        this.ruleTemplateMaterializationService = ruleTemplateMaterializationService;
 
         // Validate baseUrl scheme/host at construction time so a misconfigured
         // ZEROMAIL_WEB_BASE_URL fails fast instead of silently becoming an open-redirect on
@@ -177,8 +182,40 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                         : authorizedClient.getRefreshToken().getTokenValue();
 
         // (e) Single delegation to atomic provisioning service.
-        provisioningService.provisionBundledOAuth(googleSubject, email, refreshToken, gmailScopes);
+        BundledProvisioningResult provisioningResult =
+                provisioningService.provisionBundledOAuth(
+                        googleSubject, email, refreshToken, gmailScopes);
+
+        // (f) First-login only: seed the Inbox-Zero-style default rules (enabled) so the new tenant
+        // lands on a populated Rules page. Best-effort and post-commit — the materialization
+        // service
+        // opens its own REQUIRES_NEW tenant-scoped transaction, so a seeding failure must never
+        // break the login redirect (the user can still add rules manually). Idempotent per tenant.
+        if (provisioningResult.firstLogin()) {
+            try {
+                ruleTemplateMaterializationService.materializeDefaultRulesEnabled(
+                        provisioningResult.tenantId(), ruleLanguageFor(oidcUser));
+            } catch (RuntimeException defaultRuleSeedingFailure) {
+                log.warn(
+                        "event=default_rules_seed_failed tenantId={} failureClass={}",
+                        provisioningResult.tenantId(),
+                        defaultRuleSeedingFailure.getClass().getSimpleName());
+            }
+        }
 
         super.onAuthenticationSuccess(request, response, authentication);
+    }
+
+    /**
+     * Picks the language for first-login default-rule seeding from the Google OIDC {@code locale}
+     * claim (e.g. {@code "en"}, {@code "en-GB"}, {@code "vi"}). Returns {@code "en"} only when the
+     * locale clearly starts with English; everything else (including a missing claim) falls back to
+     * {@code "vi"} — the app is Vietnamese-first. Never logs the claim (privacy).
+     */
+    private static String ruleLanguageFor(OidcUser oidcUser) {
+        String locale = oidcUser.getClaimAsString(StandardClaimNames.LOCALE);
+        return locale != null && locale.toLowerCase(java.util.Locale.ROOT).startsWith("en")
+                ? "en"
+                : "vi";
     }
 }

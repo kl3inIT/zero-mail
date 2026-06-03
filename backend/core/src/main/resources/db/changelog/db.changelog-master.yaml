@@ -299,3 +299,9 @@ databaseChangeLog:
   - include:
       file: changes/112-drop-waitlist-email.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/113-default-rule-templates-seed.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/114-default-rule-templates-vi-seed.yaml
+      relativeToChangelogFile: true
