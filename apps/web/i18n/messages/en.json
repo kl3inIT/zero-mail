@@ -774,7 +774,7 @@
         "oneClick": "Safe unsubscribe"
       },
       "stats": {
-        "chartEmpty": "No data in the last 30 days.",
+        "chartEmpty": "No data in the last {days} days.",
         "chartError": "Could not load the chart. Please try again shortly.",
         "chartLoading": "Loading chart…",
         "closePreview": "Close preview",

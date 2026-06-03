@@ -373,6 +373,7 @@ export function CandidateListPage() {
         senderName={statsCandidate?.senderName ?? null}
         senderDomain={statsCandidate?.senderDomain ?? null}
         unsubscribeMethod={statsCandidate?.unsubscribeMethod ?? null}
+        windowDays={windowId === '7d' ? 7 : windowId === '30d' ? 30 : 90}
         onOpenChange={(open) => !open && setStatsCandidate(null)}
         onUnsubscribe={() => {
           if (!statsCandidate?.senderEmail) return;

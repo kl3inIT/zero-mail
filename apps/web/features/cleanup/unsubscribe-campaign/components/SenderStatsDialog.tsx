@@ -31,8 +31,6 @@ import {
 import type { SenderMessageSummary } from '@/features/cleanup/unsubscribe-campaign/api/unsubscribe-campaign-api';
 import { cn } from '@/lib/utils';
 
-const TIMELINE_WINDOW_DAYS = 30;
-
 type Tab = 'unarchived' | 'all';
 
 export function SenderStatsDialog({
@@ -40,6 +38,7 @@ export function SenderStatsDialog({
   senderName,
   senderDomain,
   unsubscribeMethod,
+  windowDays,
   onOpenChange,
   onUnsubscribe,
   onAutoArchive,
@@ -49,6 +48,7 @@ export function SenderStatsDialog({
   senderName: string | null;
   senderDomain: string | null;
   unsubscribeMethod: string | null;
+  windowDays: number;
   onOpenChange: (open: boolean) => void;
   onUnsubscribe: () => void;
   onAutoArchive: () => void;
@@ -68,7 +68,7 @@ export function SenderStatsDialog({
   }
 
   const archivedOnly = tab === 'all' ? false : false; // Inbox Zero: unarchived = NOT archived → use the tab to filter client-side after fetch
-  const timelineQuery = useSenderTimeline(senderEmail, TIMELINE_WINDOW_DAYS);
+  const timelineQuery = useSenderTimeline(senderEmail, windowDays);
   const messagesQuery = useSenderMessages(senderEmail, archivedOnly);
   const bodyQuery = useSenderMessageBody(activeMessageId);
 
@@ -90,7 +90,7 @@ export function SenderStatsDialog({
 
   return (
     <Dialog open={senderEmail !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-3 sm:max-w-5xl">
+      <DialogContent className="flex max-h-[90vh] flex-col gap-3 sm:max-w-6xl">
         <DialogHeader>
           <DialogTitle className="truncate text-base">
             {t('stats.titleWith', { sender: displayTitle })}
@@ -141,7 +141,7 @@ export function SenderStatsDialog({
           )}
           {!timelineQuery.isPending && !timelineQuery.isError && chartData.length === 0 && (
             <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-              {t('stats.chartEmpty')}
+              {t('stats.chartEmpty', { days: windowDays })}
             </div>
           )}
           {!timelineQuery.isPending && chartData.length > 0 && (
@@ -295,7 +295,6 @@ function MessageRow({
             {dateLabel}
           </span>
         </div>
-        <span className="text-muted-foreground line-clamp-1 text-xs">{message.snippet}</span>
       </button>
     </li>
   );

@@ -774,7 +774,7 @@
         "oneClick": "Hủy nhận an toàn"
       },
       "stats": {
-        "chartEmpty": "Chưa có dữ liệu trong 30 ngày qua.",
+        "chartEmpty": "Chưa có dữ liệu trong {days} ngày qua.",
         "chartError": "Không tải được biểu đồ. Hãy thử lại sau một chút.",
         "chartLoading": "Đang tải biểu đồ…",
         "closePreview": "Đóng phần xem trước",
