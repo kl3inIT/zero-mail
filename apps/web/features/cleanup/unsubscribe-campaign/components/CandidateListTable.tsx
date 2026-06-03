@@ -357,10 +357,11 @@ function SenderAvatar({
   }, [domain]);
   const [iconFailed, setIconFailed] = useState(false);
   const initials = senderInitials(senderName, senderDomain, senderEmail);
-  // faviconV2 (Chrome's internal API) + `fallback_opts=TYPE,SIZE,URL` returns HTTP 404 when
-  // the root domain has no favicon — so onError can fall back to initials cleanly. The legacy
-  // `s2/favicons` endpoint instead returns a 16×16 globe placeholder which upscales to a
-  // blurry 64×64 (the "globe mờ" we kept seeing).
+  // faviconV2 (Chrome's internal API) returns the real brand favicon at size=64 when the root
+  // domain has one. When it doesn't, it answers HTTP 404 with a 16×16 globe placeholder PNG —
+  // and the browser still renders that body, so onError never fires. We therefore also detect
+  // the tiny placeholder in onLoad (naturalWidth <= 16) and fall back to initials, instead of
+  // showing a blurry upscaled globe.
   const faviconUrl = rootDomain
     ? `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(
         `https://${rootDomain}`,
@@ -372,7 +373,7 @@ function SenderAvatar({
       aria-hidden="true"
     >
       {faviconUrl && !iconFailed ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Inbox Zero-style sender favicon via Google s2; not worth a next/image domain entry.
+        // eslint-disable-next-line @next/next/no-img-element -- Inbox Zero-style sender favicon via Google faviconV2; not worth a next/image domain entry.
         <img
           src={faviconUrl}
           alt=""
@@ -380,6 +381,11 @@ function SenderAvatar({
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={() => setIconFailed(true)}
+          onLoad={(event) => {
+            if (event.currentTarget.naturalWidth > 0 && event.currentTarget.naturalWidth <= 16) {
+              setIconFailed(true);
+            }
+          }}
         />
       ) : initials ? (
         initials

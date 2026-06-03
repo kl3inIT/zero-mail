@@ -2062,6 +2062,14 @@ function InboxSenderAvatar({
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={() => setIconFailed(true)}
+          onLoad={(event) => {
+            // faviconV2 answers 404 with a 16×16 globe placeholder body the browser still
+            // renders (onError never fires). Real favicons honor size=64; treat the tiny
+            // placeholder as a miss so we show the sender initial instead of a blurry globe.
+            if (event.currentTarget.naturalWidth > 0 && event.currentTarget.naturalWidth <= 16) {
+              setIconFailed(true);
+            }
+          }}
         />
       ) : (
         initial
