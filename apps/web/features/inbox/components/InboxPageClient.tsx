@@ -1302,12 +1302,14 @@ function AutoConfirmSendAction({ action }: { action: PreviewCardAction }) {
   const t = useTranslations();
   const confirmAction = useConfirmAction();
   const confirmStartedRef = useRef(false);
-  const [sendState, setSendState] = useState<'waiting' | 'sending' | 'sent' | 'failed'>('waiting');
+  // No separate 'sending' state: the in-flight send renders the same spinner as 'waiting' (see the
+  // early return below), so tracking it would only add a redundant state update inside the effect
+  // (react-doctor/no-adjust-state-on-prop-change). State stays 'waiting' until the mutation resolves.
+  const [sendState, setSendState] = useState<'waiting' | 'sent' | 'failed'>('waiting');
 
   useEffect(() => {
     if (confirmStartedRef.current || !action.persistenceConfirmed) return;
     confirmStartedRef.current = true;
-    setSendState('sending');
     confirmAction
       .mutateAsync({
         chatId: action.chatId,
@@ -1321,7 +1323,7 @@ function AutoConfirmSendAction({ action }: { action: PreviewCardAction }) {
       .catch(() => setSendState('failed'));
   }, [action.chatId, action.persistenceConfirmed, action.toolCallId, confirmAction]);
 
-  if (!action.persistenceConfirmed || sendState === 'waiting' || sendState === 'sending') {
+  if (!action.persistenceConfirmed || sendState === 'waiting') {
     return (
       <div
         className="text-muted-foreground flex items-center gap-2 text-sm"

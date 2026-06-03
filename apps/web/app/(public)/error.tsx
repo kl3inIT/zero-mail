@@ -49,7 +49,7 @@ export default function PublicError({
         Đã xảy ra lỗi
       </h1>
       <p className="text-muted-foreground mt-3 max-w-md text-balance">
-        Có sự cố khi tải trang. Vui lòng thử lại — nếu vẫn lỗi, hãy tải lại trang.
+        Có sự cố khi tải trang. Vui lòng thử lại. Nếu vẫn lỗi, hãy tải lại trang.
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <button
