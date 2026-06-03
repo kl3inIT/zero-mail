@@ -722,7 +722,7 @@
       },
       "filter": {
         "all": "All senders",
-        "approved": "Approved",
+        "approved": "Receiving",
         "autoArchived": "Auto archived",
         "unhandled": "Unhandled",
         "unsubscribed": "Unsubscribed"
@@ -734,7 +734,7 @@
       },
       "list": {
         "action": {
-          "approve": "Approve",
+          "approve": "Keep receiving",
           "archive": "Archive",
           "archiveAll": "Archive all mail from this sender",
           "autoArchive": "Auto-archive",
@@ -743,7 +743,7 @@
           "deleteAll": "Delete all mail from this sender",
           "labelFuture": "Label future mail",
           "menu": "More options",
-          "unapprove": "Unapprove",
+          "unapprove": "Stop keeping",
           "unsubscribe": "Unsubscribe",
           "unsubscribeBlock": "Unsubscribe / Block",
           "viewGmail": "Open in Gmail",
@@ -792,7 +792,7 @@
         "titleWith": "Stats for {sender}"
       },
       "statusLabel": {
-        "approved": "Approved",
+        "approved": "Receiving",
         "autoArchived": "Auto archived",
         "unhandled": "Unhandled",
         "unsubscribed": "Unsubscribed"

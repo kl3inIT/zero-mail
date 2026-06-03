@@ -722,7 +722,7 @@
       },
       "filter": {
         "all": "Tất cả người gửi",
-        "approved": "Đã phê duyệt",
+        "approved": "Đang nhận thư",
         "autoArchived": "Tự động lưu trữ",
         "unhandled": "Chưa xử lý",
         "unsubscribed": "Đã hủy đăng ký"
@@ -734,7 +734,7 @@
       },
       "list": {
         "action": {
-          "approve": "Phê duyệt",
+          "approve": "Giữ nhận thư",
           "archive": "Lưu trữ",
           "archiveAll": "Lưu trữ toàn bộ email từ người này",
           "autoArchive": "Tự động lưu trữ",
@@ -743,7 +743,7 @@
           "deleteAll": "Xóa toàn bộ email từ người này",
           "labelFuture": "Gắn nhãn cho email tương lai",
           "menu": "Tùy chọn thêm",
-          "unapprove": "Bỏ phê duyệt",
+          "unapprove": "Bỏ giữ nhận",
           "unsubscribe": "Hủy đăng ký",
           "unsubscribeBlock": "Hủy đăng ký / Chặn",
           "viewGmail": "Mở trong Gmail",
@@ -792,7 +792,7 @@
         "titleWith": "Thống kê cho {sender}"
       },
       "statusLabel": {
-        "approved": "Đã phê duyệt",
+        "approved": "Đang nhận thư",
         "autoArchived": "Tự động lưu trữ",
         "unhandled": "Chưa xử lý",
         "unsubscribed": "Đã hủy đăng ký"
