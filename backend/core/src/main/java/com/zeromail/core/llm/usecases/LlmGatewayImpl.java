@@ -59,6 +59,7 @@ class LlmGatewayImpl implements LlmGateway {
     private static final int DIGEST_MAX_BATCH_ITEMS = 20;
     private static final int DIGEST_PER_ITEM_CHAR_CAP = 600;
     private static final int DIGEST_SUMMARY_MAX_CHARS = 200;
+    private static final int NEEDS_REPLY_MAX_TOKENS = 8;
     private static final Pattern DIGEST_SUMMARY_LINE =
             Pattern.compile("^\\s*\\[(\\d+)]\\s*(.+?)\\s*$");
     private static final SemanticIntentEvaluator UNAVAILABLE_SEMANTIC_INTENT_EVALUATOR =
@@ -614,6 +615,89 @@ class LlmGatewayImpl implements LlmGateway {
                                     summaries.size());
                             return summaries;
                         });
+    }
+
+    @Override
+    public boolean classifyReplyNeeded(CallSite callSite, String sanitizedContent) {
+        Objects.requireNonNull(callSite, "callSite must not be null");
+        String content = sanitizedContent == null ? "" : sanitizedContent;
+        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        List<PlatformRoute> routes =
+                platformRoutes(LlmRuntimeTask.TRIAGE_SEMANTIC, platformModelFor(callSite));
+        PlatformRoute primaryRoute = routes.getFirst();
+        long startNanos = System.nanoTime();
+        return Observation.createNotStarted(
+                        "zero_mail.llm.gateway.needs_reply", observationRegistry)
+                .lowCardinalityKeyValue("callSite", callSite.id())
+                .lowCardinalityKeyValue("provider", primaryRoute.provider())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
+                .observe(
+                        () -> {
+                            log.info(
+                                    "event=llm_needs_reply_started tenantId={} callSite={} provider={} model={}",
+                                    tenantId,
+                                    callSite,
+                                    primaryRoute.provider(),
+                                    primaryRoute.model());
+
+                            SanitizationContext sanitizedContext =
+                                    sanitizationPipeline.sanitize(
+                                            buildNeedsReplyUserMessage(content));
+
+                            String rawOutput;
+                            Optional<ResolvedLlmProviderCredential> byok =
+                                    resolveByokProviderCredential(tenantId, primaryRoute.model());
+                            if (byok.isPresent()) {
+                                rawOutput =
+                                        callViaResolvedProviderCredential(
+                                                byok.get(),
+                                                sanitizedContext,
+                                                callSite,
+                                                SystemPrompts.NEEDS_REPLY_SYSTEM_PROMPT,
+                                                List.of(),
+                                                0.0,
+                                                NEEDS_REPLY_MAX_TOKENS,
+                                                false,
+                                                this::parseTextGeneration);
+                            } else {
+                                rawOutput =
+                                        callPlatformModelClientWithCreditLedger(
+                                                tenantId,
+                                                callSite,
+                                                routes,
+                                                sanitizedContext,
+                                                SystemPrompts.NEEDS_REPLY_SYSTEM_PROMPT,
+                                                List.of(),
+                                                startNanos,
+                                                0.0,
+                                                NEEDS_REPLY_MAX_TOKENS,
+                                                false,
+                                                this::parseTextGeneration);
+                            }
+
+                            boolean replyNeeded = parseReplyNeeded(rawOutput);
+                            log.info(
+                                    "event=llm_needs_reply_succeeded tenantId={} callSite={} latencyMs={} replyNeeded={}",
+                                    tenantId,
+                                    callSite,
+                                    latencyMs(startNanos),
+                                    replyNeeded);
+                            return replyNeeded;
+                        });
+    }
+
+    private static String buildNeedsReplyUserMessage(String sanitizedContent) {
+        return "Classify this inbound message as REPLY or FYI.\n\n<message>\n"
+                + sanitizedContent
+                + "\n</message>";
+    }
+
+    private static boolean parseReplyNeeded(String rawOutput) {
+        String normalized = rawOutput == null ? "" : rawOutput.strip();
+        // Contract: exactly REPLY or FYI. Fail open to REPLY on anything that is not a clear FYI so
+        // an ambiguous or garbled completion still surfaces the message for the reader.
+        return !normalized.regionMatches(true, 0, "FYI", 0, 3);
     }
 
     private static String buildDigestUserMessage(List<DigestSummarySource> batch) {
@@ -1421,7 +1505,8 @@ class LlmGatewayImpl implements LlmGateway {
         return switch (callSite) {
             case PREVIEW, DIGEST -> llmProperties.compileModel();
             case DRAFT -> llmProperties.draftModel();
-            case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC -> llmProperties.triageModel();
+            case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC, NEEDS_REPLY ->
+                    llmProperties.triageModel();
         };
     }
 
@@ -1456,10 +1541,13 @@ class LlmGatewayImpl implements LlmGateway {
             case PREVIEW -> LlmRuntimeTask.RULE_AUTHORING;
             case DRAFT -> LlmRuntimeTask.DRAFT_GENERATION;
             case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC -> LlmRuntimeTask.TRIAGE_ACTION;
-            // DIGEST is a plain text-generation call (summarizeDigestItems routes itself directly);
-            // it never issues tool/action calls, so reaching here is a routing bug.
+            // DIGEST and NEEDS_REPLY are plain text-generation calls (summarizeDigestItems /
+            // classifyReplyNeeded route themselves directly); they never issue tool/action calls,
+            // so reaching here is a routing bug.
             case DIGEST ->
                     throw new IllegalStateException("DIGEST does not issue action/tool calls");
+            case NEEDS_REPLY ->
+                    throw new IllegalStateException("NEEDS_REPLY does not issue action/tool calls");
         };
     }
 
@@ -1468,10 +1556,13 @@ class LlmGatewayImpl implements LlmGateway {
             case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC ->
                     LlmRuntimeTask.TRIAGE_SEMANTIC;
             case PREVIEW, DRAFT -> LlmRuntimeTask.RULE_PREVIEW_SEMANTIC;
-            // DIGEST never runs semantic-intent evaluation.
+            // DIGEST and NEEDS_REPLY never run semantic-intent evaluation.
             case DIGEST ->
                     throw new IllegalStateException(
                             "DIGEST does not run semantic-intent evaluation");
+            case NEEDS_REPLY ->
+                    throw new IllegalStateException(
+                            "NEEDS_REPLY does not run semantic-intent evaluation");
         };
     }
 

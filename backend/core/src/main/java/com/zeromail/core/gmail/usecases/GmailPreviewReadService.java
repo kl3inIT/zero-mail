@@ -76,7 +76,8 @@ public class GmailPreviewReadService {
     private static final List<String> THREAD_DISPLAY_METADATA_HEADERS =
             List.of("From", "To", "Cc", "Subject");
     private static final String THREAD_DISPLAY_FIELDS =
-            "id,messages(id,threadId,internalDate,payload/headers)";
+            "id,messages(id,threadId,internalDate,snippet,payload/headers)";
+    private static final int SNIPPET_EXCERPT_MAX_LENGTH = 200;
     private static final String FULL_FIELDS =
             "id,threadId,labelIds,internalDate,payload/headers,payload/body/size,"
                     + "payload/parts(filename,mimeType,body/size,parts)";
@@ -411,8 +412,15 @@ public class GmailPreviewReadService {
         String subject = excerpt(GmailMessageHeaders.firstValue(payload, "Subject").orElse(""));
         String otherParty = otherParty(payload, selfEmail);
         Instant lastActivityAt = toInstant(latestMessage.getInternalDate());
+        String snippet = snippetExcerpt(latestMessage.getSnippet());
         return Optional.of(
-                new GmailThreadDisplay(requestedThreadId, subject, otherParty, lastActivityAt));
+                new GmailThreadDisplay(
+                        requestedThreadId,
+                        subject,
+                        otherParty,
+                        lastActivityAt,
+                        latestMessage.getId(),
+                        snippet));
     }
 
     private static String otherParty(MessagePart payload, String selfEmail) {
@@ -792,6 +800,14 @@ public class GmailPreviewReadService {
         return sanitizedSubject.substring(0, SUBJECT_EXCERPT_MAX_LENGTH).trim();
     }
 
+    private static String snippetExcerpt(String snippet) {
+        String sanitizedSnippet = sanitizedText(snippet);
+        if (sanitizedSnippet.length() <= SNIPPET_EXCERPT_MAX_LENGTH) {
+            return sanitizedSnippet;
+        }
+        return sanitizedSnippet.substring(0, SNIPPET_EXCERPT_MAX_LENGTH).trim();
+    }
+
     private static String sanitizedText(String text) {
         if (text == null || text.isBlank()) {
             return "";
@@ -929,12 +945,20 @@ public class GmailPreviewReadService {
     }
 
     public record GmailThreadDisplay(
-            String gmailThreadId, String subject, String otherParty, Instant lastActivityAt) {
+            String gmailThreadId,
+            String subject,
+            String otherParty,
+            Instant lastActivityAt,
+            String latestMessageId,
+            String snippet) {
 
         public GmailThreadDisplay {
             Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
             subject = subject == null || subject.isBlank() ? null : subject;
             otherParty = otherParty == null || otherParty.isBlank() ? null : otherParty;
+            latestMessageId =
+                    latestMessageId == null || latestMessageId.isBlank() ? null : latestMessageId;
+            snippet = snippet == null || snippet.isBlank() ? null : snippet;
         }
     }
 

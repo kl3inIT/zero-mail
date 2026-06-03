@@ -5,6 +5,7 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
 import com.zeromail.core.thread.persistence.ThreadReplyStatusRepository;
 import com.zeromail.core.thread.persistence.lowlevel.NeedsReplyInboxReadRepository;
+import com.zeromail.core.thread.projection.NeedsReplyCounts;
 import com.zeromail.core.thread.projection.NeedsReplyPage;
 import com.zeromail.core.thread.projection.NeedsReplyPageQuery;
 import com.zeromail.core.thread.projection.NeedsReplyRow;
@@ -54,6 +55,25 @@ public class NeedsReplyInboxQueryService {
                         () ->
                                 threadReplyStatusRepository.countByBucketAndResolvedFalse(
                                         ThreadReplyBucket.TO_REPLY));
+    }
+
+    /**
+     * Unresolved counts for all three needs-reply tabs in one pass, so every tab badge is accurate
+     * regardless of which tab is open (the to-reply count keeps its own endpoint for the sidebar).
+     */
+    public NeedsReplyCounts counts(UUID tenantId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(
+                        () ->
+                                new NeedsReplyCounts(
+                                        threadReplyStatusRepository.countByBucketAndResolvedFalse(
+                                                ThreadReplyBucket.TO_REPLY),
+                                        threadReplyStatusRepository.countByBucketAndResolvedFalse(
+                                                ThreadReplyBucket.AWAITING_THEIR_REPLY),
+                                        threadReplyStatusRepository
+                                                .countByBucketAndResolvedFalseAndHasDraftTrue(
+                                                        ThreadReplyBucket.TO_REPLY)));
     }
 
     private static String cursorFor(NeedsReplyRow row) {

@@ -77,9 +77,9 @@ type AccountNavItem = {
 };
 
 const DAILY_NAV: NavItem[] = [
+  { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
   { href: '/inbox' as Route, labelKey: 'nav.inbox', icon: Inbox },
   { href: '/needs-reply' as Route, labelKey: 'nav.needsReply', icon: Reply },
-  { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
 ];
 
 const AUTOMATION_NAV: NavItem[] = [

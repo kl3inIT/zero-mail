@@ -10,4 +10,6 @@ public interface ThreadReplyStatusRepository extends JpaRepository<ThreadReplySt
     Optional<ThreadReplyStatusEntity> findByGmailThreadId(String gmailThreadId);
 
     long countByBucketAndResolvedFalse(ThreadReplyBucket bucket);
+
+    long countByBucketAndResolvedFalseAndHasDraftTrue(ThreadReplyBucket bucket);
 }

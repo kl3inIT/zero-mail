@@ -50,6 +50,7 @@ class ClassifyThreadReplyStatusServiceIntegrationTest extends PostgresContainerT
                                 true,
                                 false,
                                 null,
+                                false,
                                 false));
 
         String storedBucket =

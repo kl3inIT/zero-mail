@@ -165,7 +165,7 @@
         "title": "Safety net"
       },
       "updates": {
-        "helper": "Weekly digest and shadow mode",
+        "helper": "Daily digest and shadow mode",
         "title": "Updates"
       },
       "voice": {
@@ -201,8 +201,8 @@
     },
     "updates": {
       "dailyDigest": {
-        "description": "Receive one weekly email digest.",
-        "title": "Weekly digest"
+        "description": "Receive one daily email digest.",
+        "title": "Daily digest"
       },
       "pauseTriage": {
         "description": "Pause automatic triage while keeping your configuration.",
@@ -1802,9 +1802,14 @@
       "markResolved": "Mark resolved",
       "openInGmail": "Open in Gmail",
       "regenerateDraft": "Regenerate draft",
-      "regenerating": "Regenerating…"
+      "regenerating": "Regenerating…",
+      "resync": "Re-sync inbox",
+      "sync": "Sync inbox",
+      "syncing": "Syncing…",
+      "viewContent": "View content"
     },
     "banner": {
+      "syncing": "Syncing your inbox to classify mail…",
       "updating": "Updating your needs-reply list…"
     },
     "columns": {
@@ -1834,6 +1839,7 @@
       },
       "toReply": {
         "body": "Nothing needs a reply right now.",
+        "syncHint": "New mail is classified automatically. To classify mail already in your inbox, sync now.",
         "title": "Inbox zero 🎉"
       }
     },
@@ -1845,6 +1851,15 @@
     "page": {
       "description": "Threads waiting on a reply — yours or theirs. Review and send drafts in Gmail.",
       "title": "Needs reply"
+    },
+    "reader": {
+      "draftHeading": "Your draft reply",
+      "draftUnavailable": "Couldn't load the draft. Open it in Gmail to view.",
+      "noBody": "This email has no content to display.",
+      "originalHeading": "Original email",
+      "to": "To",
+      "unavailableBody": "Open it in Gmail to read the full message.",
+      "unavailableTitle": "Can't preview here"
     },
     "row": {
       "ageDays": "Waiting {count}d",
@@ -1866,6 +1881,8 @@
       "toReply": "To reply"
     },
     "toast": {
+      "backfillDone": "Inbox synced — your needs-reply list is up to date.",
+      "backfillFailed": "Couldn't sync your inbox. Try again.",
       "draftSaved": "Draft saved in Gmail — review and send it there."
     }
   },
@@ -2379,16 +2396,6 @@
       "upgradePlan": "Upgrade plan"
     },
     "notifications": {
-      "description": "Manage your weekly summary email.",
-      "sendHour": {
-        "downtimeNote": "If the digest worker is offline during your selected hour, that week's digest is skipped — there is no automatic catch-up. Choose an hour when the system is reliably running.",
-        "helper": "The digest is sent around this hour in your time zone.",
-        "label": "Send hour (local time)"
-      },
-      "sendDay": {
-        "helper": "The digest is sent on this day each week.",
-        "label": "Day of week"
-      },
       "days": {
         "1": "Monday",
         "2": "Tuesday",
@@ -2397,6 +2404,16 @@
         "5": "Friday",
         "6": "Saturday",
         "7": "Sunday"
+      },
+      "description": "Manage your daily summary email.",
+      "sendDay": {
+        "helper": "The digest is sent on this day each week.",
+        "label": "Day of week"
+      },
+      "sendHour": {
+        "downtimeNote": "If the digest worker is offline during your selected hour, that day's digest is skipped — there is no automatic catch-up. Choose an hour when the system is reliably running.",
+        "helper": "The digest is sent around this hour in your time zone.",
+        "label": "Send hour (local time)"
       },
       "timeZone": {
         "label": "Time zone: {tz}",
@@ -2410,8 +2427,8 @@
       },
       "toggle": {
         "helperOff": "Off — you'll receive no summary emails.",
-        "helperOn": "You'll receive a summary email each week on the chosen day and hour.",
-        "label": "Weekly digest email"
+        "helperOn": "You'll receive a summary email each day at the chosen hour.",
+        "label": "Daily digest email"
       }
     },
     "privacy": {

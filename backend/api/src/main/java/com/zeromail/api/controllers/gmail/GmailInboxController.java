@@ -58,6 +58,17 @@ public class GmailInboxController {
         }
     }
 
+    @GetMapping("/drafts/{gmailDraftId}")
+    public GmailInboxMessageDetailResponse draftDetail(@PathVariable String gmailDraftId) {
+        UUID tenantId = TenantContext.currentTenantUuid();
+        try {
+            return GmailInboxMessageDetailResponse.from(
+                    recentInboxReadService.fetchDraftDetail(tenantId, gmailDraftId));
+        } catch (RecentInboxUnavailableException inboxUnavailableException) {
+            throw responseStatusException(inboxUnavailableException);
+        }
+    }
+
     @PostMapping("/{gmailMessageId}/read")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markRead(@PathVariable String gmailMessageId) {

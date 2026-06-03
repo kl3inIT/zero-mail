@@ -104,4 +104,22 @@ public interface LlmGateway {
     default List<DigestSummaryLine> summarizeDigestItems(List<DigestSummarySource> sources) {
         throw new UnsupportedOperationException("Digest summarization is unavailable");
     }
+
+    /**
+     * Needs-reply classification path. Decides, for a single inbound message, whether it warrants a
+     * human reply ({@code true} → the "Cần trả lời" / TO_REPLY bucket) or is informational ({@code
+     * false} → the FYI bucket). The triage orchestrator calls this only for inbound messages that
+     * no rule already drafted a reply for and that aren't an obvious no-reply class (newsletters,
+     * list-unsubscribe, auto-replies are pre-filtered to FYI without an LLM call).
+     *
+     * <p>The {@code sanitizedContent} parameter is the same content-free {@code
+     * semanticEvalContent} the triage path builds for {@link #evaluateSemanticIntents}: a sanitized
+     * subject excerpt plus a deterministic flag summary, never a body, snippet, prompt, or
+     * completion. Implementations re-run the Phase 2C sanitization pipeline, reserve one {@code
+     * CallSite.NEEDS_REPLY} platform credit (BYOK callers bypass the ledger), and keep both the
+     * content and the model output in memory only — never logged, never persisted.
+     */
+    default boolean classifyReplyNeeded(CallSite callSite, String sanitizedContent) {
+        throw new UnsupportedOperationException("Needs-reply classification is unavailable");
+    }
 }

@@ -11,9 +11,11 @@ import java.util.stream.Stream;
  * com.zeromail.core.billing.usecases.FeatureCatalogCache} for the runtime lookup.
  *
  * <p><b>Membership:</b> {@code TRIAGE}, {@code DRAFT}, {@code PREVIEW}, {@code
- * TRIAGE_PLATFORM_LLM}, {@code TRIAGE_DETERMINISTIC} (D-G3 + Phase 4 D-E1), and {@code DIGEST} (the
- * weekly content-digest send-time summarizer). There is intentionally no BYOK member because BYOK
- * traffic bypasses the ledger entirely. The ledger service contract documents the BYOK skip path.
+ * TRIAGE_PLATFORM_LLM}, {@code TRIAGE_DETERMINISTIC} (D-G3 + Phase 4 D-E1), {@code DIGEST} (the
+ * weekly content-digest send-time summarizer), and {@code NEEDS_REPLY} (the per-inbound-message
+ * needs-reply vs FYI classifier that populates the "Cần trả lời" inbox). There is intentionally no
+ * BYOK member because BYOK traffic bypasses the ledger entirely. The ledger service contract
+ * documents the BYOK skip path.
  *
  * <p><b>Cost source:</b> {@code feature_catalog.default_credit_cost} keyed by {@link #id()} (which
  * equals {@link #name()}). A {@code FeatureCatalogConsistencyChecker} startup validator enforces
@@ -26,7 +28,8 @@ public enum CallSite implements IdentifiedEnum {
     PREVIEW,
     TRIAGE_PLATFORM_LLM,
     TRIAGE_DETERMINISTIC,
-    DIGEST;
+    DIGEST,
+    NEEDS_REPLY;
 
     @Override
     public String id() {

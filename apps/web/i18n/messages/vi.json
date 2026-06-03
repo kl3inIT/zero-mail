@@ -165,7 +165,7 @@
         "title": "Lưới an toàn"
       },
       "updates": {
-        "helper": "Tóm tắt hằng tuần và chế độ shadow",
+        "helper": "Tóm tắt hằng ngày và chế độ shadow",
         "title": "Cập nhật"
       },
       "voice": {
@@ -201,8 +201,8 @@
     },
     "updates": {
       "dailyDigest": {
-        "description": "Nhận một bản tóm tắt email hằng tuần.",
-        "title": "Tóm tắt hằng tuần"
+        "description": "Nhận một bản tóm tắt email hằng ngày.",
+        "title": "Tóm tắt hằng ngày"
       },
       "pauseTriage": {
         "description": "Tạm dừng tự động xử lý nhưng vẫn giữ dữ liệu cấu hình.",
@@ -1802,9 +1802,14 @@
       "markResolved": "Đánh dấu đã xử lý",
       "openInGmail": "Mở trong Gmail",
       "regenerateDraft": "Tạo lại bản nháp",
-      "regenerating": "Đang tạo lại…"
+      "regenerating": "Đang tạo lại…",
+      "resync": "Đồng bộ lại hộp thư",
+      "sync": "Đồng bộ hộp thư",
+      "syncing": "Đang đồng bộ…",
+      "viewContent": "Xem nội dung"
     },
     "banner": {
+      "syncing": "Đang đồng bộ hộp thư để phân loại email…",
       "updating": "Đang cập nhật danh sách cần trả lời…"
     },
     "columns": {
@@ -1834,6 +1839,7 @@
       },
       "toReply": {
         "body": "Hiện không có email nào cần trả lời.",
+        "syncHint": "Email mới đến sẽ tự được phân loại. Để phân loại các email đã có sẵn trong hộp thư, đồng bộ ngay.",
         "title": "Inbox zero 🎉"
       }
     },
@@ -1845,6 +1851,15 @@
     "page": {
       "description": "Các luồng email đang chờ phản hồi — từ bạn hoặc từ họ. Xem lại và gửi bản nháp trong Gmail.",
       "title": "Cần trả lời"
+    },
+    "reader": {
+      "draftHeading": "Bản nháp trả lời của bạn",
+      "draftUnavailable": "Chưa đọc được bản nháp. Mở trong Gmail để xem.",
+      "noBody": "Email này không có nội dung để hiển thị.",
+      "originalHeading": "Email gốc",
+      "to": "Đến",
+      "unavailableBody": "Mở email trong Gmail để xem nội dung đầy đủ.",
+      "unavailableTitle": "Không xem được nội dung tại đây"
     },
     "row": {
       "ageDays": "Đợi {count} ngày",
@@ -1866,6 +1881,8 @@
       "toReply": "Cần trả lời"
     },
     "toast": {
+      "backfillDone": "Đã đồng bộ hộp thư — danh sách cần trả lời đã được cập nhật.",
+      "backfillFailed": "Không đồng bộ được hộp thư. Hãy thử lại.",
       "draftSaved": "Đã lưu bản nháp trong Gmail — hãy xem lại và gửi ở đó."
     }
   },
@@ -2379,16 +2396,6 @@
       "upgradePlan": "Nâng cấp gói"
     },
     "notifications": {
-      "description": "Quản lý email tóm tắt hàng tuần của bạn.",
-      "sendHour": {
-        "downtimeNote": "Nếu trình gửi digest gặp sự cố đúng giờ bạn chọn, bản digest tuần đó sẽ bị bỏ qua — không có cơ chế gửi bù. Hãy chọn giờ mà hệ thống hoạt động ổn định.",
-        "helper": "Email tóm tắt được gửi khoảng giờ này theo múi giờ của bạn.",
-        "label": "Giờ gửi (giờ địa phương)"
-      },
-      "sendDay": {
-        "helper": "Email tóm tắt được gửi vào ngày này mỗi tuần.",
-        "label": "Ngày gửi trong tuần"
-      },
       "days": {
         "1": "Thứ Hai",
         "2": "Thứ Ba",
@@ -2397,6 +2404,16 @@
         "5": "Thứ Sáu",
         "6": "Thứ Bảy",
         "7": "Chủ Nhật"
+      },
+      "description": "Quản lý email tóm tắt hàng ngày của bạn.",
+      "sendDay": {
+        "helper": "Email tóm tắt được gửi vào ngày này mỗi tuần.",
+        "label": "Ngày gửi trong tuần"
+      },
+      "sendHour": {
+        "downtimeNote": "Nếu trình gửi digest gặp sự cố đúng giờ bạn chọn, bản digest hôm đó sẽ bị bỏ qua — không có cơ chế gửi bù. Hãy chọn giờ mà hệ thống hoạt động ổn định.",
+        "helper": "Email tóm tắt được gửi khoảng giờ này theo múi giờ của bạn.",
+        "label": "Giờ gửi (giờ địa phương)"
       },
       "timeZone": {
         "label": "Múi giờ: {tz}",
@@ -2410,8 +2427,8 @@
       },
       "toggle": {
         "helperOff": "Đã tắt — bạn sẽ không nhận email tóm tắt nào.",
-        "helperOn": "Bạn sẽ nhận email tóm tắt mỗi tuần vào ngày và giờ đã chọn.",
-        "label": "Email tóm tắt hàng tuần"
+        "helperOn": "Bạn sẽ nhận email tóm tắt mỗi ngày vào giờ đã chọn.",
+        "label": "Email tóm tắt hàng ngày"
       }
     },
     "privacy": {

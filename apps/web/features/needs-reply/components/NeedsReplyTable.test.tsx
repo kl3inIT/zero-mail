@@ -128,12 +128,15 @@ function needsReplyRow(
   overrides: Partial<NeedsReplyRowModel> = {},
 ): NeedsReplyRowModel {
   return {
+    draftId: null,
     draftStatus: 'NO_DRAFT',
     gmailThreadId: threadId,
     lastActivityAt: '2026-05-12T10:30:00.000Z',
+    latestMessageId: `message-${threadId}`,
     openInGmailUrl: `https://mail.google.com/mail/u/0/#all/${threadId}`,
     otherParty: 'Founding team',
     resolved: false,
+    snippet: `Snippet for ${threadId}`,
     subject: `Quarterly update ${threadId}`,
     ...overrides,
   };

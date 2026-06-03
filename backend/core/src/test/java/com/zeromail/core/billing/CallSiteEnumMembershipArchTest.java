@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 class CallSiteEnumMembershipArchTest {
 
     @Test
-    void callsite_has_exactly_six_members() {
-        assertThat(CallSite.values()).hasSize(6);
+    void callsite_has_exactly_seven_members() {
+        assertThat(CallSite.values()).hasSize(7);
     }
 
     @Test
@@ -22,7 +22,8 @@ class CallSiteEnumMembershipArchTest {
                         "PREVIEW",
                         "TRIAGE_PLATFORM_LLM",
                         "TRIAGE_DETERMINISTIC",
-                        "DIGEST");
+                        "DIGEST",
+                        "NEEDS_REPLY");
     }
 
     @Test

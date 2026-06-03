@@ -2,6 +2,7 @@ package com.zeromail.core.gmail.usecases;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.ListMessagesResponse;
@@ -141,22 +142,7 @@ public class RecentInboxReadService {
                             .setFormat("full")
                             .setFields(FULL_FIELDS)
                             .execute();
-            RecentInboxMessage message =
-                    toRecentInboxMessage(gmailMessage, fetchLabelNamesById(gmail));
-            MessagePart payload = gmailMessage.getPayload();
-            String renderedText =
-                    cap(decodedMimeBody(payload, "text/plain", true), RENDERED_TEXT_MAX_LENGTH);
-            String decodedHtml =
-                    cap(decodedMimeBody(payload, "text/html", false), RENDERED_HTML_MAX_LENGTH);
-            String renderedHtml =
-                    decodedHtml.isBlank()
-                            ? ""
-                            : safeHtmlSanitizer.sanitizeEmailHtml(
-                                    cap(
-                                            inlineCidImageSources(
-                                                    gmail, messageId, payload, decodedHtml),
-                                            RENDERED_HTML_MAX_LENGTH));
-            return new RecentInboxMessageDetail(message, renderedText, renderedHtml);
+            return renderMessageDetail(gmail, gmailMessage);
         } catch (InvalidGrantException invalidGrantException) {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.REVOKED, invalidGrantException);
@@ -167,6 +153,65 @@ public class RecentInboxReadService {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.GMAIL_UNAVAILABLE, ioException);
         }
+    }
+
+    /**
+     * Fetch and render the saved Gmail reply draft for a thread. The draft body is user-authored
+     * draft data (the user owns it, reviews it, decides whether to send it), not extracted email
+     * content received from Gmail — so it may be shown in-place (privacy carve-out). It is rendered
+     * live and never persisted. Reuses the same decode + sanitize pipeline as {@link
+     * #fetchMessageDetail}.
+     */
+    @Transactional(readOnly = true)
+    public RecentInboxMessageDetail fetchDraftDetail(UUID tenantId, String gmailDraftId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        if (gmailDraftId == null || gmailDraftId.isBlank()) {
+            throw new IllegalArgumentException("gmailDraftId must not be blank");
+        }
+        try {
+            Gmail gmail = gmailForTenant(tenantId);
+            Draft draft =
+                    gmail.users()
+                            .drafts()
+                            .get("me", gmailDraftId.trim())
+                            .setFormat("full")
+                            .execute();
+            Message draftMessage = draft.getMessage();
+            if (draftMessage == null) {
+                throw new RecentInboxUnavailableException(
+                        RecentInboxUnavailableReason.MESSAGE_NOT_FOUND);
+            }
+            return renderMessageDetail(gmail, draftMessage);
+        } catch (InvalidGrantException invalidGrantException) {
+            throw new RecentInboxUnavailableException(
+                    RecentInboxUnavailableReason.REVOKED, invalidGrantException);
+        } catch (GoogleJsonResponseException googleResponseException) {
+            throw new RecentInboxUnavailableException(
+                    mapGoogleResponse(googleResponseException), googleResponseException);
+        } catch (IOException ioException) {
+            throw new RecentInboxUnavailableException(
+                    RecentInboxUnavailableReason.GMAIL_UNAVAILABLE, ioException);
+        }
+    }
+
+    private RecentInboxMessageDetail renderMessageDetail(Gmail gmail, Message gmailMessage)
+            throws IOException {
+        String messageId = gmailMessage.getId();
+        RecentInboxMessage message = toRecentInboxMessage(gmailMessage, fetchLabelNamesById(gmail));
+        MessagePart payload = gmailMessage.getPayload();
+        String renderedText =
+                cap(decodedMimeBody(payload, "text/plain", true), RENDERED_TEXT_MAX_LENGTH);
+        String decodedHtml =
+                cap(decodedMimeBody(payload, "text/html", false), RENDERED_HTML_MAX_LENGTH);
+        String renderedHtml =
+                decodedHtml.isBlank()
+                        ? ""
+                        : safeHtmlSanitizer.sanitizeEmailHtml(
+                                cap(
+                                        inlineCidImageSources(
+                                                gmail, messageId, payload, decodedHtml),
+                                        RENDERED_HTML_MAX_LENGTH));
+        return new RecentInboxMessageDetail(message, renderedText, renderedHtml);
     }
 
     /**
