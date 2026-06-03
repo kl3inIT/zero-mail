@@ -44,6 +44,13 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# pnpm 11's runDepsStatusCheck detects the workspace project count mismatch
+# between the deps stage (web only) and builder stage (web + admin once
+# `COPY . .` lands) and tries to purge node_modules. Without a TTY that purge
+# aborts (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY). Setting CI=true is the
+# pnpm-documented opt-out for non-interactive environments.
+ENV CI=true
+
 # NEXT_PUBLIC_* are baked in at build time
 ARG NEXT_PUBLIC_API_BASE=https://zeromail.vn
 ENV NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}

@@ -1,5 +1,7 @@
 package com.zeromail.core.chat.llm.springai;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
 import com.zeromail.core.chat.usecases.ChatProperties;
@@ -11,11 +13,10 @@ import com.zeromail.core.llm.usecases.LlmCredentialSource;
 import com.zeromail.core.llm.usecases.LlmProviderCredential;
 import com.zeromail.core.llm.usecases.PlatformLlmRuntimeRouter;
 import com.zeromail.core.llm.usecases.ResolvedLlmProviderCredential;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.stereotype.Component;
@@ -30,8 +31,7 @@ public class SpringAiChatModelFactory {
     private final PlatformLlmRuntimeRouter platformRuntimeRouter;
     private final ByokProviderResolver byokProviderResolver;
     private final SpringAiProviderChatClientFactory chatClientFactory;
-    private final ConcurrentMap<ChatClientCacheKey, ResolvedChatClient> chatClientsByKey =
-            new ConcurrentHashMap<>();
+    private final Cache<ChatClientCacheKey, ResolvedChatClient> chatClientsByKey;
 
     public SpringAiChatModelFactory(
             ChatProperties chatProperties,
@@ -44,6 +44,13 @@ public class SpringAiChatModelFactory {
         this.platformRuntimeRouter = platformRuntimeRouter;
         this.byokProviderResolver = byokProviderResolver;
         this.chatClientFactory = chatClientFactory;
+        this.chatClientsByKey =
+                Caffeine.newBuilder()
+                        .maximumSize(chatProperties.chatModelCache().maximumSize())
+                        .expireAfterAccess(
+                                Duration.ofMinutes(
+                                        chatProperties.chatModelCache().expireAfterAccessMinutes()))
+                        .build();
     }
 
     public ResolvedChatClient forTenant(String tenantId, String requestedModelId) {
@@ -58,7 +65,7 @@ public class SpringAiChatModelFactory {
                         : byokCredential(tenantUuid, requestedModelId);
         ChatClientCacheKey cacheKey = cacheKey(tenantId, resolvedCredential);
         try {
-            return chatClientsByKey.computeIfAbsent(
+            return chatClientsByKey.get(
                     cacheKey, ignored -> createResolvedChatClient(resolvedCredential));
         } finally {
             resolvedCredential.credential().wipe();
@@ -66,7 +73,11 @@ public class SpringAiChatModelFactory {
     }
 
     public void evictByProvider(LlmProvider provider) {
-        chatClientsByKey.keySet().removeIf(cacheKey -> cacheKey.providerId().equals(provider.id()));
+        chatClientsByKey
+                .asMap()
+                .keySet()
+                .removeIf(cacheKey -> cacheKey.providerId().equals(provider.id()));
+        chatClientsByKey.cleanUp();
     }
 
     public void evictByModelIds(Collection<String> modelIds) {
@@ -75,8 +86,10 @@ public class SpringAiChatModelFactory {
         }
         java.util.Set<String> affectedModelIds = java.util.Set.copyOf(modelIds);
         chatClientsByKey
+                .asMap()
                 .keySet()
                 .removeIf(cacheKey -> affectedModelIds.contains(cacheKey.modelId()));
+        chatClientsByKey.cleanUp();
     }
 
     public ChatOptions.Builder<?> optionsFor(ResolvedChatClient resolvedChatClient) {

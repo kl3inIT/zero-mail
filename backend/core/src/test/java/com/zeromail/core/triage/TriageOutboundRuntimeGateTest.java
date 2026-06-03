@@ -66,6 +66,8 @@ class TriageOutboundRuntimeGateTest {
     private final TriageDraftSettings triageDraftSettings = mock(TriageDraftSettings.class);
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService =
             mock(ClassifyThreadReplyStatusService.class);
+    // Bare mock: TransactionTemplate.getTransaction returns null and commit is a no-op, so the
+    // executeWithoutResult callback still runs synchronously in the test.
     private final PlatformTransactionManager transactionManager =
             mock(PlatformTransactionManager.class);
 

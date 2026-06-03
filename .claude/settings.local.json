@@ -6,5 +6,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright-test",
+    "postgres"
+  ]
 }

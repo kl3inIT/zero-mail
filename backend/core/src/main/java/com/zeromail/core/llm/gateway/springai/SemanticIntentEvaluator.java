@@ -5,6 +5,7 @@ import com.zeromail.core.llm.config.LlmProperties;
 import com.zeromail.core.llm.config.LlmProperties.PlatformProperties;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.routing.PlatformLlmRouteCredentials;
+import com.zeromail.core.llm.usecases.LlmProviderCredential;
 import com.zeromail.core.llm.usecases.LlmUsage;
 import com.zeromail.core.llm.usecases.SemanticIntentEvaluationResult;
 import com.zeromail.core.llm.usecases.SemanticIntentRequest;
@@ -19,6 +20,7 @@ import java.util.Set;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatModel.ResponseFormat;
@@ -58,27 +60,33 @@ public class SemanticIntentEvaluator
 
     private final ChatClient platformChatClient;
     private final PlatformProperties llmProperties;
+    private final SpringAiProviderChatClientFactory providerChatClientFactory;
     private final BeanOutputConverter<SemanticIntentResponse> outputConverter =
             new BeanOutputConverter<>(SemanticIntentResponse.class);
 
     @Autowired
     public SemanticIntentEvaluator(
             @Qualifier("platformChatClient") ChatClient platformChatClient,
-            LlmProperties llmConfiguration) {
-        this(platformChatClient, llmConfiguration.platform());
+            LlmProperties llmConfiguration,
+            SpringAiProviderChatClientFactory providerChatClientFactory) {
+        this(platformChatClient, llmConfiguration.platform(), providerChatClientFactory);
     }
 
     SemanticIntentEvaluator(ChatClient platformChatClient) {
         this(
                 platformChatClient,
                 new PlatformProperties(
-                        null, null, "test-platform-key", null, null, null, null, null, null));
+                        null, null, "test-platform-key", null, null, null, null, null, null),
+                null);
     }
 
     private SemanticIntentEvaluator(
-            ChatClient platformChatClient, PlatformProperties llmProperties) {
+            ChatClient platformChatClient,
+            PlatformProperties llmProperties,
+            SpringAiProviderChatClientFactory providerChatClientFactory) {
         this.platformChatClient = platformChatClient;
         this.llmProperties = llmProperties;
+        this.providerChatClientFactory = providerChatClientFactory;
     }
 
     @Override
@@ -133,30 +141,65 @@ public class SemanticIntentEvaluator
         }
     }
 
+    @Override
+    public SemanticIntentEvaluationResult evaluate(
+            CallSite callSite,
+            String modelId,
+            LlmProviderCredential providerCredential,
+            String sanitizedMessageContent,
+            List<SemanticIntentRequest> intents) {
+        if (providerChatClientFactory == null) {
+            providerCredential.wipe();
+            throw new IllegalStateException("Provider chat client factory is unavailable");
+        }
+        try {
+            ChatClient chatClient =
+                    providerChatClientFactory.create(providerCredential, modelId, 0.0, 512, false);
+            ChatOptions.Builder<?> runtimeOptions =
+                    providerChatClientFactory.options(providerCredential, modelId, 0.0, 512, false);
+            if (runtimeOptions instanceof OpenAiChatOptions.Builder openAiOptionsBuilder) {
+                openAiOptionsBuilder.responseFormat(responseFormat());
+            }
+            return evaluateWithClient(
+                    chatClient,
+                    callSite,
+                    modelId,
+                    sanitizedMessageContent,
+                    intents,
+                    runtimeOptions);
+        } finally {
+            providerCredential.wipe();
+        }
+    }
+
     private SemanticIntentEvaluationResult evaluateWithClient(
             ChatClient chatClient,
             CallSite callSite,
             String modelId,
             String sanitizedMessageContent,
             List<SemanticIntentRequest> intents) {
+        return evaluateWithClient(
+                chatClient,
+                callSite,
+                modelId,
+                sanitizedMessageContent,
+                intents,
+                openAiSemanticOptions(modelId));
+    }
+
+    private SemanticIntentEvaluationResult evaluateWithClient(
+            ChatClient chatClient,
+            CallSite callSite,
+            String modelId,
+            String sanitizedMessageContent,
+            List<SemanticIntentRequest> intents,
+            ChatOptions.Builder<?> runtimeOptions) {
         Objects.requireNonNull(callSite, "callSite");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(sanitizedMessageContent, "sanitizedMessageContent");
         Objects.requireNonNull(intents, "intents");
 
         Set<String> requestedNodeIds = requestedNodeIds(intents);
-        String jsonSchema = outputConverter.getJsonSchema();
-        OpenAiChatOptions.Builder runtimeOptions =
-                OpenAiChatOptions.builder()
-                        .model(modelId)
-                        .temperature(0.0)
-                        .maxTokens(512)
-                        .responseFormat(
-                                ResponseFormat.builder()
-                                        .type(ResponseFormat.Type.JSON_SCHEMA)
-                                        .jsonSchema(jsonSchema)
-                                        .build());
-
         ChatResponse response =
                 chatClient
                         .prompt()
@@ -180,6 +223,21 @@ public class SemanticIntentEvaluator
         }
         return new SemanticIntentEvaluationResult(
                 validateNodeMatches(requestedNodeIds, parsed.nodeMatches()), usage(response));
+    }
+
+    private OpenAiChatOptions.Builder openAiSemanticOptions(String modelId) {
+        return OpenAiChatOptions.builder()
+                .model(modelId)
+                .temperature(0.0)
+                .maxTokens(512)
+                .responseFormat(responseFormat());
+    }
+
+    private ResponseFormat responseFormat() {
+        return ResponseFormat.builder()
+                .type(ResponseFormat.Type.JSON_SCHEMA)
+                .jsonSchema(outputConverter.getJsonSchema())
+                .build();
     }
 
     private Set<String> requestedNodeIds(List<SemanticIntentRequest> intents) {

@@ -18,28 +18,31 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const state = createChromeMockState();
 
-    await openAuthenticatedRoute(page, '/settings', state);
+    // Notification preferences moved from /settings into the /ai page's Updates
+    // section (refactor 676e36b9 "flatten /settings") with `ai-` prefixed testids.
+    await openAuthenticatedRoute(page, '/ai', state);
 
     await expect(page.getByTestId('notifications-section')).toBeVisible();
-    await expect(page.getByTestId('daily-digest-switch')).toBeChecked();
+    await expect(page.getByTestId('ai-daily-digest-switch')).toBeChecked();
     await expect(page.getByText(/no automatic catch-up/i)).toBeVisible();
 
-    await page.getByTestId('daily-digest-switch').click();
+    await page.getByTestId('ai-daily-digest-switch').click();
     await expect
       .poll(() => state.notificationPreferenceUpdates)
       .toContainEqual({
         digestEnabled: false,
         digestSendHourLocal: 20,
       });
-    await expect(page.getByTestId('daily-digest-switch')).not.toBeChecked();
-    await expect(page.getByTestId('digest-send-hour-select')).toBeDisabled();
+    await expect(page.getByTestId('ai-daily-digest-switch')).not.toBeChecked();
+    // When the digest is off the send-hour select is unmounted (not just disabled).
+    await expect(page.getByTestId('ai-digest-send-hour-select')).toHaveCount(0);
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('daily-digest-switch')).not.toBeChecked({ timeout: 15_000 });
+    await expect(page.getByTestId('ai-daily-digest-switch')).not.toBeChecked({ timeout: 15_000 });
 
-    await page.getByTestId('daily-digest-switch').click();
-    await expect(page.getByTestId('digest-send-hour-select')).toBeEnabled();
-    await page.getByTestId('digest-send-hour-select').click();
+    await page.getByTestId('ai-daily-digest-switch').click();
+    await expect(page.getByTestId('ai-digest-send-hour-select')).toBeEnabled();
+    await page.getByTestId('ai-digest-send-hour-select').click();
     await page.getByRole('option', { name: '08:00' }).click();
 
     await expect
@@ -48,7 +51,7 @@ for (const viewport of [
         digestEnabled: true,
         digestSendHourLocal: 8,
       });
-    await expect(page.getByTestId('digest-send-hour-select')).toContainText('08:00');
+    await expect(page.getByTestId('ai-digest-send-hour-select')).toContainText('08:00');
     await expectNoHorizontalOverflow(page);
   });
 }
@@ -57,7 +60,7 @@ test('notification downtime note is localized', async ({ page }) => {
   const state = createChromeMockState({ preferredLanguage: 'vi' });
   await seedAuthenticatedSession(page, 'vi');
   await installChromeApiMock(page, state);
-  await page.goto('/settings', { waitUntil: 'domcontentloaded' });
+  await page.goto('/ai', { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('load');
 
   await expect(page.getByTestId('notifications-section')).toBeVisible();

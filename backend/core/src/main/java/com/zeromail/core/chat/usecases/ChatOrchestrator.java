@@ -13,7 +13,6 @@ import com.zeromail.core.chat.domain.parts.TextPart;
 import com.zeromail.core.chat.domain.parts.ToolCallPart;
 import com.zeromail.core.chat.domain.parts.ToolOutputPart;
 import com.zeromail.core.chat.llm.TenantAwareReactorScheduler;
-import com.zeromail.core.chat.llm.springai.ZeroMailChatMemory;
 import com.zeromail.core.chat.persistence.ChatMessageJdbcRepository;
 import com.zeromail.core.chat.persistence.lowlevel.ChatTurnRepository;
 import com.zeromail.core.chat.sanitize.ToolOutputSanitizer;
@@ -58,7 +57,6 @@ public class ChatOrchestrator {
     private static final String TRANSIENT_STREAM_ERROR_CODE = "chat_stream_transient";
 
     private final ChatLlmGateway chatLlmGateway;
-    private final ZeroMailChatMemory zeroMailChatMemory;
     private final ToolOutputSanitizer toolOutputSanitizer;
     private final TenantAwareReactorScheduler tenantAwareReactorScheduler;
     private final XmlFencedPersonalizationRenderer personalizationRenderer;
@@ -74,7 +72,6 @@ public class ChatOrchestrator {
 
     public ChatOrchestrator(
             ChatLlmGateway chatLlmGateway,
-            ZeroMailChatMemory zeroMailChatMemory,
             ToolOutputSanitizer toolOutputSanitizer,
             TenantAwareReactorScheduler tenantAwareReactorScheduler,
             XmlFencedPersonalizationRenderer personalizationRenderer,
@@ -88,7 +85,6 @@ public class ChatOrchestrator {
             List<ChatReadToolHandler> readToolHandlers,
             ObjectProvider<LlmRouteResolver> routeResolverProvider) {
         this.chatLlmGateway = Objects.requireNonNull(chatLlmGateway, "chatLlmGateway");
-        this.zeroMailChatMemory = Objects.requireNonNull(zeroMailChatMemory, "zeroMailChatMemory");
         this.toolOutputSanitizer =
                 Objects.requireNonNull(toolOutputSanitizer, "toolOutputSanitizer");
         this.tenantAwareReactorScheduler =
@@ -340,7 +336,6 @@ public class ChatOrchestrator {
     }
 
     private List<ChatMessage> history(UUID tenantId, UUID chatId) {
-        zeroMailChatMemory.get(chatId.toString(), chatProperties.maxHistoryTokens());
         return budgetHistory(
                 chatMessageRepository.findByChatIdAndTenantIdOrderByCreatedAtAsc(tenantId, chatId),
                 chatProperties.maxHistoryTokens());

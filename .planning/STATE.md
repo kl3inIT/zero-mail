@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: — Admin Console + User Settings UI
-status: "Phase 9 shipped — PR #74; Phase 10 planning complete (11 plans, plan-checker PASS) — ready for /gsd:execute-phase 10"
+status: "Phase 9 shipped — PR #74; Phase 10 planning complete (11 plans, plan-checker PASS) — ready for /gsd:execute-phase 10; v1.2 milestone archived on main (merged into integration 2026-06-03)"
 stopped_at: Phase 10 planning complete
-last_updated: "2026-06-01T00:00:00.000Z"
-last_activity: "2026-06-01 - Completed quick task 260601-cwr: make AI settings page content wider"
+last_updated: "2026-06-03T00:00:00.000Z"
+last_activity: "2026-06-03 - Merged main into integration (v1.2 archived); inbox sender avatars shipped"
 progress:
-  total_phases: 4
+  total_phases: 3
   completed_phases: 3
-  total_plans: 28
-  completed_plans: 27
-  percent: 75
+  total_plans: 22
+  completed_plans: 22
+  percent: 100
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
 Plan: 6 of 6
-Status: Phase 9 shipped — PR #74
-Last activity: 2026-06-01 - Completed quick task 260601-cwr: make AI settings page content wider
+Status: Phase 9 shipped — PR #74; Phase 10 planning complete; v1.2 milestone archived on main (merged 2026-06-03)
+Last activity: 2026-06-03 - Merged main into integration; inbox sender avatars shipped
 
 ## Current Milestone Roadmap
 
@@ -544,6 +544,61 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 | Slug | Description |
 |------|-------------|
 | 260601-gmail-inbox-cqrs-projection-phase-a | Inbox CQRS-lite projection foundation (schema + crypto + write + backfill + ArchUnit) — complete |
+
+## Deferred Items
+
+Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 phases shipped (70/73 requirements complete); the items below are accepted as carry-forward tech debt to v1.3, not blockers.
+
+### Deferred requirements (3 → v1.3)
+
+| Requirement | Reason |
+|-------------|--------|
+| SET-BEHV-05 | Surface shadow-mode toggle — only i18n strings shipped, no UI control wired |
+| SET-SAFE-02 | Paste-import multiple safety-net entries — deferred at plan-time per Phase 9 success criterion 4 |
+| SET-SAFE-03 | Per-entry protect/escalate mode — deferred at plan-time per Phase 9 success criterion 4 |
+
+### Blocked verification (1 — external dependency)
+
+| Item | Status |
+|------|--------|
+| 08.1-UAT test #6 — live Gmail outbound send/draft-fallback | blocked (needs controlled Gmail test tenant + safe recipient allow-list); automated gate coverage passed |
+
+### Debug sessions (4 open)
+
+| Slug | Status |
+|------|--------|
+| 260530-worker-tenant-context-failure | unknown |
+| chat-preview-send-stuck | investigating |
+| lemon-squeezy-checkout-api | unknown |
+| pr72-ci-fix | unknown |
+
+### Quick tasks (12 incomplete)
+
+| Slug | Status |
+|------|--------|
+| 260522-37g-review-trang-quan-ly-llm-targeted-tests | unknown |
+| 260522-kkk-replace-legal-stubs-and-wire-landing-nav | missing |
+| 260522-w9w-add-spring-modulith-docs-generation-dev- | unknown |
+| 260524-hbp-implement-boundary-safe-llm-runtime-rout | verified |
+| 260524-k9v-fix-admin-llm-provider-cards-and-9router | missing |
+| 260524-s8g-cleanup-unsubscribe-ux-wording-and-align | completed |
+| 260524-tc6-unify-platform-and-byok-llm-provider-exe | unknown |
+| 260525-gf6-monorepo-config-consistency-rename-admin | unknown |
+| 260525-kyu-regenerate-openapi-schemas-for-web-and-a | missing |
+| 260526-r73-migrate-privacy-terms-from-i18n-to-mdx-w | missing |
+| 260526-vza-move-billing-top-up-cta-into-balance-car | missing |
+| 260530-vmp-reorganize-sidebar-nav-into-3-frequency- | unknown |
+
+### Pending todos (2)
+
+| Slug | Status |
+|------|--------|
+| 2026-04-28-wr-06-test-profile-securityconfig-slice | testing |
+| 2026-05-21-optional-phase-08-e2e-smoke-real-gmail-vps | smoke-test / pre-launch-gate (optional) |
+
+### Seeds (19 dormant)
+
+19 unimplemented seeds (SEED-001..018) carried forward, dormant by design. See `gsd-tools query audit-open` for the full list.
 
 ## Session Continuity
 

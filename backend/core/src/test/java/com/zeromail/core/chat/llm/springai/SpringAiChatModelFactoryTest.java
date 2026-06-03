@@ -98,6 +98,7 @@ class SpringAiChatModelFactoryTest {
                                 1024,
                                 4,
                                 1,
+                                new ChatProperties.ChatModelCacheProperties(512, 30),
                                 new ChatProperties.HistoryProperties(50),
                                 new ChatProperties.TokenizerProperties(4)),
                         settingsRepository,

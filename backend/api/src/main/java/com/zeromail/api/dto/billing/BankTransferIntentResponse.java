@@ -1,5 +1,6 @@
 package com.zeromail.api.dto.billing;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.zeromail.core.billing.projection.BankTransferIntentView;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
@@ -20,16 +21,17 @@ import java.util.UUID;
             "transferContent",
             "qrUrl"
         })
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record BankTransferIntentResponse(
         UUID id,
         String code,
         String planCode,
         long amountVnd,
         String currency,
-        String status,
+        @Schema(allowableValues = {"PENDING", "PAID", "EXPIRED", "VOIDED"}) String status,
         Instant expiresAt,
         String bankCode,
-        String bankName,
+        @Schema(nullable = true) String bankName,
         String accountNumber,
         String accountName,
         String transferContent,

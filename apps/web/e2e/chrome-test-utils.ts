@@ -338,6 +338,26 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
+    if (url.pathname === '/api/settings/voice' && request.method() === 'GET') {
+      await fulfillJson(route, voiceSettings());
+      return;
+    }
+
+    if (url.pathname === '/api/settings/behavior' && request.method() === 'GET') {
+      await fulfillJson(route, behaviorSettings());
+      return;
+    }
+
+    if (url.pathname === '/api/settings/ai/cost' && request.method() === 'GET') {
+      await fulfillJson(route, { usd: 0 });
+      return;
+    }
+
+    if (url.pathname === '/api/knowledge-snippets' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [] });
+      return;
+    }
+
     await route.fulfill({ status: 204, body: '' });
   });
 }
@@ -369,7 +389,41 @@ function billingPlan(
     priceVnd,
     monthlyCreditAllowance,
     sortOrder: tierRank * 10,
-    features: [],
+    features: billingPlanFeatures(code),
+  };
+}
+
+function billingPlanFeatures(code: BillingPlanCode) {
+  if (code === 'FREE') {
+    return [
+      billingPlanFeature('basic-triage', 'Phân loại AI cơ bản', 1),
+      billingPlanFeature('manual-rules', 'Quy tắc thủ công', 0),
+    ];
+  }
+  if (code === 'PLUS') {
+    return [
+      billingPlanFeature('smart-triage', 'Phân loại AI nâng cao', 1),
+      billingPlanFeature('reply-drafts', 'Gợi ý trả lời email', 3),
+      billingPlanFeature('automation-rules', 'Quy tắc tự động', 0),
+    ];
+  }
+  return [
+    billingPlanFeature('smart-triage', 'Phân loại AI nâng cao', 1),
+    billingPlanFeature('premium-reply-drafts', 'Soạn trả lời bằng mô hình cao cấp', 5),
+    billingPlanFeature('automation-rules', 'Quy tắc tự động không giới hạn', 0),
+    billingPlanFeature('analytics', 'Phân tích hộp thư nâng cao', 0),
+  ];
+}
+
+function billingPlanFeature(code: string, displayName: string, creditCost: number) {
+  return {
+    code,
+    displayName,
+    description: null,
+    category: 'TRIAGE',
+    creditCost,
+    dailyInvocationLimit: null,
+    monthlyInvocationLimit: null,
   };
 }
 
@@ -435,6 +489,7 @@ function planTier(planCode: BillingPlanCode): number {
 export async function openAuthenticatedRoute(
   page: Page,
   path:
+    | '/ai'
     | '/analytics'
     | '/rules'
     | '/settings'
@@ -557,6 +612,23 @@ function analyticsSummary(window: AnalyticsWindow) {
         reverted: 0,
       },
     ],
+  };
+}
+
+function voiceSettings() {
+  return {
+    writingStyle: '',
+    personalInstructions: '',
+    emailSignature: '',
+    aiOutputLanguage: 'en',
+  };
+}
+
+function behaviorSettings() {
+  return {
+    autoDraftReplies: false,
+    draftConfidence: 'MEDIUM',
+    sensitiveDataProtection: true,
   };
 }
 

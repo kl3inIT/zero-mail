@@ -1,0 +1,63 @@
+# Zero Mail alerting rules — focused on the failure modes that actually bit us.
+# Evaluated by Prometheus; view under /alerts (and in Grafana). Wire an
+# Alertmanager / Grafana contact point to get notified (otherwise these only
+# show as "firing" in the UI).
+groups:
+  - name: zeromail-availability
+    rules:
+      - alert: ServiceDown
+        expr: up{job=~"zeromail-api|zeromail-worker"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.job }} is down"
+          description: "Prometheus cannot scrape {{ $labels.job }} for >2m — the service is down or unreachable."
+
+  - name: zeromail-triage-resilience
+    rules:
+      # The smoking gun for the 2026-06-01 outage: triage's nested REQUIRES_NEW tx
+      # under a resubmission burst exhausted the Hikari pool. Catch it early.
+      - alert: DbConnectionPoolTimeouts
+        expr: increase(hikaricp_connections_timeout_total[5m]) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "DB connection pool timeouts on {{ $labels.application }} (pool {{ $labels.pool }})"
+          description: "HikariCP could not hand out a connection within the timeout — pool is starved (concurrency burst or a leak). This is what 'CannotCreateTransactionException' looks like in metrics."
+
+      # Events that exhausted the retry cap and were dead-lettered: mail that will
+      # NOT be triaged until a human/recovery acts. A long outage surfaces here.
+      - alert: TriageEventsDeadLettered
+        expr: zero_mail_triage_event_deadlettered > 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} triage events dead-lettered on {{ $labels.application }}"
+          description: "Incomplete triage events have exceeded the retry cap — mail missed triage. Inspect event_publication (completion_date IS NULL, completion_attempts >= cap) and recover or abandon."
+
+      # Sustained high triage failure → DB/Gmail/LLM systemic problem.
+      - alert: TriageHttpErrorsHigh
+        expr: sum(rate(http_server_requests_seconds_count{application="zeromail-api",status=~"5.."}[5m])) > 0.2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Elevated 5xx on zeromail-api"
+          description: "API 5xx rate > 0.2/s for 10m — a systemic backend fault."
+
+  - name: zeromail-resources
+    rules:
+      - alert: JvmHeapHigh
+        expr: sum by (application) (jvm_memory_used_bytes{area="heap"}) / sum by (application) (jvm_memory_max_bytes{area="heap"}) > 0.9
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.application }} JVM heap >90%"
+          description: "Heap usage above 90% for 10m — risk of GC thrash / OOM."
+
+      - alert: HostDiskLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "Host disk <10% free"
+          description: "Root filesystem under 10% free — Postgres/Loki/Prometheus retention or logs may fill the disk."

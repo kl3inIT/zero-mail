@@ -476,15 +476,24 @@
       "amount": "Amount",
       "bank": "Bank",
       "content": "Transfer memo",
+      "copyContent": "Copy",
       "description": "Scan the QR or transfer the exact amount and memo so Zero Mail can activate the plan.",
       "expiresAt": "QR expires at {time}. After payment, the SE Pay webhook will update your plan automatically.",
+      "expiresAtShort": "Expires at {time}",
+      "featuresLabel": "Plan features",
+      "paymentSuccess": "Payment successful. Your plan has been activated.",
+      "pendingNote": "After the matching transfer is confirmed, Zero Mail will activate the plan and take you back to Credits.",
+      "planLabel": "Selected plan",
+      "planPrice": "Plan price",
       "qrAlt": "Bank transfer QR code",
+      "shortDescription": "Scan the QR to pay. Your plan activates after SE Pay confirms it.",
       "title": "Bank transfer"
     },
     "copy": {
       "aria": "Copy {label}",
       "cta": "Copy",
-      "done": "Copied"
+      "done": "Copied",
+      "failed": "Couldn't copy"
     },
     "ledger": {
       "columns": {

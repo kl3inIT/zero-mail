@@ -6,6 +6,7 @@ build/
 .env.local
 .env.dev
 .env.prod
+.env.observability
 node_modules/
 .idea/
 *.iml

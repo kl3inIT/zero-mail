@@ -24,4 +24,13 @@ public interface SemanticIntentEvaluator {
             List<SemanticIntentRequest> intents) {
         return evaluate(callSite, modelId, sanitizedMessageContent, intents);
     }
+
+    default SemanticIntentEvaluationResult evaluate(
+            CallSite callSite,
+            String modelId,
+            LlmProviderCredential providerCredential,
+            String sanitizedMessageContent,
+            List<SemanticIntentRequest> intents) {
+        return evaluate(callSite, modelId, sanitizedMessageContent, intents);
+    }
 }

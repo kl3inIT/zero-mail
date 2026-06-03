@@ -43,8 +43,12 @@ public class GmailMessageBuilder {
                         jakarta.mail.Message.RecipientType.BCC,
                         InternetAddress.parse(command.bcc(), false));
             }
-            mimeMessage.setSubject(
-                    requireText(command.subject(), "subject"), StandardCharsets.UTF_8.name());
+            // Blank-tolerant: omit the Subject header entirely when empty so Gmail renders
+            // "(no subject)", matching native Gmail compose behaviour. Setting an empty header
+            // would emit a literal "Subject: " line instead.
+            if (hasText(command.subject())) {
+                mimeMessage.setSubject(command.subject().trim(), StandardCharsets.UTF_8.name());
+            }
             mimeMessage.setText(
                     requireText(command.body().value(), "body"), StandardCharsets.UTF_8.name());
             putThreadingHeaders(mimeMessage, command);

@@ -1,6 +1,8 @@
 package com.zeromail.api.controllers.billing;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -14,6 +16,7 @@ import com.zeromail.api.dto.billing.BillingCheckoutResponse;
 import com.zeromail.api.dto.billing.BillingLedgerHistoryResponse;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
+import com.zeromail.api.websocket.PlanUpgradePaymentCompletedMessage;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.billing.domain.CreditGrantCategory;
@@ -41,6 +44,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
@@ -50,8 +54,10 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -83,6 +89,7 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
     @Autowired BillingWebhookEventRepository billingWebhookEventRepository;
     @Autowired TestSessionSupport.TestSessionMinter testSessionMinter;
     @Autowired RestClient.Builder lemonSqueezyRestClientBuilder;
+    @MockitoBean SimpMessagingTemplate messagingTemplate;
 
     private MockRestServiceServer lemonSqueezyServer;
 
@@ -832,6 +839,80 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                                                         .sumAvailableCreditsForTenant(
                                                                 seed.tenantId()))
                                         .isEqualTo(2000));
+        ArgumentCaptor<Object> websocketMessageCaptor = ArgumentCaptor.forClass(Object.class);
+        then(messagingTemplate)
+                .should()
+                .convertAndSend(
+                        eq("/topic/tenants/" + seed.tenantId() + "/billing"),
+                        websocketMessageCaptor.capture());
+        assertThat(websocketMessageCaptor.getValue())
+                .isInstanceOf(PlanUpgradePaymentCompletedMessage.class);
+        PlanUpgradePaymentCompletedMessage websocketMessage =
+                (PlanUpgradePaymentCompletedMessage) websocketMessageCaptor.getValue();
+        assertThat(websocketMessage.type()).isEqualTo("PLAN_UPGRADE_PAYMENT_COMPLETED");
+        assertThat(websocketMessage.bankTransferIntentId())
+                .isEqualTo(checkoutResponse.bankTransferIntent().id());
+        assertThat(websocketMessage.bankTransferCode()).isEqualTo(transferCode);
+        assertThat(websocketMessage.planCode()).isEqualTo("PLUS");
+        assertThat(websocketMessage.provider()).isEqualTo("SEPAY");
+        assertThat(websocketMessage.amountVnd()).isEqualTo(199000L);
+        assertThat(websocketMessage.currency()).isEqualTo("VND");
+    }
+
+    @Test
+    void sepay_webhook_skips_non_inbound_transfer_but_keeps_matched_tenant() {
+        Seed seed = seedUser("billing-sepay-webhook-outbound");
+        BillingCheckoutResponse checkoutResponse =
+                RestClient.create("http://localhost:" + port)
+                        .post()
+                        .uri("/api/plan-upgrades/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, seed.email())
+                        .body(
+                                """
+                                        {
+                                          "planCode": "PLUS",
+                                          "paymentMethod": "SEPAY_BANK_TRANSFER"
+                                        }
+                                        """)
+                        .retrieve()
+                        .body(BillingCheckoutResponse.class);
+        String transferCode = checkoutResponse.bankTransferIntent().code();
+        String payload =
+                """
+                        {
+                          "id": 990003,
+                          "gateway": "MBBank",
+                          "transactionDate": "2026-06-01 10:05:00",
+                          "accountNumber": "123456789",
+                          "code": "%s",
+                          "content": "ZM %s PLUS",
+                          "transferType": "out",
+                          "transferAmount": 199000,
+                          "referenceCode": "%s",
+                          "description": "Outbound transfer"
+                        }
+                        """
+                        .formatted(transferCode, transferCode, transferCode);
+
+        ResponseEntity<String> response = postSepayWebhook("test-sepay-key", payload);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        BillingWebhookEventEntity webhookEvent =
+                billingWebhookEventRepository
+                        .findByProviderAndProviderEventId("SEPAY", "990003")
+                        .orElseThrow();
+        assertThat(webhookEvent.getTenantId()).isEqualTo(seed.tenantId());
+        assertThat(webhookEvent.getProcessingStatus()).isEqualTo("SKIPPED");
+        assertThat(webhookEvent.getProcessingError()).isEqualTo("sepay_transfer_not_inbound");
+        assertThat(
+                        billingBankTransferIntentRepository
+                                .findByIdAndTenantId(
+                                        checkoutResponse.bankTransferIntent().id(), seed.tenantId())
+                                .orElseThrow()
+                                .getStatus())
+                .isEqualTo("PENDING");
     }
 
     @Test

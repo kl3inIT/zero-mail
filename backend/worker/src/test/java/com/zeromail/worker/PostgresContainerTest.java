@@ -74,6 +74,7 @@ public abstract class PostgresContainerTest {
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         dynamicPropertyRegistry.add(
                 "zero-mail.worker.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");
+        dynamicPropertyRegistry.add("zero-mail.scheduling.enabled", () -> "false");
         dynamicPropertyRegistry.add("zero-mail.gmail.api-root-url", GMAIL::baseUrl);
         dynamicPropertyRegistry.add(
                 "zero-mail.gmail.oauth-token-url", () -> GMAIL.baseUrl() + "token");

@@ -278,10 +278,10 @@ class LlmGatewayImpl implements LlmGateway {
         PlatformRoute primaryRoute = routes.getFirst();
         long startNanos = System.nanoTime();
         return Observation.createNotStarted("zero_mail.llm.gateway", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -348,10 +348,10 @@ class LlmGatewayImpl implements LlmGateway {
                         inboundSubject);
         long startNanos = System.nanoTime();
         return Observation.createNotStarted("zero_mail.llm.gateway.draft", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -415,10 +415,10 @@ class LlmGatewayImpl implements LlmGateway {
         long startNanos = System.nanoTime();
         return Observation.createNotStarted(
                         "zero_mail.llm.gateway.rule_compile", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -483,10 +483,10 @@ class LlmGatewayImpl implements LlmGateway {
         long startNanos = System.nanoTime();
         return Observation.createNotStarted(
                         "zero_mail.llm.gateway.preview_text", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -539,10 +539,10 @@ class LlmGatewayImpl implements LlmGateway {
         long startNanos = System.nanoTime();
         return Observation.createNotStarted(
                         "zero_mail.llm.gateway.semantic_intent", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("callSite", callSite.id())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -565,10 +565,10 @@ class LlmGatewayImpl implements LlmGateway {
                             Optional<ResolvedLlmProviderCredential> byok =
                                     resolveByokProviderCredential(tenantId, primaryRoute.model());
                             if (byok.isPresent()) {
-                                return evaluateSemanticIntentsWithoutCreditLedger(
+                                return evaluateSemanticIntentsWithByokCredential(
                                         tenantId,
                                         callSite,
-                                        routes,
+                                        byok.get(),
                                         sanitizedContext,
                                         intents,
                                         startNanos);
@@ -584,6 +584,62 @@ class LlmGatewayImpl implements LlmGateway {
                         });
     }
 
+    private Map<String, Boolean> evaluateSemanticIntentsWithByokCredential(
+            UUID tenantId,
+            CallSite callSite,
+            ResolvedLlmProviderCredential resolvedCredential,
+            SanitizationContext sanitizedContext,
+            List<SemanticIntentRequest> intents,
+            long startNanos) {
+        try {
+            SemanticIntentEvaluationResult semanticIntentEvaluationResult =
+                    semanticIntentEvaluator.evaluate(
+                            callSite,
+                            resolvedCredential.modelId(),
+                            resolvedCredential.credential(),
+                            sanitizedContext.content(),
+                            intents);
+            LlmUsage usage = semanticIntentEvaluationResult.usage();
+            log.info(
+                    "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} promptTokens={} completionTokens={} truncated={}",
+                    tenantId,
+                    callSite,
+                    resolvedCredential.providerId(),
+                    resolvedCredential.modelId(),
+                    latencyMs(startNanos),
+                    intents.size(),
+                    usage.promptTokens(),
+                    usage.completionTokens(),
+                    sanitizedContext.truncated());
+            recordUsage(
+                    tenantId,
+                    callSite,
+                    resolvedCredential.providerId(),
+                    resolvedCredential.modelId(),
+                    "BYOK",
+                    usage,
+                    0);
+            return semanticIntentEvaluationResult.matches();
+        } catch (SafetyViolationException safetyViolation) {
+            log.error(
+                    "event=llm_safety_violation tenantId={} callSite={} reason={}",
+                    tenantId,
+                    callSite,
+                    safetyViolation.getClass().getSimpleName());
+            throw safetyViolation;
+        } catch (RuntimeException semanticEvaluationFailure) {
+            log.warn(
+                    "event=llm_semantic_eval_failed tenantId={} callSite={} intentCount={} errorClass={}",
+                    tenantId,
+                    callSite,
+                    intents.size(),
+                    semanticEvaluationFailure.getClass().getSimpleName());
+            throw new LlmEvaluationFailedException(semanticEvaluationFailure);
+        } finally {
+            resolvedCredential.credential().wipe();
+        }
+    }
+
     @Override
     public ToolCallResult driftCheck(String rawEmailFixture) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
@@ -592,9 +648,9 @@ class LlmGatewayImpl implements LlmGateway {
         PlatformRoute primaryRoute = routes.getFirst();
         long startNanos = System.nanoTime();
         return Observation.createNotStarted("zero_mail.llm.gateway.drift", observationRegistry)
-                .lowCardinalityKeyValue("tenantId", tenantId.toString())
                 .lowCardinalityKeyValue("provider", primaryRoute.provider())
-                .lowCardinalityKeyValue("model", primaryRoute.model())
+                .highCardinalityKeyValue("tenantId", tenantId.toString())
+                .highCardinalityKeyValue("model", primaryRoute.model())
                 .observe(
                         () -> {
                             log.info(
@@ -721,10 +777,7 @@ class LlmGatewayImpl implements LlmGateway {
         } catch (SafetyViolationException safetyViolation) {
             creditLedger.release(reservationId);
             meterRegistry
-                    .counter(
-                            "llm_safety_violation_cost_absorbed_total",
-                            "tenantId",
-                            tenantId.toString())
+                    .counter("llm_safety_violation_cost_absorbed_total", "callSite", callSite.id())
                     .increment();
             log.error(
                     "event=llm_safety_violation tenantId={} callSite={} reason={}",
@@ -893,10 +946,7 @@ class LlmGatewayImpl implements LlmGateway {
         } catch (SafetyViolationException safetyViolation) {
             creditLedger.release(reservationId);
             meterRegistry
-                    .counter(
-                            "llm_safety_violation_cost_absorbed_total",
-                            "tenantId",
-                            tenantId.toString())
+                    .counter("llm_safety_violation_cost_absorbed_total", "callSite", callSite.id())
                     .increment();
             log.error(
                     "event=llm_safety_violation tenantId={} callSite={} reason={}",
@@ -975,56 +1025,6 @@ class LlmGatewayImpl implements LlmGateway {
                     callSite,
                     credentialSource,
                     usageRecordingFailure.getClass().getSimpleName());
-        }
-    }
-
-    private Map<String, Boolean> evaluateSemanticIntentsWithoutCreditLedger(
-            UUID tenantId,
-            CallSite callSite,
-            List<PlatformRoute> routes,
-            SanitizationContext sanitizedContext,
-            List<SemanticIntentRequest> intents,
-            long startNanos) {
-        try {
-            SemanticIntentRouteOutcome semanticIntentRouteOutcome =
-                    evaluateSemanticIntentRoutes(
-                            callSite, routes, sanitizedContext.content(), intents);
-            LlmUsage usage = semanticIntentRouteOutcome.result().usage();
-            log.info(
-                    "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} promptTokens={} completionTokens={} truncated={}",
-                    tenantId,
-                    callSite,
-                    semanticIntentRouteOutcome.route().provider(),
-                    semanticIntentRouteOutcome.route().model(),
-                    latencyMs(startNanos),
-                    intents.size(),
-                    usage.promptTokens(),
-                    usage.completionTokens(),
-                    sanitizedContext.truncated());
-            recordUsage(
-                    tenantId,
-                    callSite,
-                    semanticIntentRouteOutcome.route().provider(),
-                    semanticIntentRouteOutcome.route().model(),
-                    "PLATFORM",
-                    usage,
-                    0);
-            return semanticIntentRouteOutcome.result().matches();
-        } catch (SafetyViolationException safetyViolation) {
-            log.error(
-                    "event=llm_safety_violation tenantId={} callSite={} reason={}",
-                    tenantId,
-                    callSite,
-                    safetyViolation.getClass().getSimpleName());
-            throw safetyViolation;
-        } catch (RuntimeException semanticEvaluationFailure) {
-            log.warn(
-                    "event=llm_semantic_eval_failed tenantId={} callSite={} intentCount={} errorClass={}",
-                    tenantId,
-                    callSite,
-                    intents.size(),
-                    semanticEvaluationFailure.getClass().getSimpleName());
-            throw new LlmEvaluationFailedException(semanticEvaluationFailure);
         }
     }
 

@@ -3,6 +3,7 @@ package com.zeromail.worker.config;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.TaskScheduler;
@@ -16,10 +17,15 @@ import org.springframework.util.ErrorHandler;
  * which hides silent task failures from dashboards and alerts.
  */
 @Configuration
+@ConditionalOnProperty(
+        name = "zero-mail.scheduling.enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class ScheduledTaskErrorHandlerConfig {
 
     private static final Logger log =
             LoggerFactory.getLogger(ScheduledTaskErrorHandlerConfig.class);
+    private static final int AWAIT_TERMINATION_SECONDS = 20;
 
     @Bean
     public TaskScheduler taskScheduler(MeterRegistry meterRegistry) {
@@ -27,8 +33,11 @@ public class ScheduledTaskErrorHandlerConfig {
         scheduler.setPoolSize(Math.max(2, Runtime.getRuntime().availableProcessors()));
         scheduler.setThreadNamePrefix("zm-scheduled-");
         scheduler.setErrorHandler(buildErrorHandler(meterRegistry));
+        scheduler.setAcceptTasksAfterContextClose(false);
+        scheduler.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
+        scheduler.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
-        scheduler.setAwaitTerminationSeconds(30);
+        scheduler.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
         return scheduler;
     }
 

@@ -46,7 +46,7 @@ public class ConfirmedSendToolHandlers {
                 recipient,
                 WriteToolArguments.optionalText(effectiveInput, "cc"),
                 WriteToolArguments.optionalText(effectiveInput, "bcc"),
-                WriteToolArguments.text(effectiveInput, "subject"),
+                subjectOrEmpty(effectiveInput),
                 Sensitive.of(body(reservation.toolName(), effectiveInput)),
                 WriteToolArguments.optionalText(effectiveInput, "sourceMessageId"),
                 WriteToolArguments.optionalText(effectiveInput, "gmailThreadId"),
@@ -54,6 +54,17 @@ public class ConfirmedSendToolHandlers {
                 vipAcknowledged,
                 Map.copyOf(previewSnapshot),
                 processInstanceId);
+    }
+
+    /**
+     * Subject is blank-tolerant: Gmail renders an empty subject as "(no subject)". The assistant is
+     * instructed to always compose one, but a user who clears the subject field on the preview card
+     * (contentOverride) must still be able to send rather than hit a validation failure that
+     * reverts the action to PENDING.
+     */
+    private static String subjectOrEmpty(Map<String, Object> effectiveInput) {
+        String subject = WriteToolArguments.optionalText(effectiveInput, "subject");
+        return subject == null ? "" : subject;
     }
 
     private static String body(ChatToolName toolName, Map<String, Object> effectiveInput) {

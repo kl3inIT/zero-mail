@@ -1,0 +1,189 @@
+# Zero Mail — self-hosted observability stack (Grafana + Prometheus + Loki +
+# Tempo + Alloy + exporters). NOT started by default.
+#
+# Bring up alongside the running app/infra (project zero-mail) when wanted:
+#   docker compose \
+#     -f docker/docker-compose.infra.yml \
+#     -f docker/docker-compose.yml \
+#     -f docker/docker-compose.observability.yml \
+#     --env-file .env --env-file docker/.env.observability up -d
+#
+# Config files live under docker/observability/. Volumes pinned by name so they
+# survive relocation. Project name pinned to `zero-mail`.
+name: zero-mail
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
+services:
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:13.0.1}
+    container_name: zeromail-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - zeromail-proxy
+      - zeromail-internal
+    mem_limit: ${GRAFANA_MEM_LIMIT:-512m}
+    logging: *default-logging
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v3.12.0}
+    container_name: zeromail-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-14d}"
+      - "--storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-8GB}"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    networks:
+      - zeromail-internal
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    mem_limit: ${PROMETHEUS_MEM_LIMIT:-1536m}
+    logging: *default-logging
+
+  loki:
+    image: ${LOKI_IMAGE:-grafana/loki:3.7.2}
+    container_name: zeromail-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - loki_data:/loki
+      - ./observability/loki/loki.yml:/etc/loki/loki.yml:ro
+    networks:
+      - zeromail-internal
+    mem_limit: ${LOKI_MEM_LIMIT:-1024m}
+    logging: *default-logging
+
+  tempo:
+    image: ${TEMPO_IMAGE:-grafana/tempo:2.10.5}
+    container_name: zeromail-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    volumes:
+      - tempo_data:/data/tempo
+      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+    networks:
+      - zeromail-internal
+    mem_limit: ${TEMPO_MEM_LIMIT:-768m}
+    logging: *default-logging
+
+  alloy:
+    image: ${ALLOY_IMAGE:-grafana/alloy:v1.16.1}
+    container_name: zeromail-alloy
+    restart: unless-stopped
+    command:
+      - "run"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--storage.path=/var/lib/alloy/data"
+      - "/etc/alloy/config.alloy"
+    volumes:
+      - alloy_data:/var/lib/alloy/data
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # loki.source.file tails each container's json-file log directly (see config.alloy).
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - zeromail-internal
+    ports:
+      - "127.0.0.1:${ALLOY_PORT:-12345}:12345"
+      - "127.0.0.1:${OTLP_HTTP_PORT:-4318}:4318"
+      - "127.0.0.1:${OTLP_GRPC_PORT:-4317}:4317"
+    mem_limit: ${ALLOY_MEM_LIMIT:-512m}
+    logging: *default-logging
+
+  node-exporter:
+    image: ${NODE_EXPORTER_IMAGE:-prom/node-exporter:latest}
+    container_name: zeromail-node-exporter
+    restart: unless-stopped
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/docker/.+|var/lib/docker/.+)($$|/)"
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - zeromail-internal
+    mem_limit: ${NODE_EXPORTER_MEM_LIMIT:-128m}
+    logging: *default-logging
+
+  cadvisor:
+    image: ${CADVISOR_IMAGE:-gcr.io/cadvisor/cadvisor:latest}
+    container_name: zeromail-cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - zeromail-internal
+    mem_limit: ${CADVISOR_MEM_LIMIT:-256m}
+    logging: *default-logging
+
+  postgres-exporter:
+    image: ${POSTGRES_EXPORTER_IMAGE:-prometheuscommunity/postgres-exporter:latest}
+    container_name: zeromail-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-zeromail}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@zeromail-postgres:5432/${POSTGRES_DB:-zeromail}?sslmode=disable"
+    networks:
+      - zeromail-internal
+    mem_limit: ${POSTGRES_EXPORTER_MEM_LIMIT:-128m}
+    logging: *default-logging
+
+  redis-exporter:
+    image: ${REDIS_EXPORTER_IMAGE:-oliver006/redis_exporter:latest}
+    container_name: zeromail-redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis://zeromail-redis:6379
+    networks:
+      - zeromail-internal
+    mem_limit: ${REDIS_EXPORTER_MEM_LIMIT:-128m}
+    logging: *default-logging
+
+networks:
+  zeromail-proxy:
+    external: true
+  zeromail-internal:
+    external: true
+
+volumes:
+  grafana_data:
+    name: ${GRAFANA_VOLUME_NAME:-zeromail_grafana_data}
+  prometheus_data:
+    name: ${PROMETHEUS_VOLUME_NAME:-zeromail_prometheus_data}
+  loki_data:
+    name: ${LOKI_VOLUME_NAME:-zeromail_loki_data}
+  tempo_data:
+    name: ${TEMPO_VOLUME_NAME:-zeromail_tempo_data}
+  alloy_data:
+    name: ${ALLOY_VOLUME_NAME:-zeromail_alloy_data}

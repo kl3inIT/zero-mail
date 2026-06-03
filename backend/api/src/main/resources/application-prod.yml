@@ -17,6 +17,22 @@ spring:
     compose:
       enabled: false
 
+  datasource:
+    hikari:
+      pool-name: zeromail-api-pool
+      maximum-pool-size: ${ZERO_MAIL_API_DB_POOL_MAX:16}
+      minimum-idle: ${ZERO_MAIL_API_DB_POOL_MIN_IDLE:4}
+      connection-timeout: ${ZERO_MAIL_DB_CONNECTION_TIMEOUT_MS:3000}
+      validation-timeout: ${ZERO_MAIL_DB_VALIDATION_TIMEOUT_MS:1000}
+      keepalive-time: ${ZERO_MAIL_DB_KEEPALIVE_TIME_MS:120000}
+      # Must stay below max-lifetime or HikariCP disables it with a startup WARN.
+      idle-timeout: ${ZERO_MAIL_DB_IDLE_TIMEOUT_MS:300000}
+      max-lifetime: ${ZERO_MAIL_DB_MAX_LIFETIME_MS:600000}
+      leak-detection-threshold: ${ZERO_MAIL_DB_LEAK_DETECTION_THRESHOLD_MS:0}
+
+  lifecycle:
+    timeout-per-shutdown-phase: ${ZERO_MAIL_SHUTDOWN_PHASE_TIMEOUT:25s}
+
   ai:
     chat:
       # intentional defense-in-depth: also enforced by base + zero-mail-shared.yml — never drop
@@ -33,6 +49,7 @@ spring:
           include-completion: false
 
 server:
+  shutdown: graceful
   servlet:
     session:
       cookie:
@@ -44,6 +61,38 @@ server:
 # the internal docker network; nginx-proxy-manager does not route /actuator/** publicly.
 # Health details hidden — readiness/liveness probes still return 200/503.
 management:
+  observations:
+    enabled: true
+  # micrometer-registry-otlp is on the classpath and would otherwise auto-push
+  # metrics to the default http://localhost:4318/v1/metrics (nothing listens there
+  # — Alloy is zeromail-alloy:4318), flooding WARN logs. Metrics are collected via
+  # Prometheus SCRAPE of /actuator/prometheus, so disable the redundant OTLP metrics
+  # push. Traces still export over OTLP to Alloy (config below).
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    enabled: ${ZERO_MAIL_TRACING_ENABLED:true}
+    sampling:
+      probability: ${ZERO_MAIL_TRACE_SAMPLING_PROBABILITY:0.10}
+    export:
+      otlp:
+        enabled: ${ZERO_MAIL_OTLP_TRACING_ENABLED:true}
+  opentelemetry:
+    resource-attributes:
+      service.name: ${spring.application.name}
+      service.namespace: zeromail
+      service.version: ${ZERO_MAIL_RELEASE_VERSION:unknown}
+      deployment.environment.name: ${ZERO_MAIL_DEPLOYMENT_ENVIRONMENT:production}
+    tracing:
+      export:
+        otlp:
+          endpoint: ${ZERO_MAIL_OTLP_TRACES_ENDPOINT:http://zeromail-alloy:4318/v1/traces}
+          transport: http
+          compression: gzip
+          connect-timeout: ${ZERO_MAIL_OTLP_CONNECT_TIMEOUT:2s}
+          timeout: ${ZERO_MAIL_OTLP_TIMEOUT:10s}
   endpoints:
     web:
       exposure:

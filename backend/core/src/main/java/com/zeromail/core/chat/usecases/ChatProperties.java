@@ -16,6 +16,7 @@ public record ChatProperties(
         @Min(1) @DefaultValue("4000") int maxToolOutputTokens,
         @Min(1) @DefaultValue("4") int maxReadToolIterations,
         @Min(0) @DefaultValue("1") int transientStreamRetryMaxAttempts,
+        @Valid ChatModelCacheProperties chatModelCache,
         @Valid HistoryProperties history,
         @Valid TokenizerProperties tokenizer) {
 
@@ -24,9 +25,15 @@ public record ChatProperties(
                 defaultModel == null || defaultModel.isBlank()
                         ? "openai/gpt-5.4-nano"
                         : defaultModel;
+        chatModelCache =
+                chatModelCache == null ? new ChatModelCacheProperties(512, 30) : chatModelCache;
         history = history == null ? new HistoryProperties(50) : history;
         tokenizer = tokenizer == null ? new TokenizerProperties(4) : tokenizer;
     }
+
+    public record ChatModelCacheProperties(
+            @Min(1) @DefaultValue("512") long maximumSize,
+            @Min(1) @DefaultValue("30") long expireAfterAccessMinutes) {}
 
     public record HistoryProperties(@Min(1) @DefaultValue("50") int pageSize) {}
 

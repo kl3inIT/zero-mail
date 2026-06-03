@@ -118,7 +118,11 @@ public class SecurityConfig {
     SecurityFilterChain lemonSqueezyWebhookChain(
             HttpSecurity http, BillingProperties billingProperties) throws Exception {
         http.securityMatcher("/api/plan-upgrades/webhooks/lemon-squeezy")
-                .csrf(csrf -> csrf.disable())
+                .csrf(
+                        csrf ->
+                                csrf.spa()
+                                        .ignoringRequestMatchers(
+                                                "/api/plan-upgrades/webhooks/lemon-squeezy"))
                 .authorizeHttpRequests(
                         authorizationRequests ->
                                 authorizationRequests
@@ -139,7 +143,11 @@ public class SecurityConfig {
     SecurityFilterChain sepayWebhookChain(HttpSecurity http, BillingProperties billingProperties)
             throws Exception {
         http.securityMatcher("/api/plan-upgrades/webhooks/sepay")
-                .csrf(csrf -> csrf.disable())
+                .csrf(
+                        csrf ->
+                                csrf.spa()
+                                        .ignoringRequestMatchers(
+                                                "/api/plan-upgrades/webhooks/sepay"))
                 .authorizeHttpRequests(
                         authorizationRequests ->
                                 authorizationRequests
@@ -183,6 +191,15 @@ public class SecurityConfig {
                                                 "/login",
                                                 "/actuator/health",
                                                 "/actuator/health/**",
+                                                // Prometheus scrape target. Exposes operational
+                                                // metrics only (JVM/GC/HTTP counters) — never
+                                                // email,
+                                                // tokens, prompts, or PII (privacy invariant). The
+                                                // reverse proxy must NOT route /actuator/** to the
+                                                // public internet; internal scrape is on the docker
+                                                // network (zeromail-prometheus →
+                                                // zeromail-api:8080).
+                                                "/actuator/prometheus",
                                                 "/v3/api-docs/**",
                                                 "/swagger-ui/**",
                                                 "/login/oauth2/**",

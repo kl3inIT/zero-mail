@@ -5,7 +5,10 @@ public record SendEmailToolArgs(String to, String subject, String body) {
 
     public SendEmailToolArgs {
         to = requireText(to, "to");
-        subject = requireText(subject, "subject");
+        // Subject is intentionally blank-tolerant: Gmail renders an empty subject as
+        // "(no subject)". The LLM is instructed to always compose one, but a user who
+        // clears the field in the preview card must still be able to send.
+        subject = blankToEmpty(subject);
         body = requireText(body, "body");
     }
 
@@ -14,5 +17,9 @@ public record SendEmailToolArgs(String to, String subject, String body) {
             throw new IllegalArgumentException(fieldName + " must not be blank");
         }
         return text;
+    }
+
+    private static String blankToEmpty(String text) {
+        return text == null ? "" : text.trim();
     }
 }

@@ -3271,6 +3271,93 @@
         }
       }
     },
+    "/api/plan-upgrades/webhooks/sepay": {
+      "post": {
+        "tags": ["plan-upgrade-webhook-controller"],
+        "operationId": "sepay",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAcknowledgmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/plan-upgrades/webhooks/lemon-squeezy": {
       "post": {
         "tags": ["plan-upgrade-webhook-controller"],
@@ -3364,7 +3451,7 @@
     "/api/plan-upgrades/plans/{planCode}/checkout": {
       "post": {
         "tags": ["plan-upgrades"],
-        "operationId": "checkout",
+        "operationId": "legacyLemonSqueezyCheckout",
         "parameters": [
           {
             "name": "planCode",
@@ -3375,6 +3462,94 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCheckoutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plan-upgrades/checkout": {
+      "post": {
+        "tags": ["plan-upgrades"],
+        "operationId": "checkout",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -6788,6 +6963,95 @@
         }
       }
     },
+    "/api/plan-upgrades/bank-transfer-intents/{intentId}": {
+      "get": {
+        "tags": ["plan-upgrades"],
+        "operationId": "bankTransferIntent",
+        "parameters": [
+          {
+            "name": "intentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankTransferIntentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me": {
       "get": {
         "tags": ["me-controller"],
@@ -8928,6 +9192,17 @@
         },
         "required": ["status"]
       },
+      "WebhookAcknowledgmentResponse": {
+        "type": "object",
+        "description": "Webhook acknowledgment response",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the webhook was accepted"
+          }
+        },
+        "required": ["success"]
+      },
       "ContentDisposition": {
         "type": "object",
         "properties": {
@@ -8946,10 +9221,10 @@
           "inline": {
             "type": "boolean"
           },
-          "attachment": {
+          "formData": {
             "type": "boolean"
           },
-          "formData": {
+          "attachment": {
             "type": "boolean"
           }
         }
@@ -9071,6 +9346,25 @@
               "$ref": "#/components/schemas/HttpRange"
             }
           },
+          "contentDisposition": {
+            "$ref": "#/components/schemas/ContentDisposition"
+          },
+          "acceptCharset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "acceptPatch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "basicAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
           "acceptLanguage": {
             "type": "array",
             "items": {
@@ -9086,16 +9380,6 @@
               }
             }
           },
-          "acceptPatch": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
-          },
-          "basicAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
           "acceptLanguageAsLocales": {
             "type": "array",
             "items": {
@@ -9106,36 +9390,22 @@
             "type": "integer",
             "format": "int64"
           },
-          "contentDisposition": {
-            "$ref": "#/components/schemas/ContentDisposition"
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "acceptCharset": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "ifNoneMatch": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
           "contentLanguage": {
             "type": "string"
           },
-          "cacheControl": {
-            "type": "string"
-          },
-          "accept": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
           },
           "allow": {
             "type": "array",
@@ -9144,23 +9414,13 @@
             },
             "uniqueItems": true
           },
-          "expires": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "ifMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "etag": {
+          "cacheControl": {
             "type": "string"
           },
-          "accessControlRequestHeaders": {
+          "accessControlAllowMethods": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/HttpMethod"
             }
           },
           "accessControlAllowCredentials": {
@@ -9172,28 +9432,38 @@
               "type": "string"
             }
           },
-          "accessControlAllowMethods": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpMethod"
-            }
-          },
-          "accessControlAllowOrigin": {
-            "type": "string"
-          },
           "accessControlAllowHeaders": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
+          "accessControlRequestHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlAllowOrigin": {
+            "type": "string"
+          },
           "accessControlRequestMethod": {
             "$ref": "#/components/schemas/HttpMethod"
           },
-          "pragma": {
-            "type": "string"
+          "accept": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
           },
           "upgrade": {
+            "type": "string"
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "etag": {
             "type": "string"
           },
           "vary": {
@@ -9202,9 +9472,14 @@
               "type": "string"
             }
           },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
+          "ifMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pragma": {
+            "type": "string"
           }
         }
       },
@@ -9238,23 +9513,117 @@
           "wildcardSubtype": {
             "type": "boolean"
           },
-          "subtypeSuffix": {
-            "type": "string"
-          },
           "wildcardType": {
             "type": "boolean"
+          },
+          "subtypeSuffix": {
+            "type": "string"
           }
         }
+      },
+      "BankTransferIntentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "planCode": {
+            "type": "string"
+          },
+          "amountVnd": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "PAID", "EXPIRED", "VOIDED"]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bankCode": {
+            "type": "string"
+          },
+          "bankName": {
+            "type": ["string", "null"]
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "accountName": {
+            "type": "string"
+          },
+          "transferContent": {
+            "type": "string"
+          },
+          "qrUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "accountName",
+          "accountNumber",
+          "amountVnd",
+          "bankCode",
+          "code",
+          "currency",
+          "expiresAt",
+          "id",
+          "planCode",
+          "qrUrl",
+          "status",
+          "transferContent"
+        ]
       },
       "BillingCheckoutResponse": {
         "type": "object",
         "properties": {
+          "paymentMethod": {
+            "type": "string",
+            "description": "Payment method used for this checkout",
+            "enum": ["LEMON_SQUEEZY", "SEPAY_BANK_TRANSFER"]
+          },
+          "status": {
+            "type": "string",
+            "description": "Client action state",
+            "enum": ["REDIRECT_REQUIRED", "WAITING_FOR_TRANSFER"]
+          },
           "checkoutUrl": {
             "type": "string",
-            "description": "Hosted Lemon Squeezy checkout URL for the selected billing plan"
+            "description": "Hosted Lemon Squeezy checkout URL when redirect is required"
+          },
+          "bankTransferIntent": {
+            "$ref": "#/components/schemas/BankTransferIntentResponse",
+            "description": "Bank transfer instructions when paymentMethod is SEPAY_BANK_TRANSFER"
           }
         },
-        "required": ["checkoutUrl"]
+        "required": ["paymentMethod", "status"]
+      },
+      "BillingCheckoutRequest": {
+        "type": "object",
+        "properties": {
+          "planCode": {
+            "type": "string",
+            "description": "Selected billing plan code",
+            "enum": ["PLUS", "PRO"],
+            "minLength": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Payment method for this checkout",
+            "enum": ["LEMON_SQUEEZY", "SEPAY_BANK_TRANSFER"],
+            "minLength": 1
+          }
+        },
+        "required": ["paymentMethod", "planCode"]
       },
       "SelectTemplateRequest": {
         "type": "object",

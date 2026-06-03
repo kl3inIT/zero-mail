@@ -1,0 +1,109 @@
+// ── Traces ──────────────────────────────────────────────────────────────────
+// Receive OTLP from the app's OpenTelemetry agent, batch, and export to Tempo.
+otelcol.receiver.otlp "apps" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.traces.input]
+  }
+}
+
+otelcol.processor.batch "traces" {
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "zeromail-tempo:4317"
+
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// ── Logs ────────────────────────────────────────────────────────────────────
+// Tail each container's Docker json-file log directly with loki.source.file.
+//
+// We deliberately do NOT use loki.source.docker: it tails via the Docker logs
+// API streaming endpoint, whose long-lived stream silently dies on EOF /
+// "context deadline exceeded" and is never re-established (the per-container
+// tailer goroutine exits without a panic or error log, so Alloy keeps reporting
+// healthy while logs quietly stop). That defect is tracked in grafana/alloy#691
+// and closed "not planned" — there is no fix and refresh_interval has no effect
+// over a Unix socket. File tailing is rotation-aware and uses a positions file
+// to resume, so it survives the conditions that stall the socket tailer.
+//
+// discovery.docker still provides the container metadata so log lines keep their
+// friendly container / service / compose_project labels; the relabel below turns
+// each discovered container into a file target pointed at its live json log.
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.containers.targets
+
+  // Point the tailer at the container's live json-file log. Rotated files
+  // (<id>-json.log.N.gz) are intentionally excluded — only the live file is read.
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    target_label  = "__path__"
+    replacement   = "/var/lib/docker/containers/$1/$1-json.log"
+  }
+
+  // Preserve the labels the previous loki.source.docker pipeline emitted so
+  // existing Grafana queries / dashboards keep working.
+  rule {
+    target_label = "job"
+    replacement  = "docker"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+    replacement   = "$1"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+}
+
+loki.source.file "containers" {
+  targets    = discovery.relabel.docker_logs.output
+  forward_to = [loki.process.docker.receiver]
+
+  // Start from the end on first attach so switching pipelines does not re-ingest
+  // the existing tail of each json file. New lines are followed normally after.
+  tail_from_end = true
+}
+
+loki.process "docker" {
+  // Unwrap Docker's json-file envelope ({"log","stream","time"}): emit the inner
+  // log line (the app's own JSON message) and use the container's real timestamp.
+  stage.docker {}
+
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://zeromail-loki:3100/loki/api/v1/push"
+  }
+}

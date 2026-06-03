@@ -27,11 +27,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BillingPlanQueryService {
+
+    private static final Logger log = LoggerFactory.getLogger(BillingPlanQueryService.class);
 
     private static final String CHECKOUT_STATUS_CREATED = "CREATED";
     private static final String CHECKOUT_STATUS_FAILED = "FAILED";
@@ -128,9 +132,14 @@ public class BillingPlanQueryService {
         }
         LemonSqueezyCheckoutCreation checkoutCreation =
                 checkoutClient.createCheckout(plan, tenantId, normalizedUserEmail);
-        billingCheckoutSessionRepository.save(
+        billingCheckoutSessionRepository.saveAndFlush(
                 checkoutSession(tenantId, normalizedUserEmail, plan, checkoutCreation, now));
         if (!checkoutCreation.created()) {
+            log.warn(
+                    "event=lemon_squeezy_checkout_failed tenantId={} planCode={} failureReason={}",
+                    tenantId,
+                    plan.getCode(),
+                    checkoutCreation.failureReason());
             throw new BillingCheckoutUnavailableException();
         }
         return PlanUpgradeCheckoutView.lemonSqueezy(checkoutCreation.checkoutUrl());

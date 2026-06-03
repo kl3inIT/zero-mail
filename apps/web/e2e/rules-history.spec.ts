@@ -29,9 +29,7 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await openAi(page);
 
-    await expect(
-      page.getByRole('heading', { name: 'AI configuration', exact: true }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI settings', exact: true })).toBeVisible();
     await expect(page.getByText('Protected senders', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
@@ -128,6 +126,45 @@ async function installApiMock(page: Page) {
 
     if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       await route.fulfill({ status: 204, body: '' });
+      return;
+    }
+
+    if (url.pathname === '/api/settings/voice' && request.method() === 'GET') {
+      await fulfillJson(route, {
+        writingStyle: '',
+        personalInstructions: '',
+        emailSignature: '',
+        aiOutputLanguage: 'en',
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/settings/behavior' && request.method() === 'GET') {
+      await fulfillJson(route, {
+        autoDraftReplies: false,
+        draftConfidence: 'MEDIUM',
+        sensitiveDataProtection: true,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/settings/ai/cost' && request.method() === 'GET') {
+      await fulfillJson(route, { usd: 0 });
+      return;
+    }
+
+    if (url.pathname === '/api/rules/settings/automation' && request.method() === 'GET') {
+      await fulfillJson(route, { autoSendRulesEnabled: true });
+      return;
+    }
+
+    if (url.pathname === '/api/byok' && request.method() === 'GET') {
+      await fulfillJson(route, { code: 'ai.byok.no_row' }, 404);
+      return;
+    }
+
+    if (url.pathname === '/api/knowledge-snippets' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [] });
       return;
     }
 

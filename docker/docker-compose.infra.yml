@@ -1,0 +1,94 @@
+# Zero Mail — infrastructure services (postgres, redis, nginx-proxy-manager).
+#
+# Run together with the application stack:
+#   docker compose \
+#     -f docker/docker-compose.infra.yml \
+#     -f docker/docker-compose.yml \
+#     --env-file .env up -d
+#
+# Volumes are pinned to their existing names so data survives any compose-file
+# relocation or project rename. Project name pinned to `zero-mail` to match.
+name: zero-mail
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18.4}
+    container_name: zeromail-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zeromail}
+      POSTGRES_USER: ${POSTGRES_USER:-zeromail}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the production env file}
+    # Loopback-only publish for the dev DB SSH tunnel:
+    #   ssh -L 5555:localhost:5555 dat@72.62.193.33   → localhost:5555 reaches Postgres
+    # 127.0.0.1 binding keeps it off the public internet; only reachable via SSH.
+    ports:
+      - "127.0.0.1:5555:5432"
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.track=all"
+      - "-c"
+      - "pg_stat_statements.max=10000"
+      - "-c"
+      - "log_min_duration_statement=500"
+      - "-c"
+      - "log_lock_waits=on"
+      - "-c"
+      - "log_temp_files=0"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ../scripts/ops/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - zeromail-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:8.6.3}
+    container_name: zeromail-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - zeromail-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging: *default-logging
+
+# NOTE: nginx-proxy-manager is intentionally NOT defined here. It runs as a
+# separate standalone container/project that owns the live SSL certs + proxy
+# host routing. It only needs to share the `zeromail-proxy` network to reach
+# zeromail-frontend / zeromail-admin / zeromail-api. Attach it once with:
+#   docker network connect zeromail-proxy nginx-proxy-manager
+# (or add `zeromail-proxy` as an external network in its own compose file so the
+#  attachment survives NPM recreation).
+
+networks:
+  zeromail-proxy:
+    external: true
+  zeromail-internal:
+    external: true
+
+volumes:
+  postgres_data:
+    name: ${POSTGRES_VOLUME_NAME:-zero-mail_postgres_data}
+  redis_data:
+    name: ${REDIS_VOLUME_NAME:-zero-mail_redis_data}
