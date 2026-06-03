@@ -106,11 +106,21 @@ public class RuleTemplateCatalogService {
                 .findFirst();
     }
 
+    /**
+     * Resolves the latest template version that can be turned into a tenant rule for {@code
+     * templateKey}. Covers both the browsable gallery's {@link RuleTemplateStatus#MATERIALIZABLE}
+     * templates (user picks them from the catalog) and the {@link
+     * RuleTemplateStatus#SYSTEM_DEFAULT} starter set (auto-seeded on first login). Template keys
+     * are disjoint between the two sets, so a single resolver is unambiguous.
+     */
     @Transactional(readOnly = true)
-    public Optional<RuleTemplateEntity> resolveLatestMaterializableTemplate(String templateKey) {
+    public Optional<RuleTemplateEntity> resolveLatestSeedableTemplate(String templateKey) {
         return ruleTemplateRepository
                 .findByTemplateKeyAndStatusIdsOrderByTemplateVersionDesc(
-                        templateKey, List.of(RuleTemplateStatus.MATERIALIZABLE.id()))
+                        templateKey,
+                        List.of(
+                                RuleTemplateStatus.MATERIALIZABLE.id(),
+                                RuleTemplateStatus.SYSTEM_DEFAULT.id()))
                 .stream()
                 .findFirst();
     }
@@ -142,7 +152,10 @@ public class RuleTemplateCatalogService {
         return switch (ruleTemplateEntity.getStatus()) {
             case MATERIALIZABLE -> 0;
             case GALLERY_ONLY -> 1;
-            case DEPRECATED -> 2;
+            // SYSTEM_DEFAULT is excluded from the gallery (not in ACTIVE_TEMPLATE_STATUSES), so it
+            // never reaches this sort; weight it after the visible statuses for exhaustiveness.
+            case SYSTEM_DEFAULT -> 2;
+            case DEPRECATED -> 3;
         };
     }
 

@@ -12,7 +12,9 @@ import java.util.UUID;
  * (the triage orchestrator) resolves this flag — by an LLM classification, a cheap no-reply
  * pre-filter, or "a reply was already drafted" — and passes the decision in. It is ignored when the
  * last message is from the tenant (that path is the deterministic {@code AWAITING_THEIR_REPLY}
- * bucket) or when the message is an auto-reply (always FYI).
+ * bucket) or when an inbound message is an auto-reply — the counterparty's vacation responder / "do
+ * not reply" bounce is always {@code FYI}. (An outbound auto-reply from the tenant is not forced to
+ * FYI: the counterparty still awaits the reader's real reply.)
  */
 public record ThreadReplyClassificationInput(
         UUID tenantId,

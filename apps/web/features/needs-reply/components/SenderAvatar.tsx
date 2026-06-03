@@ -87,8 +87,11 @@ function domainOf(email: string): string {
 }
 
 function senderInitials(sender: string, email: string): string {
-  const displayName = sender
-    .replace(/<[^<>]*>/g, '')
+  // The display name is everything before the first angle bracket in "Name <email>". Slicing at
+  // the bracket (rather than regex-stripping <...> segments) avoids partial-tag leftovers that a
+  // single-pass replace can miss — and keeps this off CodeQL's incomplete-sanitization radar.
+  const angleStart = sender.indexOf('<');
+  const displayName = (angleStart === -1 ? sender : sender.slice(0, angleStart))
     .replace(/^"+|"+$/g, '')
     .trim();
   const source = displayName || email;

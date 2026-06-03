@@ -305,3 +305,6 @@ databaseChangeLog:
   - include:
       file: changes/114-default-rule-templates-vi-seed.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/115-system-default-rule-template-status.yaml
+      relativeToChangelogFile: true

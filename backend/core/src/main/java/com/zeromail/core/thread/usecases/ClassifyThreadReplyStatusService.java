@@ -191,6 +191,14 @@ public class ClassifyThreadReplyStatusService {
             // The reader sent the latest message and is waiting on the other party.
             return ThreadReplyBucket.AWAITING_THEIR_REPLY;
         }
+        if (!classificationInput.lastMessageFromIsTenant()
+                && classificationInput.lastMessageIsAutoReply()) {
+            // An inbound auto-reply (the counterparty's vacation responder / "do not reply" bounce)
+            // never needs the reader's attention regardless of the needs-reply signal — always FYI,
+            // per ThreadReplyClassificationInput's contract. An outbound auto-reply (the tenant's
+            // own responder) falls through: the counterparty still awaits the reader's real reply.
+            return ThreadReplyBucket.FYI;
+        }
         // Otherwise the caller's needs-reply signal (LLM classification / no-reply pre-filter / "a
         // reply was already drafted") decides between the TO_REPLY ("Cần trả lời") and FYI buckets.
         return classificationInput.inboundReplyNeeded()

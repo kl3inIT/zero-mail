@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 115-system-default-rule-template-status
+      author: zeromail
+      changes:
+        - sql:
+            splitStatements: false
+            comment: >-
+              The 113/114 starter rules were seeded with status 'materializable', which leaked them
+              into the browsable template gallery (RuleTemplateCatalogService.listActiveTemplates).
+              They are auto-seeded enabled on first login, not catalog entries the user picks, so
+              reclassify them under a dedicated 'system_default' status: still resolvable into a
+              tenant rule (resolveLatestSeedableTemplate) but excluded from the gallery. Widen the
+              status CHECK constraint first, then move the system-* rows.
+            sql: |
+              ALTER TABLE rule_template_catalog
+                DROP CONSTRAINT ck_rule_template_catalog_status;
+              ALTER TABLE rule_template_catalog
+                ADD CONSTRAINT ck_rule_template_catalog_status
+                CHECK (status IN ('materializable','gallery_only','system_default','deprecated'));
+              UPDATE rule_template_catalog
+                SET status = 'system_default'
+                WHERE template_key LIKE 'system-%';
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE rule_template_catalog
+                SET status = 'materializable'
+                WHERE template_key LIKE 'system-%';
+              ALTER TABLE rule_template_catalog
+                DROP CONSTRAINT ck_rule_template_catalog_status;
+              ALTER TABLE rule_template_catalog
+                ADD CONSTRAINT ck_rule_template_catalog_status
+                CHECK (status IN ('materializable','gallery_only','deprecated'));

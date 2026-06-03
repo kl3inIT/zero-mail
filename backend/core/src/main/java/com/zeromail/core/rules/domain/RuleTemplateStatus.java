@@ -9,6 +9,10 @@ import java.util.stream.Stream;
 public enum RuleTemplateStatus implements IdentifiedEnum {
     MATERIALIZABLE("materializable"),
     GALLERY_ONLY("gallery_only"),
+    // Auto-seeded (enabled) on first login as the starter rule set. Resolvable into a tenant rule
+    // like MATERIALIZABLE, but intentionally hidden from the browsable template gallery so the
+    // first-login defaults do not also clutter the "add a template" catalog.
+    SYSTEM_DEFAULT("system_default"),
     DEPRECATED("deprecated");
 
     private final String id;

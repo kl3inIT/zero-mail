@@ -182,7 +182,7 @@ public class RuleTemplateMaterializationService {
         }
 
         Optional<RuleTemplateEntity> template =
-                ruleTemplateCatalogService.resolveLatestMaterializableTemplate(templateKey);
+                ruleTemplateCatalogService.resolveLatestSeedableTemplate(templateKey);
         if (template.isEmpty()) {
             return TemplateMaterializationOutcome.skipped(
                     templateKey, SkippedTemplateReason.UNKNOWN_OR_DEPRECATED, false);

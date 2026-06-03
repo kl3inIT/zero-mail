@@ -12,7 +12,9 @@ import Link from 'next/link';
  *  - Receives `{ error, unstable_retry }` props (Next 16.2+ — RESEARCH §Pitfall 3).
  *  - NEVER render error.message, error.digest, or error.stack (privacy contract).
  *  - console.error only when NODE_ENV !== 'production'.
- *  - Plain DOM <button>/<a> (not <Button> wrapper) per STATE.md line 153.
+ *  - Plain DOM <button> (not the shadcn <Button> wrapper) per STATE.md line 153.
+ *    `next/link` IS fine here: unlike not-found.tsx / (protected)/error.tsx, this
+ *    boundary is not imported by the React-dedupe-sensitive vitest suite.
  */
 export default function PublicError({
   error,
