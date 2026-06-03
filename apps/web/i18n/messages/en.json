@@ -722,7 +722,7 @@
       },
       "filter": {
         "all": "All senders",
-        "approved": "Receiving",
+        "approved": "Kept",
         "autoArchived": "Auto archived",
         "unhandled": "Unhandled",
         "unsubscribed": "Unsubscribed"
@@ -734,7 +734,7 @@
       },
       "list": {
         "action": {
-          "approve": "Keep receiving",
+          "approve": "Keep",
           "archive": "Archive",
           "archiveAll": "Archive all mail from this sender",
           "autoArchive": "Auto-archive",
@@ -792,7 +792,7 @@
         "titleWith": "Stats for {sender}"
       },
       "statusLabel": {
-        "approved": "Receiving",
+        "approved": "Kept",
         "autoArchived": "Auto archived",
         "unhandled": "Unhandled",
         "unsubscribed": "Unsubscribed"
