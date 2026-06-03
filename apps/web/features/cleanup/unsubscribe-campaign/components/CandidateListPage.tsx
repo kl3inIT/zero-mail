@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ArchiveIcon,
   CalendarIcon,
@@ -55,7 +55,7 @@ const DEFAULT_LIMIT = 50;
 const EXPANDED_LIMIT = 500;
 
 export function CandidateListPage() {
-  const t = useTranslations();
+  const t = useTranslations('cleanup.unsubscribe');
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('unhandled');
@@ -78,13 +78,18 @@ export function CandidateListPage() {
   const senderActionMutation = useSenderAction(windowId, limit);
 
   const rawCandidates = useMemo<CandidateRow[]>(
-    () => ((candidatesQuery.data ?? []) as CandidateRow[]),
+    () => (candidatesQuery.data ?? []) as CandidateRow[],
     [candidatesQuery.data],
   );
 
-  useEffect(() => {
-    clearSelection();
-  }, [clearSelection, filter, searchQuery, windowId]);
+  // Clear the multi-select whenever the filter/search/window changes, via render-time state
+  // adjustment (React-recommended) instead of an effect — avoids a cascading re-render.
+  const selectionResetKey = JSON.stringify([filter, searchQuery, windowId]);
+  const [trackedSelectionResetKey, setTrackedSelectionResetKey] = useState(selectionResetKey);
+  if (trackedSelectionResetKey !== selectionResetKey) {
+    setTrackedSelectionResetKey(selectionResetKey);
+    setSelectedEmails(new Set());
+  }
 
   const visibleCandidates = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -122,13 +127,20 @@ export function CandidateListPage() {
   const pendingSenderEmails = useMemo(() => {
     const pending = new Set<string>();
     if (executeMutation.isPending) {
-      for (const senderEmail of executeMutation.variables?.senderEmails ?? []) pending.add(senderEmail);
+      for (const senderEmail of executeMutation.variables?.senderEmails ?? [])
+        pending.add(senderEmail);
     }
     if (senderActionMutation.isPending) {
-      for (const senderEmail of senderActionMutation.variables?.senderEmails ?? []) pending.add(senderEmail);
+      for (const senderEmail of senderActionMutation.variables?.senderEmails ?? [])
+        pending.add(senderEmail);
     }
     return pending;
-  }, [executeMutation.isPending, executeMutation.variables, senderActionMutation.isPending, senderActionMutation.variables]);
+  }, [
+    executeMutation.isPending,
+    executeMutation.variables,
+    senderActionMutation.isPending,
+    senderActionMutation.variables,
+  ]);
 
   const allSelectedApproved =
     selectedCandidates.length > 0 &&
@@ -224,14 +236,14 @@ export function CandidateListPage() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           <OptionMenu
-            label={filterOption?.label ?? t('cleanup.unsubscribe.filter.all')}
+            label={filterOption?.label ?? t('filter.all')}
             icon={filterOption?.icon}
             options={filterOptions(t)}
             value={filter}
             onSelect={(value) => setFilter(value as FilterType)}
           />
           <OptionMenu
-            label={windowOption?.label ?? t('cleanup.unsubscribe.window.90d')}
+            label={windowOption?.label ?? t('window.90d')}
             icon={<CalendarIcon className="size-4" aria-hidden="true" />}
             options={windowOptions(t)}
             value={windowId}
@@ -245,7 +257,7 @@ export function CandidateListPage() {
             <Input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.currentTarget.value)}
-              placeholder={t('cleanup.unsubscribe.list.searchPlaceholder')}
+              placeholder={t('list.searchPlaceholder')}
               className="bg-background h-11 pl-9"
             />
           </div>
@@ -258,8 +270,11 @@ export function CandidateListPage() {
           disabled={limit >= EXPANDED_LIMIT || candidatesQuery.isFetching}
           onClick={() => setLimit(EXPANDED_LIMIT)}
         >
-          <RefreshCwIcon className={candidatesQuery.isFetching ? 'size-4 animate-spin' : 'size-4'} aria-hidden="true" />
-          {t('cleanup.unsubscribe.list.loadMore')}
+          <RefreshCwIcon
+            className={candidatesQuery.isFetching ? 'size-4 animate-spin' : 'size-4'}
+            aria-hidden="true"
+          />
+          {t('list.loadMore')}
         </Button>
       </div>
 
@@ -296,10 +311,15 @@ export function CandidateListPage() {
 
       {candidatesQuery.isError && (
         <Alert variant="destructive">
-          <AlertTitle>{t('cleanup.unsubscribe.list.error')}</AlertTitle>
+          <AlertTitle>{t('list.error')}</AlertTitle>
           <AlertDescription>
-            <Button type="button" size="sm" variant="outline" onClick={() => void candidatesQuery.refetch()}>
-              {t('cleanup.unsubscribe.list.retry')}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void candidatesQuery.refetch()}
+            >
+              {t('list.retry')}
             </Button>
           </AlertDescription>
         </Alert>
@@ -308,12 +328,8 @@ export function CandidateListPage() {
       {!candidatesQuery.isPending && !candidatesQuery.isError && rawCandidates.length === 0 && (
         <div className="border-border bg-card flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-10 text-center shadow-sm">
           <MailXIcon className="text-muted-foreground size-5" aria-hidden="true" />
-          <h2 className="text-foreground text-base font-medium">
-            {t('cleanup.unsubscribe.list.empty.title')}
-          </h2>
-          <p className="text-muted-foreground max-w-md text-sm">
-            {t('cleanup.unsubscribe.list.empty.body')}
-          </p>
+          <h2 className="text-foreground text-base font-medium">{t('list.empty.title')}</h2>
+          <p className="text-muted-foreground max-w-md text-sm">{t('list.empty.body')}</p>
         </div>
       )}
 
@@ -327,7 +343,9 @@ export function CandidateListPage() {
           onApproveToggle={(candidate) => {
             const senderEmail = candidate.senderEmail;
             if (!senderEmail) return;
-            runSenderAction(candidate.status === 'APPROVED' ? 'UNAPPROVE' : 'APPROVE', [senderEmail]);
+            runSenderAction(candidate.status === 'APPROVED' ? 'UNAPPROVE' : 'APPROVE', [
+              senderEmail,
+            ]);
           }}
           onViewStats={setStatsCandidate}
           onLabelFuture={(candidate) => {
@@ -339,7 +357,7 @@ export function CandidateListPage() {
           }}
           onDeleteSender={(candidate) => {
             if (!candidate.senderEmail) return;
-            if (window.confirm(t('cleanup.unsubscribe.confirm.deleteOne', { sender: candidate.senderEmail }))) {
+            if (window.confirm(t('confirm.deleteOne', { sender: candidate.senderEmail }))) {
               runSenderAction('DELETE', [candidate.senderEmail]);
             }
           }}
@@ -372,12 +390,15 @@ export function CandidateListPage() {
         }}
         isExecuting={executeMutation.isPending || senderActionMutation.isPending}
       />
-      <Dialog open={labelCandidate !== null} onOpenChange={(open) => !open && setLabelCandidate(null)}>
+      <Dialog
+        open={labelCandidate !== null}
+        onOpenChange={(open) => !open && setLabelCandidate(null)}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('cleanup.unsubscribe.labelFuture.title')}</DialogTitle>
+            <DialogTitle>{t('labelFuture.title')}</DialogTitle>
             <DialogDescription>
-              {t('cleanup.unsubscribe.labelFuture.body', {
+              {t('labelFuture.body', {
                 sender: labelCandidate?.senderEmail ?? '',
               })}
             </DialogDescription>
@@ -385,12 +406,12 @@ export function CandidateListPage() {
           <Input
             value={labelName}
             onChange={(event) => setLabelName(event.currentTarget.value)}
-            placeholder={t('cleanup.unsubscribe.labelFuture.placeholder')}
+            placeholder={t('labelFuture.placeholder')}
             autoFocus
           />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setLabelCandidate(null)}>
-              {t('cleanup.unsubscribe.confirm.cancel')}
+              {t('confirm.cancel')}
             </Button>
             <Button
               type="button"
@@ -403,7 +424,7 @@ export function CandidateListPage() {
                 setLabelCandidate(null);
               }}
             >
-              {t('cleanup.unsubscribe.list.action.labelFuture')}
+              {t('list.action.labelFuture')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -427,7 +448,16 @@ function OptionMenu({
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button type="button" variant="outline" size="lg" className="h-11 w-full justify-between sm:w-[190px]" />}>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="h-11 w-full justify-between sm:w-[190px]"
+          />
+        }
+      >
         <span className="flex items-center gap-2 truncate">
           {icon}
           {label}
@@ -450,22 +480,34 @@ function OptionMenu({
   );
 }
 
-
-function filterOptions(t: ReturnType<typeof useTranslations>) {
+function filterOptions(t: ReturnType<typeof useTranslations<'cleanup.unsubscribe'>>) {
   return [
-    { label: t('cleanup.unsubscribe.filter.unhandled'), value: 'unhandled', icon: <InboxIcon className="size-4" /> },
-    { label: t('cleanup.unsubscribe.filter.all'), value: 'all', icon: <ListIcon className="size-4" />, separatorAfter: true },
-    { label: t('cleanup.unsubscribe.filter.unsubscribed'), value: 'unsubscribed', icon: <MailXIcon className="size-4" /> },
-    { label: t('cleanup.unsubscribe.filter.autoArchived'), value: 'autoArchived', icon: <ArchiveIcon className="size-4" /> },
-    { label: t('cleanup.unsubscribe.filter.approved'), value: 'approved', icon: <ThumbsUpIcon className="size-4" /> },
+    { label: t('filter.unhandled'), value: 'unhandled', icon: <InboxIcon className="size-4" /> },
+    {
+      label: t('filter.all'),
+      value: 'all',
+      icon: <ListIcon className="size-4" />,
+      separatorAfter: true,
+    },
+    {
+      label: t('filter.unsubscribed'),
+      value: 'unsubscribed',
+      icon: <MailXIcon className="size-4" />,
+    },
+    {
+      label: t('filter.autoArchived'),
+      value: 'autoArchived',
+      icon: <ArchiveIcon className="size-4" />,
+    },
+    { label: t('filter.approved'), value: 'approved', icon: <ThumbsUpIcon className="size-4" /> },
   ];
 }
 
-function windowOptions(t: ReturnType<typeof useTranslations>) {
+function windowOptions(t: ReturnType<typeof useTranslations<'cleanup.unsubscribe'>>) {
   return [
-    { label: t('cleanup.unsubscribe.window.7d'), value: '7d' },
-    { label: t('cleanup.unsubscribe.window.30d'), value: '30d' },
-    { label: t('cleanup.unsubscribe.window.90d'), value: '90d' },
+    { label: t('window.7d'), value: '7d' },
+    { label: t('window.30d'), value: '30d' },
+    { label: t('window.90d'), value: '90d' },
   ];
 }
 
@@ -490,11 +532,15 @@ function readRate(candidate: CandidateRow): number {
   return ((candidate.readMessageCount ?? 0) / messageCount) * 100;
 }
 
-function bulkPrimaryLabel(selectedCandidates: CandidateRow[], t: ReturnType<typeof useTranslations>): string {
-  const hasUnsubscribe = selectedCandidates.some((candidate) => candidate.unsubscribeMethod !== 'NONE');
+function bulkPrimaryLabel(
+  selectedCandidates: CandidateRow[],
+  t: ReturnType<typeof useTranslations<'cleanup.unsubscribe'>>,
+): string {
+  const hasUnsubscribe = selectedCandidates.some(
+    (candidate) => candidate.unsubscribeMethod !== 'NONE',
+  );
   const hasBlock = selectedCandidates.some((candidate) => candidate.unsubscribeMethod === 'NONE');
-  if (hasUnsubscribe && hasBlock) return t('cleanup.unsubscribe.list.action.unsubscribeBlock');
-  if (hasBlock) return t('cleanup.unsubscribe.list.action.block');
-  return t('cleanup.unsubscribe.list.action.unsubscribe');
+  if (hasUnsubscribe && hasBlock) return t('list.action.unsubscribeBlock');
+  if (hasBlock) return t('list.action.block');
+  return t('list.action.unsubscribe');
 }
-

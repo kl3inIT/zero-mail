@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArchiveIcon, ExternalLinkIcon, Loader2Icon, MailXIcon, XIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -54,14 +54,18 @@ export function SenderStatsDialog({
   onAutoArchive: () => void;
   isExecuting: boolean;
 }) {
-  const t = useTranslations();
+  const t = useTranslations('cleanup.unsubscribe');
   const [tab, setTab] = useState<Tab>('unarchived');
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Reset the open message + tab when the dialog switches senders, via render-time state
+  // adjustment (React-recommended) instead of an effect — avoids a cascading re-render.
+  const [trackedSenderEmail, setTrackedSenderEmail] = useState(senderEmail);
+  if (trackedSenderEmail !== senderEmail) {
+    setTrackedSenderEmail(senderEmail);
     setActiveMessageId(null);
     setTab('unarchived');
-  }, [senderEmail]);
+  }
 
   const archivedOnly = tab === 'all' ? false : false; // Inbox Zero: unarchived = NOT archived → use the tab to filter client-side after fetch
   const timelineQuery = useSenderTimeline(senderEmail, TIMELINE_WINDOW_DAYS);
@@ -89,7 +93,7 @@ export function SenderStatsDialog({
       <DialogContent className="flex max-h-[90vh] flex-col gap-3 sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle className="truncate text-base">
-            {t('cleanup.unsubscribe.stats.titleWith', { sender: displayTitle })}
+            {t('stats.titleWith', { sender: displayTitle })}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground truncate text-xs">
             {senderEmail}
@@ -109,11 +113,7 @@ export function SenderStatsDialog({
             ) : (
               <MailXIcon className="size-4" aria-hidden="true" />
             )}
-            {t(
-              isUnsubscribable
-                ? 'cleanup.unsubscribe.list.action.unsubscribe'
-                : 'cleanup.unsubscribe.list.action.block',
-            )}
+            {t(isUnsubscribable ? 'list.action.unsubscribe' : 'list.action.block')}
           </Button>
           <Button
             type="button"
@@ -123,7 +123,7 @@ export function SenderStatsDialog({
             onClick={onAutoArchive}
           >
             <ArchiveIcon className="size-4" aria-hidden="true" />
-            {t('cleanup.unsubscribe.list.action.autoArchive')}
+            {t('list.action.autoArchive')}
           </Button>
         </div>
 
@@ -131,17 +131,17 @@ export function SenderStatsDialog({
         <div className="border-border bg-card h-[160px] rounded-md border p-3">
           {timelineQuery.isPending && (
             <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-              {t('cleanup.unsubscribe.stats.chartLoading')}
+              {t('stats.chartLoading')}
             </div>
           )}
           {timelineQuery.isError && (
             <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-              {t('cleanup.unsubscribe.stats.chartError')}
+              {t('stats.chartError')}
             </div>
           )}
           {!timelineQuery.isPending && !timelineQuery.isError && chartData.length === 0 && (
             <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-              {t('cleanup.unsubscribe.stats.chartEmpty')}
+              {t('stats.chartEmpty')}
             </div>
           )}
           {!timelineQuery.isPending && chartData.length > 0 && (
@@ -161,7 +161,7 @@ export function SenderStatsDialog({
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={28} />
                 <RechartsTooltip
                   contentStyle={{ fontSize: 12 }}
-                  labelFormatter={(value: string) => new Date(value).toLocaleDateString('vi-VN')}
+                  labelFormatter={(label) => new Date(String(label)).toLocaleDateString('vi-VN')}
                 />
                 <Bar dataKey="count" fill="#16a34a" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -173,10 +173,8 @@ export function SenderStatsDialog({
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
             <TabsList>
-              <TabsTrigger value="unarchived">
-                {t('cleanup.unsubscribe.stats.tabs.unarchived')}
-              </TabsTrigger>
-              <TabsTrigger value="all">{t('cleanup.unsubscribe.stats.tabs.all')}</TabsTrigger>
+              <TabsTrigger value="unarchived">{t('stats.tabs.unarchived')}</TabsTrigger>
+              <TabsTrigger value="all">{t('stats.tabs.all')}</TabsTrigger>
             </TabsList>
             <TabsContent value="unarchived" className="mt-0 hidden" />
             <TabsContent value="all" className="mt-0 hidden" />
@@ -187,12 +185,12 @@ export function SenderStatsDialog({
             <div className="border-border bg-card flex min-h-0 flex-col overflow-hidden rounded-md border">
               {messagesQuery.isPending && (
                 <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
-                  {t('cleanup.unsubscribe.stats.messagesLoading')}
+                  {t('stats.messagesLoading')}
                 </div>
               )}
               {messagesQuery.isError && (
                 <Alert variant="destructive" className="m-2">
-                  <AlertTitle>{t('cleanup.unsubscribe.stats.messagesError')}</AlertTitle>
+                  <AlertTitle>{t('stats.messagesError')}</AlertTitle>
                   <AlertDescription>
                     <Button
                       type="button"
@@ -200,7 +198,7 @@ export function SenderStatsDialog({
                       variant="outline"
                       onClick={() => void messagesQuery.refetch()}
                     >
-                      {t('cleanup.unsubscribe.list.retry')}
+                      {t('list.retry')}
                     </Button>
                   </AlertDescription>
                 </Alert>
@@ -209,7 +207,7 @@ export function SenderStatsDialog({
                 !messagesQuery.isError &&
                 filteredMessages.length === 0 && (
                   <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
-                    {t('cleanup.unsubscribe.stats.messagesEmpty')}
+                    {t('stats.messagesEmpty')}
                   </div>
                 )}
               {filteredMessages.length > 0 && (
@@ -230,18 +228,18 @@ export function SenderStatsDialog({
             <div className="border-border bg-card flex min-h-0 flex-col overflow-hidden rounded-md border">
               {!activeMessageId && (
                 <div className="text-muted-foreground flex h-full items-center justify-center px-4 text-center text-sm">
-                  {t('cleanup.unsubscribe.stats.previewHint')}
+                  {t('stats.previewHint')}
                 </div>
               )}
               {activeMessageId && bodyQuery.isPending && (
                 <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
                   <Loader2Icon className="mr-2 size-4 animate-spin" aria-hidden="true" />
-                  {t('cleanup.unsubscribe.stats.previewLoading')}
+                  {t('stats.previewLoading')}
                 </div>
               )}
               {activeMessageId && bodyQuery.isError && (
                 <Alert variant="destructive" className="m-2">
-                  <AlertTitle>{t('cleanup.unsubscribe.stats.previewError')}</AlertTitle>
+                  <AlertTitle>{t('stats.previewError')}</AlertTitle>
                 </Alert>
               )}
               {activeMessageId && bodyQuery.data && (
@@ -289,10 +287,7 @@ function MessageRow({
       >
         <div className="flex w-full items-center gap-2">
           <span
-            className={cn(
-              'truncate text-sm',
-              message.unread ? 'font-semibold' : 'font-medium',
-            )}
+            className={cn('truncate text-sm', message.unread ? 'font-semibold' : 'font-medium')}
           >
             {message.subject || '(no subject)'}
           </span>
@@ -321,7 +316,7 @@ function BodyPreview({
   gmailMessageId: string;
   onClose: () => void;
 }) {
-  const t = useTranslations();
+  const t = useTranslations('cleanup.unsubscribe');
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border flex items-start gap-2 border-b p-2">
@@ -334,7 +329,7 @@ function BodyPreview({
           href={`https://mail.google.com/mail/u/0/#inbox/${encodeURIComponent(gmailMessageId)}`}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={t('cleanup.unsubscribe.list.action.viewGmail')}
+          aria-label={t('list.action.viewGmail')}
         >
           <ExternalLinkIcon className="size-4" aria-hidden="true" />
         </a>
@@ -342,7 +337,7 @@ function BodyPreview({
           type="button"
           onClick={onClose}
           className="text-muted-foreground hover:text-foreground"
-          aria-label={t('cleanup.unsubscribe.stats.closePreview')}
+          aria-label={t('stats.closePreview')}
         >
           <XIcon className="size-4" aria-hidden="true" />
         </button>
@@ -357,12 +352,10 @@ function BodyPreview({
             referrerPolicy="no-referrer"
           />
         ) : plainBody ? (
-          <pre className="size-full overflow-auto whitespace-pre-wrap p-3 text-sm">
-            {plainBody}
-          </pre>
+          <pre className="size-full overflow-auto p-3 text-sm whitespace-pre-wrap">{plainBody}</pre>
         ) : (
           <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-            {t('cleanup.unsubscribe.stats.previewEmpty')}
+            {t('stats.previewEmpty')}
           </div>
         )}
       </div>

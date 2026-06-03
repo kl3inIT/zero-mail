@@ -84,7 +84,7 @@ export function CandidateListTable({
   sortDirection: SortDirection;
   onSort: (column: SortColumn) => void;
 }) {
-  const t = useTranslations();
+  const t = useTranslations('cleanup.unsubscribe');
   const visibleEmails = useMemo(
     () => candidates.map((candidate) => candidate.senderEmail ?? '').filter(Boolean),
     [candidates],
@@ -92,7 +92,8 @@ export function CandidateListTable({
   const selectedVisibleCount = visibleEmails.filter((senderEmail) =>
     selectedEmails.has(senderEmail),
   ).length;
-  const allVisibleSelected = visibleEmails.length > 0 && selectedVisibleCount === visibleEmails.length;
+  const allVisibleSelected =
+    visibleEmails.length > 0 && selectedVisibleCount === visibleEmails.length;
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
 
   return (
@@ -102,21 +103,23 @@ export function CandidateListTable({
           <TableRow className="border-border bg-muted/30 hover:bg-muted/30">
             <TableHead className="w-10">
               <Checkbox
-                aria-label={t('cleanup.unsubscribe.list.selectAll')}
+                aria-label={t('list.selectAll')}
                 checked={allVisibleSelected}
                 indeterminate={someVisibleSelected}
                 disabled={visibleEmails.length === 0}
-                onCheckedChange={(checked) => onToggleVisibleEmails(visibleEmails, checked === true)}
+                onCheckedChange={(checked) =>
+                  onToggleVisibleEmails(visibleEmails, checked === true)
+                }
               />
             </TableHead>
-            <TableHead className="h-12 min-w-80">{t('cleanup.unsubscribe.list.col.from')}</TableHead>
+            <TableHead className="h-12 min-w-80">{t('list.col.from')}</TableHead>
             <TableHead className="h-12 w-32 whitespace-nowrap">
               <HeaderButton
                 sorted={sortColumn === 'emails'}
                 sortDirection={sortColumn === 'emails' ? sortDirection : undefined}
                 onClick={() => onSort('emails')}
               >
-                {t('cleanup.unsubscribe.list.col.emails')}
+                {t('list.col.emails')}
               </HeaderButton>
             </TableHead>
             <TableHead className="h-12 w-44 whitespace-nowrap">
@@ -125,7 +128,7 @@ export function CandidateListTable({
                 sortDirection={sortColumn === 'read' ? sortDirection : undefined}
                 onClick={() => onSort('read')}
               >
-                {t('cleanup.unsubscribe.list.col.read')}
+                {t('list.col.read')}
               </HeaderButton>
             </TableHead>
             <TableHead className="h-12 w-[210px] text-right" />
@@ -167,10 +170,12 @@ export function CandidateListTable({
                       <p className="truncate font-medium">
                         {senderDisplayLabel(candidate, senderEmail)}
                       </p>
-                      <p className="text-muted-foreground truncate text-xs lg:text-sm">{senderEmail}</p>
+                      <p className="text-muted-foreground truncate text-xs lg:text-sm">
+                        {senderEmail}
+                      </p>
                     </div>
-                    {unsubscribed && <StatusPill label={t('cleanup.unsubscribe.statusLabel.unsubscribed')} />}
-                    {autoArchived && <StatusPill label={t('cleanup.unsubscribe.statusLabel.autoArchived')} />}
+                    {unsubscribed && <StatusPill label={t('statusLabel.unsubscribed')} />}
+                    {autoArchived && <StatusPill label={t('statusLabel.autoArchived')} />}
                   </div>
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
@@ -216,9 +221,7 @@ export function CandidateListTable({
                             disabled={isPending || unsubscribed}
                             onClick={() => onApproveToggle(candidate)}
                             aria-label={
-                              approved
-                                ? t('cleanup.unsubscribe.list.action.unapprove')
-                                : t('cleanup.unsubscribe.list.action.approve')
+                              approved ? t('list.action.unapprove') : t('list.action.approve')
                             }
                           >
                             <ThumbsUpIcon
@@ -234,9 +237,7 @@ export function CandidateListTable({
                         }
                       />
                       <TooltipContent>
-                        {approved
-                          ? t('cleanup.unsubscribe.list.action.unapprove')
-                          : t('cleanup.unsubscribe.list.action.approve')}
+                        {approved ? t('list.action.unapprove') : t('list.action.approve')}
                       </TooltipContent>
                     </Tooltip>
                     <Button
@@ -285,37 +286,39 @@ function RowMenu({
   onArchiveSender: (candidate: CandidateRow) => void;
   onDeleteSender: (candidate: CandidateRow) => void;
 }) {
-  const t = useTranslations();
+  const t = useTranslations('cleanup.unsubscribe');
   const senderEmail = candidate.senderEmail ?? '';
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" />}>
         <MoreHorizontalIcon className="size-4" aria-hidden="true" />
-        <span className="sr-only">{t('cleanup.unsubscribe.list.action.menu')}</span>
+        <span className="sr-only">{t('list.action.menu')}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem onClick={() => onViewStats(candidate)}>
           <ZoomInIcon className="mr-2 size-4" aria-hidden="true" />
-          {t('cleanup.unsubscribe.list.action.viewStats')}
+          {t('list.action.viewStats')}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => window.open(gmailSearchUrl(senderEmail), '_blank', 'noopener,noreferrer')}>
+        <DropdownMenuItem
+          onClick={() => window.open(gmailSearchUrl(senderEmail), '_blank', 'noopener,noreferrer')}
+        >
           <ExternalLinkIcon className="mr-2 size-4" aria-hidden="true" />
-          {t('cleanup.unsubscribe.list.action.viewGmail')}
+          {t('list.action.viewGmail')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onLabelFuture(candidate)}>
           <TagIcon className="mr-2 size-4" aria-hidden="true" />
-          {t('cleanup.unsubscribe.list.action.labelFuture')}
+          {t('list.action.labelFuture')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onArchiveSender(candidate)}>
           <ArchiveIcon className="mr-2 size-4" aria-hidden="true" />
-          {t('cleanup.unsubscribe.list.action.archiveAll')}
+          {t('list.action.archiveAll')}
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={() => onDeleteSender(candidate)}>
           <TrashIcon className="mr-2 size-4" aria-hidden="true" />
-          {t('cleanup.unsubscribe.list.action.deleteAll')}
+          {t('list.action.deleteAll')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -337,9 +340,9 @@ function HeaderButton({
     <Button type="button" variant="ghost" size="sm" className="-ml-3 h-8" onClick={onClick}>
       <span className="text-muted-foreground">{children}</span>
       {sorted && sortDirection === 'asc' ? (
-        <ChevronUpIcon className="ml-1 size-4 text-muted-foreground" aria-hidden="true" />
+        <ChevronUpIcon className="text-muted-foreground ml-1 size-4" aria-hidden="true" />
       ) : (
-        <ChevronDownIcon className="ml-1 size-4 text-muted-foreground" aria-hidden="true" />
+        <ChevronDownIcon className="text-muted-foreground ml-1 size-4" aria-hidden="true" />
       )}
     </Button>
   );
@@ -452,11 +455,14 @@ function readRate(candidate: CandidateRow): number {
   return ((candidate.readMessageCount ?? 0) / messageCount) * 100;
 }
 
-function primaryActionLabel(candidate: CandidateRow, t: ReturnType<typeof useTranslations>) {
+function primaryActionLabel(
+  candidate: CandidateRow,
+  t: ReturnType<typeof useTranslations<'cleanup.unsubscribe'>>,
+) {
   if (candidate.unsubscribeMethod === 'NONE') {
-    return t('cleanup.unsubscribe.list.action.block');
+    return t('list.action.block');
   }
-  return t('cleanup.unsubscribe.list.action.unsubscribe');
+  return t('list.action.unsubscribe');
 }
 
 function gmailSearchUrl(senderEmail: string): string {

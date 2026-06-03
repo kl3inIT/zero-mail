@@ -71,11 +71,20 @@ export async function executeCampaign(
 export async function runSenderAction(
   body: CleanupSenderActionRequest,
 ): Promise<CleanupSenderActionResponse> {
-  const result = await api.POST('/api/unsubscribe/senders/action', {
-    body,
+  // TODO(openapi): switch back to the typed api.POST once /api/unsubscribe/senders/action lands
+  // in lib/api/schema.d.ts. The backend CleanupSenderActionController already exposes this
+  // endpoint; the committed OpenAPI spec is just stale. Fix: boot backend + run
+  // `pnpm --filter web run generate:api`, then restore api.POST and drop this raw fetch.
+  const response = await fetch('/api/unsubscribe/senders/action', {
+    method: 'POST',
+    credentials: 'include',
     headers: jsonHeaders(),
+    body: JSON.stringify(body),
   });
-  return unwrap(result, `/api/unsubscribe/senders/action failed: ${result.response.status}`);
+  if (!response.ok) {
+    throw new Error(`/api/unsubscribe/senders/action failed: ${response.status}`);
+  }
+  return (await response.json()) as CleanupSenderActionResponse;
 }
 
 // Stats dialog endpoints (UNS-stats-01/02/03). Types are hand-written here until the
