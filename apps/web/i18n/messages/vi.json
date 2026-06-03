@@ -427,6 +427,10 @@
       "gmail_scope_required": {
         "body": "Đăng nhập thành công nhưng quyền Gmail chưa được cấp. Nhấn Đăng nhập với Google và cấp quyền Gmail để tiếp tục.",
         "title": "Thiếu quyền Gmail"
+      },
+      "signin_failed": {
+        "body": "Quá trình đăng nhập bị gián đoạn trước khi hoàn tất. Nhấn Đăng nhập với Google để thử lại.",
+        "title": "Đăng nhập chưa hoàn tất"
       }
     },
     "everywhere": "Đầu-cuối · Đang xin SOC 2 Type II",

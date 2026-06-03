@@ -2,17 +2,17 @@
 
 import { useEffect } from 'react';
 
+import Link from 'next/link';
+
 /**
  * Public segment error boundary (Phase 01.4 D-D2 + D-D3).
- * Phase 01.5 Plan 02 — deflated from PageShell/SectionCard/StatusAlert to raw
- * <main>/<Alert variant="destructive"> (D-C1, D-C2).
  *
  * Locked constraints:
  *  - 'use client' (Next.js requires error boundaries to be client components).
  *  - Receives `{ error, unstable_retry }` props (Next 16.2+ — RESEARCH §Pitfall 3).
  *  - NEVER render error.message, error.digest, or error.stack (privacy contract).
  *  - console.error only when NODE_ENV !== 'production'.
- *  - Plain DOM <button> (not <Button> wrapper) per STATE.md line 153.
+ *  - Plain DOM <button>/<a> (not <Button> wrapper) per STATE.md line 153.
  */
 export default function PublicError({
   error,
@@ -28,17 +28,43 @@ export default function PublicError({
   }, [error]);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-12 lg:py-16">
-      <div className="border-destructive/30 bg-destructive/5 text-foreground rounded-lg border p-4">
-        <h2 className="font-semibold">Đã xảy ra lỗi / Something went wrong</h2>
-        <p className="text-muted-foreground mt-1 text-sm">Vui lòng thử lại. Please try again.</p>
+    <main className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-16 text-center">
+      <div className="border-destructive/25 bg-destructive/10 text-destructive flex size-14 items-center justify-center rounded-2xl border">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="size-7"
+          aria-hidden
+        >
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" x2="12" y1="9" y2="13" />
+          <line x1="12" x2="12.01" y1="17" y2="17" />
+        </svg>
+      </div>
+      <h1 className="text-foreground mt-6 text-2xl font-semibold tracking-tight sm:text-3xl">
+        Đã xảy ra lỗi
+      </h1>
+      <p className="text-muted-foreground mt-3 max-w-md text-balance">
+        Có sự cố khi tải trang. Vui lòng thử lại — nếu vẫn lỗi, hãy tải lại trang.
+      </p>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <button
           type="button"
           onClick={() => unstable_retry()}
-          className="border-border bg-background hover:bg-muted mt-4 inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring inline-flex h-10 items-center justify-center rounded-full px-6 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
         >
           Thử lại
         </button>
+        <Link
+          href="/"
+          className="border-border bg-background hover:bg-muted text-foreground inline-flex h-10 items-center justify-center rounded-full border px-6 text-sm font-medium"
+        >
+          Về trang chủ
+        </Link>
       </div>
     </main>
   );

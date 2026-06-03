@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
  * and gmail_scope_required (partial grant). Both redirect here with ?error=.
  */
 
-const KNOWN_ERROR_CODES = ['consent_denied', 'gmail_scope_required'] as const;
+const KNOWN_ERROR_CODES = ['consent_denied', 'gmail_scope_required', 'signin_failed'] as const;
 type LoginErrorCode = (typeof KNOWN_ERROR_CODES)[number];
 
 function isKnownError(value: unknown): value is LoginErrorCode {

@@ -427,6 +427,10 @@
       "gmail_scope_required": {
         "body": "Sign in worked, but Gmail access wasn't granted. Click Sign in with Google and approve the Gmail permission to continue.",
         "title": "Gmail permission missing"
+      },
+      "signin_failed": {
+        "body": "Something interrupted sign-in before it finished. Click Sign in with Google to try again.",
+        "title": "Sign-in didn't complete"
       }
     },
     "everywhere": "End-to-end · SOC 2 Type II in progress",
