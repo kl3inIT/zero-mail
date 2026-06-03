@@ -50,9 +50,10 @@ public class LemonSqueezyCheckoutClient {
             return failure("{}", null, "lemon_squeezy_not_configured");
         }
 
-        Map<String, Object> requestBody = createCheckoutRequest(plan, tenantId, userEmail);
-        String requestJsonb = writeJson(requestBody);
+        String requestJsonb = "{}";
         try {
+            Map<String, Object> requestBody = createCheckoutRequest(plan, tenantId, userEmail);
+            requestJsonb = writeJson(requestBody);
             String responseBody =
                     restClientBuilder
                             .clone()
@@ -69,6 +70,11 @@ public class LemonSqueezyCheckoutClient {
             return checkoutCreation(requestJsonb, responseBody);
         } catch (RestClientException | IllegalArgumentException checkoutCreationFailure) {
             return failure(requestJsonb, null, checkoutCreationFailure.getClass().getSimpleName());
+        } catch (Exception unexpectedException) {
+            return failure(
+                    requestJsonb,
+                    null,
+                    "unexpected_" + unexpectedException.getClass().getSimpleName());
         }
     }
 
