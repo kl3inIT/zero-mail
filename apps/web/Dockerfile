@@ -86,6 +86,11 @@ ENV HOSTNAME=0.0.0.0
 COPY --from=builder --chown=1654:1654 /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=1654:1654 /app/apps/web/.next/static     ./apps/web/.next/static
 COPY --from=builder --chown=1654:1654 /app/apps/web/public           ./apps/web/public
+# Legal/docs MDX is read from disk at runtime by lib/docs/loader.ts. The
+# Turbopack production build can't trace the dynamic `${slug}.${locale}.mdx`
+# path, so copy the bundle explicitly to the cwd-relative location the loader
+# probes first (server runs `node apps/web/server.js` from /app → /app/apps/web/docs).
+COPY --from=builder --chown=1654:1654 /app/apps/web/docs             ./apps/web/docs
 
 USER 1654:1654
 
