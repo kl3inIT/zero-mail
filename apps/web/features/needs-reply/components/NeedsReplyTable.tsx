@@ -60,6 +60,8 @@ export function NeedsReplyTable({
         onBucketChange={onBucketChange}
       />
 
+      <p className="text-muted-foreground text-sm">{t(bucketHintKey(activeBucket))}</p>
+
       {isClassifying ? (
         <Alert variant="warning" className="border-warning/40 bg-warning/5">
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -109,6 +111,17 @@ export function NeedsReplyTable({
       )}
     </div>
   );
+}
+
+function bucketHintKey(
+  activeBucket: NeedsReplyBucket,
+):
+  | 'needsReply.tabs.toReplyHint'
+  | 'needsReply.tabs.awaitingReplyHint'
+  | 'needsReply.tabs.draftedHint' {
+  if (activeBucket === 'awaiting-their-reply') return 'needsReply.tabs.awaitingReplyHint';
+  if (activeBucket === 'drafted') return 'needsReply.tabs.draftedHint';
+  return 'needsReply.tabs.toReplyHint';
 }
 
 function NeedsReplySkeletonRows() {

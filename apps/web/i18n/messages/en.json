@@ -1854,10 +1854,13 @@
     },
     "tabs": {
       "awaitingReply": "Awaiting reply",
+      "awaitingReplyHint": "You've replied — waiting on the other side to respond.",
       "drafted": "Drafted",
+      "draftedHint": "Zero Mail prepared a Gmail draft for you to review and send.",
       "label": "Needs-reply buckets",
       "resolved": "Resolved",
-      "toReply": "To reply"
+      "toReply": "To reply",
+      "toReplyHint": "Emails from others that are waiting on your reply."
     },
     "toast": {
       "backfillDone": "Inbox synced — your needs-reply list is up to date.",

@@ -1854,10 +1854,13 @@
     },
     "tabs": {
       "awaitingReply": "Đang chờ trả lời",
+      "awaitingReplyHint": "Bạn đã trả lời, đang chờ phía họ phản hồi lại.",
       "drafted": "Đã sinh nháp",
+      "draftedHint": "Zero Mail đã soạn nháp sẵn trong Gmail, chờ bạn xem và gửi.",
       "label": "Hộp thư cần trả lời",
       "resolved": "Đã xử lý",
-      "toReply": "Cần trả lời"
+      "toReply": "Cần trả lời",
+      "toReplyHint": "Email người khác gửi đang chờ bạn phản hồi."
     },
     "toast": {
       "backfillDone": "Đã đồng bộ hộp thư — danh sách cần trả lời đã được cập nhật.",
