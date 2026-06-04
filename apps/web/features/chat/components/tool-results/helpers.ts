@@ -47,6 +47,7 @@ export type EmailRowData = {
   snippet?: string;
   date?: string;
   isUnread?: boolean;
+  hasAttachment?: boolean;
 };
 
 export type RuleRow = {

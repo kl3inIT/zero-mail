@@ -114,15 +114,19 @@ describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
     expect(src).toMatch(/notFound\(\)/);
   });
 
-  it('lib/docs/loader.ts exists with deterministic path resolver (no process.cwd())', () => {
+  it('lib/docs/loader.ts resolves the docs dir via cwd candidates + a file-relative fallback', () => {
     expect(existsSync(DOCS_LOADER)).toBe(true);
     const src = readFileSync(DOCS_LOADER, 'utf8');
-    // Must use either path.resolve(__dirname, ...) OR fileURLToPath(import.meta.url)
-    const deterministic =
-      /path\.resolve\(\s*__dirname/.test(src) || /fileURLToPath\(\s*import\.meta\.url/.test(src);
-    expect(deterministic).toBe(true);
-    // Must NOT use process.cwd() for the docs dir resolution
-    expect(src).not.toMatch(/process\.cwd\(\)/);
+    // Turbopack (Next 16 default) inlines import.meta.url/__dirname to a literal
+    // /ROOT path that does not exist in the standalone runtime, so the loader must
+    // anchor on process.cwd() candidates first. The file-relative path stays only
+    // as the webpack-dev fallback. See loader.ts resolveDocsDir() for the rationale.
+    expect(src).toMatch(/process\.cwd\(\)/);
+    const fileRelativeFallback =
+      /path\.resolve\(\s*__dirname/.test(src) ||
+      /fileURLToPath\(\s*import\.meta\.url/.test(src) ||
+      /path\.resolve\(\s*FILE_RELATIVE_HERE/.test(src);
+    expect(fileRelativeFallback).toBe(true);
   });
 
   it('docs/[slug]/loading.tsx exists', () => {

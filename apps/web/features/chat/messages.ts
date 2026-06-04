@@ -15,6 +15,10 @@ export const chatMessages = {
     vi: 'Tin nhắn mới',
     en: 'New message',
   },
+  'chat.history.collapse': {
+    vi: 'Thu gọn lịch sử',
+    en: 'Collapse history',
+  },
   'chat.history.empty': {
     vi: 'Chưa có cuộc trò chuyện',
     en: 'No conversations yet',
@@ -30,6 +34,22 @@ export const chatMessages = {
   'chat.history.deleted': {
     vi: 'Đã xóa cuộc trò chuyện',
     en: 'Conversation deleted',
+  },
+  'chat.greeting.night': {
+    vi: 'Chào bạn{name}',
+    en: 'Hey there{name}',
+  },
+  'chat.greeting.morning': {
+    vi: 'Chào buổi sáng{name}',
+    en: 'Good morning{name}',
+  },
+  'chat.greeting.afternoon': {
+    vi: 'Chào buổi chiều{name}',
+    en: 'Good afternoon{name}',
+  },
+  'chat.greeting.evening': {
+    vi: 'Chào buổi tối{name}',
+    en: 'Good evening{name}',
   },
   'chat.empty.title': {
     vi: 'Bắt đầu trò chuyện với Zero Mail',
@@ -144,7 +164,7 @@ export const chatMessages = {
     en: 'Body',
   },
   'chat.preview.sourceThread': {
-    vi: 'Thread nguồn',
+    vi: 'Chuỗi hội thoại gốc',
     en: 'Source thread',
   },
   'chat.preview.outsideSourceThread': {
@@ -222,6 +242,10 @@ export const chatMessages = {
   'chat.preview.then': {
     vi: 'Thì',
     en: 'Then',
+  },
+  'chat.preview.ruleEditHint': {
+    vi: 'Sửa nội dung "Khi" sẽ tính lại điều kiện và hành động khi bạn xác nhận.',
+    en: 'Editing the "When" text recompiles the condition and action when you confirm.',
   },
   'chat.preview.sender': {
     vi: 'Người gửi',

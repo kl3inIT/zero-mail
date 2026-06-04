@@ -1,6 +1,7 @@
 import { useTranslations } from 'next-intl';
 
 import { Textarea } from '@/components/ui/textarea';
+import { CopyButton } from '@/features/chat/components/preview-card/copy-button';
 import {
   type PreviewCardAction,
   textValue,
@@ -54,7 +55,10 @@ export function SendEmailBody({
             onChange={(event) => onOverrideChange('body', event.currentTarget.value)}
           />
         ) : (
-          <span className="whitespace-pre-wrap">{draftBody}</span>
+          <div className="space-y-1">
+            <span className="whitespace-pre-wrap">{draftBody}</span>
+            {draftBody && <CopyButton text={draftBody} className="mt-1" />}
+          </div>
         )}
       </Field>
     </dl>

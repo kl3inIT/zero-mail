@@ -33,7 +33,9 @@ type BodySlotProps = {
 };
 
 export const BODY_SLOT_MAP: Record<BodySlotToolName, (props: BodySlotProps) => React.ReactNode> = {
-  createRule: ({ action }) => <CreateRuleBody action={action} />,
+  createRule: ({ action, editing, onOverrideChange }) => (
+    <CreateRuleBody action={action} editing={editing} onOverrideChange={onOverrideChange} />
+  ),
   deleteRule: ({ action }) => <DeleteRuleBody action={action} />,
   removeSenderFromSafetyNet: ({ action }) => <RemoveSenderFromSafetyNetBody action={action} />,
   bulkArchive: ({ action }) => <BulkArchiveBody action={action} />,
@@ -83,6 +85,19 @@ type PreviewCtaKey =
   | 'saveMemory'
   | 'updateInstructions'
   | 'send';
+
+// Only these body slots render editable fields when `editing` is toggled. The rest
+// (deleteRule, removeSenderFromSafetyNet, bulkArchive) are summary-only, so showing an Edit
+// button there is a dead control. createRule lets the user edit the rule name and the "When"
+// text; changing the text recompiles on confirm (backend).
+const EDITABLE_KINDS = new Set<BodySlotToolName>([
+  'createRule',
+  'saveMemory',
+  'updatePersonalInstructions',
+  'sendEmail',
+  'replyEmail',
+  'forwardEmail',
+]);
 
 function ctaKey(kind: BodySlotToolName): PreviewCtaKey {
   switch (kind) {
@@ -225,10 +240,14 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
       </CardContent>
       {computed.status === 'pending' && (
         <CardFooter className="border-border flex items-center justify-between gap-3 border-t px-4 py-3">
-          <Button type="button" variant="ghost" onClick={() => setEditing((current) => !current)}>
-            <Pencil className="size-4" />
-            {t('edit')}
-          </Button>
+          {EDITABLE_KINDS.has(action.kind) ? (
+            <Button type="button" variant="ghost" onClick={() => setEditing((current) => !current)}>
+              <Pencil className="size-4" />
+              {t('edit')}
+            </Button>
+          ) : (
+            <span />
+          )}
           <div className="flex items-center gap-2">
             <Button
               type="button"

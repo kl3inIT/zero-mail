@@ -1,9 +1,12 @@
+import { gmailMessageUrl } from './gmail-url';
 import { asArray, asString, formatRelativeDate, getField } from './helpers';
+import { OpenInGmailLink } from './open-in-gmail-link';
 import { SubtleToolCollapsible } from './subtle-tool-collapsible';
 import { ToolDetailRow } from './tool-detail-row';
 
 export function GetMessageResult({ input, output }: { input: unknown; output: unknown }) {
-  const messageId = asString(getField(input, 'messageId'));
+  const messageId =
+    asString(getField(input, 'messageId')) ?? asString(getField(output, 'messageId'));
   const subject = asString(getField(output, 'subject'));
   const from = asString(getField(output, 'from'));
   const to = asArray<string>(getField(output, 'to'));
@@ -22,9 +25,7 @@ export function GetMessageResult({ input, output }: { input: unknown; output: un
           {bodyText}
         </div>
       )}
-      {!subject && !bodyText && messageId && (
-        <ToolDetailRow label="Message ID" value={<code className="text-xs">{messageId}</code>} />
-      )}
+      {messageId && <OpenInGmailLink href={gmailMessageUrl(messageId)} />}
     </SubtleToolCollapsible>
   );
 }

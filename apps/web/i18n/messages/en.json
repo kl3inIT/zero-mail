@@ -585,8 +585,15 @@
       "body": "Ask about your inbox, rules, or draft email — Zero Mail sends only after confirmation.",
       "title": "Start a conversation with Zero Mail"
     },
+    "greeting": {
+      "afternoon": "Good afternoon{name}",
+      "evening": "Good evening{name}",
+      "morning": "Good morning{name}",
+      "night": "Hey there{name}"
+    },
     "history": {
       "actions": "Chat actions",
+      "collapse": "Collapse history",
       "delete": "Delete",
       "deleted": "Conversation deleted",
       "empty": "No conversations yet",
@@ -621,6 +628,7 @@
       "outsideSourceThread": "Added by AI · verify",
       "overwriteNotice": "Will overwrite current instructions",
       "removeSender": "Remove from safety net",
+      "ruleEditHint": "Editing the \"When\" text recompiles the condition and action when you confirm.",
       "ruleName": "Rule name",
       "saveMemory": "Save to knowledge",
       "saving": "Saving...",
@@ -1323,6 +1331,7 @@
   "landing": {
     "continueSetupCta": "Continue setup",
     "eyebrow": "Gmail · Private beta · v1",
+    "getStartedCta": "Get started free",
     "heading": {
       "accent": "what matters.",
       "line1": "Let AI handle email,",
@@ -1337,8 +1346,7 @@
     "primaryCta": "Sign in",
     "secondaryCta": "See features",
     "tagline": "Zero Mail reads, sorts, and drafts replies for your Gmail — by rules you write in plain English. No more 30-minute morning triage.",
-    "videoPlaceholder": "Product demo coming soon",
-    "getStartedCta": "Get started free"
+    "videoPlaceholder": "Product demo coming soon"
   },
   "landingFaq": {
     "header": {
@@ -1846,10 +1854,13 @@
     },
     "tabs": {
       "awaitingReply": "Awaiting reply",
+      "awaitingReplyHint": "You've replied — waiting on the other side to respond.",
       "drafted": "Drafted",
+      "draftedHint": "Zero Mail prepared a Gmail draft for you to review and send.",
       "label": "Needs-reply buckets",
       "resolved": "Resolved",
-      "toReply": "To reply"
+      "toReply": "To reply",
+      "toReplyHint": "Emails from others that are waiting on your reply."
     },
     "toast": {
       "backfillDone": "Inbox synced — your needs-reply list is up to date.",

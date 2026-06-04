@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import { ErrorCode } from '@/lib/api/error-codes';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
@@ -273,11 +274,15 @@ export function RulesWorkspace() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const searchParamsTab = normalizeRulesTab(searchParams.get('tab'));
-  const [activeTab, setActiveTabState] = useState<RulesTab>(searchParamsTab);
+  const activeTab = normalizeRulesTab(searchParams.get('tab'));
+  // Base UI Tabs runs UNCONTROLLED (defaultValue): a click flips aria-selected immediately from
+  // base-ui's own state, with no dependency on the async router (a controlled value driven by
+  // router.replace left the clicked trigger reporting aria-selected="false" and flaked the
+  // rules-history e2e). defaultValue must stay stable across renders, so capture the initial tab
+  // once; the live URL-derived activeTab still drives the count-chip styling and the URL sync.
+  const [initialTab] = useState(activeTab);
 
   const setActiveTab = (nextTab: RulesTab) => {
-    setActiveTabState(nextTab);
     router.replace(`/rules?tab=${nextTab}`, { scroll: false });
   };
 
@@ -462,15 +467,38 @@ export function RulesWorkspace() {
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
   return (
     <div className="space-y-6">
-      <RulesTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{t('rules.page.title')}</h1>
+        <p className="text-muted-foreground text-sm">{t('rules.page.intro')}</p>
+      </header>
 
-      {activeTab === 'list' && (
-        <section
-          id="rules-tabpanel-list"
-          role="tabpanel"
-          aria-labelledby="rules-tab-list"
-          className="space-y-6"
-        >
+      <Tabs
+        defaultValue={initialTab}
+        onValueChange={(value) => setActiveTab(normalizeRulesTab(value))}
+      >
+        <div className="overflow-x-auto">
+          <TabsList className="h-9 min-w-max gap-0.5" aria-label={t('rules.tabs.label')}>
+            <TabsTrigger value="list" className="gap-2 px-3">
+              <span>{t('rules.tabs.list')}</span>
+              <span
+                className={cn(
+                  'bg-foreground/10 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
+                  activeTab === 'list' ? 'text-foreground' : 'text-muted-foreground',
+                )}
+              >
+                {rules.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="test" className="px-3">
+              {t('rules.tabs.test')}
+            </TabsTrigger>
+            <TabsTrigger value="history" className="px-3">
+              {t('rules.tabs.history')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="list" className="space-y-6">
           <RuleList
             rules={rules}
             selectedRuleId={state.selectedRuleId}
@@ -492,16 +520,9 @@ export function RulesWorkspace() {
               </Button>
             }
           />
-        </section>
-      )}
+        </TabsContent>
 
-      {activeTab === 'test' && (
-        <section
-          id="rules-tabpanel-test"
-          role="tabpanel"
-          aria-labelledby="rules-tab-test"
-          className="space-y-6"
-        >
+        <TabsContent value="test" className="space-y-6">
           <p className="text-muted-foreground text-sm">
             {t('rules.tabs.testIntro', { count: enabledRulesCount })}
           </p>
@@ -530,20 +551,13 @@ export function RulesWorkspace() {
               <GmailRuleTester enabledRulesCount={enabledRulesCount} />
             </TabsContent>
           </Tabs>
-        </section>
-      )}
+        </TabsContent>
 
-      {activeTab === 'history' && (
-        <section
-          id="rules-tabpanel-history"
-          role="tabpanel"
-          aria-labelledby="rules-tab-history"
-          className="space-y-4"
-        >
+        <TabsContent value="history" className="space-y-4">
           <p className="text-muted-foreground text-sm">{t('rules.tabs.historyIntro')}</p>
           <AuditLog />
-        </section>
-      )}
+        </TabsContent>
+      </Tabs>
 
       {/* Composer dialog — for creating and editing rules */}
       <Dialog
@@ -594,45 +608,6 @@ export function RulesWorkspace() {
 
 const RULES_TABS = ['list', 'test', 'history'] as const;
 type RulesTab = (typeof RULES_TABS)[number];
-
-function RulesTabBar({
-  activeTab,
-  onTabChange,
-}: {
-  activeTab: RulesTab;
-  onTabChange: (tab: RulesTab) => void;
-}) {
-  const t = useTranslations();
-  const tabLabel: Record<RulesTab, string> = {
-    list: t('rules.tabs.list'),
-    test: t('rules.tabs.test'),
-    history: t('rules.tabs.history'),
-  };
-
-  return (
-    <div
-      role="tablist"
-      aria-label={t('rules.tabs.label')}
-      className="bg-muted text-muted-foreground inline-flex w-full rounded-lg p-[3px]"
-    >
-      {RULES_TABS.map((tab) => (
-        <button
-          key={tab}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === tab}
-          aria-controls={`rules-tabpanel-${tab}`}
-          id={`rules-tab-${tab}`}
-          onPointerDown={() => onTabChange(tab)}
-          onClick={() => onTabChange(tab)}
-          className="text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring aria-selected:bg-background aria-selected:text-foreground relative inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1"
-        >
-          {tabLabel[tab]}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function normalizeRulesTab(value: string | null): RulesTab {
   return RULES_TABS.includes(value as RulesTab) ? (value as RulesTab) : 'list';

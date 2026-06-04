@@ -11,6 +11,18 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // Required for standalone output in pnpm monorepo: trace files from workspace root.
   outputFileTracingRoot: workspaceRoot,
+  // lib/docs/loader.ts reads `${slug}.${locale}.mdx` from disk at runtime. The
+  // path is built dynamically, so file tracing can't follow it and the MDX
+  // bundles are otherwise dropped from the standalone output — production
+  // /privacy, /terms, and /docs then render placeholder fallback copy. Force
+  // the docs dir into the trace for the routes that read it. (Dockerfile also
+  // copies apps/web/docs as a deterministic guarantee for the Turbopack build.)
+  outputFileTracingIncludes: {
+    '/privacy': ['./docs/**/*.mdx'],
+    '/terms': ['./docs/**/*.mdx'],
+    '/docs': ['./docs/**/*.mdx'],
+    '/docs/[slug]': ['./docs/**/*.mdx'],
+  },
   turbopack: {
     root: workspaceRoot,
   },

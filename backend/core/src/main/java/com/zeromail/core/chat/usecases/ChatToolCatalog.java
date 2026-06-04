@@ -117,7 +117,8 @@ public class ChatToolCatalog {
                         SearchInboxArgs.class),
                 tool(
                         ChatToolName.GET_MESSAGE,
-                        "Fetch one Gmail message for in-memory reasoning",
+                        "Fetch one Gmail message (headers + decoded plain-text body) by messageId"
+                                + " for in-memory reasoning. The body is transient and never stored.",
                         GetMessageArgs.class),
                 tool(
                         ChatToolName.LIST_LABELS,
@@ -125,7 +126,9 @@ public class ChatToolCatalog {
                         ListLabelsArgs.class),
                 tool(
                         ChatToolName.GET_THREAD,
-                        "Fetch thread metadata and participants",
+                        "Fetch thread metadata for a threadId: participants and the message ids it"
+                                + " contains (no bodies). Call getMessage on a message id to read"
+                                + " content.",
                         GetThreadArgs.class),
                 tool(ChatToolName.GET_RULE, "Fetch one saved Zero Mail rule", GetRuleArgs.class),
                 tool(ChatToolName.LIST_RULES, "List saved Zero Mail rules", ListRulesArgs.class),
@@ -137,11 +140,20 @@ public class ChatToolCatalog {
                         ChatToolName.SEARCH_MEMORIES,
                         "Search saved knowledge snippets and chat-saved memories",
                         SearchMemoriesArgs.class),
-                tool(ChatToolName.APPLY_LABEL, "Apply a Gmail label", ApplyLabelArgs.class),
-                tool(ChatToolName.REMOVE_LABEL, "Remove a Gmail label", RemoveLabelArgs.class),
+                tool(
+                        ChatToolName.APPLY_LABEL,
+                        "Apply a Gmail label to a message. messageId is the Gmail message id (from"
+                                + " searchInbox/getMessage). labelId is the label name or Gmail label"
+                                + " id; an unknown name is created.",
+                        ApplyLabelArgs.class),
+                tool(
+                        ChatToolName.REMOVE_LABEL,
+                        "Remove a Gmail label from a message. messageId is the Gmail message id;"
+                                + " labelId is the label name or Gmail label id.",
+                        RemoveLabelArgs.class),
                 tool(
                         ChatToolName.ARCHIVE_THREAD,
-                        "Archive a Gmail thread",
+                        "Archive a Gmail thread (remove it from the Inbox) by threadId",
                         ArchiveThreadArgs.class),
                 tool(ChatToolName.UPDATE_RULE, "Update an existing rule", UpdateRuleArgs.class),
                 tool(ChatToolName.DISABLE_RULE, "Disable an existing rule", DisableRuleArgs.class),
@@ -225,9 +237,9 @@ public class ChatToolCatalog {
 
     public record SearchMemoriesArgs(String query) {}
 
-    public record ApplyLabelArgs(String targetId, String labelId) {}
+    public record ApplyLabelArgs(String messageId, String labelId) {}
 
-    public record RemoveLabelArgs(String targetId, String labelId) {}
+    public record RemoveLabelArgs(String messageId, String labelId) {}
 
     public record ArchiveThreadArgs(String threadId) {}
 
