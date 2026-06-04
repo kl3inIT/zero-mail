@@ -62,11 +62,12 @@ RUN pnpm --filter web run build
 # ============================================================================
 FROM node:24-alpine AS runner
 
-# Upgrade the system npm to refresh bundled node_modules (brace-expansion,
-# picomatch, ip-address) that Trivy flags as CVE-vulnerable in old npm releases.
-# Next.js standalone does not invoke npm at runtime, so this only patches the
-# image surface for security scans.
+# Patch the image scan surface: upgrade libxml2 (CVE-2026-6732, DoS via crafted
+# XSD; base Alpine still ships 2.13.9-r0) and refresh the system npm so bundled
+# node_modules (brace-expansion, picomatch, ip-address) stop tripping Trivy.
+# Next.js standalone invokes neither at runtime — this is scan-surface only.
 RUN apk add --no-cache tini curl && \
+    apk upgrade --no-cache libxml2 && \
     rm -rf /var/cache/apk/* && \
     npm install -g npm@latest && \
     npm cache clean --force
