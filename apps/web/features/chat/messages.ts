@@ -160,7 +160,7 @@ export const chatMessages = {
     en: 'Body',
   },
   'chat.preview.sourceThread': {
-    vi: 'Thread nguồn',
+    vi: 'Chuỗi hội thoại gốc',
     en: 'Source thread',
   },
   'chat.preview.outsideSourceThread': {

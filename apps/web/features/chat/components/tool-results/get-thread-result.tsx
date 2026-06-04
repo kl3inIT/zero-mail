@@ -10,7 +10,7 @@ export function GetThreadResult({ input, output }: { input: unknown; output: unk
   const messageIds = asArray<string>(getField(output, 'messageIds')) ?? [];
   const lastActivityAt = asString(getField(output, 'lastActivityAt'));
   return (
-    <SubtleToolCollapsible title={`Xem chuỗi · ${messageIds.length} email`} defaultOpen>
+    <SubtleToolCollapsible title={`Chuỗi hội thoại · ${messageIds.length} email`} defaultOpen>
       {participants.length > 0 && (
         <p className="text-muted-foreground text-xs">Người tham gia: {participants.join(', ')}</p>
       )}
@@ -30,7 +30,9 @@ export function GetThreadResult({ input, output }: { input: unknown; output: unk
           ))}
         </div>
       )}
-      {threadId && <OpenInGmailLink href={gmailThreadUrl(threadId)} label="Mở chuỗi trong Gmail" />}
+      {threadId && (
+        <OpenInGmailLink href={gmailThreadUrl(threadId)} label="Mở chuỗi hội thoại trong Gmail" />
+      )}
     </SubtleToolCollapsible>
   );
 }
