@@ -274,10 +274,13 @@ export function RulesWorkspace() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Derive the active tab from the URL every render (the same pattern Needs-reply uses). A local
-  // useState copy does not re-sync after navigation, which left the Base UI Tabs `value` stale and
-  // the clicked trigger reporting aria-selected="false".
   const activeTab = normalizeRulesTab(searchParams.get('tab'));
+  // Base UI Tabs runs UNCONTROLLED (defaultValue): a click flips aria-selected immediately from
+  // base-ui's own state, with no dependency on the async router (a controlled value driven by
+  // router.replace left the clicked trigger reporting aria-selected="false" and flaked the
+  // rules-history e2e). defaultValue must stay stable across renders, so capture the initial tab
+  // once; the live URL-derived activeTab still drives the count-chip styling and the URL sync.
+  const [initialTab] = useState(activeTab);
 
   const setActiveTab = (nextTab: RulesTab) => {
     router.replace(`/rules?tab=${nextTab}`, { scroll: false });
@@ -469,7 +472,10 @@ export function RulesWorkspace() {
         <p className="text-muted-foreground text-sm">{t('rules.page.intro')}</p>
       </header>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(normalizeRulesTab(value))}>
+      <Tabs
+        defaultValue={initialTab}
+        onValueChange={(value) => setActiveTab(normalizeRulesTab(value))}
+      >
         <div className="overflow-x-auto">
           <TabsList className="h-9 min-w-max gap-0.5" aria-label={t('rules.tabs.label')}>
             <TabsTrigger value="list" className="gap-2 px-3">
