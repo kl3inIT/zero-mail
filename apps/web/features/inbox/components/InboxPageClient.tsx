@@ -1768,7 +1768,11 @@ function InlineAssistantPreview({
   // the first card; the rest are dropped and their pending actions expire instead of each firing
   // POST /confirm and sending the email again.
   const firstToolPart = autoConfirm
-    ? visibleParts.find(({ part }) => part.type.startsWith('tool-'))
+    ? visibleParts.find(
+        ({ part }) =>
+          part.type.startsWith('tool-') &&
+          isBodySlotToolName(toolNameFromPart(part as ToolLikePart)),
+      )
     : undefined;
   const allowedAutoConfirmKey = firstToolPart
     ? `${firstToolPart.message.id}-${firstToolPart.index}`

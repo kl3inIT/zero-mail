@@ -1,5 +1,6 @@
 package com.zeromail.core.composer.usecases;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
@@ -96,18 +97,17 @@ public class ComposerDraftService {
                 String updatedDraftId =
                         triageGmailWriter.updateDraftMessage(
                                 tenantId, command.draftId(), draftMessage, command.gmailThreadId());
-                log.info(
-                        "event=composer_draft_updated tenantId={} gmailThreadId={}",
-                        tenantId,
-                        redact(command.gmailThreadId()));
+                log.info("event=composer_draft_updated tenantId={}", tenantId);
                 return toSnapshot(updatedDraftId, command);
-            } catch (IOException draftUpdateMiss) {
-                // The known draft was removed out from under us (sent or discarded on another
-                // device). Fall through to the list-or-create path so the user keeps an autosave.
-                log.info(
-                        "event=composer_draft_update_miss tenantId={} reason={}",
-                        tenantId,
-                        draftUpdateMiss.getClass().getSimpleName());
+            } catch (GoogleJsonResponseException draftUpdateFailure) {
+                // Only a 404 means the known draft is gone (sent or discarded on another device) —
+                // fall through to list-or-create so the user keeps an autosave. Any other Gmail
+                // error is a real failure and must propagate, not be masked into a fallback that
+                // would create a duplicate draft.
+                if (draftUpdateFailure.getStatusCode() != 404) {
+                    throw draftUpdateFailure;
+                }
+                log.info("event=composer_draft_update_miss tenantId={} status=404", tenantId);
             }
         }
 
