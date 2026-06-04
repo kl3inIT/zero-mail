@@ -31,6 +31,18 @@ export const needsReplyMessages = {
     vi: 'Đã xử lý',
     en: 'Resolved',
   },
+  'needsReply.tabs.toReplyHint': {
+    vi: 'Email người khác gửi đang chờ bạn phản hồi.',
+    en: 'Emails from others that are waiting on your reply.',
+  },
+  'needsReply.tabs.awaitingReplyHint': {
+    vi: 'Bạn đã trả lời, đang chờ phía họ phản hồi lại.',
+    en: "You've replied — waiting on the other side to respond.",
+  },
+  'needsReply.tabs.draftedHint': {
+    vi: 'Zero Mail đã soạn nháp sẵn trong Gmail, chờ bạn xem và gửi.',
+    en: 'Zero Mail prepared a Gmail draft for you to review and send.',
+  },
   'needsReply.row.ageDays': {
     vi: 'Đợi {count} ngày',
     en: 'Waiting {count}d',

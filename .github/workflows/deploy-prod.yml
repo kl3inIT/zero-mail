@@ -98,8 +98,8 @@ jobs:
           script: |
             set -euo pipefail
             cd /apps/zero-mail
-            git fetch --quiet origin "refs/tags/${DEPLOY_TAG}":"refs/tags/${DEPLOY_TAG}"
-            git checkout --quiet "${DEPLOY_TAG}" -- docker-compose.yml
+            git fetch --quiet --force origin "refs/tags/${DEPLOY_TAG}":"refs/tags/${DEPLOY_TAG}"
+            git checkout --quiet "${DEPLOY_TAG}" -- docker/docker-compose.yml
             echo "::group::Snapshot previous image digests for rollback"
             docker inspect --format='zeromail-api {{index .Image}}' zeromail-api 2>/dev/null | tee /apps/zero-mail/.last-deploy.txt || true
             docker inspect --format='zeromail-worker {{index .Image}}' zeromail-worker 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
@@ -111,14 +111,14 @@ jobs:
             ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
             ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
             ZEROMAIL_ADMIN_IMAGE="ghcr.io/kl3init/zero-mail-admin:${DEPLOY_TAG}" \
-              docker compose pull api worker frontend admin
+              docker compose -f docker/docker-compose.yml pull api worker frontend admin
             echo "::endgroup::"
             echo "::group::Recreate prod containers"
             ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
             ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
             ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
             ZEROMAIL_ADMIN_IMAGE="ghcr.io/kl3init/zero-mail-admin:${DEPLOY_TAG}" \
-              docker compose up -d --no-build api worker frontend admin
+              docker compose -f docker/docker-compose.yml up -d --no-build api worker frontend admin
             echo "::endgroup::"
             echo "::group::Wait for prod readiness"
             for attempt in {1..60}; do
@@ -128,7 +128,7 @@ jobs:
               fi
               if [[ $attempt -eq 60 ]]; then
                 echo "::error::api failed readiness within 120s — initiating rollback"
-                docker compose logs --tail=200 api worker admin
+                docker compose -f docker/docker-compose.yml logs --tail=200 api worker admin
                 exit 1
               fi
               sleep 2

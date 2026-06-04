@@ -62,11 +62,12 @@ RUN pnpm --filter web run build
 # ============================================================================
 FROM node:24-alpine AS runner
 
-# Upgrade the system npm to refresh bundled node_modules (brace-expansion,
-# picomatch, ip-address) that Trivy flags as CVE-vulnerable in old npm releases.
-# Next.js standalone does not invoke npm at runtime, so this only patches the
-# image surface for security scans.
+# Patch the image scan surface: upgrade libxml2 (CVE-2026-6732, DoS via crafted
+# XSD; base Alpine still ships 2.13.9-r0) and refresh the system npm so bundled
+# node_modules (brace-expansion, picomatch, ip-address) stop tripping Trivy.
+# Next.js standalone invokes neither at runtime — this is scan-surface only.
 RUN apk add --no-cache tini curl && \
+    apk upgrade --no-cache libxml2 && \
     rm -rf /var/cache/apk/* && \
     npm install -g npm@latest && \
     npm cache clean --force
@@ -85,6 +86,11 @@ ENV HOSTNAME=0.0.0.0
 COPY --from=builder --chown=1654:1654 /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=1654:1654 /app/apps/web/.next/static     ./apps/web/.next/static
 COPY --from=builder --chown=1654:1654 /app/apps/web/public           ./apps/web/public
+# Legal/docs MDX is read from disk at runtime by lib/docs/loader.ts. The
+# Turbopack production build can't trace the dynamic `${slug}.${locale}.mdx`
+# path, so copy the bundle explicitly to the cwd-relative location the loader
+# probes first (server runs `node apps/web/server.js` from /app → /app/apps/web/docs).
+COPY --from=builder --chown=1654:1654 /app/apps/web/docs             ./apps/web/docs
 
 USER 1654:1654
 

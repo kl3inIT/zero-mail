@@ -1,7 +1,26 @@
 import { render } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NextIntlClientProvider } from 'next-intl';
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { hasToolResultRenderer, renderToolResult } from '@/features/chat/components/tool-results';
+import enMessages from '@/i18n/messages/en.json';
+
+// Several tool-result renderers use next-intl (useTranslations) and TanStack Query
+// (inline email cards fetch the body on expand), so the smoke render needs both providers.
+function ProviderShell({ children }: { children: ReactNode }) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return (
+    <QueryClientProvider client={queryClient}>
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        {children}
+      </NextIntlClientProvider>
+    </QueryClientProvider>
+  );
+}
 
 const TOOL_NAMES = [
   'searchInbox',
@@ -158,7 +177,7 @@ describe('tool-results render smoke', () => {
         output: fixture.output,
       });
       expect(rendered, `renderToolResult returned null for ${toolName}`).not.toBeNull();
-      const { container } = render(<>{rendered}</>);
+      const { container } = render(<ProviderShell>{rendered}</ProviderShell>);
       // Smoke test: each renderer must produce SOME DOM (not an empty fragment).
       expect(container.textContent ?? '').not.toBe('');
     });

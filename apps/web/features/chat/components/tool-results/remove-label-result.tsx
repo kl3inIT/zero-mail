@@ -1,6 +1,7 @@
 import { TagsIcon } from 'lucide-react';
 
 import { asString, getField } from './helpers';
+import { InlineEmailCard } from './inline-email-card';
 import { StatusLine } from './status-line';
 import { SubtleToolCollapsible } from './subtle-tool-collapsible';
 
@@ -12,9 +13,15 @@ export function RemoveLabelResult({ input, output }: { input: unknown; output: u
   return (
     <SubtleToolCollapsible title={`Đã gỡ nhãn "${labelName}"`}>
       <StatusLine icon={TagsIcon}>
-        Gỡ nhãn <strong>{labelName}</strong> khỏi email{' '}
-        {messageId ? <code className="text-[11px]">{messageId}</code> : ''}.
+        Gỡ nhãn <strong>{labelName}</strong>
+        {messageId ? ' khỏi email:' : '.'}
       </StatusLine>
+      {messageId && (
+        <InlineEmailCard
+          email={{ messageId, threadId: messageId }}
+          fallbackTitle="Email đã gỡ nhãn"
+        />
+      )}
     </SubtleToolCollapsible>
   );
 }

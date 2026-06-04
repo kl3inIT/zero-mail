@@ -1,4 +1,6 @@
+import { GMAIL_DRAFTS_URL } from './gmail-url';
 import { asString, getField } from './helpers';
+import { OpenInGmailLink } from './open-in-gmail-link';
 import { SubtleToolCollapsible } from './subtle-tool-collapsible';
 import { ToolDetailRow } from './tool-detail-row';
 
@@ -16,9 +18,7 @@ export function SaveDraftResult({ input, output }: { input: unknown; output: unk
           {body}
         </div>
       )}
-      {draftId && (
-        <ToolDetailRow label="Draft ID" value={<code className="text-[11px]">{draftId}</code>} />
-      )}
+      {draftId && <OpenInGmailLink href={GMAIL_DRAFTS_URL} label="Mở thư nháp trong Gmail" />}
     </SubtleToolCollapsible>
   );
 }

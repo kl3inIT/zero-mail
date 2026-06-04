@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs';
+import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
@@ -17,10 +17,39 @@ import { z } from 'zod';
  *
  * This module is server-only (uses fs/path); never import from a client component.
  */
-const HERE =
+const FILE_RELATIVE_HERE =
   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
-export const DOCS_DIR = path.resolve(HERE, '../../docs');
+/**
+ * Resolve the docs dir at module load by probing known runtime layouts in
+ * priority order.
+ *
+ * `import.meta.url` / __dirname is NOT reliable for the production build: Next
+ * 16 builds with Turbopack by default (only `next dev --webpack` opts out),
+ * and Turbopack inlines this module's location as the static literal
+ * `/ROOT/apps/web/lib/docs`. The file-relative `../../docs` therefore resolves
+ * to `/ROOT/apps/web/docs`, a path that does not exist in the standalone
+ * runtime (cwd = the monorepo root, e.g. /app). The read fails and every legal
+ * page silently falls back to placeholder copy.
+ *
+ * We anchor on process.cwd() instead, which is stable per deploy target, and
+ * keep the file-relative path only as the webpack-dev fallback:
+ *  - <cwd>/apps/web/docs : standalone server (`node apps/web/server.js` from
+ *    the monorepo root); docs shipped here by the Dockerfile +
+ *    outputFileTracingIncludes.
+ *  - <cwd>/docs          : `next dev` / `next start` run from apps/web.
+ *  - <module dir>/../../docs : last-resort file-relative (webpack dev only).
+ */
+function resolveDocsDir(): string {
+  const candidates = [
+    path.join(process.cwd(), 'apps', 'web', 'docs'),
+    path.join(process.cwd(), 'docs'),
+    path.resolve(FILE_RELATIVE_HERE, '../../docs'),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[candidates.length - 1];
+}
+
+export const DOCS_DIR = resolveDocsDir();
 
 export const FrontmatterSchema = z.object({
   title: z.string().min(1),

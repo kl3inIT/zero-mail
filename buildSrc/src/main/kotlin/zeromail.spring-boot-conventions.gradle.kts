@@ -5,6 +5,12 @@ plugins {
     id("io.spring.dependency-management")
 }
 
+// Override the Boot-managed OpenTelemetry version to patch CVE-2026-45292
+// (unbounded memory in W3C Baggage propagation). Boot 4.0.6 manages 1.55.0;
+// the fix lands in 1.62.0. OTel keeps API/ABI stability across 1.x minors, so
+// the io.spring.dependency-management property override is safe here.
+extra["opentelemetry.version"] = "1.62.0"
+
 configure<DependencyManagementExtension> {
     imports {
         mavenBom("org.springframework.boot:spring-boot-dependencies:4.0.6")

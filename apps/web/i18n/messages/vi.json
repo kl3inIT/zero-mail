@@ -585,8 +585,15 @@
       "body": "Hỏi về inbox, quy tắc, hoặc soạn email — Zero Mail chỉ gửi sau khi bạn xác nhận.",
       "title": "Bắt đầu trò chuyện với Zero Mail"
     },
+    "greeting": {
+      "afternoon": "Chào buổi chiều{name}",
+      "evening": "Chào buổi tối{name}",
+      "morning": "Chào buổi sáng{name}",
+      "night": "Chào bạn{name}"
+    },
     "history": {
       "actions": "Thao tác trò chuyện",
+      "collapse": "Thu gọn lịch sử",
       "delete": "Xóa",
       "deleted": "Đã xóa cuộc trò chuyện",
       "empty": "Chưa có cuộc trò chuyện",
@@ -621,13 +628,14 @@
       "outsideSourceThread": "Thêm bởi AI · xác minh",
       "overwriteNotice": "Sẽ ghi đè hướng dẫn hiện tại",
       "removeSender": "Bỏ khỏi danh sách an toàn",
+      "ruleEditHint": "Sửa nội dung \"Khi\" sẽ tính lại điều kiện và hành động khi bạn xác nhận.",
       "ruleName": "Tên quy tắc",
       "saveMemory": "Lưu vào kho kiến thức",
       "saving": "Đang lưu...",
       "send": "Gửi qua Gmail",
       "sender": "Người gửi",
       "sent": "Đã gửi",
-      "sourceThread": "Thread nguồn",
+      "sourceThread": "Chuỗi hội thoại gốc",
       "subject": "Tiêu đề",
       "syncing": "Đang đồng bộ — Gửi sẽ bật ngay khi sẵn sàng",
       "then": "Thì",
@@ -1320,6 +1328,7 @@
   "landing": {
     "continueSetupCta": "Tiếp tục thiết lập",
     "eyebrow": "Gmail · Private beta · v1",
+    "getStartedCta": "Bắt đầu miễn phí",
     "heading": {
       "accent": "quan trọng.",
       "line1": "Để AI lo email,",
@@ -1334,8 +1343,7 @@
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem tính năng",
     "tagline": "Zero Mail tự động đọc, phân loại và soạn sẵn câu trả lời cho Gmail của bạn — theo quy tắc bạn viết bằng tiếng Việt. Không còn cảnh mỗi sáng mở hộp thư và ngồi lọc 30 phút.",
-    "videoPlaceholder": "Video demo sẽ sớm có mặt",
-    "getStartedCta": "Bắt đầu miễn phí"
+    "videoPlaceholder": "Video demo sẽ sớm có mặt"
   },
   "landingFaq": {
     "header": {
@@ -1843,10 +1851,13 @@
     },
     "tabs": {
       "awaitingReply": "Đang chờ trả lời",
+      "awaitingReplyHint": "Bạn đã trả lời, đang chờ phía họ phản hồi lại.",
       "drafted": "Đã sinh nháp",
+      "draftedHint": "Zero Mail đã soạn nháp sẵn trong Gmail, chờ bạn xem và gửi.",
       "label": "Hộp thư cần trả lời",
       "resolved": "Đã xử lý",
-      "toReply": "Cần trả lời"
+      "toReply": "Cần trả lời",
+      "toReplyHint": "Email người khác gửi đang chờ bạn phản hồi."
     },
     "toast": {
       "backfillDone": "Đã đồng bộ hộp thư — danh sách cần trả lời đã được cập nhật.",
