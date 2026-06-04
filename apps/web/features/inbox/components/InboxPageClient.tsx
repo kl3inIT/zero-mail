@@ -37,6 +37,7 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { EmptyState } from '@/components/states/EmptyState';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -225,72 +226,19 @@ export function InboxPageClient() {
               ) : null}
             </div>
           </div>
-          <div
-            className="min-h-0 flex-1 overflow-y-auto"
+          <InboxMessageList
+            isPending={inboxQuery.isPending}
+            isSyncing={isSyncing}
+            messagesCount={messages.length}
+            filteredMessages={filteredMessages}
+            selectedMessageId={selectedMessageId}
+            locale={locale}
+            onSelect={setRequestedSelectedMessageId}
             onScroll={handleListScroll}
-            data-testid="inbox-message-list"
-          >
-            {inboxQuery.isPending ? (
-              <InboxListSkeleton />
-            ) : isSyncing ? (
-              <div className="flex h-full items-center justify-center p-6">
-                <div
-                  className="flex max-w-sm flex-col items-center gap-2 text-center"
-                  data-testid="inbox-syncing-banner"
-                >
-                  <Loader2
-                    className="text-muted-foreground size-5 animate-spin"
-                    aria-hidden="true"
-                  />
-                  <p className="text-foreground text-sm font-medium">
-                    {t('inbox.state.syncing.title')}
-                  </p>
-                  <p className="text-muted-foreground text-xs">{t('inbox.state.syncing.body')}</p>
-                </div>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex h-full items-center justify-center p-6">
-                <EmptyState
-                  heading={t('inbox.state.empty.title')}
-                  body={t('inbox.state.empty.body')}
-                />
-              </div>
-            ) : filteredMessages.length === 0 ? (
-              <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center text-sm">
-                {t('inbox.search.empty')}
-              </div>
-            ) : (
-              <div className="divide-border divide-y">
-                {filteredMessages.map((message) => (
-                  <InboxMessageRow
-                    key={message.gmailMessageId}
-                    message={message}
-                    active={message.gmailMessageId === selectedMessageId}
-                    locale={locale}
-                    onSelect={() => setRequestedSelectedMessageId(message.gmailMessageId)}
-                  />
-                ))}
-                {inboxQuery.hasNextPage ? (
-                  <div className="flex justify-center p-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={loadNextPage}
-                      disabled={inboxQuery.isFetchingNextPage}
-                    >
-                      {inboxQuery.isFetchingNextPage ? (
-                        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                      ) : null}
-                      {inboxQuery.isFetchingNextPage
-                        ? t('inbox.action.loadingMore')
-                        : t('inbox.action.loadMore')}
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
+            hasNextPage={Boolean(inboxQuery.hasNextPage)}
+            isFetchingNextPage={inboxQuery.isFetchingNextPage}
+            onLoadMore={loadNextPage}
+          />
         </section>
 
         <section
@@ -311,6 +259,120 @@ export function InboxPageClient() {
           />
         </section>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Virtualized inbox list panel. Extracted from {@link InboxPageClient} so the React Compiler
+ * opt-out triggered by TanStack Virtual's `useVirtualizer` (its returned functions can't be
+ * memoized) is scoped to this small component instead of de-optimizing the whole page. Owns the
+ * scroll container, infinite-load on-scroll, and the load-more footer.
+ */
+function InboxMessageList({
+  isPending,
+  isSyncing,
+  messagesCount,
+  filteredMessages,
+  selectedMessageId,
+  locale,
+  onSelect,
+  onScroll,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
+}: {
+  isPending: boolean;
+  isSyncing: boolean;
+  messagesCount: number;
+  filteredMessages: InboxMessage[];
+  selectedMessageId: string | null;
+  locale: string;
+  onSelect: (gmailMessageId: string) => void;
+  onScroll: (event: UIEvent<HTMLDivElement>) => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
+}) {
+  const t = useTranslations();
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: filteredMessages.length,
+    getScrollElement: () => listScrollRef.current,
+    estimateSize: () => 76,
+    overscan: 8,
+    getItemKey: (index) => filteredMessages[index]?.gmailMessageId ?? index,
+  });
+
+  return (
+    <div
+      ref={listScrollRef}
+      className="min-h-0 flex-1 overflow-y-auto"
+      onScroll={onScroll}
+      data-testid="inbox-message-list"
+    >
+      {isPending ? (
+        <InboxListSkeleton />
+      ) : isSyncing ? (
+        <div className="flex h-full items-center justify-center p-6">
+          <div
+            className="flex max-w-sm flex-col items-center gap-2 text-center"
+            data-testid="inbox-syncing-banner"
+          >
+            <Loader2 className="text-muted-foreground size-5 animate-spin" aria-hidden="true" />
+            <p className="text-foreground text-sm font-medium">{t('inbox.state.syncing.title')}</p>
+            <p className="text-muted-foreground text-xs">{t('inbox.state.syncing.body')}</p>
+          </div>
+        </div>
+      ) : messagesCount === 0 ? (
+        <div className="flex h-full items-center justify-center p-6">
+          <EmptyState heading={t('inbox.state.empty.title')} body={t('inbox.state.empty.body')} />
+        </div>
+      ) : filteredMessages.length === 0 ? (
+        <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center text-sm">
+          {t('inbox.search.empty')}
+        </div>
+      ) : (
+        <>
+          <div className="relative w-full" style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const message = filteredMessages[virtualRow.index];
+              return (
+                <div
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  ref={rowVirtualizer.measureElement}
+                  className="border-border absolute top-0 left-0 w-full border-b"
+                  style={{ transform: `translateY(${virtualRow.start}px)` }}
+                >
+                  <InboxMessageRow
+                    message={message}
+                    active={message.gmailMessageId === selectedMessageId}
+                    locale={locale}
+                    onSelect={() => onSelect(message.gmailMessageId)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          {hasNextPage ? (
+            <div className="flex justify-center p-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onLoadMore}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : null}
+                {isFetchingNextPage ? t('inbox.action.loadingMore') : t('inbox.action.loadMore')}
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
