@@ -31,6 +31,22 @@ export const chatMessages = {
     vi: 'Đã xóa cuộc trò chuyện',
     en: 'Conversation deleted',
   },
+  'chat.greeting.night': {
+    vi: 'Chào bạn{name}',
+    en: 'Hey there{name}',
+  },
+  'chat.greeting.morning': {
+    vi: 'Chào buổi sáng{name}',
+    en: 'Good morning{name}',
+  },
+  'chat.greeting.afternoon': {
+    vi: 'Chào buổi chiều{name}',
+    en: 'Good afternoon{name}',
+  },
+  'chat.greeting.evening': {
+    vi: 'Chào buổi tối{name}',
+    en: 'Good evening{name}',
+  },
   'chat.empty.title': {
     vi: 'Bắt đầu trò chuyện với Zero Mail',
     en: 'Start a conversation with Zero Mail',

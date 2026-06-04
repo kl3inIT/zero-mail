@@ -585,6 +585,12 @@
       "body": "Hỏi về inbox, quy tắc, hoặc soạn email — Zero Mail chỉ gửi sau khi bạn xác nhận.",
       "title": "Bắt đầu trò chuyện với Zero Mail"
     },
+    "greeting": {
+      "afternoon": "Chào buổi chiều{name}",
+      "evening": "Chào buổi tối{name}",
+      "morning": "Chào buổi sáng{name}",
+      "night": "Chào bạn{name}"
+    },
     "history": {
       "actions": "Thao tác trò chuyện",
       "delete": "Xóa",
@@ -1323,6 +1329,7 @@
   "landing": {
     "continueSetupCta": "Tiếp tục thiết lập",
     "eyebrow": "Gmail · Private beta · v1",
+    "getStartedCta": "Bắt đầu miễn phí",
     "heading": {
       "accent": "quan trọng.",
       "line1": "Để AI lo email,",
@@ -1337,8 +1344,7 @@
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem tính năng",
     "tagline": "Zero Mail tự động đọc, phân loại và soạn sẵn câu trả lời cho Gmail của bạn — theo quy tắc bạn viết bằng tiếng Việt. Không còn cảnh mỗi sáng mở hộp thư và ngồi lọc 30 phút.",
-    "videoPlaceholder": "Video demo sẽ sớm có mặt",
-    "getStartedCta": "Bắt đầu miễn phí"
+    "videoPlaceholder": "Video demo sẽ sớm có mặt"
   },
   "landingFaq": {
     "header": {
