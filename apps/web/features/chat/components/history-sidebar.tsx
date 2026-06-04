@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquarePlus, MoreHorizontal, Trash2 } from 'lucide-react';
+import { MessageSquarePlus, MoreHorizontal, PanelLeftClose, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -31,28 +31,43 @@ export function HistorySidebar({
   activeChatId,
   onSelectChat,
   onNewChat,
+  onCollapse,
 }: {
   activeChatId: string | null;
   onSelectChat: (chatId: string) => void;
   onNewChat: () => void;
+  onCollapse?: () => void;
 }) {
   const t = useTranslations('chat.history');
   const history = useChatHistory();
   const deleteChat = useSoftDeleteChat();
 
   return (
-    <aside className="bg-secondary/50 border-border hidden w-[280px] shrink-0 flex-col border-r md:flex">
+    <aside className="bg-secondary/50 border-border hidden w-[260px] shrink-0 flex-col border-r md:flex">
       <div className="border-border flex items-center justify-between gap-2 border-b p-4">
         <h2 className="text-[17px] font-semibold">{t('title')}</h2>
-        <Button
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-          onClick={onNewChat}
-          aria-label={t('new')}
-        >
-          <MessageSquarePlus className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+            onClick={onNewChat}
+            aria-label={t('new')}
+          >
+            <MessageSquarePlus className="size-4" />
+          </Button>
+          {onCollapse && (
+            <Button
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+              onClick={onCollapse}
+              aria-label={t('collapse')}
+            >
+              <PanelLeftClose className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-auto p-2">
         {history.isLoading && (

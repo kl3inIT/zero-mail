@@ -593,6 +593,7 @@
     },
     "history": {
       "actions": "Thao tác trò chuyện",
+      "collapse": "Thu gọn lịch sử",
       "delete": "Xóa",
       "deleted": "Đã xóa cuộc trò chuyện",
       "empty": "Chưa có cuộc trò chuyện",

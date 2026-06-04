@@ -593,6 +593,7 @@
     },
     "history": {
       "actions": "Chat actions",
+      "collapse": "Collapse history",
       "delete": "Delete",
       "deleted": "Conversation deleted",
       "empty": "No conversations yet",

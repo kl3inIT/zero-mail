@@ -15,6 +15,10 @@ export const chatMessages = {
     vi: 'Tin nhắn mới',
     en: 'New message',
   },
+  'chat.history.collapse': {
+    vi: 'Thu gọn lịch sử',
+    en: 'Collapse history',
+  },
   'chat.history.empty': {
     vi: 'Chưa có cuộc trò chuyện',
     en: 'No conversations yet',
