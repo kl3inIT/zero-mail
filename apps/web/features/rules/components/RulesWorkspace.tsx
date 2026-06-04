@@ -274,11 +274,12 @@ export function RulesWorkspace() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const searchParamsTab = normalizeRulesTab(searchParams.get('tab'));
-  const [activeTab, setActiveTabState] = useState<RulesTab>(searchParamsTab);
+  // Derive the active tab from the URL every render (the same pattern Needs-reply uses). A local
+  // useState copy does not re-sync after navigation, which left the Base UI Tabs `value` stale and
+  // the clicked trigger reporting aria-selected="false".
+  const activeTab = normalizeRulesTab(searchParams.get('tab'));
 
   const setActiveTab = (nextTab: RulesTab) => {
-    setActiveTabState(nextTab);
     router.replace(`/rules?tab=${nextTab}`, { scroll: false });
   };
 
