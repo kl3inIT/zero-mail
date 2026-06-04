@@ -55,7 +55,13 @@ public class RecentInboxReadService {
 
     public static final int DEFAULT_PAGE_SIZE = 20;
     public static final int MAX_PAGE_SIZE = 20;
-    public static final int MAX_MESSAGES = 100;
+
+    /**
+     * Total number of recent messages a tenant can page through (across projection + live-Gmail
+     * fallback). Matches {@code InboxBackfillService.BACKFILL_MAX_MESSAGES} so deep scroll stays on
+     * the fast DB-backed projection instead of spilling to live Gmail; raise both together.
+     */
+    public static final int MAX_MESSAGES = 500;
 
     /**
      * Source tag prefix for Wave 1 orchestrator cursors. Pagination must stay on the source that

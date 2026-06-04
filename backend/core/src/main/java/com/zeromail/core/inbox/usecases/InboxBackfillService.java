@@ -17,6 +17,7 @@ import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,17 @@ public class InboxBackfillService {
     private static final Logger log = LoggerFactory.getLogger(InboxBackfillService.class);
 
     private static final int BACKFILL_PAGE_SIZE = 100;
+
+    /**
+     * Upper bound on how many recent INBOX messages a single backfill run pulls into the
+     * projection. Gmail returns newest-first, so this is a recent-window cap (à la Inbox Zero's
+     * ~1000 lazy cap / Zero's recent-first index). It bounds first-connect backfill time and Gmail
+     * quota: with {@link #BATCH_CHUNK_SIZE} = 50 this is at most {@code 500 / 50 = 10} metadata
+     * batch round-trips. Older mail beyond this window is reached via the live-Gmail read fallback
+     * or future deep-backfill phases, never a blocking full-mailbox sync.
+     */
+    private static final int BACKFILL_MAX_MESSAGES = 500;
+
     // Gmail allows up to 100 sub-requests per batch; chunk well under that for headroom and to
     // bound per-batch latency. Each chunk is one HTTP round-trip instead of one per message.
     private static final int BATCH_CHUNK_SIZE = 50;
@@ -114,16 +126,7 @@ public class InboxBackfillService {
             Gmail gmail =
                     gmailApiClientFactory.buildClientForConnection(
                             connection, tenantId, GMAIL_REQUEST_TIMEOUT);
-            ListMessagesResponse listResponse =
-                    gmail.users()
-                            .messages()
-                            .list("me")
-                            .setLabelIds(List.of(INBOX_LABEL))
-                            .setMaxResults((long) BACKFILL_PAGE_SIZE)
-                            .setFields("messages(id,threadId)")
-                            .execute();
-            List<Message> messageReferences =
-                    listResponse.getMessages() == null ? List.of() : listResponse.getMessages();
+            List<Message> messageReferences = listInboxMessageReferences(gmail);
 
             // Fetch all per-message metadata in batched HTTP round-trips. The previous code did one
             // sequential .get() per message (~500ms each × up to 100), which was the dominant cause
@@ -199,6 +202,38 @@ public class InboxBackfillService {
                     gmailFailure.getClass().getSimpleName());
             return 0;
         }
+    }
+
+    /**
+     * Page through {@code Users.messages.list} (INBOX, newest-first) accumulating message
+     * references up to {@link #BACKFILL_MAX_MESSAGES}. The list call returns only id + threadId
+     * (cheap, no metadata), so this is a handful of small round-trips; the expensive part is the
+     * subsequent batched per-message metadata {@code .get}. Bounding the total keeps first-connect
+     * backfill time and Gmail quota predictable rather than walking the entire mailbox.
+     */
+    private List<Message> listInboxMessageReferences(Gmail gmail) throws IOException {
+        ArrayList<Message> references = new ArrayList<>();
+        String pageToken = null;
+        do {
+            ListMessagesResponse listResponse =
+                    gmail.users()
+                            .messages()
+                            .list("me")
+                            .setLabelIds(List.of(INBOX_LABEL))
+                            .setMaxResults((long) BACKFILL_PAGE_SIZE)
+                            .setPageToken(pageToken)
+                            .setFields("messages(id,threadId),nextPageToken")
+                            .execute();
+            if (listResponse.getMessages() != null) {
+                references.addAll(listResponse.getMessages());
+            }
+            pageToken = listResponse.getNextPageToken();
+        } while (pageToken != null && references.size() < BACKFILL_MAX_MESSAGES);
+
+        if (references.size() > BACKFILL_MAX_MESSAGES) {
+            return List.copyOf(references.subList(0, BACKFILL_MAX_MESSAGES));
+        }
+        return List.copyOf(references);
     }
 
     /**
