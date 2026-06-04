@@ -1,6 +1,10 @@
 package com.zeromail.core.gmail.usecases;
 
+import com.google.api.client.googleapis.batch.BatchRequest;
+import com.google.api.client.googleapis.batch.json.JsonBatchCallback;
+import com.google.api.client.googleapis.json.GoogleJsonError;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpHeaders;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.Label;
@@ -72,6 +76,7 @@ public class RecentInboxReadService {
     private static final int RENDERED_HTML_MAX_LENGTH = 200_000;
     private static final int INLINE_IMAGE_MAX_BYTES = 1_000_000;
     private static final int INLINE_IMAGE_TOTAL_MAX_BYTES = 3_000_000;
+    private static final int BATCH_CHUNK_SIZE = 50;
     private static final List<String> METADATA_HEADERS = List.of("From", "To", "Cc", "Subject");
     private static final String MESSAGE_LIST_FIELDS = "messages(id,threadId),nextPageToken";
     private static final String METADATA_FIELDS =
@@ -95,7 +100,7 @@ public class RecentInboxReadService {
             SafeHtmlSanitizer safeHtmlSanitizer,
             com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer inboxBackfillEnqueuer,
             com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository
-                            inboxSyncStateRepository,
+                    inboxSyncStateRepository,
             InboxProjectionReadService inboxProjectionReadService) {
         this.gmailConnectionRepository =
                 Objects.requireNonNull(
@@ -118,8 +123,7 @@ public class RecentInboxReadService {
                         inboxSyncStateRepository, "inboxSyncStateRepository must not be null");
         this.inboxProjectionReadService =
                 Objects.requireNonNull(
-                        inboxProjectionReadService,
-                        "inboxProjectionReadService must not be null");
+                        inboxProjectionReadService, "inboxProjectionReadService must not be null");
     }
 
     /**
@@ -190,8 +194,7 @@ public class RecentInboxReadService {
                             tenantId, innerCursor, requestedLimit);
         } catch (InvalidProjectionCursorException invalidProjectionCursorException) {
             throw new RecentInboxUnavailableException(
-                    RecentInboxUnavailableReason.INVALID_CURSOR,
-                    invalidProjectionCursorException);
+                    RecentInboxUnavailableReason.INVALID_CURSOR, invalidProjectionCursorException);
         }
         List<RecentInboxMessage> messages = toRecentInboxMessages(projectionPage.items());
         String nextCursor =
@@ -257,8 +260,7 @@ public class RecentInboxReadService {
 
     private static List<RecentInboxMessage> toRecentInboxMessages(
             List<InboxProjectionMessage> projectionItems) {
-        ArrayList<RecentInboxMessage> recentInboxMessages =
-                new ArrayList<>(projectionItems.size());
+        ArrayList<RecentInboxMessage> recentInboxMessages = new ArrayList<>(projectionItems.size());
         for (InboxProjectionMessage projectionItem : projectionItems) {
             recentInboxMessages.add(
                     new RecentInboxMessage(
@@ -281,8 +283,8 @@ public class RecentInboxReadService {
     private static List<RecentInboxLabel> toRecentInboxLabels(
             List<com.zeromail.core.inbox.usecases.InboxProjectionLabel> projectionLabels) {
         ArrayList<RecentInboxLabel> recentInboxLabels = new ArrayList<>(projectionLabels.size());
-        for (com.zeromail.core.inbox.usecases.InboxProjectionLabel projectionLabel
-                : projectionLabels) {
+        for (com.zeromail.core.inbox.usecases.InboxProjectionLabel projectionLabel :
+                projectionLabels) {
             recentInboxLabels.add(
                     new RecentInboxLabel(projectionLabel.id(), projectionLabel.name()));
         }
@@ -291,7 +293,8 @@ public class RecentInboxReadService {
 
     /**
      * Freshness gate for the first-page orchestrator branch. Returns true when the tenant has not
-     * yet completed a full sync — equivalent to "no row in sync_state OR last_full_sync_at IS NULL".
+     * yet completed a full sync — equivalent to "no row in sync_state OR last_full_sync_at IS
+     * NULL".
      */
     private boolean needsFullSyncFirst(UUID tenantId) {
         return inboxSyncStateRepository
@@ -453,22 +456,73 @@ public class RecentInboxReadService {
     private static List<RecentInboxMessage> fetchMessageMetadata(
             Gmail gmail, List<Message> messageReferences, Map<String, String> labelNamesById)
             throws IOException {
-        ArrayList<RecentInboxMessage> messages = new ArrayList<>();
+        Map<String, Message> messagesById = fetchMessagesWithBatch(gmail, messageReferences);
+        ArrayList<RecentInboxMessage> messages = new ArrayList<>(messageReferences.size());
+        // Iterate the references (not the map) to preserve Gmail's newest-first ordering.
         for (Message messageReference : messageReferences) {
             if (messageReference == null || messageReference.getId() == null) {
                 continue;
             }
-            Message gmailMessage =
-                    gmail.users()
-                            .messages()
-                            .get("me", messageReference.getId())
-                            .setFormat("metadata")
-                            .setMetadataHeaders(METADATA_HEADERS)
-                            .setFields(METADATA_FIELDS)
-                            .execute();
+            Message gmailMessage = messagesById.get(messageReference.getId());
+            if (gmailMessage == null) {
+                continue;
+            }
             messages.add(toRecentInboxMessage(gmailMessage, labelNamesById));
         }
         return List.copyOf(messages);
+    }
+
+    /**
+     * Fetch metadata for every referenced message via Gmail batch requests (chunks of {@value
+     * #BATCH_CHUNK_SIZE}) instead of one sequential {@code .get()} per message — the live-Gmail
+     * fallback's N+1 was the residual cold-inbox latency once the projection backfill itself was
+     * batched. Mirrors {@code InboxBackfillService#fetchMessagesWithBatch}. A message whose
+     * individual sub-request fails is omitted (skipped this page; a later delta/backfill picks it
+     * up). An {@link IOException} from a batch execute propagates to the caller's catch.
+     */
+    private static Map<String, Message> fetchMessagesWithBatch(
+            Gmail gmail, List<Message> messageReferences) throws IOException {
+        LinkedHashMap<String, Message> messagesById = new LinkedHashMap<>();
+        JsonBatchCallback<Message> callback =
+                new JsonBatchCallback<>() {
+                    @Override
+                    public void onSuccess(Message message, HttpHeaders responseHeaders) {
+                        if (message != null && message.getId() != null) {
+                            messagesById.put(message.getId(), message);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(
+                            GoogleJsonError googleJsonError, HttpHeaders responseHeaders) {
+                        // Individual message failures are non-fatal: that row is skipped this page.
+                    }
+                };
+
+        for (int start = 0; start < messageReferences.size(); start += BATCH_CHUNK_SIZE) {
+            List<Message> chunk =
+                    messageReferences.subList(
+                            start, Math.min(start + BATCH_CHUNK_SIZE, messageReferences.size()));
+            BatchRequest batchRequest = gmail.batch();
+            int queued = 0;
+            for (Message reference : chunk) {
+                if (reference == null || reference.getId() == null) {
+                    continue;
+                }
+                gmail.users()
+                        .messages()
+                        .get("me", reference.getId())
+                        .setFormat("metadata")
+                        .setMetadataHeaders(METADATA_HEADERS)
+                        .setFields(METADATA_FIELDS)
+                        .queue(batchRequest, callback);
+                queued++;
+            }
+            if (queued > 0) {
+                batchRequest.execute();
+            }
+        }
+        return messagesById;
     }
 
     private static Map<String, String> fetchLabelNamesById(Gmail gmail) throws IOException {
@@ -788,7 +842,8 @@ public class RecentInboxReadService {
 
         /**
          * Empty page emitted by the Wave 1 orchestrator when the tenant has not finished its first
-         * full sync. The frontend renders a "đang đồng bộ" banner instead of the inbox list (Wave 3).
+         * full sync. The frontend renders a "đang đồng bộ" banner instead of the inbox list (Wave
+         * 3).
          */
         public static RecentInboxPage syncing(int maxMessages) {
             return new RecentInboxPage(
