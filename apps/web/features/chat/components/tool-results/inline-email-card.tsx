@@ -88,8 +88,9 @@ export function InlineEmailCard({
         <a
           href={openInGmailUrl}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           title="Mở trong Gmail"
+          aria-label="Mở trong Gmail"
           className="text-muted-foreground hover:text-foreground hover:bg-accent inline-flex shrink-0 items-center rounded p-1.5"
         >
           <ExternalLink className="size-3.5" />

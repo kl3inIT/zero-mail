@@ -80,20 +80,27 @@ public class ConfirmRequiredToolHandlers {
             compileResult =
                     ruleCompilerService.compile(
                             new RuleCompileCommand(command.tenantId(), effectiveSourceText));
+            // Recompile of the edited text can legally come back as
+            // CLARIFICATION_REQUIRED/INVALID. Fail fast with a clear message rather than
+            // letting RuleCreateCommand throw its generic "compileResult must be compiled".
+            if (!compileResult.isCompiled()) {
+                throw new IllegalStateException(
+                        "Edited rule text could not be compiled into a valid rule (status="
+                                + compileResult.status()
+                                + ")");
+            }
             boolean userEditedName =
                     overriddenDisplayName != null
                             && !overriddenDisplayName.equals(compiledDisplayName);
-            if (userEditedName) {
-                displayName = overriddenDisplayName;
-            } else if (compileResult.isCompiled()) {
-                displayName = compileResult.displayName();
-            } else {
-                displayName =
-                        overriddenDisplayName != null ? overriddenDisplayName : effectiveSourceText;
-            }
+            displayName = userEditedName ? overriddenDisplayName : compileResult.displayName();
         } else {
             compileResult = WriteReversibleToolHandlers.ruleCompileResult(command);
-            displayName = overriddenDisplayName;
+            // A name-only edit keeps the stored compile; fall back to its display name when the
+            // user did not provide an override so RuleCreateCommand never sees a blank name.
+            displayName =
+                    overriddenDisplayName != null
+                            ? overriddenDisplayName
+                            : compileResult.displayName();
         }
         RuleStatusProjection projection =
                 ruleManagementService.create(
