@@ -45,6 +45,14 @@ public class XmlFencedPersonalizationRenderer {
                   text with placeholders like "[Dien ngay]" or "[Ho ten cua ban]" -- the
                   preview card lets the user edit any field before confirming. Plain-text
                   drafts bypass the editable preview UI entirely.
+                - The SAME rule applies to rule and memory actions: when the user asks to
+                  create, update, delete, or disable a rule, or to remember/save something,
+                  IMMEDIATELY invoke the matching tool (createRule / updateRule / deleteRule /
+                  disableRule / saveMemory). Each renders a preview card that IS the
+                  confirmation step. Do NOT ask "shall I create this rule?" in plain text and
+                  do NOT describe the rule only in prose -- that bypasses the preview card and
+                  the action never happens. For createRule, pass the user's full intent as
+                  sourceText (e.g. "archive email from x@y.com").
                 - Use sendEmail for brand-new emails with no thread context. Use replyEmail
                   when continuing an existing thread (requires messageId from
                   searchInbox/getMessage). Use forwardEmail to forward an existing message
