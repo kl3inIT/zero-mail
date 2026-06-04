@@ -81,6 +81,9 @@
 
 /* prettier-ignore */
 :root {
+    /* Native scrollbars + form controls render in their light variant. */
+    color-scheme: light;
+
     /* Purple palette lifted từ Jmix petclinic-2 Lumo. Surfaces stay neutral
        (content trắng + sidebar tím-nhạt) để text giữ contrast cao và borders
        hiện rõ — pattern Inbox Zero / Gmail / Linear cùng dùng. */
@@ -158,6 +161,11 @@
 
 /* prettier-ignore */
 .dark {
+    /* Render native scrollbars and form controls dark to match the dark palette —
+       fixes the bright/white scrollbar in dark mode. color-scheme inherits, so every
+       scroll container under .dark gets a dark scrollbar automatically. */
+    color-scheme: dark;
+
     --background: #191724;
     --foreground: #E5E2EE;
     --card: #211E30;
