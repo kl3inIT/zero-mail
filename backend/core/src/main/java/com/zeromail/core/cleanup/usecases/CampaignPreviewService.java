@@ -139,7 +139,15 @@ public class CampaignPreviewService {
         Optional<SenderWorkingSet> senderWorkingSet =
                 recentInboxWorkingSet.flatMap(
                         workingSet -> workingSet.findSender(normalizedSenderEmail));
-        if (senderWorkingSet.isPresent()) {
+        // Trust the live working set only when its preview parse actually found a usable
+        // List-Unsubscribe handle. If the working set has the sender but reports NONE, fall through
+        // to the observed-DB aggregate below: the webhook parser that populates
+        // mail_message_observed can recognise a header the Gmail-preview parser misses (e.g.
+        // Facebook's List-Unsubscribe), and that DB row is exactly what the candidate list showed
+        // the user as "Unsubscribe". Returning a working-set NONE here is what made execute reject
+        // (409 "no archivable senders") senders the list had offered as unsubscribable.
+        if (senderWorkingSet.isPresent()
+                && senderWorkingSet.orElseThrow().unsubscribeMethod() != UnsubscribeMethod.NONE) {
             return fromWorkingSet(senderWorkingSet.orElseThrow());
         }
 
