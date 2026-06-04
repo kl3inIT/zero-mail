@@ -1,5 +1,6 @@
 package com.zeromail.core.composer.usecases;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
@@ -87,6 +88,29 @@ public class ComposerDraftService {
             throw new IOException("Unable to build composer draft MIME", buildFailure);
         }
 
+        // Fast path: the client already knows the draftId for this thread, so update that draft
+        // directly. This skips the listDraftIdsForThread() scan which — combined with Gmail
+        // drafts.list eventual consistency — let two overlapping upserts each observe an empty
+        // list and CREATE, leaving 2-3 duplicate copies of the same reply in the user's drafts.
+        if (command.draftId() != null) {
+            try {
+                String updatedDraftId =
+                        triageGmailWriter.updateDraftMessage(
+                                tenantId, command.draftId(), draftMessage, command.gmailThreadId());
+                log.info("event=composer_draft_updated tenantId={}", tenantId);
+                return toSnapshot(updatedDraftId, command);
+            } catch (GoogleJsonResponseException draftUpdateFailure) {
+                // Only a 404 means the known draft is gone (sent or discarded on another device) —
+                // fall through to list-or-create so the user keeps an autosave. Any other Gmail
+                // error is a real failure and must propagate, not be masked into a fallback that
+                // would create a duplicate draft.
+                if (draftUpdateFailure.getStatusCode() != 404) {
+                    throw draftUpdateFailure;
+                }
+                log.info("event=composer_draft_update_miss tenantId={} status=404", tenantId);
+            }
+        }
+
         List<String> existingDraftIds =
                 triageGmailWriter.listDraftIdsForThread(
                         tenantId, command.gmailThreadId(), MAX_DRAFTS_TO_SCAN);
@@ -120,6 +144,11 @@ public class ComposerDraftService {
                 }
             }
         }
+        return toSnapshot(writtenDraftId, command);
+    }
+
+    private static ComposerDraftSnapshot toSnapshot(
+            String writtenDraftId, ComposerDraftUpsertCommand command) {
         return new ComposerDraftSnapshot(
                 writtenDraftId,
                 command.gmailThreadId(),

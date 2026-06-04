@@ -787,6 +787,10 @@
         "none": "Unsupported",
         "oneClick": "Safe unsubscribe"
       },
+      "page": {
+        "description": "Bulk-unsubscribe or block senders whose email you never read.",
+        "title": "Unsubscribe"
+      },
       "stats": {
         "chartEmpty": "No data in the last 30 days.",
         "chartError": "Could not load the chart. Please try again shortly.",

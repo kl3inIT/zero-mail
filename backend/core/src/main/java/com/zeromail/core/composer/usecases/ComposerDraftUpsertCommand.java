@@ -17,6 +17,7 @@ import java.util.Objects;
  */
 public record ComposerDraftUpsertCommand(
         String gmailThreadId,
+        String draftId,
         String sourceGmailMessageId,
         String rfc822MessageId,
         String priorReferences,
@@ -29,6 +30,7 @@ public record ComposerDraftUpsertCommand(
 
     public ComposerDraftUpsertCommand {
         gmailThreadId = requireText(gmailThreadId, "gmailThreadId");
+        draftId = trimNullable(draftId);
         Objects.requireNonNull(mode, "mode must not be null");
         toAddresses = toAddresses == null ? "" : toAddresses;
         ccAddresses = ccAddresses == null ? "" : ccAddresses;

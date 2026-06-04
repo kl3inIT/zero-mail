@@ -45,7 +45,7 @@ export function NeedsReplyPageClient() {
   const draftedCount = counts?.drafted ?? (activeBucket === 'drafted' ? rows.length : 0);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full space-y-5">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t('needsReply.page.title')}</h1>
         <p className="text-muted-foreground text-sm">{t('needsReply.page.description')}</p>

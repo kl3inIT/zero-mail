@@ -1,4 +1,14 @@
 export const unsubscribeCampaignMessages = {
+  // Page header (matches the title/description block other app pages render)
+  'cleanup.unsubscribe.page.title': {
+    vi: 'Hủy đăng ký',
+    en: 'Unsubscribe',
+  },
+  'cleanup.unsubscribe.page.description': {
+    vi: 'Hủy đăng ký hoặc chặn hàng loạt người gửi mà bạn không bao giờ đọc.',
+    en: 'Bulk-unsubscribe or block senders whose email you never read.',
+  },
+
   // Filter menu (Inbox Zero-style table)
   'cleanup.unsubscribe.filter.unhandled': {
     vi: 'Chưa xử lý',

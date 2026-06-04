@@ -315,6 +315,11 @@ export function CandidateListPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{t('page.title')}</h1>
+        <p className="text-muted-foreground text-sm">{t('page.description')}</p>
+      </header>
+
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           <OptionMenu
