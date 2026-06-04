@@ -35,6 +35,26 @@ export const inboxMessages = {
     vi: 'Không có email đã tải nào khớp tìm kiếm.',
     en: 'No loaded messages match this search.',
   },
+  'inbox.labelFilter.trigger': {
+    vi: 'Lọc theo nhãn',
+    en: 'Filter by label',
+  },
+  'inbox.labelFilter.all': {
+    vi: 'Tất cả nhãn',
+    en: 'All labels',
+  },
+  'inbox.labelFilter.count': {
+    vi: '{count} nhãn',
+    en: '{count} labels',
+  },
+  'inbox.labelFilter.clear': {
+    vi: 'Bỏ chọn tất cả',
+    en: 'Clear all',
+  },
+  'inbox.labelFilter.empty': {
+    vi: 'Chưa có nhãn nào',
+    en: 'No labels yet',
+  },
   'inbox.action.openInGmail': {
     vi: 'Mở Gmail',
     en: 'Open Gmail',
@@ -126,6 +146,38 @@ export const inboxMessages = {
   'inbox.composer.generateLanguageEn': {
     vi: 'English',
     en: 'English',
+  },
+  'inbox.composer.generateBodyAgain': {
+    vi: 'Tạo lại',
+    en: 'Regenerate',
+  },
+  'inbox.composer.hintInitialPlaceholder': {
+    vi: 'Hướng dẫn riêng cho AI (tuỳ chọn) — ví dụ: "Từ chối lịch sự nhưng vẫn đề nghị reschedule"',
+    en: 'AI instructions (optional) — e.g. "Decline politely and suggest a reschedule"',
+  },
+  'inbox.composer.hintRefinePlaceholder': {
+    vi: 'Sửa theo hướng nào? — ví dụ: "Thêm 1 câu cảm ơn ở cuối"',
+    en: 'Adjust how? — e.g. "Add a thank-you line at the end"',
+  },
+  'inbox.composer.refineHeading': {
+    vi: 'Tinh chỉnh',
+    en: 'Refine',
+  },
+  'inbox.composer.refineShorter': {
+    vi: 'Ngắn hơn',
+    en: 'Shorter',
+  },
+  'inbox.composer.refineFormal': {
+    vi: 'Trang trọng hơn',
+    en: 'More formal',
+  },
+  'inbox.composer.refineCasual': {
+    vi: 'Thân mật hơn',
+    en: 'More casual',
+  },
+  'inbox.composer.refineDetailed': {
+    vi: 'Chi tiết hơn',
+    en: 'More detailed',
   },
   'inbox.composer.attach': {
     vi: 'Đính kèm',
@@ -336,7 +388,7 @@ export const inboxMessages = {
     en: 'Attachment',
   },
   'inbox.limit.caption': {
-    vi: '{loaded}/{max} email',
-    en: '{loaded}/{max} messages',
+    vi: '{max} email',
+    en: '{max} messages',
   },
 } as const;

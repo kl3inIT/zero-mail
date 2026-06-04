@@ -64,6 +64,13 @@ public abstract class PostgresContainerTest {
         r.add(
                 "zero-mail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        // Test-only keys for the Gmail inbox projection cipher (Phase A wave 0).
+        r.add(
+                "zero-mail.crypto.inbox-projection-key-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        r.add(
+                "zero-mail.crypto.inbox-projection-sender-hash-key-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         r.add(
                 "zero-mail.admin.audit.hmac-kek-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");

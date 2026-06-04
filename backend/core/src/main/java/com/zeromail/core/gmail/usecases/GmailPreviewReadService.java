@@ -580,6 +580,7 @@ public class GmailPreviewReadService {
         String replyToHeader =
                 GmailMessageHeaders.firstValue(payload, "Reply-To").orElse(fromHeader);
         String senderEmail = sanitizeEmail(extractEmailAddress(fromHeader));
+        String senderName = extractDisplayName(fromHeader);
         String replyToAddress = sanitizeEmail(extractEmailAddress(replyToHeader));
         String senderDomain =
                 senderEmail.contains("@")
@@ -642,6 +643,7 @@ public class GmailPreviewReadService {
                         observedMessage.gmailThreadId()),
                 senderEmail,
                 senderDomain,
+                senderName,
                 toRecipients,
                 ccRecipients,
                 subjectExcerpt,
@@ -788,6 +790,32 @@ public class GmailPreviewReadService {
         return headerValue;
     }
 
+    /**
+     * Best-effort display-name extraction from a {@code From}-style header value (e.g. {@code "John
+     * Doe" <john@x>} → {@code "John Doe"}). Returns {@code ""} when the header is bare-address or
+     * unparseable. Result is sanitized + trimmed + length-capped at 320 chars to match {@code
+     * mail_message_observed.sender_name}.
+     */
+    private static String extractDisplayName(String headerValue) {
+        if (headerValue == null) {
+            return "";
+        }
+        int openAngleIndex = headerValue.lastIndexOf('<');
+        if (openAngleIndex <= 0) {
+            return "";
+        }
+        String namePart = sanitizedText(headerValue.substring(0, openAngleIndex));
+        if (namePart.length() >= 2
+                && namePart.charAt(0) == '"'
+                && namePart.charAt(namePart.length() - 1) == '"') {
+            namePart = sanitizedText(namePart.substring(1, namePart.length() - 1));
+        }
+        if (namePart.length() > 320) {
+            namePart = namePart.substring(0, 320);
+        }
+        return namePart;
+    }
+
     private static String sanitizeEmail(String emailAddress) {
         return sanitizedText(emailAddress).toLowerCase(Locale.ROOT);
     }
@@ -877,6 +905,7 @@ public class GmailPreviewReadService {
             String gmailThreadId,
             String sanitizedSenderEmail,
             String sanitizedSenderDomain,
+            String sanitizedSenderName,
             List<String> sanitizedToRecipientEmails,
             List<String> sanitizedCcRecipientEmails,
             String sanitizedSubjectExcerpt,
@@ -902,6 +931,7 @@ public class GmailPreviewReadService {
             Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
             sanitizedSenderEmail = Objects.requireNonNullElse(sanitizedSenderEmail, "");
             sanitizedSenderDomain = Objects.requireNonNullElse(sanitizedSenderDomain, "");
+            sanitizedSenderName = Objects.requireNonNullElse(sanitizedSenderName, "");
             sanitizedSubjectExcerpt = Objects.requireNonNullElse(sanitizedSubjectExcerpt, "");
             rfcMessageId = Objects.requireNonNullElse(rfcMessageId, "");
             references = Objects.requireNonNullElse(references, "");

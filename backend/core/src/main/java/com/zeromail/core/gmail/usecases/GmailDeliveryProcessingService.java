@@ -16,6 +16,8 @@ import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
+import com.zeromail.core.inbox.usecases.InboxProjectionUpsertCommand;
+import com.zeromail.core.inbox.usecases.InboxProjectionWriteService;
 import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import java.math.BigInteger;
 import java.time.Instant;
@@ -47,6 +49,7 @@ public class GmailDeliveryProcessingService {
 
     private final PubSubDeliveryRepository deliveryRepository;
     private final MailMessageObservedRepository observedRepository;
+    private final InboxProjectionWriteService inboxProjectionWriteService;
     private final GmailConnectionService connectionService;
     private final GmailConnectionRepository connectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
@@ -57,6 +60,7 @@ public class GmailDeliveryProcessingService {
     public GmailDeliveryProcessingService(
             PubSubDeliveryRepository deliveryRepository,
             MailMessageObservedRepository observedRepository,
+            InboxProjectionWriteService inboxProjectionWriteService,
             GmailConnectionService connectionService,
             GmailConnectionRepository connectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
@@ -65,6 +69,7 @@ public class GmailDeliveryProcessingService {
             PlatformTransactionManager transactionManager) {
         this.deliveryRepository = deliveryRepository;
         this.observedRepository = observedRepository;
+        this.inboxProjectionWriteService = inboxProjectionWriteService;
         this.connectionService = connectionService;
         this.connectionRepository = connectionRepository;
         this.gmailApiClientFactory = gmailApiClientFactory;
@@ -249,10 +254,17 @@ public class GmailDeliveryProcessingService {
             return 0;
         }
         String senderEmail = extractSanitizedSenderEmail(gmailMessage);
+        String senderName = extractSanitizedSenderName(gmailMessage);
         GmailPreviewReadService.ListUnsubscribeExtraction listUnsubscribeExtraction =
                 extractListUnsubscribeFromMessage(gmailMessage);
         return insertObservationAndPublishEvents(
-                tenantId, history, gmailMessage, labelIds, senderEmail, listUnsubscribeExtraction);
+                tenantId,
+                history,
+                gmailMessage,
+                labelIds,
+                senderEmail,
+                senderName,
+                listUnsubscribeExtraction);
     }
 
     private static GmailPreviewReadService.ListUnsubscribeExtraction
@@ -271,7 +283,9 @@ public class GmailDeliveryProcessingService {
             Message gmailMessage,
             List<String> labelIds,
             String senderEmail,
+            String senderName,
             GmailPreviewReadService.ListUnsubscribeExtraction listUnsubscribeExtraction) {
+        long historyId = history.getId().longValueExact();
         Integer insertedCount =
                 observationTransaction.execute(
                         transactionStatus -> {
@@ -280,10 +294,11 @@ public class GmailDeliveryProcessingService {
                                             tenantId,
                                             gmailMessage.getId(),
                                             gmailMessage.getThreadId(),
-                                            history.getId().longValueExact(),
+                                            historyId,
                                             labelIds.toArray(new String[0]),
                                             gmailMessage.getInternalDate(),
                                             senderEmail,
+                                            senderName,
                                             listUnsubscribeExtraction.url(),
                                             listUnsubscribeExtraction.mailto(),
                                             listUnsubscribeExtraction.oneClick());
@@ -292,6 +307,28 @@ public class GmailDeliveryProcessingService {
                             }
                             return newRowCount;
                         });
+        // Always refresh the inbox projection — the observed table is append-once
+        // (insertObservedIfAbsent
+        // returns 0 on redelivery) but the projection MUST track current label / state changes
+        // (e.g. UNREAD → read, INBOX → archived) every time we see a history record for the
+        // message.
+        // The projection write runs in its own REQUIRES_NEW transaction so a failure here does not
+        // roll back the observed insert above (which is part of the same delivery ack contract).
+        if (senderEmail != null && !senderEmail.isBlank()) {
+            inboxProjectionWriteService.upsert(
+                    new InboxProjectionUpsertCommand(
+                            tenantId,
+                            gmailMessage.getId(),
+                            gmailMessage.getThreadId(),
+                            senderEmail,
+                            null,
+                            null,
+                            null,
+                            false,
+                            Instant.ofEpochMilli(gmailMessage.getInternalDate()),
+                            labelIds,
+                            historyId));
+        }
         return insertedCount == null ? 0 : insertedCount;
     }
 
@@ -321,6 +358,12 @@ public class GmailDeliveryProcessingService {
     private String extractSanitizedSenderEmail(Message gmailMessage) {
         return GmailMessageHeaders.firstValue(gmailMessage.getPayload(), "From")
                 .flatMap(this::canonicalizeSenderEmail)
+                .orElse(null);
+    }
+
+    private String extractSanitizedSenderName(Message gmailMessage) {
+        return GmailMessageHeaders.firstValue(gmailMessage.getPayload(), "From")
+                .flatMap(emailAddressCanonicalizer::extractDisplayName)
                 .orElse(null);
     }
 

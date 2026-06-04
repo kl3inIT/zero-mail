@@ -705,147 +705,127 @@
       "title": "Safe list"
     },
     "unsubscribe": {
+      "action": {
+        "approveOk": "Sender approved.",
+        "archiveOk": "Old mail from this sender archived. The sender stays in the list so you can still unsubscribe or block.",
+        "autoArchiveOk": "Created an auto-archive rule for this sender. Old mail moved out of the Inbox; new mail will be archived automatically.",
+        "blockOk": "Sender blocked: Zero Mail created an auto-archive rule. Old mail moved out of the Inbox; new mail will be archived automatically.",
+        "deleteOk": "History mail moved to Trash.",
+        "errCapMessage": "History mail limit of 2,000 exceeded. Please deselect some.",
+        "errCapSender": "Sender limit of 25 exceeded. Please deselect some.",
+        "errConflict": "This sender is already being processed or has been blocked. Refresh the list and try again.",
+        "errGeneric": "Could not create the unsubscribe task. Please try again shortly.",
+        "genericError": "Action failed. Please try again shortly.",
+        "labelFutureOk": "Future-mail label rule created.",
+        "mailAffected": "{count} mail processed.",
+        "markUnsubscribedOk": "Marked as unsubscribed.",
+        "submitDescription": "Zero Mail is processing {count} senders in the background.",
+        "submitOk": "Unsubscribe started",
+        "submitting": "Submitting unsubscribe…",
+        "submittingDescription": "Sending the request for {count} senders…",
+        "unapproveOk": "Approval removed."
+      },
+      "confirm": {
+        "archiveBody": "Zero Mail will move every history mail from these {count} senders out of the Inbox. No mail is deleted and you can move it back from Gmail.",
+        "archiveTitle": "Archive all mail from {count} senders?",
+        "cancel": "Cancel",
+        "deleteBody": "Zero Mail will move every history mail from these {count} senders to Gmail Trash. You have 30 days to restore them from Gmail before they are permanently deleted.",
+        "deleteOne": "Delete all mail from {sender}? Mail will be moved to Gmail Trash.",
+        "deleteTitle": "Delete all mail from {count} senders?"
+      },
+      "filter": {
+        "all": "All senders",
+        "approved": "Approved",
+        "autoArchived": "Auto archived",
+        "unhandled": "Unhandled"
+      },
+      "labelFuture": {
+        "body": "Zero Mail will create a rule that auto-labels new mail from {sender}. History mail is left alone.",
+        "placeholder": "Label name (e.g. Newsletters)",
+        "title": "Label future mail from this sender"
+      },
       "list": {
         "action": {
-          "collapse": "Close sender details",
-          "details": "Open sender details",
-          "keep": "Add to safe list",
-          "unsubscribe": "Preview"
+          "approve": "Approve",
+          "archive": "Archive",
+          "archiveAll": "Archive all mail from this sender",
+          "autoArchive": "Auto-archive",
+          "block": "Block",
+          "delete": "Delete",
+          "deleteAll": "Delete all mail from this sender",
+          "labelFuture": "Label future mail",
+          "menu": "More options",
+          "unapprove": "Unapprove",
+          "unblock": "Unblock",
+          "unsubscribe": "Unsubscribe",
+          "unsubscribeBlock": "Unsubscribe / Block",
+          "viewGmail": "Open in Gmail",
+          "viewStats": "View stats"
         },
         "clear": "Clear selection",
         "col": {
-          "actions": "Actions",
-          "count": "Mail (30 days)",
-          "domain": "Domain",
-          "history": "History",
-          "risk": "Status",
-          "sender": "Sender"
+          "emails": "Emails",
+          "from": "From",
+          "read": "Read"
         },
-        "counter": "{count} / 25 senders selected",
+        "counter": "{count} of {total} senders selected",
         "counterOver": "{count} / 25 senders — over the limit",
-        "detail": {
-          "archive": "Mail to process",
-          "archiveValue": "If unsubscribe succeeds, Zero Mail will archive {count} recent mail.",
-          "disabled": "Gmail has not provided a safe unsubscribe method for this sender.",
-          "lastSeen": "Last seen",
-          "safe": "Does not delete mail. Archive can be undone for 30 days.",
-          "safety": "Safety",
-          "skip": "Add to safe list",
-          "skipDescription": "Hide it from future unsubscribe suggestions. Gmail is not changed."
-        },
         "empty": {
-          "body": "Zero Mail checks the 100 most recent Inbox emails and only shows senders with a safe unsubscribe method.",
-          "link": "Learn how Zero Mail detects newsletters →",
-          "title": "No unsubscribe-ready senders found"
+          "body": "Zero Mail will show senders observed within the selected time window.",
+          "title": "No senders yet"
         },
         "error": "Could not load the sender list. Please try again shortly.",
-        "eyebrow": "Gmail cleanup",
-        "filter": {
-          "all": "All senders",
-          "mailto": "Unsubscribe by email",
-          "oneClick": "Safe unsubscribe",
-          "ready": "Ready to process"
-        },
-        "filterLabel": "Filter senders",
-        "helpBody": "Zero Mail only shows senders with a safe unsubscribe signal from Gmail. Select senders, preview the action, then confirm. Old mail is archived only after unsubscribe succeeds and is never deleted.",
-        "helpLabel": "Explain safe unsubscribe",
-        "helpTitle": "How unsubscribe works",
-        "historyCount": "{count} mail",
-        "lead": "Zero Mail finds senders that support unsubscribe from Gmail. When you confirm, it sends a safe unsubscribe request and archives old mail only after that succeeds. It never deletes mail.",
-        "preview": "Preview",
+        "loadingMore": "Loading more…",
+        "loadMore": "Load more",
         "retry": "Retry",
         "searchPlaceholder": "Search sender or domain",
         "selectAll": "Select all visible senders",
-        "selectedMail": "{count} history mail in selection",
-        "sort": {
-          "count": "Most mail",
-          "recent": "Recently seen",
-          "sender": "A-Z sender"
-        },
-        "sortLabel": "Sort senders",
-        "stats": {
-          "messages": "Mail to archive",
-          "oneClick": "Safe unsubscribe",
-          "ready": "Actionable",
-          "total": "Detected senders"
-        },
-        "suppressionLink": "Safe list",
-        "title": "Unsubscribe"
+        "selectedMail": "{count} history mail in selection"
       },
       "method": {
         "mailto": "Unsubscribe by email",
-        "mailtoTooltip": "Sends an unsubscribe email to the address declared in the Gmail header.",
         "none": "Unsupported",
-        "oneClick": "Safe unsubscribe",
-        "oneClickTooltip": "Uses the standard Gmail RFC 8058 header. Zero Mail sends a safe POST to the unsubscribe endpoint and does not open links from the email body."
+        "oneClick": "Safe unsubscribe"
       },
-      "preview": {
-        "cancel": "Back",
-        "capMessage": "History mail limit of 2,000 exceeded ({count}). Go back and deselect some.",
-        "capSender": "Sender limit of 25 exceeded. Go back and deselect some.",
-        "confirm": "Unsubscribe",
-        "description": "Review before confirming. Zero Mail archives old mail only after unsubscribe succeeds. It never deletes mail, and archive can be undone for 30 days.",
-        "empty": "No selected sender is eligible for unsubscribe.",
-        "errCapMessage": "History mail limit of 2,000 exceeded. Please deselect some.",
-        "errCapSender": "Sender limit of 25 exceeded. Please deselect some.",
-        "errGeneric": "Could not create the unsubscribe task. Please try again shortly.",
-        "submitOk": "Unsubscribe task created. Tracking progress…",
-        "submitting": "Creating…",
-        "title": "Preview unsubscribe",
-        "totalMail": "Mail to archive if successful: {count}",
-        "totalSender": "Total senders: {count}",
-        "willArchive": "{count} recent mail will be archived if unsubscribe succeeds",
-        "willNotArchive": "This sender will not be processed automatically"
-      },
-      "retry": {
-        "alreadyOk": "This sender has already unsubscribed — no retry needed.",
-        "generic": "Retry failed. Please try again shortly."
-      },
-      "risk": {
-        "noHeader": "Not supported",
-        "noHeaderTooltip": "Gmail has no safe unsubscribe header for this sender.",
-        "safe": "Ready",
-        "suppressed": "Safe-listed"
-      },
-      "status": {
-        "breadcrumb": "Unsubscribe / #{shortId}",
-        "col": {
-          "action": "Action",
-          "archived": "Mail archived",
-          "sender": "Sender",
-          "state": "State"
+      "stats": {
+        "chartEmpty": "No data in the last 30 days.",
+        "chartError": "Could not load the chart. Please try again shortly.",
+        "chartHide": "Hide chart",
+        "chartLoading": "Loading chart…",
+        "chartShow": "Show chart",
+        "chartTooltipCount": "Total {count} emails",
+        "closePreview": "Close preview",
+        "messagesEmpty": "No mail in this tab.",
+        "messagesError": "Could not load the mail list. Please try again shortly.",
+        "messagesLoading": "Loading mail from Gmail…",
+        "previewEmpty": "This mail has no displayable body.",
+        "previewError": "Could not load the mail body. Please try again.",
+        "previewHint": "Pick an email on the left to read it.",
+        "previewLoading": "Loading mail body…",
+        "tabs": {
+          "all": "All",
+          "unarchived": "Unarchived"
         },
-        "completed": "Completed",
-        "error": "Could not load unsubscribe status. Please try again shortly.",
-        "errorBanner": "System error — did not complete. Contact support if needed.",
-        "failed": "Error — did not complete",
-        "progress": "{percent}% ({okCount} OK / {failedCount} failed / {totalCount} senders)",
-        "queued": "Waiting for worker",
-        "retry": "Retry",
-        "retryOk": "Retry enqueued for {sender}.",
-        "running": "Running",
-        "state": {
-          "failed": "Failed",
-          "ok": "OK",
-          "pending": "Pending",
-          "running": "Running"
-        },
-        "title": "Unsubscribe #{shortId}",
-        "undo": {
-          "body": "You can undo within the next {daysLeft} days: restore mail to INBOX and remove the `Zero Mail/Unsubscribed` label.",
-          "button": "Undo archive",
-          "title": "Cleanup completed"
-        }
+        "titleWith": "Stats for {sender}"
       },
-      "undo": {
-        "cancel": "Cancel",
-        "confirmBody": "This will restore {count} mail to INBOX and remove the `Zero Mail/Unsubscribed` label. This action cannot be reversed again.",
-        "confirmCta": "Confirm undo",
-        "confirmTitle": "Undo archive?",
-        "generic": "Undo failed. Please try again shortly.",
-        "ok": "Restored {count} mail to INBOX.",
-        "windowExpired": "More than 30 days have passed since the cleanup ran — undo is no longer available.",
-        "windowExpiredToast": "Past the 30-day window — undo is no longer available."
+      "statusLabel": {
+        "approved": "Approved",
+        "autoArchived": "Auto archived",
+        "unhandled": "Unhandled",
+        "unsubscribed": "Unsubscribed"
+      },
+      "window": {
+        "30d": "Last 30 days",
+        "7d": "Last 7 days",
+        "90d": "Last 3 months",
+        "custom": "Custom",
+        "customApply": "Apply",
+        "customEnd": "To",
+        "customInvalidOrder": "Start date must be on or before end date",
+        "customLabel": "{startDate} – {endDate}",
+        "customMissing": "Pick both a start and an end date",
+        "customStart": "From",
+        "customTitle": "Pick a date range"
       }
     }
   },
@@ -957,11 +937,8 @@
     },
     "cleanup": {
       "campaign": {
-        "not_found": "Unsubscribe task not found. Please return to the list.",
-        "retry_conflict": "This sender has already unsubscribed — no retry needed.",
         "too_many_messages": "History mail limit of 2,000 exceeded. Please deselect some.",
-        "too_many_senders": "Sender limit of 25 exceeded. Please deselect some.",
-        "undo_window_expired": "Past the 30-day window — undo is no longer available."
+        "too_many_senders": "Sender limit of 25 exceeded. Please deselect some."
       },
       "sender_suppressed": "This sender is in the safe list. Remove it before processing."
     },
@@ -1230,6 +1207,7 @@
     },
     "badge": {
       "attachment": "Attachment",
+      "sent": "Sent",
       "unread": "Unread"
     },
     "composer": {
@@ -1256,6 +1234,7 @@
       "copyUnavailable": "Couldn't copy body.",
       "discard": "Discard composer",
       "generateBody": "Write with AI",
+      "generateBodyAgain": "Regenerate",
       "generateBodyError": "Couldn't write AI text. Try again in a moment.",
       "generateBodyLoading": "Writing...",
       "generateBodySuccess": "AI text was added to the composer.",
@@ -1267,6 +1246,8 @@
       "generateLanguageLabel": "AI writing language",
       "generateLanguageVi": "Vietnamese",
       "generateSuccess": "AI text generated.",
+      "hintInitialPlaceholder": "AI instructions (optional) — e.g. \"Decline politely and suggest a reschedule\"",
+      "hintRefinePlaceholder": "Adjust how? — e.g. \"Add a thank-you line at the end\"",
       "italic": "Italic",
       "link": "Insert link",
       "list": "List",
@@ -1275,6 +1256,11 @@
       "previewAttachment": "Preview",
       "previewError": "Couldn't prepare the email for sending.",
       "previewLoading": "Preparing to send...",
+      "refineCasual": "More casual",
+      "refineDetailed": "More detailed",
+      "refineFormal": "More formal",
+      "refineHeading": "Refine",
+      "refineShorter": "Shorter",
       "removeAttachment": "Remove {name}",
       "saveTemplate": "Templates",
       "sendFailed": "Couldn't send the email. Try again.",
@@ -1303,8 +1289,15 @@
       "body": "Check your Gmail connection and try again.",
       "title": "Couldn't load inbox"
     },
+    "labelFilter": {
+      "all": "All labels",
+      "clear": "Clear all",
+      "count": "{count} labels",
+      "empty": "No labels yet",
+      "trigger": "Filter by label"
+    },
     "limit": {
-      "caption": "{loaded}/{max} messages"
+      "caption": "{max} messages"
     },
     "message": {
       "noSubject": "(no subject)",
@@ -1325,6 +1318,10 @@
         "title": "No inbox mail"
       },
       "noBody": "This message has no readable content. Open Gmail for the full version.",
+      "syncing": {
+        "body": "New messages will appear in a moment.",
+        "title": "Syncing your Gmail inbox"
+      },
       "unselected": "Select a message to read it."
     }
   },

@@ -29,6 +29,7 @@ class OAuthProvisioningDefaultsTest extends PostgresContainerTest {
     @Autowired TenantService tenantService;
     @Autowired GmailConnectionService gmailConnectionService;
     @Autowired RefreshTokenCipher refreshTokenCipher;
+    @Autowired com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer inboxBackfillEnqueuer;
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired NotificationPreferenceRepository notificationPreferenceRepository;
     @Autowired JdbcTemplate jdbcTemplate;
@@ -89,6 +90,7 @@ class OAuthProvisioningDefaultsTest extends PostgresContainerTest {
                         gmailConnectionService,
                         failingNotificationPreferenceService,
                         refreshTokenCipher,
+                        inboxBackfillEnqueuer,
                         transactionManager);
 
         assertThatThrownBy(

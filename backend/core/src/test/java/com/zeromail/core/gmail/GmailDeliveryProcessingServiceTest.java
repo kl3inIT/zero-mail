@@ -123,12 +123,14 @@ class GmailDeliveryProcessingServiceTest {
                         eq(null),
                         eq(null),
                         eq(null),
+                        eq(null),
                         eq(false)))
                 .thenReturn(1);
 
         new GmailDeliveryProcessingService(
                         deliveryRepository,
                         observedRepository,
+                        mock(com.zeromail.core.inbox.usecases.InboxProjectionWriteService.class),
                         connectionService,
                         connectionRepository,
                         gmailApiClientFactory,
@@ -188,6 +190,7 @@ class GmailDeliveryProcessingServiceTest {
         new GmailDeliveryProcessingService(
                         deliveryRepository,
                         observedRepository,
+                        mock(com.zeromail.core.inbox.usecases.InboxProjectionWriteService.class),
                         connectionService,
                         connectionRepository,
                         gmailApiClientFactory,

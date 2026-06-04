@@ -1,4 +1,4 @@
-﻿# SePay Bank Transfer Plan Upgrades
+# SePay Bank Transfer Plan Upgrades
 
 ## Goal
 Add QR bank-transfer payment via SePay as a second payment method for plan upgrades, while keeping Lemon Squeezy as its own readable path.

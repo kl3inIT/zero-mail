@@ -92,8 +92,7 @@ public class CleanupRecentInboxWorkingSetService {
                     || !previewMessage.internalDate().isBefore(windowEndExclusive)) {
                 continue;
             }
-            if (!previewMessage.listUnsubscribePresent()
-                    || previewMessage.sanitizedSenderEmail().isBlank()) {
+            if (previewMessage.sanitizedSenderEmail().isBlank()) {
                 continue;
             }
             SenderAccumulator senderAccumulator =
@@ -103,13 +102,19 @@ public class CleanupRecentInboxWorkingSetService {
                                     new SenderAccumulator(
                                             senderEmail, previewMessage.sanitizedSenderDomain()));
             senderAccumulator.include(previewMessage);
+            senderAccumulator.captureSenderName(previewMessage.sanitizedSenderName());
         }
 
         ArrayList<SenderWorkingSet> senders = new ArrayList<>();
         for (SenderAccumulator senderAccumulator : accumulatorsBySenderEmail.values()) {
             if (!isSuppressed(
-                    tenantId, senderAccumulator.senderEmail(), senderAccumulator.senderDomain())) {
-                senders.add(senderAccumulator.toWorkingSet());
+                            tenantId,
+                            senderAccumulator.senderEmail(),
+                            senderAccumulator.senderDomain())
+                    && !isAlreadyQueuedOrRunning(tenantId, senderAccumulator.senderEmail())) {
+                senders.add(
+                        senderAccumulator.toWorkingSet(
+                                senderStatus(tenantId, senderAccumulator.senderEmail())));
             }
         }
         senders.sort(
@@ -143,6 +148,40 @@ public class CleanupRecentInboxWorkingSetService {
         return Boolean.TRUE.equals(suppressed);
     }
 
+    private boolean isAlreadyQueuedOrRunning(UUID tenantId, String senderEmail) {
+        Boolean alreadyQueuedOrRunning =
+                jdbcTemplate.queryForObject(
+                        """
+                                SELECT EXISTS (
+                                    SELECT 1
+                                    FROM unsubscribe_attempt ua
+                                    JOIN unsubscribe_campaign uc ON uc.id = ua.campaign_id
+                                    WHERE uc.tenant_id = ?
+                                      AND ua.sender_email = ?
+                                      AND uc.reverted_at IS NULL
+                                      AND ua.state IN ('PENDING', 'RUNNING')
+                                )
+                                """,
+                        Boolean.class,
+                        tenantId,
+                        senderEmail);
+        return Boolean.TRUE.equals(alreadyQueuedOrRunning);
+    }
+
+    private String senderStatus(UUID tenantId, String senderEmail) {
+        List<String> statuses =
+                jdbcTemplate.queryForList(
+                        """
+                                SELECT status
+                                FROM cleanup_sender_status
+                                WHERE tenant_id = ? AND sender_email = ?
+                                """,
+                        String.class,
+                        tenantId,
+                        senderEmail);
+        return statuses.isEmpty() ? null : statuses.getFirst();
+    }
+
     public record WorkingSet(List<SenderWorkingSet> senders) {
 
         public WorkingSet {
@@ -169,9 +208,12 @@ public class CleanupRecentInboxWorkingSetService {
     public record SenderWorkingSet(
             String senderEmail,
             String senderDomain,
+            String senderName,
             long messageCount,
+            long readMessageCount,
             Instant lastSeenAt,
             UnsubscribeMethod unsubscribeMethod,
+            String status,
             List<String> gmailMessageIds,
             String listUnsubscribeUrl,
             String listUnsubscribeMailto) {
@@ -179,6 +221,9 @@ public class CleanupRecentInboxWorkingSetService {
         public SenderWorkingSet {
             Objects.requireNonNull(senderEmail, "senderEmail must not be null");
             senderDomain = Objects.requireNonNullElse(senderDomain, "");
+            if (senderName != null && senderName.isBlank()) {
+                senderName = null;
+            }
             Objects.requireNonNull(lastSeenAt, "lastSeenAt must not be null");
             Objects.requireNonNull(unsubscribeMethod, "unsubscribeMethod must not be null");
             gmailMessageIds =
@@ -189,11 +234,23 @@ public class CleanupRecentInboxWorkingSetService {
                 throw new IllegalArgumentException(
                         "messageCount must be >= 0, was " + messageCount);
             }
+            if (readMessageCount < 0L) {
+                throw new IllegalArgumentException(
+                        "readMessageCount must be >= 0, was " + readMessageCount);
+            }
         }
 
         public UnsubscribeCandidateProjection toCandidateProjection() {
             return new UnsubscribeCandidateProjection(
-                    senderEmail, senderDomain, messageCount, lastSeenAt, unsubscribeMethod, false);
+                    senderEmail,
+                    senderDomain,
+                    senderName,
+                    messageCount,
+                    readMessageCount,
+                    lastSeenAt,
+                    unsubscribeMethod,
+                    status,
+                    false);
         }
     }
 
@@ -202,7 +259,9 @@ public class CleanupRecentInboxWorkingSetService {
         private final String senderEmail;
         private final String senderDomain;
         private final ArrayList<String> gmailMessageIds = new ArrayList<>();
+        private String senderName;
         private long messageCount;
+        private long readMessageCount;
         private Instant lastSeenAt = Instant.EPOCH;
         private boolean oneClickPresent;
         private boolean mailtoPresent;
@@ -214,8 +273,17 @@ public class CleanupRecentInboxWorkingSetService {
             this.senderDomain = Objects.requireNonNullElse(senderDomain, "");
         }
 
+        private void captureSenderName(String candidateName) {
+            if (senderName != null) return;
+            if (candidateName == null || candidateName.isBlank()) return;
+            senderName = candidateName;
+        }
+
         private void include(GmailPreviewMessage previewMessage) {
             messageCount++;
+            if (!previewMessage.gmailLabelIds().contains("UNREAD")) {
+                readMessageCount++;
+            }
             gmailMessageIds.add(previewMessage.gmailMessageId());
             if (previewMessage.internalDate().isAfter(lastSeenAt)) {
                 lastSeenAt = previewMessage.internalDate();
@@ -230,13 +298,16 @@ public class CleanupRecentInboxWorkingSetService {
             }
         }
 
-        private SenderWorkingSet toWorkingSet() {
+        private SenderWorkingSet toWorkingSet(String status) {
             return new SenderWorkingSet(
                     senderEmail,
                     senderDomain,
+                    senderName,
                     messageCount,
+                    readMessageCount,
                     lastSeenAt,
                     unsubscribeMethod(),
+                    status,
                     gmailMessageIds,
                     listUnsubscribeUrl,
                     listUnsubscribeMailto);

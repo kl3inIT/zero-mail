@@ -100,6 +100,7 @@ public class ProcessingJobWorker {
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
     private final UnsubscribeCampaignHandler unsubscribeCampaignHandler;
+    private final com.zeromail.worker.inbox.InboxBackfillJobHandler inboxBackfillJobHandler;
 
     private volatile boolean shouldRun = true;
     private Thread pollLoopThread;
@@ -107,13 +108,17 @@ public class ProcessingJobWorker {
     public ProcessingJobWorker(
             JdbcTemplate jdbcTemplate,
             PlatformTransactionManager transactionManager,
-            UnsubscribeCampaignHandler unsubscribeCampaignHandler) {
+            UnsubscribeCampaignHandler unsubscribeCampaignHandler,
+            com.zeromail.worker.inbox.InboxBackfillJobHandler inboxBackfillJobHandler) {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
         Objects.requireNonNull(transactionManager, "transactionManager must not be null");
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.unsubscribeCampaignHandler =
                 Objects.requireNonNull(
                         unsubscribeCampaignHandler, "unsubscribeCampaignHandler must not be null");
+        this.inboxBackfillJobHandler =
+                Objects.requireNonNull(
+                        inboxBackfillJobHandler, "inboxBackfillJobHandler must not be null");
     }
 
     @PostConstruct
@@ -207,6 +212,9 @@ public class ProcessingJobWorker {
             case "UNSUBSCRIBE_CAMPAIGN" ->
                     unsubscribeCampaignHandler.handle(
                             claimedJob.jobId(), claimedJob.tenantId(), claimedJob.payload());
+            case "INBOX_PROJECTION_BACKFILL" ->
+                    inboxBackfillJobHandler.handle(
+                            claimedJob.jobId(), claimedJob.tenantId(), claimedJob.payload());
             default ->
                     throw new IllegalStateException(
                             "Unknown processing_job.job_type: " + claimedJob.jobType());
@@ -223,7 +231,6 @@ public class ProcessingJobWorker {
         String simpleName = handlerFailure.getClass().getSimpleName();
         return switch (simpleName) {
             case "SuppressedSenderException" -> JobFailureReason.VALIDATION_FAILED;
-            case "CampaignNotFoundException" -> JobFailureReason.VALIDATION_FAILED;
             case "CampaignCapExceededException" -> JobFailureReason.VALIDATION_FAILED;
             default -> JobFailureReason.UNKNOWN;
         };

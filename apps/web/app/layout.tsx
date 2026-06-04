@@ -5,18 +5,45 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { getCurrentUserCached } from '@/features/account/api/account-api';
 import { routing } from '@/i18n/routing';
 import { getApiBase } from '@/lib/api/base-url';
+import { getSiteUrl, SITE_NAME, siteUrl } from '@/lib/site';
 
 import './globals.css';
 
+/** Brand mark Google reads for the search-result logo (white-bg square, ≥112px). */
+const BRAND_LOGO_URL = siteUrl('/icon.png');
+
 /**
  * Localize <title> + <meta name="description"> via next-intl (UI-SPEC §"Routing
- * behavior" — `generateMetadata` localizes Phase 1 route title/description).
+ * behavior" — `generateMetadata` localizes Phase 1 route title/description) and
+ * publish the site-wide SEO surface: `metadataBase` (so relative OG/canonical
+ * URLs resolve), an Open Graph / Twitter card, and a title template so child
+ * routes render "<Page> · Zero Mail". Favicon links are emitted automatically by
+ * the app/icon.png, app/apple-icon.png and app/favicon.ico file conventions.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('common.app');
+  const title = t('title');
+  const description = t('description');
   return {
-    title: t('title'),
-    description: t('description'),
+    metadataBase: new URL(getSiteUrl()),
+    applicationName: SITE_NAME,
+    title: { default: title, template: `%s · ${SITE_NAME}` },
+    description,
+    openGraph: {
+      type: 'website',
+      siteName: SITE_NAME,
+      title,
+      description,
+      locale: 'vi_VN',
+      alternateLocale: ['en_US'],
+      images: [{ url: BRAND_LOGO_URL, width: 512, height: 512, alt: SITE_NAME }],
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+      images: [BRAND_LOGO_URL],
+    },
   };
 }
 
@@ -77,6 +104,39 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const themeValue = cookieStore.get('zm-theme')?.value;
   const theme: 'light' | 'dark' = themeValue === 'dark' ? 'dark' : 'light';
+
+  // Organization + WebSite structured data — drives the logo and site name
+  // Google can surface in search results / the knowledge panel (distinct from
+  // the favicon, which is the file-convention icon above).
+  const site = getSiteUrl();
+  const appTranslations = await getTranslations('common.app');
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${site}/#organization`,
+        name: SITE_NAME,
+        url: site,
+        logo: {
+          '@type': 'ImageObject',
+          url: BRAND_LOGO_URL,
+          width: 512,
+          height: 512,
+        },
+        description: appTranslations('description'),
+        sameAs: ['https://github.com/kl3inIT/zero-mail'],
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${site}/#website`,
+        name: SITE_NAME,
+        url: site,
+        publisher: { '@id': `${site}/#organization` },
+        inLanguage: ['vi', 'en'],
+      },
+    ],
+  };
   const cookieLocale = await getLocale();
   // Reassert from /me when authenticated; falls back to cookie when not.
   const locale = await reassertServerLocale(cookieLocale);
@@ -90,7 +150,13 @@ export default async function RootLayout({
 
   return (
     <html lang={safeLocale} className={`${theme === 'dark' ? 'dark' : ''} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

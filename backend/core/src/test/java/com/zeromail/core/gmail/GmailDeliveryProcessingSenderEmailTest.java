@@ -67,6 +67,7 @@ class GmailDeliveryProcessingSenderEmailTest {
         scenario.service().processDelivery(scenario.delivery());
 
         ArgumentCaptor<String> senderEmailCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> senderNameCaptor = ArgumentCaptor.forClass(String.class);
         verify(scenario.messageGetRequest()).setFormat("metadata");
         verify(scenario.messageGetRequest())
                 .setMetadataHeaders(List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post"));
@@ -79,10 +80,12 @@ class GmailDeliveryProcessingSenderEmailTest {
                         any(String[].class),
                         eq(1_779_999_111_000L),
                         senderEmailCaptor.capture(),
+                        senderNameCaptor.capture(),
                         eq(null),
                         eq(null),
                         eq(false));
         assertThat(senderEmailCaptor.getValue()).isEqualTo("alice@example.com");
+        assertThat(senderNameCaptor.getValue()).isEqualTo("Alice Example");
     }
 
     @Test
@@ -107,6 +110,7 @@ class GmailDeliveryProcessingSenderEmailTest {
                         eq(301L),
                         any(String[].class),
                         eq(1_779_999_111_000L),
+                        eq(null),
                         eq(null),
                         eq(null),
                         eq(null),
@@ -190,6 +194,9 @@ class GmailDeliveryProcessingSenderEmailTest {
                     new GmailDeliveryProcessingService(
                             deliveryRepository,
                             observedRepository,
+                            mock(
+                                    com.zeromail.core.inbox.usecases.InboxProjectionWriteService
+                                            .class),
                             connectionService,
                             connectionRepository,
                             gmailApiClientFactory,
@@ -207,6 +214,7 @@ class GmailDeliveryProcessingSenderEmailTest {
                             eq(301L),
                             any(String[].class),
                             eq(1_779_999_111_000L),
+                            any(),
                             any(),
                             any(),
                             any(),

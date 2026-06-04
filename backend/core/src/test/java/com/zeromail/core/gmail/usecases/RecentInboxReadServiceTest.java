@@ -93,7 +93,10 @@ class RecentInboxReadServiceTest {
     }
 
     private static CryptoProperties cryptoProperties() {
-        return new CryptoProperties("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        return new CryptoProperties(
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
     }
 
     private static RecentInboxReadService service(
@@ -103,6 +106,12 @@ class RecentInboxReadServiceTest {
                 gmailConnectionRepository,
                 gmailApiClientFactory,
                 cryptoProperties(),
-                new JsoupSafeHtmlSanitizer());
+                new JsoupSafeHtmlSanitizer(),
+                org.mockito.Mockito.mock(
+                        com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer.class),
+                org.mockito.Mockito.mock(
+                        com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository.class),
+                org.mockito.Mockito.mock(
+                        com.zeromail.core.inbox.usecases.InboxProjectionReadService.class));
     }
 }

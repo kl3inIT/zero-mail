@@ -16,11 +16,11 @@ public interface MailMessageObservedRepository
                     """
             INSERT INTO mail_message_observed
               (tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids, internal_date,
-               sender_email, list_unsubscribe_url, list_unsubscribe_mailto,
+               sender_email, sender_name, list_unsubscribe_url, list_unsubscribe_mailto,
                list_unsubscribe_one_click, observed_at)
             VALUES
               (:tenantId, :gmailMessageId, :gmailThreadId, :historyId, :labelIds, :internalDate,
-               :senderEmail, :listUnsubscribeUrl, :listUnsubscribeMailto,
+               :senderEmail, :senderName, :listUnsubscribeUrl, :listUnsubscribeMailto,
                :listUnsubscribeOneClick, NOW())
             ON CONFLICT (tenant_id, gmail_message_id) DO NOTHING
             """,
@@ -34,6 +34,7 @@ public interface MailMessageObservedRepository
             @Param("labelIds") String[] labelIds,
             @Param("internalDate") Long internalDate,
             @Param("senderEmail") String senderEmail,
+            @Param("senderName") String senderName,
             @Param("listUnsubscribeUrl") String listUnsubscribeUrl,
             @Param("listUnsubscribeMailto") String listUnsubscribeMailto,
             @Param("listUnsubscribeOneClick") boolean listUnsubscribeOneClick);

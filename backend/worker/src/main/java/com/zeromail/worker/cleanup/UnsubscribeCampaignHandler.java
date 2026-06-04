@@ -1,6 +1,7 @@
 package com.zeromail.worker.cleanup;
 
 import com.zeromail.core.cleanup.domain.CampaignStatus;
+import com.zeromail.core.cleanup.domain.CleanupSenderStatus;
 import com.zeromail.core.cleanup.domain.UnsubscribeAttemptState;
 import com.zeromail.core.cleanup.domain.UnsubscribeCampaignPolicy;
 import com.zeromail.core.cleanup.domain.UnsubscribeResult;
@@ -12,6 +13,7 @@ import com.zeromail.core.cleanup.persistence.UnsubscribeCampaignRepository;
 import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService;
 import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.SenderWorkingSet;
 import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.WorkingSet;
+import com.zeromail.core.cleanup.usecases.CleanupSenderStatusService;
 import com.zeromail.core.cleanup.usecases.UnsubscribeDomainThrottle;
 import com.zeromail.core.cleanup.usecases.UnsubscribeHttpClient;
 import com.zeromail.core.cleanup.usecases.UnsubscribeMailtoSender;
@@ -90,6 +92,7 @@ public class UnsubscribeCampaignHandler {
     private final UnsubscribeMailtoSender unsubscribeMailtoSender;
     private final UnsubscribeDomainThrottle unsubscribeDomainThrottle;
     private final CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService;
+    private final CleanupSenderStatusService cleanupSenderStatusService;
     private final TriageGmailWriter triageGmailWriter;
     private final TriageAuditWriter triageAuditWriter;
     private final JdbcTemplate jdbcTemplate;
@@ -103,6 +106,7 @@ public class UnsubscribeCampaignHandler {
             UnsubscribeMailtoSender unsubscribeMailtoSender,
             UnsubscribeDomainThrottle unsubscribeDomainThrottle,
             CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService,
+            CleanupSenderStatusService cleanupSenderStatusService,
             TriageGmailWriter triageGmailWriter,
             TriageAuditWriter triageAuditWriter,
             JdbcTemplate jdbcTemplate,
@@ -129,6 +133,9 @@ public class UnsubscribeCampaignHandler {
                 Objects.requireNonNull(
                         cleanupRecentInboxWorkingSetService,
                         "cleanupRecentInboxWorkingSetService must not be null");
+        this.cleanupSenderStatusService =
+                Objects.requireNonNull(
+                        cleanupSenderStatusService, "cleanupSenderStatusService must not be null");
         this.triageGmailWriter =
                 Objects.requireNonNull(triageGmailWriter, "triageGmailWriter must not be null");
         this.triageAuditWriter =
@@ -231,6 +238,8 @@ public class UnsubscribeCampaignHandler {
 
         // Per-sender atomic: label + archive ONLY when unsubscribe step succeeded.
         int archivedCount = applyLabelAndArchiveHistory(tenantId, attempt, recentInboxWorkingSet);
+        cleanupSenderStatusService.setStatus(
+                tenantId, List.of(attempt.getSenderEmail()), CleanupSenderStatus.UNSUBSCRIBED);
         attempt.markOk(archivedCount, clock.instant());
         unsubscribeAttemptRepository.save(attempt);
         log.info(

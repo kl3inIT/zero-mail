@@ -13,9 +13,11 @@ export function AiConfigPage() {
   const t = useTranslations();
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6">
-      <header className="mb-8 space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">{t('ai.page.title')}</h1>
+    <div className="w-full space-y-8">
+      <header className="space-y-1">
+        <h1 className="text-foreground text-2xl font-semibold tracking-normal">
+          {t('ai.page.title')}
+        </h1>
         <p className="text-muted-foreground text-sm">{t('ai.page.description')}</p>
       </header>
 

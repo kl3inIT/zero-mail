@@ -9,7 +9,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,10 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
  * Read-side query for the bulk-unsubscribe candidate list (UNS-01).
  *
  * <p>CQRS-lite — direct {@link JdbcTemplate} over the {@code mail_message_observed} + {@code
- * sender_suppression} tables. It intentionally suspends caller transactions before probing Gmail so
- * a Gmail preview failure can fall back to the DB snapshot without marking the caller
- * rollback-only. Lives in {@code core.cleanup.usecases} so the analytics module never sees
- * cleanup-specific column shapes (D-17 module boundary).
+ * sender_suppression} tables as the source of truth. When the DB returns zero rows for a tenant
+ * (typically a fresh onboarding before the observer pipeline catches up) the service falls back to
+ * a live Gmail-preview read so the candidate table is never empty for a real inbox. Once the DB has
+ * at least one observed row inside the window, the Gmail path is skipped — that keeps the Inbox
+ * Zero-style UX where Archive doesn't make a sender disappear (DB snapshot persists even after
+ * Gmail removes the INBOX label).
  *
  * <p>Privacy invariant: this service never logs raw {@code senderEmail} values. Only count +
  * tenantId scoped to the {@code event=cleanup_candidates_queried} log line.
@@ -53,19 +54,28 @@ public class CandidateQueryService {
                     SELECT
                         mmo.sender_email,
                         split_part(mmo.sender_email, '@', 2) AS sender_domain,
+                        MAX(mmo.sender_name) FILTER (WHERE mmo.sender_name IS NOT NULL) AS sender_name,
                         COUNT(*) AS message_count,
+                        COUNT(*) FILTER (WHERE NOT ('UNREAD' = ANY(mmo.label_ids))) AS read_message_count,
                         MAX(mmo.observed_at) AS last_seen_at,
                         CASE
                             WHEN BOOL_OR(mmo.list_unsubscribe_one_click) THEN 'ONE_CLICK'
                             WHEN BOOL_OR(mmo.list_unsubscribe_mailto IS NOT NULL) THEN 'MAILTO'
                             ELSE 'NONE'
-                        END AS unsubscribe_method
+                        END AS unsubscribe_method,
+                        MAX(css.status) AS sender_status
                     FROM mail_message_observed mmo
+                    LEFT JOIN cleanup_sender_status css
+                      ON css.tenant_id = mmo.tenant_id
+                     AND css.sender_email = mmo.sender_email
                     WHERE mmo.tenant_id = ?
                       AND mmo.observed_at >= ?
                       AND mmo.observed_at < ?
                       AND mmo.sender_email IS NOT NULL
-                      AND (mmo.list_unsubscribe_url IS NOT NULL OR mmo.list_unsubscribe_mailto IS NOT NULL)
+                      AND (
+                          mmo.list_unsubscribe_url IS NOT NULL
+                          OR mmo.list_unsubscribe_mailto IS NOT NULL
+                      )
                       AND NOT EXISTS (
                           SELECT 1 FROM sender_suppression ss
                           WHERE ss.tenant_id = mmo.tenant_id
@@ -73,6 +83,15 @@ public class CandidateQueryService {
                                 ss.sender_email = mmo.sender_email
                                 OR ss.sender_domain = split_part(mmo.sender_email, '@', 2)
                             )
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM unsubscribe_attempt ua
+                          JOIN unsubscribe_campaign uc ON uc.id = ua.campaign_id
+                          WHERE uc.tenant_id = mmo.tenant_id
+                            AND ua.sender_email = mmo.sender_email
+                            AND uc.reverted_at IS NULL
+                            AND ua.state IN ('PENDING', 'RUNNING')
                       )
                     GROUP BY mmo.sender_email
                     ORDER BY message_count DESC, mmo.sender_email ASC
@@ -100,39 +119,43 @@ public class CandidateQueryService {
      * still have at least one of {@code list_unsubscribe_url} / {@code list_unsubscribe_mailto}
      * populated and are NOT in the tenant's suppression list.
      *
-     * <p>{@code limit} is hard-capped to {@link UnsubscribeCampaignPolicy#MAX_SENDERS_PER_CAMPAIGN}
-     * so a runaway controller cap cannot exceed the campaign batch ceiling.
+     * <p>{@code limit} is hard-capped to {@link UnsubscribeCampaignPolicy#MAX_CANDIDATE_SENDERS} so
+     * the browsing table can load more than one execution batch without an unbounded query.
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public List<UnsubscribeCandidateProjection> findCandidates(
             UUID tenantId, Duration window, int limit) {
-        Objects.requireNonNull(tenantId, "tenantId must not be null");
         Objects.requireNonNull(window, "window must not be null");
         if (window.isNegative() || window.isZero()) {
             throw new IllegalArgumentException("window must be a positive Duration, was " + window);
         }
+        Instant now = clock.instant();
+        return findCandidates(tenantId, now.minus(window), now, limit);
+    }
+
+    /**
+     * Range-based overload powering the date-picker filter ("from {@code fromInclusive}" through
+     * "to {@code toExclusive}"). Callers that want the legacy 7d/30d/90d preset continue to use the
+     * {@link Duration}-based method above; the date picker UI calls this one directly so users can
+     * target an arbitrary historical window (e.g. May 1 – May 15) instead of only "last N days from
+     * now".
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public List<UnsubscribeCandidateProjection> findCandidates(
+            UUID tenantId, Instant fromInclusive, Instant toExclusive, int limit) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(fromInclusive, "fromInclusive must not be null");
+        Objects.requireNonNull(toExclusive, "toExclusive must not be null");
+        if (!fromInclusive.isBefore(toExclusive)) {
+            throw new IllegalArgumentException("fromInclusive must be strictly before toExclusive");
+        }
         if (limit <= 0) {
             throw new IllegalArgumentException("limit must be > 0, was " + limit);
         }
-        int effectiveLimit = Math.min(limit, UnsubscribeCampaignPolicy.MAX_SENDERS_PER_CAMPAIGN);
-        Instant now = clock.instant();
-        Instant windowStartInclusive = now.minus(window);
-        Optional<CleanupRecentInboxWorkingSetService.WorkingSet> recentInboxWorkingSet =
-                cleanupRecentInboxWorkingSetService.findRecentInboxWorkingSet(tenantId, window);
-        if (recentInboxWorkingSet.isPresent()) {
-            List<UnsubscribeCandidateProjection> candidates =
-                    recentInboxWorkingSet.orElseThrow().toCandidateProjections(effectiveLimit);
-            log.info(
-                    "event=cleanup_candidates_queried tenantId={} window={} limit={} count={} source=recent_inbox",
-                    tenantId,
-                    window,
-                    effectiveLimit,
-                    candidates.size());
-            return candidates;
-        }
-
-        Timestamp windowStartTimestamp = Timestamp.from(windowStartInclusive);
-        Timestamp windowEndTimestamp = Timestamp.from(now);
+        int effectiveLimit = Math.min(limit, UnsubscribeCampaignPolicy.MAX_CANDIDATE_SENDERS);
+        Duration window = Duration.between(fromInclusive, toExclusive);
+        Timestamp windowStartTimestamp = Timestamp.from(fromInclusive);
+        Timestamp windowEndTimestamp = Timestamp.from(toExclusive);
 
         List<UnsubscribeCandidateProjection> candidates =
                 jdbcTemplate.query(
@@ -140,17 +163,23 @@ public class CandidateQueryService {
                         (resultSet, rowNumber) -> {
                             String senderEmail = resultSet.getString("sender_email");
                             String senderDomain = resultSet.getString("sender_domain");
+                            String senderName = resultSet.getString("sender_name");
                             long messageCount = resultSet.getLong("message_count");
+                            long readMessageCount = resultSet.getLong("read_message_count");
                             Instant lastSeenAt = resultSet.getTimestamp("last_seen_at").toInstant();
                             UnsubscribeMethod unsubscribeMethod =
                                     UnsubscribeMethod.fromId(
                                             resultSet.getString("unsubscribe_method"));
+                            String senderStatus = resultSet.getString("sender_status");
                             return new UnsubscribeCandidateProjection(
                                     senderEmail,
                                     senderDomain == null ? "" : senderDomain,
+                                    senderName,
                                     messageCount,
+                                    readMessageCount,
                                     lastSeenAt,
                                     unsubscribeMethod,
+                                    senderStatus,
                                     false);
                         },
                         tenantId,
@@ -158,12 +187,39 @@ public class CandidateQueryService {
                         windowEndTimestamp,
                         effectiveLimit);
 
+        if (!candidates.isEmpty()) {
+            log.info(
+                    "event=cleanup_candidates_queried tenantId={} window={} limit={} count={} source=db",
+                    tenantId,
+                    window,
+                    effectiveLimit,
+                    candidates.size());
+            return candidates;
+        }
+
+        // DB is empty for this tenant (observer pipeline has not populated mail_message_observed
+        // yet for this window). Fall back to a live Gmail-preview read so a freshly-onboarded
+        // tenant can browse senders immediately. Once the observer catches up the DB branch wins
+        // — and after Archive, sender stays in the list because the DB snapshot persists.
+        java.util.Optional<CleanupRecentInboxWorkingSetService.WorkingSet> recentInboxWorkingSet =
+                cleanupRecentInboxWorkingSetService.findRecentInboxWorkingSet(tenantId, window);
+        if (recentInboxWorkingSet.isPresent()) {
+            List<UnsubscribeCandidateProjection> bootstrapCandidates =
+                    recentInboxWorkingSet.orElseThrow().toCandidateProjections(effectiveLimit);
+            log.info(
+                    "event=cleanup_candidates_queried tenantId={} window={} limit={} count={} source=gmail_bootstrap",
+                    tenantId,
+                    window,
+                    effectiveLimit,
+                    bootstrapCandidates.size());
+            return bootstrapCandidates;
+        }
+
         log.info(
-                "event=cleanup_candidates_queried tenantId={} window={} limit={} count={}",
+                "event=cleanup_candidates_queried tenantId={} window={} limit={} count=0 source=db",
                 tenantId,
                 window,
-                effectiveLimit,
-                candidates.size());
+                effectiveLimit);
         return candidates;
     }
 }

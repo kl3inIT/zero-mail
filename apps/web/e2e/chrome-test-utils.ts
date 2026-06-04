@@ -494,7 +494,7 @@ export async function openAuthenticatedRoute(
     | '/rules'
     | '/settings'
     | '/onboarding/gmail-connect'
-    | '/cleanup/unsubscribe-campaign'
+    | '/cleanup/bulk-unsubscribe'
     | '/cleanup/suppression',
   state: ChromeMockState,
 ) {

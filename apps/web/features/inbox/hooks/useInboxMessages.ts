@@ -13,11 +13,13 @@ import {
   getGmailDraftDetail,
   getInboxMessageDetail,
   getInboxPage,
+  getInboxThreadDetail,
   markInboxMessageRead,
   type InboxLabel,
   type InboxMessage,
   type InboxMessageDetail,
   type InboxPage,
+  type InboxThreadDetail,
 } from '@/features/inbox/api/inbox-api';
 import { inboxKeys } from '@/features/inbox/query-keys';
 
@@ -31,6 +33,12 @@ export function useInboxMessages() {
     gcTime: 30 * 60_000,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    // Poll so mail that Pub/Sub has already written to the projection appears without a manual
+    // refresh. TanStack pauses this while the tab is unfocused (refetchIntervalInBackground defaults
+    // to false), so idle tabs don't poll; refetchOnWindowFocus catches up the moment the user
+    // returns. Note: refetching an infinite query refetches every loaded page, so keep the interval
+    // generous rather than chasing real-time — true push would be SSE, not a tighter poll.
+    refetchInterval: 60_000,
   });
 }
 
@@ -38,14 +46,16 @@ export function flattenInboxMessages(data: InfiniteData<InboxPage> | undefined):
   return data?.pages.flatMap((page) => page.items) ?? [];
 }
 
-export function latestInboxLoadedCount(data: InfiniteData<InboxPage> | undefined): number {
-  const lastPage = data?.pages.at(-1);
-  return lastPage?.loadedCount ?? 0;
-}
-
 export function latestInboxMaxMessages(data: InfiniteData<InboxPage> | undefined): number {
   const lastPage = data?.pages.at(-1);
   return lastPage?.maxMessages ?? 100;
+}
+
+export function latestInboxDataSource(
+  data: InfiniteData<InboxPage> | undefined,
+): InboxPage['dataSource'] | null {
+  const lastPage = data?.pages.at(-1);
+  return lastPage?.dataSource ?? null;
 }
 
 export function useInboxMessageDetail(gmailMessageId: string | null) {
@@ -53,6 +63,23 @@ export function useInboxMessageDetail(gmailMessageId: string | null) {
     queryKey: inboxKeys.detail(gmailMessageId),
     queryFn: () => getInboxMessageDetail(gmailMessageId!),
     enabled: Boolean(gmailMessageId),
+    staleTime: 30_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * Fetch a whole conversation (received + the user's sent replies) for the reader. Keyed on the
+ * thread id and reusing a short staleTime so reopening a thread is instant; `refetchOnMount:
+ * 'always'` keeps it fresh so a reply just sent shows up when the reader re-renders.
+ */
+export function useInboxThreadDetail(gmailThreadId: string | null) {
+  return useQuery<InboxThreadDetail>({
+    queryKey: inboxKeys.thread(gmailThreadId),
+    queryFn: () => getInboxThreadDetail(gmailThreadId!),
+    enabled: Boolean(gmailThreadId),
     staleTime: 30_000,
     gcTime: 30 * 60_000,
     refetchOnMount: 'always',
@@ -98,10 +125,11 @@ export function useMarkInboxMessageRead() {
       }
     },
     onSuccess: async (_data, gmailMessageId) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: inboxKeys.pages() }),
-        queryClient.invalidateQueries({ queryKey: inboxKeys.detail(gmailMessageId) }),
-      ]);
+      // Phase B Wave 2: the backend mark-read now writes the projection row in the same flow as
+      // the Gmail label modify, so the optimistic cache already matches the next DB read. Skip
+      // the inbox pages refetch (would flash the read state away then back) and only invalidate
+      // the open message detail so the labels chip there reflects the UNREAD removal.
+      await queryClient.invalidateQueries({ queryKey: inboxKeys.detail(gmailMessageId) });
     },
   });
 }

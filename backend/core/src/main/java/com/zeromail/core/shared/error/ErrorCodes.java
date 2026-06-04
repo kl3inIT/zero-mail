@@ -64,10 +64,6 @@ public final class ErrorCodes {
             "error.cleanup.campaign.too_many_senders";
     public static final String CAMPAIGN_TOO_MANY_MESSAGES =
             "error.cleanup.campaign.too_many_messages";
-    public static final String CAMPAIGN_NOT_FOUND = "error.cleanup.campaign.not_found";
-    public static final String CAMPAIGN_UNDO_WINDOW_EXPIRED =
-            "error.cleanup.campaign.undo_window_expired";
-    public static final String CAMPAIGN_RETRY_CONFLICT = "error.cleanup.campaign.retry_conflict";
     public static final String SENDER_SUPPRESSED = "error.cleanup.sender_suppressed";
     public static final String VOICE_WRITING_STYLE_TOO_SHORT = "voice.writing_style.too_short";
     public static final String VOICE_WRITING_STYLE_TOO_LONG = "voice.writing_style.too_long";

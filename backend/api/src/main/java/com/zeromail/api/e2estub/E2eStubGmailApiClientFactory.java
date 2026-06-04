@@ -61,6 +61,7 @@ public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
     private static final String USER_ID = "me";
     private static final String INBOX_LABEL_ID = "INBOX";
     private static final String SENT_LABEL_ID = "SENT";
+    private static final String TRASH_LABEL_ID = "TRASH";
     private static final String E2E_STUB_ACCESS_TOKEN = "e2e-stub-access-token";
 
     private final ConcurrentHashMap<String, SeededMessage> seededMessages =
@@ -171,6 +172,7 @@ public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
     private void seedSystemLabels() {
         seededLabels.put(INBOX_LABEL_ID, label(INBOX_LABEL_ID, INBOX_LABEL_ID));
         seededLabels.put(SENT_LABEL_ID, label(SENT_LABEL_ID, SENT_LABEL_ID));
+        seededLabels.put(TRASH_LABEL_ID, label(TRASH_LABEL_ID, TRASH_LABEL_ID));
     }
 
     private Message toGmailMessage(String messageId) {
@@ -217,6 +219,15 @@ public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
         if (request.getRemoveLabelIds() != null) {
             labelIds.removeAll(request.getRemoveLabelIds());
         }
+    }
+
+    private Message moveMessageToTrash(String messageId) {
+        LinkedHashSet<String> labelIds =
+                seededMessageLabelIds.computeIfAbsent(
+                        messageId, _ -> new LinkedHashSet<>(List.of(INBOX_LABEL_ID)));
+        labelIds.add(TRASH_LABEL_ID);
+        labelIds.remove(INBOX_LABEL_ID);
+        return toGmailMessage(messageId);
     }
 
     private Draft createDraft(Draft draft) {
@@ -509,6 +520,11 @@ public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
                 throws IOException {
             return new OfflineMessageModify(this, messageId, content, e2eStubGmailFactory);
         }
+
+        @Override
+        public Trash trash(String userId, String messageId) throws IOException {
+            return new OfflineMessageTrash(this, messageId, e2eStubGmailFactory);
+        }
     }
 
     private static final class OfflineMessageGet extends Gmail.Users.Messages.Get {
@@ -568,6 +584,26 @@ public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
         public Message execute() {
             e2eStubGmailFactory.applyLabelMutation(messageId, request);
             return e2eStubGmailFactory.toGmailMessage(messageId);
+        }
+    }
+
+    private static final class OfflineMessageTrash extends Gmail.Users.Messages.Trash {
+
+        private final String messageId;
+        private final E2eStubGmailApiClientFactory e2eStubGmailFactory;
+
+        private OfflineMessageTrash(
+                Gmail.Users.Messages messages,
+                String messageId,
+                E2eStubGmailApiClientFactory e2eStubGmailFactory) {
+            messages.super(USER_ID, messageId);
+            this.messageId = messageId;
+            this.e2eStubGmailFactory = e2eStubGmailFactory;
+        }
+
+        @Override
+        public Message execute() {
+            return e2eStubGmailFactory.moveMessageToTrash(messageId);
         }
     }
 

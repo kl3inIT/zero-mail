@@ -41,6 +41,9 @@ public class MailMessageObservedEntity {
     @Column(name = "sender_email", length = 320)
     private String senderEmail;
 
+    @Column(name = "sender_name", length = 320)
+    private String senderName;
+
     @Column(name = "observed_at", nullable = false)
     private Instant observedAt = Instant.now();
 
@@ -92,6 +95,28 @@ public class MailMessageObservedEntity {
             Long internalDate,
             String senderEmail,
             Instant observedAt) {
+        this(
+                tenantId,
+                gmailMessageId,
+                gmailThreadId,
+                historyId,
+                labelIds,
+                internalDate,
+                senderEmail,
+                null,
+                observedAt);
+    }
+
+    public MailMessageObservedEntity(
+            UUID tenantId,
+            String gmailMessageId,
+            String gmailThreadId,
+            Long historyId,
+            String[] labelIds,
+            Long internalDate,
+            String senderEmail,
+            String senderName,
+            Instant observedAt) {
         this.tenantId = tenantId;
         this.gmailMessageId = gmailMessageId;
         this.gmailThreadId = gmailThreadId;
@@ -99,6 +124,7 @@ public class MailMessageObservedEntity {
         this.labelIds = labelIds;
         this.internalDate = internalDate;
         this.senderEmail = senderEmail;
+        this.senderName = senderName;
         this.observedAt = observedAt;
     }
 
@@ -132,6 +158,10 @@ public class MailMessageObservedEntity {
 
     public String getSenderEmail() {
         return senderEmail;
+    }
+
+    public String getSenderName() {
+        return senderName;
     }
 
     public Instant getObservedAt() {

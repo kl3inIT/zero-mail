@@ -4,16 +4,19 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.Label;
+import com.google.api.services.gmail.model.ListDraftsResponse;
 import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.inbox.usecases.InboxProjectionWriteService;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.exception.MissingMessageIdException;
 import com.zeromail.core.triage.exception.ThreadingHeaderInvalidException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,9 +45,18 @@ public class TriageGmailWriter {
     private static final String DIGEST_LABEL_NAME = "Zero Mail/Digest";
 
     private final GmailApiClientFactory gmailApiClientFactory;
+    private final InboxProjectionWriteService inboxProjectionWriteService;
 
-    public TriageGmailWriter(GmailApiClientFactory gmailApiClientFactory) {
-        this.gmailApiClientFactory = gmailApiClientFactory;
+    public TriageGmailWriter(
+            GmailApiClientFactory gmailApiClientFactory,
+            InboxProjectionWriteService inboxProjectionWriteService) {
+        this.gmailApiClientFactory =
+                Objects.requireNonNull(
+                        gmailApiClientFactory, "gmailApiClientFactory must not be null");
+        this.inboxProjectionWriteService =
+                Objects.requireNonNull(
+                        inboxProjectionWriteService,
+                        "inboxProjectionWriteService must not be null");
     }
 
     public String applyLabel(UUID tenantId, String gmailMessageId, String labelName)
@@ -85,8 +97,15 @@ public class TriageGmailWriter {
                 });
     }
 
+    /**
+     * Drop the Gmail {@code UNREAD} system label AND mirror the change into the inbox projection so
+     * the next DB-backed read returns the same state the optimistic UI already shows (Phase B Wave
+     * 2). Gmail call happens first; the projection write runs only after Gmail confirms — if Gmail
+     * throws, the projection stays untouched and the next Pub/Sub event will reconcile.
+     */
     public void markRead(UUID tenantId, String gmailMessageId) throws IOException {
         removeSystemLabel(tenantId, gmailMessageId, UNREAD_LABEL_ID, "markRead");
+        inboxProjectionWriteService.markRead(tenantId, gmailMessageId);
     }
 
     public void markUnread(UUID tenantId, String gmailMessageId) throws IOException {
@@ -236,6 +255,17 @@ public class TriageGmailWriter {
                 });
     }
 
+    public void moveToTrash(UUID tenantId, String gmailMessageId) throws IOException {
+        executeGmailWrite(
+                tenantId,
+                "moveToTrash",
+                gmail -> {
+                    gmail.users().messages().trash(USER_ID, gmailMessageId).execute();
+                    logMessageWrite(tenantId, gmailMessageId, "moveToTrash");
+                    return null;
+                });
+    }
+
     /**
      * H-2 — Look up the Gmail-side label id for a known label name. Returns {@link
      * Optional#empty()} when the label does not exist (e.g. user manually deleted the {@code "Zero
@@ -270,6 +300,106 @@ public class TriageGmailWriter {
         requireText(labelName, "labelName");
         return executeGmailWrite(
                 tenantId, "ensureLabelExists", gmail -> resolveOrCreateLabelId(gmail, labelName));
+    }
+
+    /**
+     * Update the MIME content of an existing Gmail draft. Used by the composer auto-save loop: when
+     * the user types into the inbox reply composer, the FE debounces and calls the composer draft
+     * service, which routes through here to keep the Gmail draft in sync. Idempotent: if Gmail
+     * returns 404 the caller is expected to retry as create.
+     *
+     * <p>Mirrors {@link #saveDraftMessage} but routes through {@code drafts().update} so the same
+     * draftId is preserved across composer keystrokes (one draft per thread, not many).
+     */
+    public String updateDraftMessage(
+            UUID tenantId, String draftId, Message draftMessage, String gmailThreadId)
+            throws IOException {
+        Objects.requireNonNull(draftMessage, "draftMessage must not be null");
+        return executeGmailWrite(
+                tenantId,
+                "updateDraftMessage",
+                gmail -> {
+                    Draft updatedDraft =
+                            gmail.users()
+                                    .drafts()
+                                    .update(USER_ID, draftId, new Draft().setMessage(draftMessage))
+                                    .execute();
+                    logThreadWrite(tenantId, gmailThreadId);
+                    return updatedDraft.getId();
+                });
+    }
+
+    /**
+     * Look up every Gmail draft that belongs to the given thread. Returns the raw Gmail draftIds so
+     * callers can choose which one to load. Drafts.list is paginated; we cap at {@code maxDrafts}
+     * to keep latency bounded for users with massive draft folders. For composer caching we
+     * typically only care about the most recent draft on a specific thread.
+     */
+    public List<String> listDraftIdsForThread(UUID tenantId, String gmailThreadId, int maxDrafts)
+            throws IOException {
+        requireText(gmailThreadId, "gmailThreadId");
+        return executeGmailWrite(
+                tenantId,
+                "listDraftIdsForThread",
+                gmail -> {
+                    List<String> matchingDraftIds = new ArrayList<>();
+                    String nextPageToken = null;
+                    int scannedDrafts = 0;
+                    do {
+                        ListDraftsResponse listResponse =
+                                gmail.users()
+                                        .drafts()
+                                        .list(USER_ID)
+                                        .setMaxResults((long) Math.min(50, maxDrafts))
+                                        .setPageToken(nextPageToken)
+                                        .execute();
+                        List<Draft> pageDrafts =
+                                listResponse.getDrafts() == null
+                                        ? List.of()
+                                        : listResponse.getDrafts();
+                        for (Draft scannedDraft : pageDrafts) {
+                            scannedDrafts++;
+                            Message draftMessage = scannedDraft.getMessage();
+                            if (draftMessage != null
+                                    && gmailThreadId.equals(draftMessage.getThreadId())
+                                    && hasText(scannedDraft.getId())) {
+                                matchingDraftIds.add(scannedDraft.getId());
+                            }
+                            if (scannedDrafts >= maxDrafts) {
+                                break;
+                            }
+                        }
+                        nextPageToken = listResponse.getNextPageToken();
+                    } while (hasText(nextPageToken) && scannedDrafts < maxDrafts);
+                    return List.copyOf(matchingDraftIds);
+                });
+    }
+
+    /**
+     * Fetch a single draft in {@code RAW} format so callers can parse the underlying MIME headers
+     * and body. The composer draft service uses this to restore To/Cc/Bcc/Subject/Body when the
+     * user reopens the composer for a thread that already has a draft.
+     */
+    public Optional<Draft> fetchDraftRaw(UUID tenantId, String draftId) throws IOException {
+        requireText(draftId, "draftId");
+        return executeGmailWrite(
+                tenantId,
+                "fetchDraftRaw",
+                gmail -> {
+                    try {
+                        return Optional.of(
+                                gmail.users()
+                                        .drafts()
+                                        .get(USER_ID, draftId)
+                                        .setFormat("RAW")
+                                        .execute());
+                    } catch (GoogleJsonResponseException googleResponseException) {
+                        if (googleResponseException.getStatusCode() == 404) {
+                            return Optional.<Draft>empty();
+                        }
+                        throw googleResponseException;
+                    }
+                });
     }
 
     public void deleteDraft(UUID tenantId, String draftId) throws IOException {

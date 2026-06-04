@@ -1,18 +1,32 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ArchiveIcon,
+  ArchiveRestoreIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
-  Clock3Icon,
+  ChevronUpIcon,
+  ExternalLinkIcon,
+  Loader2Icon,
+  MailIcon,
   MailXIcon,
-  ShieldIcon,
+  MoreHorizontalIcon,
+  TagIcon,
+  ThumbsUpIcon,
+  TrashIcon,
+  ZoomInIcon,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -23,288 +37,225 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnsubscribeCandidateResponse } from '@/features/cleanup/unsubscribe-campaign/api/unsubscribe-campaign-api';
-import { RiskBadge } from '@/features/cleanup/unsubscribe-campaign/components/RiskBadge';
 import { cn } from '@/lib/utils';
 
-type CandidateRow = UnsubscribeCandidateResponse & { riskBadge?: string };
+export type CandidateStatus = 'APPROVED' | 'UNSUBSCRIBED' | 'AUTO_ARCHIVED';
+export type SortColumn = 'emails' | 'read';
+export type SortDirection = 'asc' | 'desc';
 
-const lastSeenFormatter = new Intl.DateTimeFormat('vi-VN', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-});
+// senderName is added to the backend DTO by Phase 2; the optional access keeps the FE
+// compiling against the not-yet-regenerated schema.d.ts and switches to fully-typed after
+// `pnpm --filter web run generate:api` re-pulls the spec.
+export type CandidateRow = UnsubscribeCandidateResponse & {
+  readMessageCount?: number;
+  status?: CandidateStatus | null;
+  senderName?: string | null;
+};
 
-function deriveRiskBadge(candidate: CandidateRow): string {
-  if (candidate.riskBadge) return candidate.riskBadge;
-  if (candidate.suppressed) return 'SUPPRESSED_BLOCKED';
-  if (candidate.unsubscribeMethod === 'NONE') return 'NO_HEADER_DISABLED';
-  return 'SAFE';
-}
+const LOW_READ_THRESHOLD = 30;
+const HIGH_READ_THRESHOLD = 70;
 
 export function CandidateListTable({
   candidates,
   selectedEmails,
   onToggleEmail,
   onToggleVisibleEmails,
-  onPreviewSender,
-  onKeepSender,
-  keepingSenderEmail,
+  onPrimaryAction,
+  onApproveToggle,
+  onViewStats,
+  onLabelFuture,
+  onArchiveSender,
+  onDeleteSender,
+  pendingSenderEmails,
+  sortColumn,
+  sortDirection,
+  onSort,
 }: {
   candidates: CandidateRow[];
   selectedEmails: Set<string>;
   onToggleEmail: (senderEmail: string) => void;
   onToggleVisibleEmails: (senderEmails: string[], checked: boolean) => void;
-  onPreviewSender: (senderEmail: string) => void;
-  onKeepSender: (senderEmail: string) => void;
-  keepingSenderEmail?: string;
+  onPrimaryAction: (candidate: CandidateRow) => void;
+  onApproveToggle: (candidate: CandidateRow) => void;
+  onViewStats: (candidate: CandidateRow) => void;
+  onLabelFuture: (candidate: CandidateRow) => void;
+  onArchiveSender: (candidate: CandidateRow) => void;
+  onDeleteSender: (candidate: CandidateRow) => void;
+  pendingSenderEmails?: Set<string>;
+  sortColumn: SortColumn;
+  sortDirection: SortDirection;
+  onSort: (column: SortColumn) => void;
 }) {
-  const t = useTranslations();
-  const [expandedSenderEmail, setExpandedSenderEmail] = useState<string | null>(null);
-  const maxMessageCount = useMemo(
-    () => Math.max(1, ...candidates.map((candidate) => candidate.messageCount ?? 0)),
+  const t = useTranslations('cleanup.unsubscribe');
+  const visibleEmails = useMemo(
+    () => candidates.map((candidate) => candidate.senderEmail ?? '').filter(Boolean),
     [candidates],
   );
-  const selectableVisibleEmails = useMemo(
-    () =>
-      candidates.reduce<string[]>((emails, candidate) => {
-        if (
-          candidate.senderEmail &&
-          candidate.unsubscribeMethod !== 'NONE' &&
-          candidate.suppressed !== true
-        ) {
-          emails.push(candidate.senderEmail);
-        }
-        return emails;
-      }, []),
-    [candidates],
-  );
-  const selectedVisibleCount = selectableVisibleEmails.filter((senderEmail) =>
+  const selectedVisibleCount = visibleEmails.filter((senderEmail) =>
     selectedEmails.has(senderEmail),
   ).length;
   const allVisibleSelected =
-    selectableVisibleEmails.length > 0 && selectedVisibleCount === selectableVisibleEmails.length;
+    visibleEmails.length > 0 && selectedVisibleCount === visibleEmails.length;
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
 
   return (
     <div className="border-border bg-card overflow-x-auto rounded-lg border shadow-sm">
-      <Table className="min-w-[760px]">
+      <Table className="min-w-[850px]">
         <TableHeader>
           <TableRow className="border-border bg-muted/30 hover:bg-muted/30">
             <TableHead className="w-10">
               <Checkbox
-                aria-label={t('cleanup.unsubscribe.list.selectAll')}
+                aria-label={t('list.selectAll')}
                 checked={allVisibleSelected}
                 indeterminate={someVisibleSelected}
-                disabled={selectableVisibleEmails.length === 0}
+                disabled={visibleEmails.length === 0}
                 onCheckedChange={(checked) =>
-                  onToggleVisibleEmails(selectableVisibleEmails, checked === true)
+                  onToggleVisibleEmails(visibleEmails, checked === true)
                 }
               />
             </TableHead>
-            <TableHead className="h-12">{t('cleanup.unsubscribe.list.col.sender')}</TableHead>
-            <TableHead className="h-12 min-w-36">
-              {t('cleanup.unsubscribe.list.col.history')}
+            <TableHead className="h-12 min-w-80">{t('list.col.from')}</TableHead>
+            <TableHead className="h-12 w-32 whitespace-nowrap">
+              <HeaderButton
+                sorted={sortColumn === 'emails'}
+                sortDirection={sortColumn === 'emails' ? sortDirection : undefined}
+                onClick={() => onSort('emails')}
+              >
+                {t('list.col.emails')}
+              </HeaderButton>
             </TableHead>
-            <TableHead className="h-12">{t('cleanup.unsubscribe.list.col.risk')}</TableHead>
-            <TableHead className="text-right">
-              {t('cleanup.unsubscribe.list.col.actions')}
+            <TableHead className="h-12 w-44 whitespace-nowrap">
+              <HeaderButton
+                sorted={sortColumn === 'read'}
+                sortDirection={sortColumn === 'read' ? sortDirection : undefined}
+                onClick={() => onSort('read')}
+              >
+                {t('list.col.read')}
+              </HeaderButton>
             </TableHead>
+            <TableHead className="h-12 w-[210px] text-right" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {candidates.map((candidate) => {
             const senderEmail = candidate.senderEmail ?? '';
-            const senderDomain = candidate.senderDomain ?? '';
-            const method = candidate.unsubscribeMethod ?? 'NONE';
-            const isDisabled = method === 'NONE' || candidate.suppressed === true;
             const isChecked = selectedEmails.has(senderEmail);
-            const risk = deriveRiskBadge(candidate);
-            const showTooltip = risk === 'NO_HEADER_DISABLED';
-            const isExpanded = expandedSenderEmail === senderEmail;
-            const messageCount = candidate.messageCount ?? 0;
-            const messageShare = Math.max(6, Math.round((messageCount / maxMessageCount) * 100));
-            const isKeeping = keepingSenderEmail === senderEmail;
+            const isPending = pendingSenderEmails?.has(senderEmail) ?? false;
+            const readPercentage = readRate(candidate);
+            const readRateStyle = readRateBarClasses(readPercentage);
+            const approved = candidate.status === 'APPROVED';
+            const unsubscribed = candidate.status === 'UNSUBSCRIBED';
+            const autoArchived = candidate.status === 'AUTO_ARCHIVED';
 
-            const rowContent = (
+            return (
               <TableRow
                 key={senderEmail}
-                className={cn(
-                  'border-border hover:bg-muted/25 align-middle',
-                  isDisabled && 'opacity-60',
-                )}
+                className="border-border hover:bg-muted/25 align-middle"
                 data-state={isChecked ? 'selected' : undefined}
               >
                 <TableCell>
                   <Checkbox
                     aria-label={senderEmail}
                     checked={isChecked}
-                    disabled={isDisabled}
-                    onCheckedChange={() => {
-                      if (!isDisabled) onToggleEmail(senderEmail);
-                    }}
+                    disabled={isPending}
+                    onCheckedChange={() => onToggleEmail(senderEmail)}
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 shrink-0"
-                        aria-label={
-                          isExpanded
-                            ? t('cleanup.unsubscribe.list.action.collapse')
-                            : t('cleanup.unsubscribe.list.action.details')
-                        }
-                        onClick={() =>
-                          setExpandedSenderEmail((current) =>
-                            current === senderEmail ? null : senderEmail,
-                          )
-                        }
-                      >
-                        {isExpanded ? (
-                          <ChevronDownIcon className="size-4" aria-hidden="true" />
-                        ) : (
-                          <ChevronRightIcon className="size-4" aria-hidden="true" />
-                        )}
-                      </Button>
-                      <span className="truncate font-medium">{senderEmail}</span>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <SenderAvatar
+                      senderEmail={senderEmail}
+                      senderDomain={candidate.senderDomain ?? ''}
+                      senderName={candidate.senderName ?? null}
+                    />
+                    <div className="min-w-0 lg:flex lg:items-baseline lg:gap-2">
+                      <p className="truncate font-medium">
+                        {senderDisplayLabel(candidate, senderEmail)}
+                      </p>
+                      <p className="text-muted-foreground truncate text-xs lg:text-sm">
+                        {senderEmail}
+                      </p>
                     </div>
-                    <span className="text-muted-foreground truncate pl-9 text-xs">
-                      {senderDomain}
+                    {unsubscribed && <StatusPill label={t('statusLabel.unsubscribed')} />}
+                    {autoArchived && <StatusPill label={t('statusLabel.autoArchived')} />}
+                  </div>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <span className="text-foreground/80 text-sm font-medium tabular-nums">
+                    {candidate.messageCount ?? 0}
+                  </span>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-muted h-1.5 w-16 overflow-hidden rounded-full">
+                      <div
+                        className={cn('h-full rounded-full', readRateStyle.fill)}
+                        style={{ width: `${readPercentage}%` }}
+                      />
+                    </div>
+                    <span className={cn('text-sm font-medium tabular-nums', readRateStyle.text)}>
+                      {Math.round(readPercentage)}%
                     </span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex min-w-32 flex-col gap-1.5">
-                    <span className="text-sm font-medium tabular-nums">
-                      {t('cleanup.unsubscribe.list.historyCount', { count: messageCount })}
-                    </span>
-                    <div className="bg-muted/70 h-2 overflow-hidden rounded-full">
-                      <div className="bg-primary/70 h-full" style={{ width: `${messageShare}%` }} />
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <RiskBadge risk={risk} />
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-end gap-2">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant={approved ? 'secondary' : 'ghost'}
+                            size="icon-sm"
+                            disabled={isPending || unsubscribed}
+                            onClick={() => onApproveToggle(candidate)}
+                            aria-label={
+                              approved ? t('list.action.unapprove') : t('list.action.approve')
+                            }
+                          >
+                            <ThumbsUpIcon
+                              className={cn(
+                                'size-4',
+                                approved
+                                  ? 'fill-violet-400 text-violet-500 dark:fill-violet-500/70 dark:text-violet-400'
+                                  : 'text-muted-foreground',
+                              )}
+                              aria-hidden="true"
+                            />
+                          </Button>
+                        }
+                      />
+                      <TooltipContent>
+                        {approved ? t('list.action.unapprove') : t('list.action.approve')}
+                      </TooltipContent>
+                    </Tooltip>
                     <Button
                       type="button"
-                      variant="default"
+                      variant="outline"
                       size="sm"
-                      disabled={isDisabled}
-                      aria-label={`${t('cleanup.unsubscribe.list.action.unsubscribe')} ${senderEmail}`}
-                      onClick={() => onPreviewSender(senderEmail)}
+                      className="w-[110px] justify-center"
+                      disabled={isPending || unsubscribed}
+                      onClick={() => onPrimaryAction(candidate)}
                     >
-                      <MailXIcon className="size-4" aria-hidden="true" />
-                      <span className="hidden lg:inline">
-                        {t('cleanup.unsubscribe.list.action.unsubscribe')}
-                      </span>
+                      {isPending ? (
+                        <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />
+                      ) : autoArchived ? (
+                        <ArchiveRestoreIcon className="size-4" aria-hidden="true" />
+                      ) : (
+                        <MailXIcon className="size-4" aria-hidden="true" />
+                      )}
+                      {primaryActionLabel(candidate, t)}
                     </Button>
+                    <RowMenu
+                      candidate={candidate}
+                      onViewStats={onViewStats}
+                      onLabelFuture={onLabelFuture}
+                      onArchiveSender={onArchiveSender}
+                      onDeleteSender={onDeleteSender}
+                    />
                   </div>
                 </TableCell>
               </TableRow>
-            );
-
-            const renderedRow = showTooltip ? (
-              <Tooltip key={senderEmail}>
-                <TooltipTrigger render={rowContent} />
-                <TooltipContent>{t('cleanup.unsubscribe.risk.noHeaderTooltip')}</TooltipContent>
-              </Tooltip>
-            ) : (
-              rowContent
-            );
-
-            return (
-              <Fragment key={senderEmail}>
-                {renderedRow}
-                {isExpanded && (
-                  <TableRow className="border-border bg-muted/20 hover:bg-muted/20">
-                    <TableCell />
-                    <TableCell colSpan={4} className="whitespace-normal">
-                      <div className="grid gap-3 py-3 text-sm md:grid-cols-4">
-                        <div className="flex min-w-0 items-start gap-2">
-                          <Clock3Icon
-                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-muted-foreground text-xs">
-                              {t('cleanup.unsubscribe.list.detail.lastSeen')}
-                            </p>
-                            <p className="font-medium break-words">
-                              {formatLastSeen(candidate.lastSeenAt)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex min-w-0 items-start gap-2">
-                          <ArchiveIcon
-                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-muted-foreground text-xs">
-                              {t('cleanup.unsubscribe.list.detail.archive')}
-                            </p>
-                            <p className="font-medium break-words">
-                              {t('cleanup.unsubscribe.list.detail.archiveValue', {
-                                count: messageCount,
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex min-w-0 items-start gap-2">
-                          <ShieldIcon
-                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-muted-foreground text-xs">
-                              {t('cleanup.unsubscribe.list.detail.safety')}
-                            </p>
-                            <p className="font-medium break-words">
-                              {isDisabled
-                                ? t('cleanup.unsubscribe.list.detail.disabled')
-                                : t('cleanup.unsubscribe.list.detail.safe')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex min-w-0 items-start gap-2">
-                          <ShieldIcon
-                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                          <div className="flex min-w-0 flex-col gap-2">
-                            <div>
-                              <p className="text-muted-foreground text-xs">
-                                {t('cleanup.unsubscribe.list.detail.skip')}
-                              </p>
-                              <p className="text-muted-foreground text-xs leading-5 break-words">
-                                {t('cleanup.unsubscribe.list.detail.skipDescription')}
-                              </p>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="w-fit"
-                              disabled={isKeeping}
-                              aria-label={`${t('cleanup.unsubscribe.list.action.keep')} ${senderEmail}`}
-                              onClick={() => onKeepSender(senderEmail)}
-                            >
-                              <ShieldIcon className="size-4" aria-hidden="true" />
-                              {t('cleanup.unsubscribe.list.action.keep')}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </Fragment>
             );
           })}
         </TableBody>
@@ -313,9 +264,225 @@ export function CandidateListTable({
   );
 }
 
-function formatLastSeen(value: string | undefined): string {
-  if (!value) return '-';
-  const timestamp = Date.parse(value);
-  if (Number.isNaN(timestamp)) return value;
-  return lastSeenFormatter.format(new Date(timestamp));
+function RowMenu({
+  candidate,
+  onViewStats,
+  onLabelFuture,
+  onArchiveSender,
+  onDeleteSender,
+}: {
+  candidate: CandidateRow;
+  onViewStats: (candidate: CandidateRow) => void;
+  onLabelFuture: (candidate: CandidateRow) => void;
+  onArchiveSender: (candidate: CandidateRow) => void;
+  onDeleteSender: (candidate: CandidateRow) => void;
+}) {
+  const t = useTranslations('cleanup.unsubscribe');
+  const senderEmail = candidate.senderEmail ?? '';
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" />}>
+        <MoreHorizontalIcon className="size-4" aria-hidden="true" />
+        <span className="sr-only">{t('list.action.menu')}</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onClick={() => onViewStats(candidate)}>
+          <ZoomInIcon className="mr-2 size-4" aria-hidden="true" />
+          {t('list.action.viewStats')}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => window.open(gmailSearchUrl(senderEmail), '_blank', 'noopener,noreferrer')}
+        >
+          <ExternalLinkIcon className="mr-2 size-4" aria-hidden="true" />
+          {t('list.action.viewGmail')}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onLabelFuture(candidate)}>
+          <TagIcon className="mr-2 size-4" aria-hidden="true" />
+          {t('list.action.labelFuture')}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onArchiveSender(candidate)}>
+          <ArchiveIcon className="mr-2 size-4" aria-hidden="true" />
+          {t('list.action.archiveAll')}
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onClick={() => onDeleteSender(candidate)}>
+          <TrashIcon className="mr-2 size-4" aria-hidden="true" />
+          {t('list.action.deleteAll')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function HeaderButton({
+  children,
+  sorted,
+  sortDirection,
+  onClick,
+}: {
+  children: React.ReactNode;
+  sorted: boolean;
+  sortDirection?: SortDirection;
+  onClick: () => void;
+}) {
+  return (
+    <Button type="button" variant="ghost" size="sm" className="-ml-3 h-8" onClick={onClick}>
+      <span className="text-muted-foreground">{children}</span>
+      {sorted && sortDirection === 'asc' ? (
+        <ChevronUpIcon className="text-muted-foreground ml-1 size-4" aria-hidden="true" />
+      ) : (
+        <ChevronDownIcon className="text-muted-foreground ml-1 size-4" aria-hidden="true" />
+      )}
+    </Button>
+  );
+}
+
+function SenderAvatar({
+  senderEmail,
+  senderDomain,
+  senderName,
+}: {
+  senderEmail: string;
+  senderDomain: string;
+  senderName: string | null;
+}) {
+  const domain = senderDomain.trim();
+  // Inbox Zero pattern: always resolve to the second-level domain — Google's favicon service
+  // returns the real brand logo for `domain=miro.com` but a globe placeholder for subdomains
+  // like `product.miro.com`.
+  const rootDomain = useMemo(() => {
+    if (!domain) return null;
+    const parts = domain.split('.');
+    if (parts.length <= 2) return domain;
+    return parts.slice(-2).join('.');
+  }, [domain]);
+  const [iconFailed, setIconFailed] = useState(false);
+  const initials = senderInitials(senderName, senderDomain, senderEmail);
+  // Use Google's public s2/favicons endpoint (NOT t1.gstatic.com/faviconV2). Both return the
+  // brand favicon when one exists, but for unknown domains faviconV2 answers HTTP 404 + a 16×16
+  // globe placeholder, which spams the DevTools console with 404s for every newsletter sender
+  // the user has never visited. s2/favicons returns HTTP 200 + a placeholder for the same
+  // unknown-domain case, so the network log stays clean. We still detect the placeholder by
+  // its small natural size in onLoad and fall back to initials, instead of upscaling the blurry
+  // globe to 32×32.
+  const faviconUrl = rootDomain
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(rootDomain)}&sz=64`
+    : null;
+  return (
+    <div
+      className="bg-muted text-muted-foreground relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border text-xs font-semibold"
+      aria-hidden="true"
+    >
+      {faviconUrl && !iconFailed ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Inbox Zero-style sender favicon via Google s2/favicons; not worth a next/image domain entry.
+        <img
+          src={faviconUrl}
+          alt=""
+          className="size-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setIconFailed(true)}
+          onLoad={(event) => {
+            if (event.currentTarget.naturalWidth > 0 && event.currentTarget.naturalWidth <= 16) {
+              setIconFailed(true);
+            }
+          }}
+        />
+      ) : initials ? (
+        initials
+      ) : (
+        <MailIcon className="size-3.5" />
+      )}
+    </div>
+  );
+}
+
+function StatusPill({ label }: { label: string }) {
+  return (
+    <span className="bg-muted text-muted-foreground hidden rounded-md px-1.5 py-0.5 text-xs font-medium xl:inline-flex">
+      {label}
+    </span>
+  );
+}
+
+/**
+ * Inbox Zero-style display label: prefer the From-header display-name; fall back to the
+ * sender domain (e.g. `user-service.klingai.com`) which is what Inbox Zero shows when a
+ * sender has no human-set name. Local-part word-split is a last resort.
+ */
+function senderDisplayLabel(
+  candidate: { senderName?: string | null; senderDomain?: string | null },
+  senderEmail: string,
+): string {
+  const senderName = candidate.senderName?.trim();
+  if (senderName) return senderName;
+  const senderDomain = candidate.senderDomain?.trim();
+  if (senderDomain) return senderDomain;
+  const localPart = senderEmail.split('@')[0] ?? senderEmail;
+  return localPart.replace(/[._-]+/g, ' ') || senderEmail;
+}
+
+function senderInitials(
+  senderName: string | null,
+  senderDomain: string,
+  senderEmail: string,
+): string {
+  if (senderName && senderName.trim().length > 0) {
+    const words = senderName.trim().split(/\s+/);
+    const first = words[0]?.[0] ?? '';
+    const second = words[1]?.[0] ?? '';
+    const initials = `${first}${second}`.toUpperCase().slice(0, 2);
+    if (initials) return initials;
+  }
+  if (senderDomain && senderDomain.length > 0) {
+    return senderDomain.charAt(0).toUpperCase();
+  }
+  const localPart = senderEmail.split('@')[0] ?? '';
+  const parts = localPart.split(/[._-]+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? '';
+  const second = parts[1]?.[0] ?? '';
+  return `${first}${second}`.toUpperCase().slice(0, 2);
+}
+
+function readRate(candidate: CandidateRow): number {
+  const messageCount = candidate.messageCount ?? 0;
+  if (messageCount <= 0) return 0;
+  return ((candidate.readMessageCount ?? 0) / messageCount) * 100;
+}
+
+// Read-rate traffic light (design tokens only): <30% warning (rarely read → unsubscribe
+// candidate), 30–70% primary (mid), ≥70% chart-4 green (highly read → engaged sender).
+function readRateBarClasses(percentage: number): { fill: string; text: string } {
+  if (percentage < LOW_READ_THRESHOLD) {
+    return { fill: 'bg-warning', text: 'text-warning' };
+  }
+  if (percentage < HIGH_READ_THRESHOLD) {
+    return { fill: 'bg-primary', text: 'text-foreground/80' };
+  }
+  return { fill: 'bg-(--chart-4)', text: 'text-foreground/80' };
+}
+
+function primaryActionLabel(
+  candidate: CandidateRow,
+  t: ReturnType<typeof useTranslations<'cleanup.unsubscribe'>>,
+) {
+  // AUTO_ARCHIVED already has the cleanup rule wired — the primary action
+  // flips to the inverse so the user can undo it. UNSUBSCRIBED is terminal
+  // and the button is disabled at the call site, so it doesn't need a label
+  // swap here. Senders with no List-Unsubscribe header are blocked instead
+  // of unsubscribed; once they are auto-archived, the same row offers
+  // "Unblock" to restore them.
+  if (candidate.status === 'AUTO_ARCHIVED') {
+    return t('list.action.unblock');
+  }
+  if (candidate.unsubscribeMethod === 'NONE') {
+    return t('list.action.block');
+  }
+  return t('list.action.unsubscribe');
+}
+
+function gmailSearchUrl(senderEmail: string): string {
+  return `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(`from:${senderEmail}`)}`;
 }

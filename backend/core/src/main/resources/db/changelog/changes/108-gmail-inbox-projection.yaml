@@ -1,0 +1,192 @@
+databaseChangeLog:
+  - changeSet:
+      id: 108-gmail-inbox-projection
+      author: zeromail
+      comment: >
+        CQRS-lite inbox projection for the Gmail inbox list path. Phase A foundation only:
+        schema + indices. mail_message_observed stays as the ingestion/triage append-once seed
+        (ON CONFLICT DO NOTHING). gmail_inbox_projection is the mutable display state UPSERTed
+        by the Pub/Sub observed listener and the backfill service. Read swap, sent-message
+        projection, thread view, history.list incremental sync, and the cron purge job are
+        all out of scope for Phase A.
+      changes:
+        - createTable:
+            tableName: gmail_inbox_projection
+            remarks: >
+              Per-message Gmail inbox display projection. Sensitive metadata (sender email,
+              sender display name, subject, snippet) is AES-GCM encrypted at the app layer via
+              InboxProjectionCipher; sender_email_hash is a keyed HMAC for future lookup.
+            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_gmail_inbox_projection_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: gmail_message_id
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gmail_thread_id
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sender_email_hash
+                  type: bytea
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sender_email_ciphertext
+                  type: bytea
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sender_display_name_ciphertext
+                  type: bytea
+              - column:
+                  name: subject_ciphertext
+                  type: bytea
+              - column:
+                  name: snippet_ciphertext
+                  type: bytea
+              - column:
+                  name: has_attachment
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label_ids
+                  type: text[]
+                  defaultValueComputed: "'{}'::text[]"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: inbox_state
+                  type: varchar(16)
+                  defaultValue: INBOX
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unread
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_history_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: refreshed_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: gmail_inbox_projection
+            columnNames: tenant_id, gmail_message_id
+            constraintName: pk_gmail_inbox_projection
+        - sql:
+            comment: >
+              Partial index for the inbox list query. inbox_state is intentionally NOT in the
+              key columns because the WHERE clause already filters to INBOX rows; including it
+              in the key would just bloat the index.
+            sql: >
+              CREATE INDEX idx_gmail_inbox_projection_list
+                ON gmail_inbox_projection (tenant_id, received_at DESC, gmail_message_id DESC)
+                WHERE inbox_state = 'INBOX'
+        - sql:
+            comment: Supports the future Phase C thread view (group by thread, latest first).
+            sql: >
+              CREATE INDEX idx_gmail_inbox_projection_thread
+                ON gmail_inbox_projection (tenant_id, gmail_thread_id, received_at DESC)
+        - sql:
+            comment: Supports the future TTL purge job (cron defers to a later phase).
+            sql: >
+              CREATE INDEX idx_gmail_inbox_projection_expires_at
+                ON gmail_inbox_projection (expires_at)
+        - createTable:
+            tableName: gmail_inbox_sync_state
+            remarks: >
+              Per-tenant sync cursor for the inbox projection. Tracks last full backfill and
+              error state. Source of truth for "is a backfill currently queued" is the
+              processing_job table (job_type=INBOX_PROJECTION_BACKFILL, idempotency_key=tenantId);
+              status here is informational write-through.
+            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_gmail_inbox_sync_state
+                    foreignKeyName: fk_gmail_inbox_sync_state_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: last_history_id
+                  type: bigint
+              - column:
+                  name: last_full_sync_at
+                  type: timestamptz
+              - column:
+                  name: last_incremental_at
+                  type: timestamptz
+              - column:
+                  name: status
+                  type: varchar(24)
+                  defaultValue: IDLE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: consecutive_errors
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_error_at
+                  type: timestamptz
+              - column:
+                  name: last_error_code
+                  type: varchar(64)
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_gmail_inbox_projection_expires_at
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_gmail_inbox_projection_thread
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_gmail_inbox_projection_list
+        - dropTable:
+            tableName: gmail_inbox_sync_state
+        - dropTable:
+            tableName: gmail_inbox_projection

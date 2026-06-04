@@ -69,6 +69,16 @@ public abstract class PostgresContainerTest {
         dynamicPropertyRegistry.add(
                 "zero-mail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        // Inbox-projection KEK + sender-hash key: the worker test context scans com.zeromail.core,
+        // which now instantiates InboxProjectionCipher (core.inbox.usecases). Without these the
+        // CryptoProperties binding falls back to application.yml's ${INBOX_PROJECTION_*:?} and the
+        // cipher's Base64 decode fails. Mirrors ApiPostgresTestBase.
+        dynamicPropertyRegistry.add(
+                "zero-mail.crypto.inbox-projection-key-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        dynamicPropertyRegistry.add(
+                "zero-mail.crypto.inbox-projection-sender-hash-key-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         dynamicPropertyRegistry.add(
                 "zero-mail.admin.audit.hmac-kek-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");

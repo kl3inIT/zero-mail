@@ -67,6 +67,8 @@ zero-mail:
     enabled: false
   crypto:
     refresh-token-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    inbox-projection-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    inbox-projection-sender-hash-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
   api:
     gmail:
       pubsub:

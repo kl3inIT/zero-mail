@@ -6,6 +6,7 @@
             "gmail",
             "gmail :: usecases",
             "gmail :: persistence.crypto",
+            "inbox :: usecases",
             "notification",
             "notification :: domain",
             "notification :: usecases",

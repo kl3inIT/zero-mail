@@ -2,6 +2,7 @@ package com.zeromail.api.controllers.gmail;
 
 import com.zeromail.api.dto.gmail.GmailInboxMessageDetailResponse;
 import com.zeromail.api.dto.gmail.GmailInboxPageResponse;
+import com.zeromail.api.dto.gmail.GmailThreadDetailResponse;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxUnavailableException;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxUnavailableReason;
@@ -53,6 +54,17 @@ public class GmailInboxController {
         try {
             return GmailInboxMessageDetailResponse.from(
                     recentInboxReadService.fetchMessageDetail(tenantId, gmailMessageId));
+        } catch (RecentInboxUnavailableException inboxUnavailableException) {
+            throw responseStatusException(inboxUnavailableException);
+        }
+    }
+
+    @GetMapping("/threads/{gmailThreadId}")
+    public GmailThreadDetailResponse threadDetail(@PathVariable String gmailThreadId) {
+        UUID tenantId = TenantContext.currentTenantUuid();
+        try {
+            return GmailThreadDetailResponse.from(
+                    recentInboxReadService.fetchThreadDetail(tenantId, gmailThreadId));
         } catch (RecentInboxUnavailableException inboxUnavailableException) {
             throw responseStatusException(inboxUnavailableException);
         }

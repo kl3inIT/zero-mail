@@ -81,6 +81,9 @@
 
 /* prettier-ignore */
 :root {
+    /* Native scrollbars + form controls render in their light variant. */
+    color-scheme: light;
+
     /* Purple palette lifted từ Jmix petclinic-2 Lumo. Surfaces stay neutral
        (content trắng + sidebar tím-nhạt) để text giữ contrast cao và borders
        hiện rõ — pattern Inbox Zero / Gmail / Linear cùng dùng. */
@@ -158,6 +161,11 @@
 
 /* prettier-ignore */
 .dark {
+    /* Render native scrollbars and form controls dark to match the dark palette —
+       fixes the bright/white scrollbar in dark mode. color-scheme inherits, so every
+       scroll container under .dark gets a dark scrollbar automatically. */
+    color-scheme: dark;
+
     --background: #191724;
     --foreground: #E5E2EE;
     --card: #211E30;
@@ -241,6 +249,38 @@
 
   html {
     @apply font-sans;
+  }
+
+  /* Custom themable scrollbars. The track stays transparent so the gutter shows the
+     container's own surface — in dark mode that's the purple panel (#191724), so the
+     scrollbar reads as fully in sync with the theme instead of a black native strip.
+     The thumb is a rounded, padded pill in muted-foreground that brightens on hover;
+     color-mix keeps the rest state subtle, and tokens keep it correct in light mode
+     too. The email body iframe keeps its own isolated (light) scrollbar. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 45%, transparent) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--muted-foreground) 45%, transparent);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--muted-foreground) 70%, transparent);
   }
 }
 

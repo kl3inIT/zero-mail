@@ -82,9 +82,13 @@ class GmailWriteBoundaryTest {
                 normalizedOwnerName.endsWith(GMAIL_MESSAGES_OWNER) && methodName.equals("modify");
         boolean messageSend =
                 normalizedOwnerName.endsWith(GMAIL_MESSAGES_OWNER) && methodName.equals("send");
-        boolean draftCreateOrDelete =
+        boolean messageTrash =
+                normalizedOwnerName.endsWith(GMAIL_MESSAGES_OWNER) && methodName.equals("trash");
+        boolean draftWrite =
                 normalizedOwnerName.endsWith(GMAIL_DRAFTS_OWNER)
-                        && (methodName.equals("create") || methodName.equals("delete"));
-        return messageModify || messageSend || draftCreateOrDelete;
+                        && (methodName.equals("create")
+                                || methodName.equals("delete")
+                                || methodName.equals("update"));
+        return messageModify || messageSend || messageTrash || draftWrite;
     }
 }

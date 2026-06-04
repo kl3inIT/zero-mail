@@ -21,6 +21,9 @@ public final class UnsubscribeCampaignPolicy {
      */
     public static final int MAX_SENDERS_PER_CAMPAIGN = 25;
 
+    /** Maximum senders the Inbox Zero-style table can load for browsing/searching. */
+    public static final int MAX_CANDIDATE_SENDERS = 500;
+
     /**
      * Maximum number of history messages the campaign will archive across all targeted senders
      * (UNS-03b). Worker stops archiving once this threshold is hit even if some senders still have

@@ -17,6 +17,7 @@ import { SaveMemoryBody } from './body/save-memory-body';
 import { SendEmailBody } from './body/send-email-body';
 import { UpdatePersonalInstructionsBody } from './body/update-personal-instructions-body';
 import {
+  actionStatus,
   type BodySlotToolName,
   BODY_SLOT_TOOL_NAMES,
   type PreviewCardAction,
@@ -118,7 +119,16 @@ function ctaKey(kind: BodySlotToolName): PreviewCtaKey {
   }
 }
 
-export function PreviewCard({ action }: { action: PreviewCardAction }) {
+export function PreviewCard({
+  action,
+  onSent,
+}: {
+  action: PreviewCardAction;
+  // Optional hook fired exactly once when the backend reports the confirmed action reached
+  // 'sent' terminal state. Used by the inbox composer to delete the cached Gmail Draft after
+  // the assistant actually sends the email so we do not leave a stale draft in Gmail.
+  onSent?: () => void;
+}) {
   const t = useTranslations('chat.preview');
   const confirmAction = useConfirmAction();
   const cancelAction = useCancelAction();
@@ -128,6 +138,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
   const [localState, setLocalState] = useState<string | null>(null);
   const confirmInFlightRef = useRef(false);
   const cancelInFlightRef = useRef(false);
+  const sentReportedRef = useRef(false);
   const computed = usePreviewCardState({
     action: { ...action, state: localState ?? action.state },
     vipAcknowledged,
@@ -156,6 +167,18 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
       });
       setLocalState(response.state);
       setEditing(false);
+      // Backend returns `state: "CONFIRMED"` for every committed action (see
+      // AssistantSendExecutor#execute). For send/reply/forward we map that to
+      // the UI status 'sent' via actionStatus(). Compare against the mapped
+      // status, not the raw backend string — otherwise `onSent` never fires,
+      // the inbox composer's autoConfirmRequested stays true, and the user
+      // is stuck staring at "Đang gửi email..." forever even though the
+      // mail already went out.
+      const mappedStatus = actionStatus({ ...action, state: response.state });
+      if (mappedStatus === 'sent' && !sentReportedRef.current) {
+        sentReportedRef.current = true;
+        onSent?.();
+      }
     } finally {
       confirmInFlightRef.current = false;
     }

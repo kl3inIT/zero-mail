@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: — Admin Console + User Settings UI
-status: Awaiting next milestone
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-06-01T03:19:49.392Z"
-last_activity: 2026-06-01 — Milestone v1.2 completed and archived
+status: "Phase 9 shipped — PR #74; Phase 10 planning complete (11 plans, plan-checker PASS) — ready for /gsd:execute-phase 10; v1.2 milestone archived on main (merged into integration 2026-06-03)"
+stopped_at: Phase 10 planning complete
+last_updated: "2026-06-03T00:00:00.000Z"
+last_activity: "2026-06-03 - Merged main into integration (v1.2 archived); inbox sender avatars shipped"
 progress:
   total_phases: 3
   completed_phases: 3
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 ## Current Position
 
-Phase: Milestone v1.2 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-01 — Milestone v1.2 completed and archived
+Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
+Plan: 6 of 6
+Status: Phase 9 shipped — PR #74; Phase 10 planning complete; v1.2 milestone archived on main (merged 2026-06-03)
+Last activity: 2026-06-03 - Merged main into integration; inbox sender avatars shipped
 
 ## Current Milestone Roadmap
 
@@ -384,6 +384,7 @@ Recent decisions affecting current work:
 - Phase 01.5 inserted after Phase 1.4: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (URGENT)
 - Phase 01.6 inserted after Phase 1: Brand Identity, Design Tokens, and Landing Page (URGENT)
 - Phase 08.1 inserted after Phase 8: Inbox Zero-style rule actions and admin-managed examples catalog (URGENT)
+- Phase 10 added (2026-05-28): Telegram Messaging Assistant — promotes SEED-007 from dormant umbrella to draft SPEC; introduces `core.messaging.telegram` Modulith module, single global bot, signed stateless link code, DM-only enforcement, cross-actor permission check on callbacks, deterministic 16-char action token, reuse of existing `OutboundSendExecutor` + chat assistant pipeline with `responseSurface=TELEGRAM`; extends ARCH-02 body-content ban to Telegram payloads via new `TelegramPathBodyBanTest`; draft SPEC lives in `.planning/seeds/SEED-007-messaging-assistant-slack-telegram-zalo.md` ready for /gsd-spec-phase. Slack/Teams out of scope; Zalo OA deferred to follow-on phase pending business registration.
 
 ### Pending Todos
 
@@ -407,6 +408,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260601-cwr | Make AI settings page content wider like other app sections | 2026-06-01 | pending | Verified | [260601-cwr-make-ai-settings-page-content-wider-like](./quick/260601-cwr-make-ai-settings-page-content-wider-like/) |
 | 260531-tkb | Fix rules test tabs (read-only-tx crash, LLM nodeMatches parse, always-semantic collapse, credit/Gmail/server error split) + Inbox-Zero-style Gmail tester: GET/POST /api/rules/test/{messages,message}, load 10/20 recent emails, test-all + per-row test/retest with inline verdict | 2026-05-31 | b3357a1f | Static-verified (live needs backend+web restart) | [260531-tkb-fix-rules-preview-test-tabs-read-only-tx](./quick/260531-tkb-fix-rules-preview-test-tabs-read-only-tx/) |
 | 260531-lpx | Flatten /settings to /ai-style section layout (no tabs), inline language+theme segmented controls, consolidate daily digest into /ai, remove duplicated cards (credit/pause/provider/notifications), delete /settings/privacy route + features/privacy + sidebar item | 2026-05-31 | 676e36b9 | Verified | [260531-lpx-flatten-settings-page](./quick/260531-lpx-flatten-settings-page/) |
 | 260530-w9t | Redesign backend config/properties to Spring Boot 4 best practices: unify zeromail→zero-mail prefix, split god-object into per-feature records, centralize Spring-AI privacy block via zero-mail-shared.yml, relocate CryptoProperties to shared.crypto | 2026-05-31 | 2bc7cd88 | Verified | [260530-w9t-redesign-backend-config-properties-to-20](./quick/260530-w9t-redesign-backend-config-properties-to-20/) |
@@ -537,6 +539,12 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 (Note: 9 directories on disk; SDK audit shows 7 with no SUMMARY.md — all carried forward, none archived as completed.)
 
+### v1.2-period quick tasks (in-progress)
+
+| Slug | Description |
+|------|-------------|
+| 260601-gmail-inbox-cqrs-projection-phase-a | Inbox CQRS-lite projection foundation (schema + crypto + write + backfill + ArchUnit) — complete |
+
 ## Deferred Items
 
 Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 phases shipped (70/73 requirements complete); the items below are accepted as carry-forward tech debt to v1.3, not blockers.
@@ -594,10 +602,12 @@ Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 
 
 ## Session Continuity
 
-Last session: 2026-05-26T19:14:53.383Z
-Stopped at: Completed 09-02-PLAN.md
-Resume file: None
+Last session: 2026-06-01T08:55:00.000Z
+Stopped at: Phase A of Gmail inbox CQRS-lite projection complete (5 waves, all green) — Phase 10 plans still pending
+Resume file: .planning/phases/10-telegram-messaging-assistant/10-00-PLAN.md (first plan; Wave 0 foundation)
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Execute Phase 10 with `/gsd:execute-phase 10` (starts at Wave 0 foundation — Liquibase 099-103 + ArchUnit skeletons + Bucket4j 8.19.0 pin)
+- Or continue v1.2 by completing Phase 9 first if dependency ordering matters
+- Start the next milestone with `/gsd-new-milestone` when v1.2 is fully shipped

@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 110-mail-message-observed-sender-name
+      author: zeromail
+      comment: >
+        Add nullable plaintext sender_name (display-name portion of the From header) to
+        mail_message_observed so the bulk-unsubscribe candidate list can show "John Doe"
+        next to "john@example.com" instead of falling back to the local-part. Same privacy
+        class as sender_email (changelog 032): sanitized From-header metadata persisted
+        plaintext, never email body. Existing rows stay NULL; the observer pipeline
+        backfills sender_name for messages observed after this changeset deploys.
+      changes:
+        - addColumn:
+            tableName: mail_message_observed
+            columns:
+              - column:
+                  name: sender_name
+                  type: varchar(320)
+      rollback:
+        - dropColumn:
+            tableName: mail_message_observed
+            columnName: sender_name

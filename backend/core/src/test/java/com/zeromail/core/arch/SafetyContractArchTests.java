@@ -32,13 +32,13 @@ public class SafetyContractArchTests {
     // in plan 04 as e.g. `Sensitive<String> refreshToken`). The rule's job is to fail the
     // build if any unwrapped variant is later added.
     //
-    // Exempt: com.zeromail.core.chat.domain.sendaction. Per CLAUDE.md privacy scope
-    // "Draft-body carve-out", the body/additionalBody fields on the LLM-facing
-    // send/reply/forward tool args records carry user-authored draft data (the user
-    // owns it, reviews it on the preview card, decides whether to send). They are NOT
-    // extracted email content received from Gmail and are explicitly persistable. The
-    // internal AssistantSendCommand still wraps the body in Sensitive<T> so any
-    // logging path inside the command pipeline keeps the redaction guarantee.
+    // Exempt packages, all under the same draft-body carve-out (CLAUDE.md privacy scope):
+    //   - com.zeromail.core.chat.domain.sendaction — LLM-facing send/reply/forward tool args
+    //     records carry user-authored draft data (the user owns it, reviews it on the preview
+    //     card, decides whether to send). NOT extracted Gmail content.
+    //   - com.zeromail.core.composer.usecases — inbox composer draft cache. Same source semantics:
+    //     the body field is the user-typed reply/forward body that the composer auto-saves to
+    //     Gmail Draft. Not extracted Gmail content; logging paths never receive the body.
     @ArchTest
     static final ArchRule sensitive_names_wrapped =
             fields().that()
@@ -46,12 +46,15 @@ public class SafetyContractArchTests {
                     .and()
                     .areDeclaredInClassesThat()
                     .resideOutsideOfPackage("com.zeromail.core.chat.domain.sendaction")
+                    .and()
+                    .areDeclaredInClassesThat()
+                    .resideOutsideOfPackage("com.zeromail.core.composer.usecases")
                     .should()
                     .haveRawType(SENSITIVE)
                     .because(
                             "FND-03/04: deny-listed names must be Sensitive<T> "
-                                    + "(except draft-body carve-out in send-action tool args, "
-                                    + "see CLAUDE.md privacy scope)")
+                                    + "(except draft-body carve-out in send-action tool args "
+                                    + "and composer draft cache, see CLAUDE.md privacy scope)")
                     .allowEmptyShould(true);
 
     @ArchTest

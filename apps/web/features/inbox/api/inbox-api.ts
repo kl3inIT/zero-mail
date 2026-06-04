@@ -24,11 +24,14 @@ export type GmailInboxLabelResponse = {
   name?: string;
 };
 
+export type InboxDataSource = 'PROJECTION' | 'LIVE_GMAIL' | 'SYNCING';
+
 export type GmailInboxPageResponse = {
   items?: GmailInboxMessageResponse[];
   nextCursor?: string | null;
   loadedCount?: number;
   maxMessages?: number;
+  dataSource?: InboxDataSource;
 };
 
 export type GmailInboxMessageDetailResponse = {
@@ -63,12 +66,26 @@ export type InboxPage = {
   nextCursor: string | null;
   loadedCount: number;
   maxMessages: number;
+  dataSource: InboxDataSource;
 };
 
 export type InboxMessageDetail = {
   message: InboxMessage;
   renderedText: string;
   renderedHtml: string;
+};
+
+export type GmailThreadDetailResponse = {
+  gmailThreadId?: string;
+  subject?: string;
+  messages?: GmailInboxMessageDetailResponse[];
+};
+
+/** A full conversation: every message in the thread (received + the user's own sent replies). */
+export type InboxThreadDetail = {
+  gmailThreadId: string;
+  subject: string;
+  messages: InboxMessageDetail[];
 };
 
 export class InboxApiError extends Error {
@@ -123,6 +140,8 @@ function normalizePage(response: GmailInboxPageResponse): InboxPage {
     nextCursor: response.nextCursor ?? null,
     loadedCount: response.loadedCount ?? 0,
     maxMessages: response.maxMessages ?? 100,
+    // Backend < Wave 3 omitted dataSource; legacy responses are effectively live Gmail.
+    dataSource: response.dataSource ?? 'LIVE_GMAIL',
   };
 }
 
@@ -207,6 +226,44 @@ export async function getGmailDraftDetail(gmailDraftId: string): Promise<InboxMe
     );
   }
   return normalizeDetail(result.data);
+}
+
+function normalizeThreadDetail(response: GmailThreadDetailResponse): InboxThreadDetail {
+  const messages = (response.messages ?? [])
+    .map((entry): InboxMessageDetail | null => {
+      const message = entry.message ? normalizeMessage(entry.message) : null;
+      if (!message) return null;
+      return {
+        message,
+        renderedText: entry.renderedText ?? '',
+        renderedHtml: entry.renderedHtml ?? '',
+      };
+    })
+    .filter((entry): entry is InboxMessageDetail => entry !== null);
+  return {
+    gmailThreadId: response.gmailThreadId ?? '',
+    subject: response.subject ?? '',
+    messages,
+  };
+}
+
+/**
+ * Fetch a whole Gmail conversation (received messages + the user's own sent replies) for the inbox
+ * reader, so a user can see at a glance that they already replied — including AI-composed messages
+ * sent immediately, which never enter the needs-reply queue. Rendered live, never persisted.
+ */
+export async function getInboxThreadDetail(gmailThreadId: string): Promise<InboxThreadDetail> {
+  const result = await getJson<GmailThreadDetailResponse>(
+    `/api/gmail/inbox/threads/${encodeURIComponent(gmailThreadId)}`,
+  );
+
+  if (!result.response.ok || result.data === undefined) {
+    throwApiError(
+      result,
+      `/api/gmail/inbox/threads/${gmailThreadId} failed: ${result.response.status}`,
+    );
+  }
+  return normalizeThreadDetail(result.data);
 }
 
 export async function markInboxMessageRead(gmailMessageId: string): Promise<void> {
