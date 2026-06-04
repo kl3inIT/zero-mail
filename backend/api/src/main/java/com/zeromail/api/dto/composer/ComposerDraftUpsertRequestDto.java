@@ -18,6 +18,14 @@ import jakarta.validation.constraints.Size;
 @Schema(allowableValues = {"reply", "reply_all", "forward"})
 public record ComposerDraftUpsertRequestDto(
         @NotBlank @Size(max = 256) String gmailThreadId,
+        @Schema(
+                        description =
+                                "Gmail draftId of the existing draft for this thread, if the client"
+                                        + " already knows it. When present the backend updates that"
+                                        + " draft directly instead of scanning Gmail, which avoids the"
+                                        + " create-create race that flooded the user's drafts folder"
+                                        + " with duplicates.")
+                @Size(max = 256) String draftId,
         @Size(max = 256) String sourceGmailMessageId,
         @Size(max = 998) String rfc822MessageId,
         @Size(max = 16384) String priorReferences,
@@ -31,6 +39,7 @@ public record ComposerDraftUpsertRequestDto(
     public ComposerDraftUpsertCommand toCommand() {
         return new ComposerDraftUpsertCommand(
                 gmailThreadId,
+                draftId,
                 sourceGmailMessageId,
                 rfc822MessageId,
                 priorReferences,

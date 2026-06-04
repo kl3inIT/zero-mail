@@ -87,6 +87,30 @@ public class ComposerDraftService {
             throw new IOException("Unable to build composer draft MIME", buildFailure);
         }
 
+        // Fast path: the client already knows the draftId for this thread, so update that draft
+        // directly. This skips the listDraftIdsForThread() scan which — combined with Gmail
+        // drafts.list eventual consistency — let two overlapping upserts each observe an empty
+        // list and CREATE, leaving 2-3 duplicate copies of the same reply in the user's drafts.
+        if (command.draftId() != null) {
+            try {
+                String updatedDraftId =
+                        triageGmailWriter.updateDraftMessage(
+                                tenantId, command.draftId(), draftMessage, command.gmailThreadId());
+                log.info(
+                        "event=composer_draft_updated tenantId={} gmailThreadId={}",
+                        tenantId,
+                        redact(command.gmailThreadId()));
+                return toSnapshot(updatedDraftId, command);
+            } catch (IOException draftUpdateMiss) {
+                // The known draft was removed out from under us (sent or discarded on another
+                // device). Fall through to the list-or-create path so the user keeps an autosave.
+                log.info(
+                        "event=composer_draft_update_miss tenantId={} reason={}",
+                        tenantId,
+                        draftUpdateMiss.getClass().getSimpleName());
+            }
+        }
+
         List<String> existingDraftIds =
                 triageGmailWriter.listDraftIdsForThread(
                         tenantId, command.gmailThreadId(), MAX_DRAFTS_TO_SCAN);
@@ -120,6 +144,11 @@ public class ComposerDraftService {
                 }
             }
         }
+        return toSnapshot(writtenDraftId, command);
+    }
+
+    private static ComposerDraftSnapshot toSnapshot(
+            String writtenDraftId, ComposerDraftUpsertCommand command) {
         return new ComposerDraftSnapshot(
                 writtenDraftId,
                 command.gmailThreadId(),

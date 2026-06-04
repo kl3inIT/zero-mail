@@ -59,7 +59,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useChat } from '@/features/chat/hooks/use-chat';
-import { useConfirmAction } from '@/features/chat/hooks/use-confirm-action';
 import { EmailHtmlFrame, PlainEmailContent } from '@/features/inbox/components/EmailHtmlFrame';
 import { PreviewCard } from '@/features/chat/components/preview-card/preview-card';
 import {
@@ -1110,19 +1109,28 @@ function InboxReplyComposer({
     if (previewSubmitted) return;
     const timeoutId = window.setTimeout(() => {
       pendingDraftSaveTimeoutRef.current = null;
-      const upsertPromise = upsertDraftMutation
-        .mutateAsync({
-          gmailThreadId: selectedMessage.gmailThreadId,
-          sourceGmailMessageId: selectedMessage.gmailMessageId,
-          rfc822MessageId: null,
-          priorReferences: null,
-          mode: composerModeId(mode),
-          toAddresses: toText,
-          ccAddresses: showCc ? ccText : '',
-          bccAddresses: showBcc ? bccText : '',
-          subject: subjectText,
-          body: bodyText,
-        })
+      // Serialize autosaves behind any in-flight upsert so the next call reads the draftId the
+      // previous one created (latestDraftIdRef) and routes to a Gmail draft UPDATE instead of a
+      // second CREATE. Without this, two overlapping autosaves (debounce flush + close flush, or
+      // a generate-triggered save) each created a fresh draft, leaving 2-3 duplicates in Gmail.
+      const previousUpsert = inFlightUpsertRef.current;
+      const upsertPromise = Promise.resolve(previousUpsert)
+        .catch(() => undefined)
+        .then(() =>
+          upsertDraftMutation.mutateAsync({
+            draftId: latestDraftIdRef.current,
+            gmailThreadId: selectedMessage.gmailThreadId,
+            sourceGmailMessageId: selectedMessage.gmailMessageId,
+            rfc822MessageId: null,
+            priorReferences: null,
+            mode: composerModeId(mode),
+            toAddresses: toText,
+            ccAddresses: showCc ? ccText : '',
+            bccAddresses: showBcc ? bccText : '',
+            subject: subjectText,
+            body: bodyText,
+          }),
+        )
         .then((snapshot) => {
           setDraftId(snapshot.draftId);
           latestDraftIdRef.current = snapshot.draftId;
@@ -1166,19 +1174,27 @@ function InboxReplyComposer({
       pendingDraftSaveTimeoutRef.current = null;
     }
     if (hydrationSettled && !previewSubmitted) {
-      const upsertPromise = upsertDraftMutation
-        .mutateAsync({
-          gmailThreadId: selectedMessage.gmailThreadId,
-          sourceGmailMessageId: selectedMessage.gmailMessageId,
-          rfc822MessageId: null,
-          priorReferences: null,
-          mode: composerModeId(mode),
-          toAddresses: toText,
-          ccAddresses: showCc ? ccText : '',
-          bccAddresses: showBcc ? bccText : '',
-          subject: subjectText,
-          body: bodyText,
-        })
+      // Same serialize-and-reuse-draftId guard as the debounced autosave: chain behind any
+      // in-flight upsert and pass the known draftId so the close-flush updates the existing
+      // Gmail draft rather than racing the debounce flush into a duplicate create.
+      const previousUpsert = inFlightUpsertRef.current;
+      const upsertPromise = Promise.resolve(previousUpsert)
+        .catch(() => undefined)
+        .then(() =>
+          upsertDraftMutation.mutateAsync({
+            draftId: latestDraftIdRef.current,
+            gmailThreadId: selectedMessage.gmailThreadId,
+            sourceGmailMessageId: selectedMessage.gmailMessageId,
+            rfc822MessageId: null,
+            priorReferences: null,
+            mode: composerModeId(mode),
+            toAddresses: toText,
+            ccAddresses: showCc ? ccText : '',
+            bccAddresses: showBcc ? bccText : '',
+            subject: subjectText,
+            body: bodyText,
+          }),
+        )
         .then((snapshot) => {
           setDraftId(snapshot.draftId);
           latestDraftIdRef.current = snapshot.draftId;
@@ -1741,6 +1757,59 @@ function InlineAssistantPreview({
     [messages],
   );
 
+  // When autoConfirm is on (inbox composer Send), the assistant is prompted to call exactly one
+  // confirmed-send tool. Some model responses still emit the tool 2-3 times; each tool part used
+  // to render its own auto-confirming PreviewCard, firing POST /confirm 2-3 times and sending the
+  // email 2-3 times. Cap rendering to the FIRST confirmed-send card so a duplicated tool call can
+  // never produce a duplicate send — the extra pending actions stay unconfirmed and expire on the
+  // backend. The manual chat path is unaffected (the user clicks Send on each card themselves).
+  // The single tool card the autoConfirm path is allowed to render. Keyed by message id + part
+  // index so a duplicated confirmed-send tool call (the model occasionally emits 2-3) renders only
+  // the first card; the rest are dropped and their pending actions expire instead of each firing
+  // POST /confirm and sending the email again.
+  const firstToolPart = autoConfirm
+    ? visibleParts.find(({ part }) => part.type.startsWith('tool-'))
+    : undefined;
+  const allowedAutoConfirmKey = firstToolPart
+    ? `${firstToolPart.message.id}-${firstToolPart.index}`
+    : null;
+  const previewNodes = visibleParts.map(({ message, part, index }) => {
+    if (part.type === 'text') {
+      return (
+        <p key={`${message.id}-${index}`} className="text-muted-foreground text-sm leading-6">
+          {part.text}
+        </p>
+      );
+    }
+    if (!part.type.startsWith('tool-')) {
+      return null;
+    }
+    if (autoConfirm && allowedAutoConfirmKey !== `${message.id}-${index}`) {
+      return null;
+    }
+    // autoConfirm path: only treat persistence as confirmed once the stream is fully closed
+    // (backend has committed user_message + assistant_message + pending_action rows). The
+    // manual chat path keeps the looser ack-count gate because the user is the one clicking
+    // Send and they only do that after seeing the rendered card.
+    const persistenceConfirmed = autoConfirm
+      ? isPersistedMessage(message) || streamReady
+      : isPersistedMessage(message) || persistenceAckCount > 0;
+    const previewAction = toInlinePreviewAction({
+      chatId,
+      message,
+      part: part as ToolLikePart,
+      persistenceConfirmed,
+    });
+    if (!previewAction) return null;
+    return (
+      <PreviewCard
+        key={`${message.id}-${previewAction.toolCallId}`}
+        action={{ ...previewAction, autoConfirm }}
+        onSent={onSent}
+      />
+    );
+  });
+
   return (
     <div className="mt-3 space-y-3" data-testid="inbox-assistant-preview">
       {busy && visibleParts.length === 0 ? (
@@ -1749,39 +1818,7 @@ function InlineAssistantPreview({
           {t('inbox.composer.previewLoading')}
         </div>
       ) : null}
-      {visibleParts.map(({ message, part, index }) => {
-        if (part.type === 'text') {
-          return (
-            <p key={`${message.id}-${index}`} className="text-muted-foreground text-sm leading-6">
-              {part.text}
-            </p>
-          );
-        }
-        if (!part.type.startsWith('tool-')) {
-          return null;
-        }
-        // autoConfirm path: only treat persistence as confirmed once the stream is fully closed
-        // (backend has committed user_message + assistant_message + pending_action rows). The
-        // manual chat path keeps the looser ack-count gate because the user is the one clicking
-        // Send and they only do that after seeing the rendered card.
-        const persistenceConfirmed = autoConfirm
-          ? isPersistedMessage(message) || streamReady
-          : isPersistedMessage(message) || persistenceAckCount > 0;
-        const previewAction = toInlinePreviewAction({
-          chatId,
-          message,
-          part: part as ToolLikePart,
-          persistenceConfirmed,
-        });
-        if (!previewAction) return null;
-        return (
-          <PreviewCard
-            key={`${message.id}-${previewAction.toolCallId}`}
-            action={{ ...previewAction, autoConfirm }}
-            onSent={onSent}
-          />
-        );
-      })}
+      {previewNodes}
       {busy && visibleParts.length > 0 ? (
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -1789,58 +1826,6 @@ function InlineAssistantPreview({
         </div>
       ) : null}
     </div>
-  );
-}
-
-function AutoConfirmSendAction({ action }: { action: PreviewCardAction }) {
-  const t = useTranslations();
-  const confirmAction = useConfirmAction();
-  const confirmStartedRef = useRef(false);
-  // No separate 'sending' state: the in-flight send renders the same spinner as 'waiting' (see the
-  // early return below), so tracking it would only add a redundant state update inside the effect
-  // (react-doctor/no-adjust-state-on-prop-change). State stays 'waiting' until the mutation resolves.
-  const [sendState, setSendState] = useState<'waiting' | 'sent' | 'failed'>('waiting');
-
-  useEffect(() => {
-    if (confirmStartedRef.current || !action.persistenceConfirmed) return;
-    confirmStartedRef.current = true;
-    confirmAction
-      .mutateAsync({
-        chatId: action.chatId,
-        body: {
-          toolCallId: action.toolCallId,
-          contentOverride: {},
-          vipAcknowledged: false,
-        },
-      })
-      .then(() => setSendState('sent'))
-      .catch(() => setSendState('failed'));
-  }, [action.chatId, action.persistenceConfirmed, action.toolCallId, confirmAction]);
-
-  if (!action.persistenceConfirmed || sendState === 'waiting') {
-    return (
-      <div
-        className="text-muted-foreground flex items-center gap-2 text-sm"
-        data-testid="inbox-auto-send-status"
-      >
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-        {t('inbox.composer.sendingNow')}
-      </div>
-    );
-  }
-
-  if (sendState === 'sent') {
-    return (
-      <p className="text-sm text-emerald-700" data-testid="inbox-auto-send-status">
-        {t('inbox.composer.sentSuccess')}
-      </p>
-    );
-  }
-
-  return (
-    <p className="text-destructive text-sm" data-testid="inbox-auto-send-status">
-      {t('inbox.composer.sendFailed')}
-    </p>
   );
 }
 

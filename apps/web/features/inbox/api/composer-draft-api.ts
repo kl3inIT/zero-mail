@@ -17,6 +17,10 @@ export type ComposerDraftSnapshot = {
 
 export type ComposerDraftUpsertInput = {
   gmailThreadId: string;
+  // When the client already knows the Gmail draftId for this thread, send it so the backend
+  // updates that draft directly instead of scanning Gmail — closes the create-create race that
+  // otherwise left 2-3 duplicate drafts when overlapping autosaves each created a fresh draft.
+  draftId?: string | null;
   sourceGmailMessageId?: string | null;
   rfc822MessageId?: string | null;
   priorReferences?: string | null;

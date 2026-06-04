@@ -787,6 +787,10 @@
         "none": "Không hỗ trợ",
         "oneClick": "Hủy nhận an toàn"
       },
+      "page": {
+        "description": "Hủy đăng ký hoặc chặn hàng loạt người gửi mà bạn không bao giờ đọc.",
+        "title": "Hủy đăng ký"
+      },
       "stats": {
         "chartEmpty": "Chưa có dữ liệu trong 30 ngày qua.",
         "chartError": "Không tải được biểu đồ. Hãy thử lại sau một chút.",

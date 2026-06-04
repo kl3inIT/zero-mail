@@ -224,6 +224,11 @@ export function AnalyticsPageClient() {
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{t('analytics.page.title')}</h1>
+        <p className="text-muted-foreground text-sm">{t('analytics.page.description')}</p>
+      </header>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <AnalyticsToolbar
           selectedWindow={selectedWindow}
