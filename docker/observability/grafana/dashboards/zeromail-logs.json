@@ -5,7 +5,7 @@
   "tags": ["zeromail", "logs"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
   "templating": {
@@ -25,15 +25,24 @@
         "name": "level",
         "label": "Level",
         "type": "custom",
-        "query": "ALL,INFO,WARN,ERROR",
+        "query": "All : .*,ERROR : error,WARN : warn,INFO : info,DEBUG : debug",
         "includeAll": false,
-        "current": { "text": "ALL", "value": "ALL" },
+        "current": { "text": "All", "value": ".*" },
         "options": [
-          { "text": "ALL", "value": "ALL", "selected": true },
-          { "text": "INFO", "value": "INFO" },
-          { "text": "WARN", "value": "WARN" },
-          { "text": "ERROR", "value": "ERROR" }
+          { "text": "All", "value": ".*", "selected": true },
+          { "text": "ERROR", "value": "error" },
+          { "text": "WARN", "value": "warn" },
+          { "text": "INFO", "value": "info" },
+          { "text": "DEBUG", "value": "debug" }
         ]
+      },
+      {
+        "name": "search",
+        "label": "Search",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" },
+        "options": [ { "text": "", "value": "", "selected": true } ]
       }
     ]
   },
@@ -62,7 +71,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "sum by (container) (count_over_time({container=~\"$container\"} |~ `(?i)\\\"level\\\":\\\"(ERROR|WARN)` [1m]))",
+          "expr": "sum by (container) (count_over_time({container=~\"$container\"} | detected_level=~\"(error|warn)\" [1m]))",
           "legendFormat": "{{container}}"
         }
       ]
@@ -83,7 +92,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "{container=~\"$container\"}",
+          "expr": "{container=~\"$container\"} |= \"$search\" | detected_level=~\"$level\"",
           "legendFormat": ""
         }
       ]
