@@ -280,6 +280,16 @@ export function ConversationPane({
   const messages = chat.messages.length > 0 ? chat.messages : initialMessages;
   const isBusy = chat.status === 'submitted' || chat.status === 'streaming';
   const isEmpty = messages.length === 0;
+  // Show the "assistant is thinking" loader from the moment the user sends until the assistant
+  // produces its first visible part (text or a tool call). This bridges the gap that 'submitted'
+  // alone misses — e.g. a createRule turn spends seconds compiling before the preview card lands.
+  const lastMessage = messages.at(-1);
+  const awaitingAssistant =
+    isBusy &&
+    !(
+      lastMessage?.role === 'assistant' &&
+      lastMessage.parts.some((part) => part.type === 'text' || part.type.startsWith('tool-'))
+    );
 
   const inputArea = (
     <PromptInput
@@ -366,7 +376,7 @@ export function ConversationPane({
               </Message>
             );
           })}
-          {chat.status === 'submitted' && <Loader className="px-1 py-2" />}
+          {awaitingAssistant && <Loader className="px-1 py-2" />}
           {stopped && (
             <p className="text-text-faint text-[12.5px] italic">{t('stream.cancelled')}</p>
           )}

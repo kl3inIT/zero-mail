@@ -628,6 +628,7 @@
       "outsideSourceThread": "Thêm bởi AI · xác minh",
       "overwriteNotice": "Sẽ ghi đè hướng dẫn hiện tại",
       "removeSender": "Bỏ khỏi danh sách an toàn",
+      "ruleEditHint": "Sửa nội dung \"Khi\" sẽ tính lại điều kiện và hành động khi bạn xác nhận.",
       "ruleName": "Tên quy tắc",
       "saveMemory": "Lưu vào kho kiến thức",
       "saving": "Đang lưu...",

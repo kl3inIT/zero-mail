@@ -628,6 +628,7 @@
       "outsideSourceThread": "Added by AI · verify",
       "overwriteNotice": "Will overwrite current instructions",
       "removeSender": "Remove from safety net",
+      "ruleEditHint": "Editing the \"When\" text recompiles the condition and action when you confirm.",
       "ruleName": "Rule name",
       "saveMemory": "Save to knowledge",
       "saving": "Saving...",

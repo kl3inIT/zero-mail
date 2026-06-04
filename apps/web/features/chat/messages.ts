@@ -243,6 +243,10 @@ export const chatMessages = {
     vi: 'Thì',
     en: 'Then',
   },
+  'chat.preview.ruleEditHint': {
+    vi: 'Sửa nội dung "Khi" sẽ tính lại điều kiện và hành động khi bạn xác nhận.',
+    en: 'Editing the "When" text recompiles the condition and action when you confirm.',
+  },
   'chat.preview.sender': {
     vi: 'Người gửi',
     en: 'Sender',

@@ -486,6 +486,11 @@ public class ChatOrchestrator {
         enrichedInput.put("displayName", compileResult.displayName());
         enrichedInput.put("matcherAst", compileResult.matcherAst());
         enrichedInput.put("actionIntents", compileResult.actionIntents());
+        // Snapshot what was compiled so the confirm handler can tell whether the user edited the
+        // rule text / name on the preview card and needs a recompile (see
+        // ConfirmRequiredToolHandlers.createRule).
+        enrichedInput.put("compiledSourceText", sourceText);
+        enrichedInput.put("compiledDisplayName", compileResult.displayName());
         return writeJson(enrichedInput);
     }
 

@@ -7,6 +7,9 @@ import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.usecases.AssistantKnowledgeService;
 import com.zeromail.core.chat.usecases.AssistantPersonalInstructionsService;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
+import com.zeromail.core.rules.usecases.RuleCompileCommand;
+import com.zeromail.core.rules.usecases.RuleCompileResult;
+import com.zeromail.core.rules.usecases.RuleCompilerService;
 import com.zeromail.core.rules.usecases.RuleCreateCommand;
 import com.zeromail.core.rules.usecases.RuleManagementService;
 import com.zeromail.core.triage.usecases.SenderSafetyEntryService;
@@ -23,13 +26,15 @@ public class ConfirmRequiredToolHandlers {
 
     public ConfirmRequiredToolHandlers(
             RuleManagementService ruleManagementService,
+            RuleCompilerService ruleCompilerService,
             AssistantKnowledgeService assistantKnowledgeService,
             AssistantPersonalInstructionsService assistantPersonalInstructionsService,
             SenderSafetyEntryService senderSafetyEntryService,
             TriageGmailWriter triageGmailWriter) {
         EnumMap<ChatToolName, WriteToolHandler> handlerMap = new EnumMap<>(ChatToolName.class);
         handlerMap.put(
-                ChatToolName.CREATE_RULE, command -> createRule(ruleManagementService, command));
+                ChatToolName.CREATE_RULE,
+                command -> createRule(ruleManagementService, ruleCompilerService, command));
         handlerMap.put(
                 ChatToolName.DELETE_RULE, command -> deleteRule(ruleManagementService, command));
         handlerMap.put(
@@ -52,14 +57,51 @@ public class ConfirmRequiredToolHandlers {
     }
 
     private static WriteToolResult createRule(
-            RuleManagementService ruleManagementService, AssistantWriteCommand command) {
+            RuleManagementService ruleManagementService,
+            RuleCompilerService ruleCompilerService,
+            AssistantWriteCommand command) {
+        String effectiveSourceText = WriteToolArguments.text(command.inputJson(), "sourceText");
+        String compiledSourceText =
+                WriteToolArguments.optionalText(command.inputJson(), "compiledSourceText");
+        String overriddenDisplayName =
+                WriteToolArguments.optionalText(command.inputJson(), "displayName");
+        String compiledDisplayName =
+                WriteToolArguments.optionalText(command.inputJson(), "compiledDisplayName");
+
+        // The user can edit the rule name and the natural-language "When" text on the preview card
+        // before confirming. If the text changed (or was never successfully compiled), recompile so
+        // the matcher/action match what the user now sees -- backend never re-derives them from the
+        // raw text itself (CLAUDE.md). A name-only edit reuses the stored compile.
+        boolean ruleTextChanged =
+                compiledSourceText == null || !compiledSourceText.equals(effectiveSourceText);
+        RuleCompileResult compileResult;
+        String displayName;
+        if (ruleTextChanged) {
+            compileResult =
+                    ruleCompilerService.compile(
+                            new RuleCompileCommand(command.tenantId(), effectiveSourceText));
+            boolean userEditedName =
+                    overriddenDisplayName != null
+                            && !overriddenDisplayName.equals(compiledDisplayName);
+            if (userEditedName) {
+                displayName = overriddenDisplayName;
+            } else if (compileResult.isCompiled()) {
+                displayName = compileResult.displayName();
+            } else {
+                displayName =
+                        overriddenDisplayName != null ? overriddenDisplayName : effectiveSourceText;
+            }
+        } else {
+            compileResult = WriteReversibleToolHandlers.ruleCompileResult(command);
+            displayName = overriddenDisplayName;
+        }
         RuleStatusProjection projection =
                 ruleManagementService.create(
                         new RuleCreateCommand(
                                 command.tenantId(),
-                                WriteToolArguments.text(command.inputJson(), "displayName"),
-                                WriteToolArguments.text(command.inputJson(), "sourceText"),
-                                WriteReversibleToolHandlers.ruleCompileResult(command)));
+                                displayName,
+                                effectiveSourceText,
+                                compileResult));
         return WriteReversibleToolHandlers.result(
                 "rule_id", projection.ruleId().toString(), "enabled", projection.enabled());
     }
