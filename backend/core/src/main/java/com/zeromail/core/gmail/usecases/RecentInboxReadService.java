@@ -175,7 +175,14 @@ public class RecentInboxReadService {
         }
 
         if (needsFullSyncFirst(tenantId)) {
-            return RecentInboxPage.syncing(MAX_MESSAGES);
+            // First connect: the background backfill (enqueued above) is still populating the
+            // projection. Don't park the user behind an empty SYNCING banner waiting for the whole
+            // backfill to finish — serve the live Gmail first page immediately (batched, ~1-2s) so
+            // they see real mail right away. Subsequent visits read the fast DB projection once the
+            // backfill has completed. Mirrors Inbox Zero, which always serves the list live and
+            // treats the DB as a cache.
+            log.info("event=inbox_read_first_connect_live tenantId={}", tenantId);
+            return fetchPageFromLiveGmail(tenantId, null, requestedLimit);
         }
 
         int firstPageLimit = effectiveLimit(requestedLimit, 0);

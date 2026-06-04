@@ -43,9 +43,9 @@ import org.mockito.ArgumentCaptor;
  * <ul>
  *   <li>{@link GmailInboxSyncStateRepository} — used for the freshness gate
  *   <li>{@link InboxProjectionReadService} — used for the projection path
- *   <li>{@link GmailConnectionRepository} — when the gmail fallback runs we let it throw
- *       {@code NOT_CONNECTED} as a sentinel, proving the fallback path was taken without needing a
- *       Gmail SDK mock
+ *   <li>{@link GmailConnectionRepository} — when the gmail fallback runs we let it throw {@code
+ *       NOT_CONNECTED} as a sentinel, proving the fallback path was taken without needing a Gmail
+ *       SDK mock
  *   <li>{@link InboxBackfillEnqueuer} — verified for the lazy-enqueue invariant on the SYNCING
  *       branch
  * </ul>
@@ -80,29 +80,40 @@ class RecentInboxReadServiceOrchestratorTest {
     }
 
     @Test
-    void firstPage_noSyncStateRow_returnsSyncingAndEnqueuesBackfill() {
+    void firstPage_noSyncStateRow_servesLiveGmailAndEnqueuesBackfill() {
         when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.empty());
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
 
-        RecentInboxPage page = recentInboxReadService.fetchPage(TENANT_ID, null, 20);
-
-        assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.SYNCING);
-        assertThat(page.messages()).isEmpty();
-        assertThat(page.nextCursor()).isNull();
+        // First connect no longer parks the user on an empty SYNCING banner; it serves the live
+        // Gmail first page while the background backfill runs. With no GmailConnection row, the
+        // live
+        // path surfaces NOT_CONNECTED — reaching it proves the orchestrator took the live branch
+        // instead of short-circuiting to SYNCING. The lazy backfill enqueue still fires.
+        assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, null, 20))
+                .isInstanceOf(RecentInboxUnavailableException.class)
+                .matches(
+                        exception ->
+                                ((RecentInboxUnavailableException) exception).reason()
+                                        == RecentInboxUnavailableReason.NOT_CONNECTED);
         verify(inboxBackfillEnqueuer).enqueueIfNotPending(TENANT_ID);
+        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
         verifyNoInteractions(inboxProjectionReadService);
-        verifyNoInteractions(gmailConnectionRepository, gmailApiClientFactory);
     }
 
     @Test
-    void firstPage_lastFullSyncAtNull_returnsSyncing() {
+    void firstPage_lastFullSyncAtNull_servesLiveGmail() {
         GmailInboxSyncStateEntity syncState = syncStateWithLastFullSyncAt(null);
         when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
 
-        RecentInboxPage page = recentInboxReadService.fetchPage(TENANT_ID, null, 20);
-
-        assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.SYNCING);
+        assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, null, 20))
+                .isInstanceOf(RecentInboxUnavailableException.class)
+                .matches(
+                        exception ->
+                                ((RecentInboxUnavailableException) exception).reason()
+                                        == RecentInboxUnavailableReason.NOT_CONNECTED);
+        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
         verifyNoInteractions(inboxProjectionReadService);
-        verifyNoInteractions(gmailConnectionRepository);
     }
 
     @Test
@@ -114,7 +125,9 @@ class RecentInboxReadServiceOrchestratorTest {
         when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
                 .thenReturn(
                         new InboxProjectionPage(
-                                rows, "inner-projection-cursor", InboxProjectionDataSource.PROJECTION));
+                                rows,
+                                "inner-projection-cursor",
+                                InboxProjectionDataSource.PROJECTION));
 
         RecentInboxPage page = recentInboxReadService.fetchPage(TENANT_ID, null, 20);
 
@@ -147,18 +160,21 @@ class RecentInboxReadServiceOrchestratorTest {
 
     @Test
     void cursorWithPPrefix_routesToProjectionWithStrippedInnerCursor() {
-        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq("inner-keyset-cursor"), anyInt()))
+        when(inboxProjectionReadService.fetchInboxPage(
+                        eq(TENANT_ID), eq("inner-keyset-cursor"), anyInt()))
                 .thenReturn(
                         new InboxProjectionPage(
                                 projectionRows(3), null, InboxProjectionDataSource.PROJECTION));
 
-        RecentInboxPage page = recentInboxReadService.fetchPage(TENANT_ID, "Pinner-keyset-cursor", 20);
+        RecentInboxPage page =
+                recentInboxReadService.fetchPage(TENANT_ID, "Pinner-keyset-cursor", 20);
 
         assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.PROJECTION);
         assertThat(page.messages()).hasSize(3);
         assertThat(page.nextCursor()).isNull();
         ArgumentCaptor<String> innerCursorCaptor = ArgumentCaptor.forClass(String.class);
-        verify(inboxProjectionReadService).fetchInboxPage(eq(TENANT_ID), innerCursorCaptor.capture(), anyInt());
+        verify(inboxProjectionReadService)
+                .fetchInboxPage(eq(TENANT_ID), innerCursorCaptor.capture(), anyInt());
         assertThat(innerCursorCaptor.getValue()).isEqualTo("inner-keyset-cursor");
         // findById is called by the lazy backfill enqueue (Phase A invariant), but the orchestrator
         // routing on the cursor branch must not consult it again — projection routing is sticky.
@@ -185,7 +201,10 @@ class RecentInboxReadServiceOrchestratorTest {
 
     @Test
     void cursorWithUnknownPrefix_throwsInvalidCursor() {
-        assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, "Xunknown-prefix-cursor", 20))
+        assertThatThrownBy(
+                        () ->
+                                recentInboxReadService.fetchPage(
+                                        TENANT_ID, "Xunknown-prefix-cursor", 20))
                 .isInstanceOf(RecentInboxUnavailableException.class)
                 .matches(
                         exception ->

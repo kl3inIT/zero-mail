@@ -21,14 +21,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Postgres-backed integration test for the three branches of the Phase B Wave 1 read orchestrator
- * in {@link RecentInboxReadService#fetchPage}: PROJECTION (full page from DB), SYNCING (first
- * fetch before backfill completes), LIVE_GMAIL (projection short → fall back to Gmail).
+ * in {@link RecentInboxReadService#fetchPage}: PROJECTION (full page from DB), SYNCING (first fetch
+ * before backfill completes), LIVE_GMAIL (projection short → fall back to Gmail).
  *
  * <p>The LIVE_GMAIL branch is asserted via the {@code NOT_CONNECTED} signal — when no Gmail
  * connection row exists for the tenant, the fallback {@code gmailForTenant} call throws and the
  * orchestrator wraps it. Reaching that exception proves the orchestrator transitioned past the
- * projection short-page check and into the live Gmail code path. The full Gmail SDK exchange
- * itself is covered by {@code RecentInboxReadServiceTest} and {@code RecentInboxReadServiceOrches-
+ * projection short-page check and into the live Gmail code path. The full Gmail SDK exchange itself
+ * is covered by {@code RecentInboxReadServiceTest} and {@code RecentInboxReadServiceOrches-
  * tratorTest} — duplicating that mock setup here would not increase coverage of the wiring.
  *
  * <p>Lazy backfill enqueue (Phase A wave 3) is still triggered on every fetchPage; the test only
@@ -60,17 +60,25 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
     }
 
     @Test
-    void firstPage_noSyncStateRow_returnsSyncingEmpty() {
+    void firstPage_noSyncStateRow_fallsBackToLiveGmail() {
         UUID tenantId = seedTenant();
-        // Deliberately do not write sync_state — represents a tenant that just connected.
-
-        RecentInboxPage page =
-                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> recentInboxReadService.fetchPage(tenantId, null, 20));
-
-        assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.SYNCING);
-        assertThat(page.messages()).isEmpty();
-        assertThat(page.nextCursor()).isNull();
+        // Just-connected tenant: no sync_state row. First connect now serves the live Gmail first
+        // page (the background backfill runs separately) instead of an empty SYNCING banner. With
+        // no
+        // GmailConnection row, the live path surfaces NOT_CONNECTED — reaching it proves the live
+        // branch was taken rather than a SYNCING short-circuit.
+        assertThatThrownBy(
+                        () ->
+                                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                                        .call(
+                                                () ->
+                                                        recentInboxReadService.fetchPage(
+                                                                tenantId, null, 20)))
+                .isInstanceOf(RecentInboxUnavailableException.class)
+                .matches(
+                        exception ->
+                                ((RecentInboxUnavailableException) exception).reason()
+                                        == RecentInboxUnavailableReason.NOT_CONNECTED);
     }
 
     @Test
