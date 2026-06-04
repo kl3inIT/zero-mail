@@ -205,8 +205,6 @@ public class SecurityConfig {
                                                 "/login/oauth2/**",
                                                 "/oauth2/**")
                                         .permitAll()
-                                        .requestMatchers(HttpMethod.POST, "/api/waitlist/subscribe")
-                                        .permitAll()
                                         .anyRequest()
                                         .authenticated())
                 .oauth2Login(
@@ -223,9 +221,7 @@ public class SecurityConfig {
                         csrf ->
                                 csrf.spa()
                                         .ignoringRequestMatchers(
-                                                "/login/oauth2/code/**",
-                                                "/oauth2/callback/**",
-                                                "/api/waitlist/subscribe"))
+                                                "/login/oauth2/code/**", "/oauth2/callback/**"))
                 .exceptionHandling(
                         exceptionHandling ->
                                 exceptionHandling.defaultAuthenticationEntryPointFor(
@@ -233,9 +229,14 @@ public class SecurityConfig {
                                         API_REQUEST_MATCHER))
                 .logout(
                         logout ->
+                                // Logout MUST live under /api so the production reverse proxy
+                                // (routes only /api, /oauth2, /login/oauth2 to Spring) forwards it
+                                // to the backend. A top-level /logout fell through to Next.js → 404
+                                // → "Không thể đăng xuất". Mirrors the admin chain's
+                                // /api/admin/logout.
                                 logout.logoutRequestMatcher(
                                                 PathPatternRequestMatcher.withDefaults()
-                                                        .matcher(HttpMethod.POST, "/logout"))
+                                                        .matcher(HttpMethod.POST, "/api/logout"))
                                         .logoutSuccessHandler(
                                                 new HttpStatusReturningLogoutSuccessHandler())
                                         .invalidateHttpSession(true)

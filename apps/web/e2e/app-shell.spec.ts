@@ -67,7 +67,8 @@ test('app shell remains mounted across client navigation and hidden onboarding r
   state.onboardingStep = 'GMAIL_CONNECTED';
   await page.goto('/onboarding/gmail-connect', { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('load');
-  await expect(page).toHaveURL(/\/rules$/);
+  // Hidden beta onboarding bypasses to ONBOARDING_BYPASS_ROUTE (Chat), still inside app chrome.
+  await expect(page).toHaveURL(/\/chat$/);
   await expect(page.getByTestId('app-shell')).toBeVisible();
   await expect(page.getByTestId('app-sidebar')).toBeVisible();
 });

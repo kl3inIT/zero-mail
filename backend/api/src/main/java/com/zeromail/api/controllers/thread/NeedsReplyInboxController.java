@@ -1,5 +1,7 @@
 package com.zeromail.api.controllers.thread;
 
+import com.zeromail.api.dto.thread.NeedsReplyBackfillResponse;
+import com.zeromail.api.dto.thread.NeedsReplyCountsResponse;
 import com.zeromail.api.dto.thread.NeedsReplyListResponse;
 import com.zeromail.api.dto.thread.ToReplyCountResponse;
 import com.zeromail.api.error.InvalidCursorException;
@@ -12,6 +14,7 @@ import com.zeromail.core.thread.projection.NeedsReplyPage;
 import com.zeromail.core.thread.projection.NeedsReplyPageQuery;
 import com.zeromail.core.thread.projection.NeedsReplyRow;
 import com.zeromail.core.thread.usecases.NeedsReplyInboxQueryService;
+import com.zeromail.core.triage.usecases.BackfillNeedsReplyService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Duration;
 import java.util.List;
@@ -20,6 +23,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,12 +37,15 @@ public class NeedsReplyInboxController {
 
     private final NeedsReplyInboxQueryService needsReplyInboxQueryService;
     private final GmailPreviewReadService gmailPreviewReadService;
+    private final BackfillNeedsReplyService backfillNeedsReplyService;
 
     public NeedsReplyInboxController(
             NeedsReplyInboxQueryService needsReplyInboxQueryService,
-            GmailPreviewReadService gmailPreviewReadService) {
+            GmailPreviewReadService gmailPreviewReadService,
+            BackfillNeedsReplyService backfillNeedsReplyService) {
         this.needsReplyInboxQueryService = needsReplyInboxQueryService;
         this.gmailPreviewReadService = gmailPreviewReadService;
+        this.backfillNeedsReplyService = backfillNeedsReplyService;
     }
 
     @GetMapping
@@ -69,6 +76,18 @@ public class NeedsReplyInboxController {
     public ToReplyCountResponse toReplyCount() {
         UUID tenantId = TenantContext.currentTenantUuid();
         return ToReplyCountResponse.from(needsReplyInboxQueryService.toReplyCount(tenantId));
+    }
+
+    @GetMapping("/counts")
+    public NeedsReplyCountsResponse counts() {
+        UUID tenantId = TenantContext.currentTenantUuid();
+        return NeedsReplyCountsResponse.from(needsReplyInboxQueryService.counts(tenantId));
+    }
+
+    @PostMapping("/backfill")
+    public NeedsReplyBackfillResponse backfill(@RequestParam(defaultValue = "20") int limit) {
+        UUID tenantId = TenantContext.currentTenantUuid();
+        return NeedsReplyBackfillResponse.from(backfillNeedsReplyService.backfill(tenantId, limit));
     }
 
     private static void validateCursor(String cursor) {

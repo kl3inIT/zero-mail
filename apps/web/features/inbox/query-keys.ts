@@ -4,4 +4,5 @@ export const inboxKeys = {
   detail: (gmailMessageId: string | null) => [...inboxKeys.all, 'detail', gmailMessageId] as const,
   composerDraft: (gmailThreadId: string | null) =>
     [...inboxKeys.all, 'composer-draft', gmailThreadId] as const,
+  draft: (gmailDraftId: string | null) => [...inboxKeys.all, 'draft', gmailDraftId] as const,
 };

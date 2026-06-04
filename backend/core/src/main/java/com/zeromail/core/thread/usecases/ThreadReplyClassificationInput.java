@@ -3,6 +3,19 @@ package com.zeromail.core.thread.usecases;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Inputs the deterministic reply-status classifier maps to a {@link
+ * com.zeromail.core.thread.domain.ThreadReplyBucket}.
+ *
+ * <p>{@code inboundReplyNeeded} is the needs-reply-vs-FYI signal for an inbound message ({@code
+ * lastMessageFromIsTenant=false}). The thread module cannot reach the LLM gateway, so the caller
+ * (the triage orchestrator) resolves this flag — by an LLM classification, a cheap no-reply
+ * pre-filter, or "a reply was already drafted" — and passes the decision in. It is ignored when the
+ * last message is from the tenant (that path is the deterministic {@code AWAITING_THEIR_REPLY}
+ * bucket) or when an inbound message is an auto-reply — the counterparty's vacation responder / "do
+ * not reply" bounce is always {@code FYI}. (An outbound auto-reply from the tenant is not forced to
+ * FYI: the counterparty still awaits the reader's real reply.)
+ */
 public record ThreadReplyClassificationInput(
         UUID tenantId,
         String gmailThreadId,
@@ -11,7 +24,8 @@ public record ThreadReplyClassificationInput(
         boolean threadHasSentLabel,
         boolean hasZeroMailDraft,
         String zeroMailDraftId,
-        boolean lastMessageIsAutoReply) {
+        boolean lastMessageIsAutoReply,
+        boolean inboundReplyNeeded) {
 
     public ThreadReplyClassificationInput {
         Objects.requireNonNull(tenantId, "tenantId must not be null");

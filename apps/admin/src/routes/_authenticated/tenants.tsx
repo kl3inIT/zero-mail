@@ -83,7 +83,6 @@ function TenantsRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Vận hành</p>
           <h1 className="text-xl font-semibold text-ink">Khách hàng</h1>
         </div>
         <Badge variant="secondary">{tenantList.isLoading ? 'Đang tải' : `${rows.length} hiển thị`}</Badge>

@@ -58,6 +58,61 @@ class RuleTemplateMaterializationServiceTest extends PostgresContainerTest {
     }
 
     @Test
+    void english_default_rules_are_materialized_enabled_exactly_once_on_first_login()
+            throws Exception {
+        UUID tenantId = seedTenant("default-rules-seed-en");
+
+        RuleTemplateMaterializationResult firstResult =
+                ruleTemplateMaterializationService.materializeDefaultRulesEnabled(tenantId, "en");
+        RuleTemplateMaterializationResult secondResult =
+                ruleTemplateMaterializationService.materializeDefaultRulesEnabled(tenantId, "en");
+
+        int defaultCount = RuleTemplateMaterializationService.DEFAULT_RULE_TEMPLATE_KEYS_EN.size();
+        assertThat(firstResult.createdCount()).isEqualTo(defaultCount);
+        assertThat(secondResult.createdCount()).isZero();
+        assertThat(secondResult.skippedCount()).isEqualTo(defaultCount);
+        // Every seeded default rule is ENABLED, ordered by the EN key order, and carries valid
+        // matcher/action JSON (getMatcherAst/getActionIntents validate on read).
+        assertThat(withTenant(tenantId, () -> ruleRepository.findOrderedByTenantId(tenantId)))
+                .allSatisfy(
+                        rule -> {
+                            assertThat(rule.isEnabled()).isTrue();
+                            assertThat(rule.getMatcherAst()).contains("SEMANTIC_INTENT");
+                            assertThat(rule.getActionIntents()).contains("label");
+                        })
+                .extracting(RuleEntity::getTemplateKey)
+                .containsExactlyElementsOf(
+                        RuleTemplateMaterializationService.DEFAULT_RULE_TEMPLATE_KEYS_EN);
+    }
+
+    @Test
+    void vietnamese_default_rules_seed_localized_names_and_gmail_labels() throws Exception {
+        UUID tenantId = seedTenant("default-rules-seed-vi");
+
+        RuleTemplateMaterializationResult result =
+                ruleTemplateMaterializationService.materializeDefaultRulesEnabled(tenantId, "vi");
+
+        assertThat(result.createdCount())
+                .isEqualTo(RuleTemplateMaterializationService.DEFAULT_RULE_TEMPLATE_KEYS_VI.size());
+        var rules = withTenant(tenantId, () -> ruleRepository.findOrderedByTenantId(tenantId));
+        assertThat(rules)
+                .allSatisfy(rule -> assertThat(rule.isEnabled()).isTrue())
+                .extracting(RuleEntity::getTemplateKey)
+                .containsExactlyElementsOf(
+                        RuleTemplateMaterializationService.DEFAULT_RULE_TEMPLATE_KEYS_VI);
+        // The Vietnamese set localizes the rule name AND the Gmail label the user sees.
+        assertThat(rules)
+                .extracting(RuleEntity::getDisplayName)
+                .contains("Cần trả lời", "Bản tin", "Tiếp thị", "Hóa đơn");
+        assertThat(rules)
+                .anySatisfy(
+                        rule -> {
+                            assertThat(rule.getDisplayName()).isEqualTo("Cần trả lời");
+                            assertThat(rule.getActionIntents()).contains("Cần trả lời");
+                        });
+    }
+
+    @Test
     void customized_template_derived_rule_is_preserved_on_repeated_materialization()
             throws Exception {
         UUID tenantId = seedTenant("template-materialization-customized");

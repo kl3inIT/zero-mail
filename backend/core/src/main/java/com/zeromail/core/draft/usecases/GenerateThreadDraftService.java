@@ -271,7 +271,10 @@ public class GenerateThreadDraftService {
                                     draftReplySource.threadHasSentLabel(),
                                     true,
                                     newDraftId,
-                                    draftReplySource.lastMessageIsAutoReply()));
+                                    draftReplySource.lastMessageIsAutoReply(),
+                                    // The user just drafted a reply, so this inbound thread needs
+                                    // one (bucketFor keeps it in TO_REPLY rather than FYI).
+                                    true));
                 });
     }
 

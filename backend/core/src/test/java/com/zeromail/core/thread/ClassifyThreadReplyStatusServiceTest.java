@@ -95,6 +95,20 @@ class ClassifyThreadReplyStatusServiceTest {
     }
 
     @Test
+    void inbound_auto_reply_classifies_as_fyi_even_when_reply_signal_is_true() {
+        when(threadReplyStatusRepository.findByGmailThreadId(GMAIL_THREAD_ID))
+                .thenReturn(Optional.empty());
+
+        // Counterparty's vacation responder / "do not reply" bounce: inbound, auto-reply, and the
+        // needs-reply signal defaults true — yet it must never land in "To reply".
+        ThreadReplyStatus result =
+                classifyThreadReplyStatusService.classify(
+                        input("gmail-message-inbound-auto", false, false, false, null, true));
+
+        assertThat(result.bucket()).isEqualTo(ThreadReplyBucket.FYI);
+    }
+
+    @Test
     void unchanged_last_message_is_idempotent_and_new_inbound_reopens_resolved_row() {
         ThreadReplyStatusEntity existingResolvedStatus =
                 statusEntity(
@@ -128,6 +142,28 @@ class ClassifyThreadReplyStatusServiceTest {
                 .isEqualTo("gmail-message-new");
     }
 
+    @Test
+    void inbound_message_not_needing_reply_classifies_as_fyi() {
+        when(threadReplyStatusRepository.findByGmailThreadId(GMAIL_THREAD_ID))
+                .thenReturn(Optional.empty());
+
+        ThreadReplyStatus result =
+                classifyThreadReplyStatusService.classify(
+                        new ThreadReplyClassificationInput(
+                                TENANT_ID,
+                                GMAIL_THREAD_ID,
+                                "gmail-message-fyi",
+                                false,
+                                false,
+                                false,
+                                null,
+                                false,
+                                false));
+
+        assertThat(result.bucket()).isEqualTo(ThreadReplyBucket.FYI);
+        assertThat(result.hasDraft()).isFalse();
+    }
+
     private static ThreadReplyClassificationInput input(
             String lastMessageId,
             boolean lastMessageFromIsTenant,
@@ -143,7 +179,10 @@ class ClassifyThreadReplyStatusServiceTest {
                 threadHasSentLabel,
                 hasZeroMailDraft,
                 zeroMailDraftId,
-                lastMessageIsAutoReply);
+                lastMessageIsAutoReply,
+                // These cases assert direction/draft buckets; an inbound message needs a reply
+                // unless explicitly told otherwise (see the dedicated FYI test).
+                true);
     }
 
     private static ThreadReplyStatusEntity statusEntity(

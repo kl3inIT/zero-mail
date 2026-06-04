@@ -9,19 +9,21 @@ import org.junit.jupiter.api.Test;
 class CallSiteEnumMembershipArchTest {
 
     @Test
-    void callsite_has_exactly_five_members() {
-        assertThat(CallSite.values()).hasSize(5);
+    void callsite_has_exactly_seven_members() {
+        assertThat(CallSite.values()).hasSize(7);
     }
 
     @Test
-    void callsite_members_locked_to_TRIAGE_DRAFT_PREVIEW_AND_TRIAGE_EXECUTION_CALLSITES() {
+    void callsite_members_locked_to_known_billable_callsites() {
         assertThat(Arrays.stream(CallSite.values()).map(Enum::name))
                 .containsExactlyInAnyOrder(
                         "TRIAGE",
                         "DRAFT",
                         "PREVIEW",
                         "TRIAGE_PLATFORM_LLM",
-                        "TRIAGE_DETERMINISTIC");
+                        "TRIAGE_DETERMINISTIC",
+                        "DIGEST",
+                        "NEEDS_REPLY");
     }
 
     @Test

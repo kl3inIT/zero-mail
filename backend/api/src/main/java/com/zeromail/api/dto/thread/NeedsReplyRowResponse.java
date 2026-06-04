@@ -23,7 +23,27 @@ public record NeedsReplyRowResponse(
         @Schema(nullable = true) Instant lastActivityAt,
         String draftStatus,
         boolean resolved,
-        String openInGmailUrl) {
+        String openInGmailUrl,
+        @Schema(
+                        nullable = true,
+                        description =
+                                "Short preview of the latest message in the thread, fetched live"
+                                        + " from Gmail (never persisted).")
+                String snippet,
+        @Schema(
+                        nullable = true,
+                        description =
+                                "Gmail message id of the latest message in the thread, used to open"
+                                        + " an in-place reader. Null when the live Gmail display"
+                                        + " fetch was unavailable.")
+                String latestMessageId,
+        @Schema(
+                        nullable = true,
+                        description =
+                                "Gmail draft id of the saved reply draft for this thread, used to"
+                                        + " preview the draft body in-place. Null when the thread"
+                                        + " has no draft.")
+                String draftId) {
 
     public static NeedsReplyRowResponse from(NeedsReplyRow row, GmailThreadDisplay display) {
         return new NeedsReplyRowResponse(
@@ -33,7 +53,10 @@ public record NeedsReplyRowResponse(
                 display == null ? null : display.lastActivityAt(),
                 draftStatus(row),
                 row.resolved(),
-                "https://mail.google.com/mail/u/0/#all/" + row.gmailThreadId());
+                "https://mail.google.com/mail/u/0/#all/" + row.gmailThreadId(),
+                display == null ? null : display.snippet(),
+                display == null ? null : display.latestMessageId(),
+                row.hasDraft() ? row.draftId() : null);
     }
 
     private static String draftStatus(NeedsReplyRow row) {

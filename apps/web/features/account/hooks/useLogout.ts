@@ -6,7 +6,7 @@ import { getApiUrl } from '@/lib/api/base-url';
 import { xsrfHeader } from '@/lib/api/client';
 
 async function logoutUser(): Promise<void> {
-  const response = await fetch(getApiUrl('/logout'), {
+  const response = await fetch(getApiUrl('/api/logout'), {
     method: 'POST',
     credentials: 'include',
     headers: xsrfHeader(),

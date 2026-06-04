@@ -24,6 +24,9 @@ export type NeedsReplyRow = {
   gmailThreadId: string;
   subject: string;
   otherParty: string;
+  snippet: string;
+  latestMessageId: string | null;
+  draftId: string | null;
   lastActivityAt: string;
   draftStatus: DraftStatus;
   resolved: boolean;
@@ -92,6 +95,9 @@ function normalizeRow(row: NeedsReplyRowResponse): NeedsReplyRow | null {
     gmailThreadId: row.gmailThreadId,
     subject: row.subject ?? '',
     otherParty: row.otherParty ?? '',
+    snippet: row.snippet ?? '',
+    latestMessageId: row.latestMessageId ?? null,
+    draftId: row.draftId ?? null,
     lastActivityAt: row.lastActivityAt ?? new Date(0).toISOString(),
     draftStatus: normalizeDraftStatus(row.draftStatus),
     resolved: Boolean(row.resolved),
@@ -153,6 +159,44 @@ export async function getToReplyCount(): Promise<number> {
   }
 
   return result.data.toReplyCount ?? 0;
+}
+
+export type NeedsReplyCounts = { toReply: number; awaiting: number; drafted: number };
+
+export async function getNeedsReplyCounts(): Promise<NeedsReplyCounts> {
+  const result = await api.GET('/api/threads/counts', {});
+
+  if (result.error || !result.response.ok || result.data === undefined) {
+    throwApiError(result, `/api/threads/counts failed: ${result.response.status}`);
+  }
+
+  return {
+    toReply: result.data.toReplyCount ?? 0,
+    awaiting: result.data.awaitingCount ?? 0,
+    drafted: result.data.draftedCount ?? 0,
+  };
+}
+
+export type NeedsReplyBackfillResult = {
+  threadsScanned: number;
+  threadsClassified: number;
+  threadsFailed: number;
+};
+
+export async function runNeedsReplyBackfill(limit?: number): Promise<NeedsReplyBackfillResult> {
+  const result = await api.POST('/api/threads/backfill', {
+    params: { query: limit != null ? { limit } : {} },
+  });
+
+  if (result.error || !result.response.ok || result.data === undefined) {
+    throwApiError(result, `/api/threads/backfill failed: ${result.response.status}`);
+  }
+
+  return {
+    threadsScanned: result.data.threadsScanned ?? 0,
+    threadsClassified: result.data.threadsClassified ?? 0,
+    threadsFailed: result.data.threadsFailed ?? 0,
+  };
 }
 
 export async function generateDraft(gmailThreadId: string): Promise<ThreadDraftResponse> {

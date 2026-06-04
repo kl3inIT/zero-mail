@@ -13,8 +13,9 @@ import java.util.List;
             "oldestUnleasedJobAgeSeconds",
             "retryHistogram",
             "failureRateLast24h",
+            "failedCountLast24h",
+            "sampleSizeLast24h",
             "deadLetterCount",
-            "adminRequeuedLast24h",
             "snapshotAt"
         })
 public record QueueHealthResponse(
@@ -22,8 +23,19 @@ public record QueueHealthResponse(
         long oldestUnleasedJobAgeSeconds,
         List<RetryDistributionBucketResponse> retryHistogram,
         double failureRateLast24h,
+        @Schema(
+                        description =
+                                "FAILED rows in the last 24h (numerator of failureRateLast24h)."
+                                        + " Pair with sampleSizeLast24h to render an honest count when"
+                                        + " the sample is too small for a meaningful percentage.")
+                int failedCountLast24h,
+        @Schema(
+                        description =
+                                "Rows created in the last 24h (denominator of failureRateLast24h)."
+                                        + " When small (e.g. < 10) the client should show counts, not a"
+                                        + " percentage — 1/1 = 100% alarms without informing.")
+                int sampleSizeLast24h,
         int deadLetterCount,
-        int adminRequeuedLast24h,
         Instant snapshotAt) {
 
     public QueueHealthResponse {
@@ -39,8 +51,9 @@ public record QueueHealthResponse(
                         .map(RetryDistributionBucketResponse::from)
                         .toList(),
                 snapshot.failureRateLast24h(),
+                snapshot.failedCountLast24h(),
+                snapshot.sampleSizeLast24h(),
                 snapshot.deadLetterCount(),
-                snapshot.adminRequeuedLast24h(),
                 snapshot.snapshotAt());
     }
 

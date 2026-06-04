@@ -35,7 +35,11 @@ public class NotificationPreferenceService {
 
     @Transactional
     public NotificationPreferenceEntity updatePreference(
-            UUID tenantId, ChannelType channel, boolean enabled, int sendHourLocal) {
+            UUID tenantId,
+            ChannelType channel,
+            boolean enabled,
+            int sendHourLocal,
+            int sendDayOfWeek) {
         NotificationPreferenceEntity notificationPreference =
                 notificationPreferenceRepository
                         .findByTenantIdAndChannel(tenantId, channel)
@@ -46,6 +50,7 @@ public class NotificationPreferenceService {
                                                         + tenantId));
         notificationPreference.setDigestEnabled(enabled);
         notificationPreference.setDigestSendHourLocal(sendHourLocal);
+        notificationPreference.setDigestSendDayOfWeek(sendDayOfWeek);
         return notificationPreferenceRepository.save(notificationPreference);
     }
 

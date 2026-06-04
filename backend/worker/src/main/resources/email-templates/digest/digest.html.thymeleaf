@@ -1,21 +1,21 @@
 <!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-  <body style="margin:0;padding:0;background:#F8F7F2;color:#1D1D1B;font-family:Arial,Helvetica,sans-serif;">
+  <body style="margin:0;padding:0;background:#F4F2F9;color:#1C1D21;font-family:Arial,Helvetica,sans-serif;">
     <span th:text="${preheader}" style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;"></span>
     <span th:text="${subject}" style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;"></span>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#F8F7F2;padding:24px 0;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#F4F2F9;padding:24px 0;">
       <tr>
         <td align="center" style="padding:0 16px;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;max-width:560px;background:#FFFFFF;border:1px solid #E8E5DC;border-radius:8px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;max-width:560px;background:#FFFFFF;border:1px solid #E5E7EB;border-radius:8px;">
             <tr th:fragment="header">
               <td style="padding:28px 28px 16px 28px;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
-                    <td style="font-size:20px;font-weight:700;color:#1D1D1B;">Zero Mail</td>
-                    <td align="right" th:text="${digestDate}" style="font-size:12px;line-height:18px;color:#6B675F;font-family:'Courier New',monospace;"></td>
+                    <td style="font-size:20px;font-weight:700;color:#1C1D21;">Zero Mail</td>
+                    <td align="right" th:text="${digestDate}" style="font-size:12px;line-height:18px;color:#6B7280;font-family:'Courier New',monospace;"></td>
                   </tr>
                 </table>
-                <p th:text="${payload.zeroActivity()} ? #{digest.header.greeting.zero} : #{digest.header.greeting}" style="margin:18px 0 0 0;font-size:14px;line-height:22px;color:#6B675F;"></p>
+                <p th:text="${payload.zeroActivity()} ? #{digest.header.greeting.zero} : #{digest.header.greeting}" style="margin:18px 0 0 0;font-size:14px;line-height:22px;color:#6B7280;"></p>
               </td>
             </tr>
             <tr th:fragment="totals">
@@ -23,12 +23,12 @@
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                   <tr>
                     <td width="50%" style="padding:16px 12px 16px 0;">
-                      <div th:text="${payload.totals().volumeApplied()}" style="font-size:28px;line-height:34px;font-weight:700;color:#1D1D1B;"></div>
-                      <div th:text="#{digest.totals.messages}" style="font-size:12px;line-height:18px;color:#6B675F;"></div>
+                      <div th:text="${payload.totals().volumeApplied()}" style="font-size:28px;line-height:34px;font-weight:700;color:#1C1D21;"></div>
+                      <div th:text="#{digest.totals.messages}" style="font-size:12px;line-height:18px;color:#6B7280;"></div>
                     </td>
                     <td width="50%" style="padding:16px 0 16px 12px;">
-                      <div th:text="${timeSaved}" style="font-size:28px;line-height:34px;font-weight:700;color:#1D1D1B;"></div>
-                      <div th:text="#{digest.totals.timeSaved}" style="font-size:12px;line-height:18px;color:#6B675F;"></div>
+                      <div th:text="${timeSaved}" style="font-size:28px;line-height:34px;font-weight:700;color:#1C1D21;"></div>
+                      <div th:text="#{digest.totals.timeSaved}" style="font-size:12px;line-height:18px;color:#6B7280;"></div>
                     </td>
                   </tr>
                 </table>
@@ -36,47 +36,64 @@
             </tr>
             <tr>
               <td align="center" style="padding:28px 28px 32px 28px;">
-                <a th:href="${payload.ctaUrl()}" th:text="#{digest.cta}" style="background:#0E5E5A;border-radius:6px;color:#FFFFFF;display:inline-block;font-size:14px;font-weight:700;line-height:20px;padding:12px 24px;text-decoration:none;"></a>
+                <a th:href="${payload.ctaUrl()}" th:text="#{digest.cta}" style="background:#867AEB;border-radius:6px;color:#FFFFFF;display:inline-block;font-size:14px;font-weight:700;line-height:20px;padding:12px 24px;text-decoration:none;"></a>
               </td>
             </tr>
             <tr th:if="${!payload.zeroActivity() and !payload.topSenders().isEmpty()}">
               <td style="padding:0 28px 24px 28px;">
-                <div th:text="#{digest.topSenders.eyebrow}" style="font-size:12px;line-height:18px;color:#6B675F;font-family:'Courier New',monospace;font-weight:700;letter-spacing:0;text-transform:uppercase;"></div>
+                <div th:text="#{digest.topSenders.eyebrow}" style="font-size:12px;line-height:18px;color:#6B7280;font-family:'Courier New',monospace;font-weight:700;letter-spacing:0;text-transform:uppercase;"></div>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-top:8px;">
                   <tr th:each="sender, senderState : ${payload.topSenders()}">
-                    <td th:text="${senderState.count}" width="24" style="padding:8px 8px 8px 0;font-size:12px;line-height:18px;color:#6B675F;font-family:'Courier New',monospace;"></td>
-                    <td th:text="${sender.senderEmail()}" style="padding:8px 8px;font-size:14px;line-height:20px;color:#1D1D1B;max-width:38ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></td>
-                    <td th:text="${sender.count()}" align="right" width="56" style="padding:8px 0 8px 8px;font-size:12px;line-height:18px;color:#6B675F;font-family:'Courier New',monospace;"></td>
+                    <td th:text="${senderState.count}" width="24" style="padding:8px 8px 8px 0;font-size:12px;line-height:18px;color:#6B7280;font-family:'Courier New',monospace;"></td>
+                    <td th:text="${sender.senderEmail()}" style="padding:8px 8px;font-size:14px;line-height:20px;color:#1C1D21;max-width:38ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></td>
+                    <td th:text="${sender.count()}" align="right" width="56" style="padding:8px 0 8px 8px;font-size:12px;line-height:18px;color:#6B7280;font-family:'Courier New',monospace;"></td>
                   </tr>
                 </table>
               </td>
             </tr>
             <tr th:if="${!payload.zeroActivity() and !payload.topRules().isEmpty()}">
               <td style="padding:0 28px 24px 28px;">
-                <div th:text="#{digest.topRules.eyebrow}" style="font-size:12px;line-height:18px;color:#6B675F;font-family:'Courier New',monospace;font-weight:700;letter-spacing:0;text-transform:uppercase;"></div>
+                <div th:text="#{digest.topRules.eyebrow}" style="font-size:12px;line-height:18px;color:#6B7280;font-family:'Courier New',monospace;font-weight:700;letter-spacing:0;text-transform:uppercase;"></div>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-top:8px;">
                   <tr th:each="rule : ${payload.topRules()}">
-                    <td th:text="${rule.ruleName()}" style="padding:8px 8px 8px 0;font-size:14px;line-height:20px;color:#1D1D1B;"></td>
+                    <td th:text="${rule.ruleName()}" style="padding:8px 8px 8px 0;font-size:14px;line-height:20px;color:#1C1D21;"></td>
                     <td align="right" style="padding:8px 0 8px 8px;white-space:nowrap;">
-                      <span th:text="${rule.applied() + ' ' + #messages.msg('digest.rules.applied')}" style="background:#E6F1EF;border-radius:999px;color:#0E5E5A;display:inline-block;font-size:12px;line-height:18px;padding:2px 8px;"></span>
-                      <span th:if="${rule.reverted() > 0}" th:text="${rule.reverted() + ' ' + #messages.msg('digest.rules.reverted')}" style="background:#F1EFE7;border-radius:999px;color:#6B675F;display:inline-block;font-size:12px;line-height:18px;margin-left:4px;padding:2px 8px;"></span>
+                      <span th:text="${rule.applied() + ' ' + #messages.msg('digest.rules.applied')}" style="background:#EAE8F7;border-radius:999px;color:#5849C9;display:inline-block;font-size:12px;line-height:18px;padding:2px 8px;"></span>
+                      <span th:if="${rule.reverted() > 0}" th:text="${rule.reverted() + ' ' + #messages.msg('digest.rules.reverted')}" style="background:#F4F2F9;border-radius:999px;color:#6B7280;display:inline-block;font-size:12px;line-height:18px;margin-left:4px;padding:2px 8px;"></span>
                     </td>
                   </tr>
                 </table>
               </td>
             </tr>
+            <tr th:if="${payload.hasContentSections()}">
+              <td style="padding:0 28px 8px 28px;">
+                <div th:text="#{digest.content.eyebrow}" style="font-size:12px;line-height:18px;color:#6B7280;font-family:'Courier New',monospace;font-weight:700;letter-spacing:0;text-transform:uppercase;"></div>
+                <th:block th:each="section : ${payload.contentSections()}">
+                  <div th:text="${section.ruleName()}" style="margin:16px 0 4px 0;font-size:13px;line-height:20px;font-weight:700;color:#5849C9;"></div>
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                    <tr th:each="entry : ${section.entries()}">
+                      <td style="padding:8px 0;border-top:1px solid #E5E7EB;">
+                        <div th:text="${entry.subject()} ?: #{digest.content.noSubject}" style="font-size:14px;line-height:20px;font-weight:700;color:#1C1D21;"></div>
+                        <div th:text="${entry.senderEmail()}" style="font-size:12px;line-height:18px;color:#6B7280;max-width:46ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+                        <div th:if="${entry.hasSummary()}" th:text="${entry.summary()}" style="margin-top:4px;font-size:13px;line-height:20px;color:#1C1D21;"></div>
+                      </td>
+                    </tr>
+                  </table>
+                </th:block>
+              </td>
+            </tr>
             <tr th:if="${payload.zeroActivity()}">
               <td style="padding:0 28px 28px 28px;">
-                <p th:text="#{digest.zeroBody}" style="margin:0;font-size:14px;line-height:22px;color:#6B675F;"></p>
+                <p th:text="#{digest.zeroBody}" style="margin:0;font-size:14px;line-height:22px;color:#6B7280;"></p>
               </td>
             </tr>
             <tr th:fragment="footer">
               <td style="padding:4px 28px 28px 28px;">
-                <div style="border-top:1px solid #E8E5DC;margin-bottom:32px;"></div>
-                <div style="background:#F1EFE7;border-radius:6px;color:#6B675F;font-size:12px;line-height:18px;padding:16px;">
+                <div style="border-top:1px solid #E5E7EB;margin-bottom:32px;"></div>
+                <div style="background:#F4F2F9;border-radius:6px;color:#6B7280;font-size:12px;line-height:18px;padding:16px;">
                   <p style="margin:0 0 8px 0;">
                     <span th:text="#{digest.footer.optOutPrompt}"></span>
-                    <a th:href="${payload.optOutUrl()}" th:text="#{digest.footer.optOutLink}" style="color:#0E5E5A;font-weight:700;text-decoration:none;"></a>
+                    <a th:href="${payload.optOutUrl()}" th:text="#{digest.footer.optOutLink}" style="color:#5849C9;font-weight:700;text-decoration:none;"></a>
                   </p>
                   <p th:text="#{digest.footer.brand(${appDomain})}" style="margin:0 0 8px 0;font-family:'Courier New',monospace;"></p>
                   <p th:text="#{digest.footer.legal}" style="margin:0;"></p>

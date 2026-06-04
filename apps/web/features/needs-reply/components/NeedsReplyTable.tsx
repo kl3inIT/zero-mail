@@ -29,6 +29,7 @@ type NeedsReplyTableProps = {
   onLoadMore?: () => void;
   onRetry?: () => void;
   onBucketChange?: (bucket: NeedsReplyBucket) => void;
+  onOpenRow?: (row: NeedsReplyRowModel) => void;
 };
 
 export function NeedsReplyTable({
@@ -45,6 +46,7 @@ export function NeedsReplyTable({
   onLoadMore,
   onRetry,
   onBucketChange,
+  onOpenRow,
 }: NeedsReplyTableProps) {
   const t = useTranslations();
 
@@ -83,7 +85,12 @@ export function NeedsReplyTable({
         <>
           <div className="grid gap-2">
             {rows.map((row) => (
-              <NeedsReplyRow key={row.gmailThreadId} row={row} activeBucket={activeBucket} />
+              <NeedsReplyRow
+                key={row.gmailThreadId}
+                row={row}
+                activeBucket={activeBucket}
+                onOpen={() => onOpenRow?.(row)}
+              />
             ))}
           </div>
           {hasNextPage ? (

@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-query';
 
 import {
+  getGmailDraftDetail,
   getInboxMessageDetail,
   getInboxPage,
   markInboxMessageRead,
@@ -54,6 +55,18 @@ export function useInboxMessageDetail(gmailMessageId: string | null) {
     queryKey: inboxKeys.detail(gmailMessageId),
     queryFn: () => getInboxMessageDetail(gmailMessageId!),
     enabled: Boolean(gmailMessageId),
+    staleTime: 30_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useGmailDraftDetail(gmailDraftId: string | null) {
+  return useQuery<InboxMessageDetail>({
+    queryKey: inboxKeys.draft(gmailDraftId),
+    queryFn: () => getGmailDraftDetail(gmailDraftId!),
+    enabled: Boolean(gmailDraftId),
     staleTime: 30_000,
     gcTime: 30 * 60_000,
     refetchOnMount: 'always',

@@ -33,7 +33,7 @@ class DigestComposerTest {
                 mock(AnalyticsSummaryQueryService.class);
         when(analyticsSummaryQueryService.summarize(
                         TENANT_ID,
-                        TimeWindow.between(SEND_MOMENT.minusSeconds(86_400), SEND_MOMENT)))
+                        TimeWindow.between(SEND_MOMENT.minusSeconds(604_800), SEND_MOMENT)))
                 .thenReturn(
                         new AnalyticsSummaryProjection(
                                 12,
@@ -71,7 +71,7 @@ class DigestComposerTest {
                 mock(AnalyticsSummaryQueryService.class);
         when(analyticsSummaryQueryService.summarize(
                         TENANT_ID,
-                        TimeWindow.between(SEND_MOMENT.minusSeconds(86_400), SEND_MOMENT)))
+                        TimeWindow.between(SEND_MOMENT.minusSeconds(604_800), SEND_MOMENT)))
                 .thenReturn(new AnalyticsSummaryProjection(0, 0, 0, List.of(), List.of()));
         DigestComposer digestComposer = new DigestComposer(analyticsSummaryQueryService);
 

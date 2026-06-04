@@ -1,10 +1,14 @@
 package com.zeromail.core.triage.persistence.lowlevel;
 
+import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.pagination.KeysetCursor;
+import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.domain.TriageUndoPolicy;
 import com.zeromail.core.triage.projection.AuditLogPageQuery;
 import com.zeromail.core.triage.projection.AuditLogRow;
+import com.zeromail.core.triage.projection.DigestSourceItem;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -85,5 +89,49 @@ public class AuditLogReadRepository {
                             resultSet.getString("blocked_by_safety_net_pattern"));
                 },
                 parameters.toArray());
+    }
+
+    /**
+     * Reads the privacy-clean digest pointers a tenant accumulated within a window: every {@code
+     * add_to_digest} rule write that was applied and not later reverted. Selects only sanitized
+     * audit metadata (subject excerpt, sender email, rule-name snapshot) — never {@code
+     * action_args_json} or any body column — so the weekly content digest can group messages by
+     * rule and fetch their bodies fresh from Gmail at send time.
+     */
+    public List<DigestSourceItem> findDigestSourceItems(
+            UUID tenantId, Instant since, Instant until, int limit) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(since, "since must not be null");
+        Objects.requireNonNull(until, "until must not be null");
+        String sql =
+                """
+                select gmail_message_id, gmail_thread_id, sanitized_subject,
+                       sanitized_sender_email, rule_name_snapshot, applied_at
+                from triage_audit
+                where tenant_id = ?
+                  and action_type = ?
+                  and decision = ?
+                  and reverted_at is null
+                  and applied_at >= ?
+                  and applied_at < ?
+                order by applied_at desc
+                limit ?
+                """;
+        return jdbcTemplate.query(
+                sql,
+                (resultSet, _) ->
+                        new DigestSourceItem(
+                                resultSet.getString("gmail_message_id"),
+                                resultSet.getString("gmail_thread_id"),
+                                resultSet.getString("sanitized_subject"),
+                                resultSet.getString("sanitized_sender_email"),
+                                resultSet.getString("rule_name_snapshot"),
+                                resultSet.getTimestamp("applied_at").toInstant()),
+                tenantId,
+                RuleActionType.ADD_TO_DIGEST.id(),
+                TriageDecision.APPLIED.id(),
+                Timestamp.from(since),
+                Timestamp.from(until),
+                limit);
     }
 }

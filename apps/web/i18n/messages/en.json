@@ -427,6 +427,10 @@
       "gmail_scope_required": {
         "body": "Sign in worked, but Gmail access wasn't granted. Click Sign in with Google and approve the Gmail permission to continue.",
         "title": "Gmail permission missing"
+      },
+      "signin_failed": {
+        "body": "Something interrupted sign-in before it finished. Click Sign in with Google to try again.",
+        "title": "Sign-in didn't complete"
       }
     },
     "everywhere": "End-to-end · SOC 2 Type II in progress",
@@ -438,14 +442,12 @@
       "headline": "Reach inbox zero without giving up control.",
       "headlineA": "Sign in to start",
       "headlineB": "clearing your inbox.",
-      "newUser": "First time here?",
       "noCard": "No card required",
       "privacy": "Privacy Policy",
       "terms": "Terms",
       "termsAnd": "and",
       "termsPrefix": "By signing in you agree to our",
       "title": "Sign in",
-      "waitlist": "Register to experience Zero Mail →",
       "workEmail": "Sign in with company Gmail"
     }
   },
@@ -826,37 +828,6 @@
     "disconnected": "Disconnected",
     "notConnected": "Not connected",
     "reconnectPrompt": "Google access was revoked or expired. Reconnect Gmail to continue setup."
-  },
-  "cta": {
-    "b1": "Free during beta",
-    "b2": "No card required",
-    "b3": "Unsubscribe in one click",
-    "button": "Register to experience",
-    "closeAria": "Close waitlist dialog",
-    "closeCta": "Close",
-    "desc": "Join the waitlist. We're onboarding 50 founders and operators a week, in order. You'll get an invite to set up Zero Mail with your real Gmail account.",
-    "emailPlaceholder": "you@company.com",
-    "eyebrow": "Early access",
-    "note": {
-      "body": "We're going deep on Gmail before adding Outlook or IMAP. If you live in another inbox, leave your email and we'll let you know when we expand.",
-      "title": "Gmail-only · v1"
-    },
-    "privacyNote": "We only use this email to send your Zero Mail invite.",
-    "stats": {
-      "s1": "on the waitlist",
-      "s2": "invites going out",
-      "s3": "avg inbox reduction",
-      "s4": "emails auto-sent"
-    },
-    "submitting": "Joining...",
-    "success": {
-      "body": "You're on the list as {email}. We'll reach out when your invite is ready.",
-      "title": "You're on the waitlist"
-    },
-    "title": {
-      "a": "Register to experience Zero Mail",
-      "b": "without the anxiety."
-    }
   },
   "dashboard": {
     "recentActivity": "Recent activity",
@@ -1341,18 +1312,18 @@
     "secondaryCta": "See features",
     "tagline": "Zero Mail reads, sorts, and drafts replies for your Gmail — by rules you write in plain English. No more 30-minute morning triage.",
     "videoPlaceholder": "Product demo coming soon",
-    "waitlistCta": "Register to experience Zero Mail"
+    "getStartedCta": "Get started free"
   },
   "landingFaq": {
     "header": {
       "title": "Frequently asked questions"
     },
     "items": {
-      "a1": "We support Gmail, Google Workspace, and Microsoft Outlook accounts.",
+      "a1": "We support Gmail and Google Workspace accounts.",
       "a2": "Email us. We're always listening to improve your email experience.",
-      "a3": "No! Zero Mail is not an email client. It runs alongside your existing email app. You still use Google or Outlook as normal.",
+      "a3": "No! Zero Mail is not an email client. It runs alongside your existing email app. You still use Gmail as normal.",
       "a4": "Yes — if you feel we haven't delivered value, email us within 14 days of upgrading and we'll refund you.",
-      "a5": "Absolutely. We offer a 7-day free trial across all plans so you can experience it right away — no credit card required!",
+      "a5": "Yes — Zero Mail is completely free to use right now during early access. No credit card, no charges yet.",
       "q1": "Which email providers does Zero Mail support?",
       "q2": "How can I request a new feature?",
       "q3": "Will Zero Mail replace my current email app?",
@@ -1442,9 +1413,9 @@
     }
   },
   "landingPricing": {
-    "ctaTrial": "Start 7-day free trial",
+    "ctaStart": "Get started free",
     "header": {
-      "badge": "Annual pricing, 7-day free trial",
+      "badge": "Free to use right now",
       "body": "No hidden fees. Cancel anytime.",
       "title": "Simple pricing, fair plans"
     },
@@ -1622,7 +1593,7 @@
           "heading": "Eligibility"
         },
         "gmailAuthorization": {
-          "body": "Zero Mail requests only the minimum Gmail OAuth scopes required to operate. With your consent, the service may perform the following actions on Gmail messages in your account: read incoming messages so that the AI can triage them; apply or remove Gmail labels; archive messages by removing them from your inbox; save Gmail drafts; mark messages as read or unread; star or unstar messages; flag messages as spam; and add messages to a daily digest you can review in one place.\n\nWith your explicit opt-in through the Auto-send rules setting, Zero Mail may additionally send replies on your behalf, forward messages on your behalf, and send new messages on your behalf, subject to the safety gates described in the next section.\n\nDestructive actions are NOT in scope. Zero Mail does not permanently delete messages from your Gmail account on your behalf, and it does not invoke arbitrary webhooks against external services on your behalf. If the service ever supports those actions, they will be gated by a separate, clearly-labeled administrative opt-in.",
+          "body": "Zero Mail requests only the minimum Gmail OAuth scopes required to operate. With your consent, the service may perform the following actions on Gmail messages in your account: read incoming messages so that the AI can triage them; apply or remove Gmail labels; archive messages by removing them from your inbox; save Gmail drafts; mark messages as read or unread; star or unstar messages; flag messages as spam; and add messages to a weekly digest you can review in one place.\n\nWith your explicit opt-in through the Auto-send rules setting, Zero Mail may additionally send replies on your behalf, forward messages on your behalf, and send new messages on your behalf, subject to the safety gates described in the next section.\n\nDestructive actions are NOT in scope. Zero Mail does not permanently delete messages from your Gmail account on your behalf, and it does not invoke arbitrary webhooks against external services on your behalf. If the service ever supports those actions, they will be gated by a separate, clearly-labeled administrative opt-in.",
           "heading": "Scope of Gmail authorization"
         },
         "governingLaw": {
@@ -1746,6 +1717,7 @@
     "dashboard": "Dashboard",
     "faq": "FAQ",
     "features": "Features",
+    "getStarted": "Get started free",
     "how": "How it works",
     "inbox": "Inbox",
     "languageSelector": "Language",
@@ -1766,8 +1738,7 @@
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
     "trust": "Trust & safety",
-    "upgradePlan": "Upgrade plan",
-    "waitlist": "Register to experience Zero Mail"
+    "upgradePlan": "Upgrade plan"
   },
   "needsReply": {
     "action": {
@@ -1776,9 +1747,14 @@
       "markResolved": "Mark resolved",
       "openInGmail": "Open in Gmail",
       "regenerateDraft": "Regenerate draft",
-      "regenerating": "Regenerating…"
+      "regenerating": "Regenerating…",
+      "resync": "Re-sync inbox",
+      "sync": "Sync inbox",
+      "syncing": "Syncing…",
+      "viewContent": "View content"
     },
     "banner": {
+      "syncing": "Syncing your inbox to classify mail…",
       "updating": "Updating your needs-reply list…"
     },
     "columns": {
@@ -1808,6 +1784,7 @@
       },
       "toReply": {
         "body": "Nothing needs a reply right now.",
+        "syncHint": "New mail is classified automatically. To classify mail already in your inbox, sync now.",
         "title": "Inbox zero 🎉"
       }
     },
@@ -1819,6 +1796,15 @@
     "page": {
       "description": "Threads waiting on a reply — yours or theirs. Review and send drafts in Gmail.",
       "title": "Needs reply"
+    },
+    "reader": {
+      "draftHeading": "Your draft reply",
+      "draftUnavailable": "Couldn't load the draft. Open it in Gmail to view.",
+      "noBody": "This email has no content to display.",
+      "originalHeading": "Original email",
+      "to": "To",
+      "unavailableBody": "Open it in Gmail to read the full message.",
+      "unavailableTitle": "Can't preview here"
     },
     "row": {
       "ageDays": "Waiting {count}d",
@@ -1840,6 +1826,8 @@
       "toReply": "To reply"
     },
     "toast": {
+      "backfillDone": "Inbox synced — your needs-reply list is up to date.",
+      "backfillFailed": "Couldn't sync your inbox. Try again.",
       "draftSaved": "Draft saved in Gmail — review and send it there."
     }
   },
@@ -2353,7 +2341,20 @@
       "upgradePlan": "Upgrade plan"
     },
     "notifications": {
+      "days": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
+      },
       "description": "Manage your daily summary email.",
+      "sendDay": {
+        "helper": "The digest is sent on this day each week.",
+        "label": "Day of week"
+      },
       "sendHour": {
         "downtimeNote": "If the digest worker is offline during your selected hour, that day's digest is skipped — there is no automatic catch-up. Choose an hour when the system is reliably running.",
         "helper": "The digest is sent around this hour in your time zone.",

@@ -5,4 +5,5 @@ export const needsReplyKeys = {
   inbox: (bucket: NeedsReplyBucket, resolved = false) =>
     [...needsReplyKeys.all, 'inbox', bucket, resolved] as const,
   count: () => [...needsReplyKeys.all, 'count'] as const,
+  counts: () => [...needsReplyKeys.all, 'counts'] as const,
 } as const;

@@ -16,6 +16,10 @@
       {
         "files": ["**/src/routes/**"],
         "rules": ["react-doctor/only-export-components", "react-doctor/no-multi-comp"]
+      },
+      {
+        "files": ["**/app/**"],
+        "rules": ["react-doctor/only-export-components", "react-doctor/no-multi-comp"]
       }
     ]
   }
