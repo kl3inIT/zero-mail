@@ -737,7 +737,12 @@ function ThreadConversation({
 }) {
   const t = useTranslations();
   const threadQuery = useInboxThreadDetail(gmailThreadId);
-  const messages = threadQuery.data?.messages ?? [];
+  // Defense in depth alongside the backend: never render the thread's unsent draft as a
+  // conversation message. Gmail's thread includes the in-progress reply draft, which would
+  // otherwise show as a duplicate of the just-sent message right after a send.
+  const messages = (threadQuery.data?.messages ?? []).filter(
+    (detail) => !detail.message.labelIds.includes('DRAFT'),
+  );
 
   if (messages.length === 0) {
     return (

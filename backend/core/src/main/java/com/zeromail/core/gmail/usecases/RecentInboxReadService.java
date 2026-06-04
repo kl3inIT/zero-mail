@@ -428,6 +428,16 @@ public class RecentInboxReadService {
                     new ArrayList<>(orderedOldestFirst.size());
             String threadSubject = null;
             for (Message threadMessage : orderedOldestFirst) {
+                // Skip the thread's unsent draft. Gmail's threads.get returns the in-progress
+                // reply draft as a thread message; rendering it would show a near-identical second
+                // copy of the reply alongside the actually-sent message right after a send (the
+                // composer autosaves a draft, the send fires, and the post-send thread refetch can
+                // race ahead of the draft cleanup). A draft is the compose buffer, not part of the
+                // read conversation, so it never belongs in the reader.
+                if (threadMessage.getLabelIds() != null
+                        && threadMessage.getLabelIds().contains("DRAFT")) {
+                    continue;
+                }
                 RecentInboxMessageDetail renderedMessage =
                         renderMessageDetail(gmail, threadMessage, labelNamesById);
                 if (threadSubject == null && renderedMessage.message().subject() != null) {
