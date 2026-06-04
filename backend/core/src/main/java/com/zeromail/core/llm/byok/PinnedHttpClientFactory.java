@@ -255,7 +255,12 @@ public class PinnedHttpClientFactory {
         if (statusParts.length < 2) {
             throw new IOException("Malformed HTTP status line");
         }
-        int statusCode = Integer.parseInt(statusParts[1]);
+        int statusCode;
+        try {
+            statusCode = Integer.parseInt(statusParts[1]);
+        } catch (NumberFormatException malformedStatusCode) {
+            throw new IOException("Malformed HTTP status code", malformedStatusCode);
+        }
         int bodyStart = response.indexOf("\r\n\r\n");
         String body = "";
         if (bodyStart >= 0 && statusCode >= 200 && statusCode < 300) {

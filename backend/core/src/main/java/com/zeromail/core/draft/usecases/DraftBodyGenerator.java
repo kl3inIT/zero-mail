@@ -97,8 +97,11 @@ public class DraftBodyGenerator implements TriageDraftBodyGenerator {
             throw new SafetyViolationException();
         }
         String generatedDraftBody = appendEmailSignature(tenantId, body.trim());
+        String logSafeGmailThreadId = gmailThreadId.replaceAll("[\\r\\n]", "");
         log.info(
-                "event=draft_body_generated tenantId={} gmailThreadId={}", tenantId, gmailThreadId);
+                "event=draft_body_generated tenantId={} gmailThreadId={}",
+                tenantId,
+                logSafeGmailThreadId);
         return generatedDraftBody;
     }
 

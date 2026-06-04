@@ -1670,10 +1670,13 @@ function inboxSenderDisplayName(value: string): string {
     return '';
   }
 
-  const withoutEmailAddress = trimmedValue
-    .replace(/<[^<>]*>/g, '')
-    .replace(/^"+|"+$/g, '')
-    .trim();
+  let strippedAngleBrackets = trimmedValue;
+  let previousPass: string;
+  do {
+    previousPass = strippedAngleBrackets;
+    strippedAngleBrackets = strippedAngleBrackets.replace(/<[^<>]*>/g, '');
+  } while (strippedAngleBrackets !== previousPass);
+  const withoutEmailAddress = strippedAngleBrackets.replace(/^"+|"+$/g, '').trim();
   if (withoutEmailAddress) {
     return withoutEmailAddress;
   }

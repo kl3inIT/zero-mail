@@ -24,6 +24,7 @@ public class AssistantDraftSettingsService
                         "assistantSettingsRepository must not be null");
     }
 
+    @Override
     @Transactional(readOnly = true)
     public boolean autoDraftRepliesEnabled(UUID tenantId) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
