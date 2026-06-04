@@ -20,6 +20,9 @@ import com.zeromail.core.chat.sanitize.XmlFencedPersonalizationRenderer;
 import com.zeromail.core.chat.usecases.tools.ChatReadToolHandler;
 import com.zeromail.core.llm.routing.LlmRouteResolver;
 import com.zeromail.core.llm.routing.LlmRuntimeTask;
+import com.zeromail.core.rules.usecases.RuleCompileCommand;
+import com.zeromail.core.rules.usecases.RuleCompileResult;
+import com.zeromail.core.rules.usecases.RuleCompilerService;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
 import java.util.Collections;
@@ -69,6 +72,7 @@ public class ChatOrchestrator {
     private final ObjectMapper objectMapper;
     private final Map<ChatToolName, ChatReadToolHandler> readToolHandlers;
     private final LlmRouteResolver routeResolver;
+    private final RuleCompilerService ruleCompilerService;
 
     public ChatOrchestrator(
             ChatLlmGateway chatLlmGateway,
@@ -83,7 +87,8 @@ public class ChatOrchestrator {
             ChatTurnRepository chatTurnRepository,
             ObjectMapper objectMapper,
             List<ChatReadToolHandler> readToolHandlers,
-            ObjectProvider<LlmRouteResolver> routeResolverProvider) {
+            ObjectProvider<LlmRouteResolver> routeResolverProvider,
+            RuleCompilerService ruleCompilerService) {
         this.chatLlmGateway = Objects.requireNonNull(chatLlmGateway, "chatLlmGateway");
         this.toolOutputSanitizer =
                 Objects.requireNonNull(toolOutputSanitizer, "toolOutputSanitizer");
@@ -103,6 +108,8 @@ public class ChatOrchestrator {
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
         this.readToolHandlers = readToolHandlerMap(readToolHandlers);
         this.routeResolver = routeResolverProvider.getIfAvailable();
+        this.ruleCompilerService =
+                Objects.requireNonNull(ruleCompilerService, "ruleCompilerService");
     }
 
     public Disposable stream(ChatStreamCommand command, ChatStreamSink streamSink) {
@@ -203,6 +210,14 @@ public class ChatOrchestrator {
                 continue;
             }
             if (outcome.toolName() != null) {
+                // Compile rule source text into a structured When/Then BEFORE opening the
+                // persistence transaction -- the compiler is a (slow) LLM call and must not hold a
+                // DB connection. The enriched input is what the preview card renders and what the
+                // confirm-time handler reads, so the card shows an editable When/Then instead of an
+                // empty shell. (CLAUDE.md: NL is only a compiler front-end; the LLM compiler
+                // extracts structured fields -- backend never infers them via string hacks.)
+                String enrichedToolInputJson =
+                        enrichWriteToolInput(tenantId, outcome.toolName(), outcome.toolInputJson());
                 UUID toolCallMessageId =
                         transactionTemplate.execute(
                                 _ ->
@@ -211,7 +226,16 @@ public class ChatOrchestrator {
                                                 tenantId,
                                                 outcome.toolCallId(),
                                                 outcome.toolName().id(),
-                                                outcome.toolInputJson()));
+                                                enrichedToolInputJson));
+                // When compilation enriched the input (createRule), push the structured version to
+                // the FE so the LIVE preview card shows the compiled When/Then immediately. The raw
+                // {sourceText} was already streamed via tool-input-available during the turn; this
+                // second emit (same toolCallId) updates the part in place. Without it the card
+                // renders the raw text until a page reload re-hydrates from the persisted part.
+                if (!enrichedToolInputJson.equals(outcome.toolInputJson())) {
+                    streamSink.emitToolInputAvailable(
+                            outcome.toolCallId(), outcome.toolName().id(), enrichedToolInputJson);
+                }
                 streamSink.emitDataPersistence(toolCallMessageId, "tool-call-saved");
                 streamSink.emitFinish("awaiting-confirmation");
                 return;
@@ -423,6 +447,46 @@ public class ChatOrchestrator {
                                                 assistantText,
                                                 Instant.now()))),
                         Instant.now()));
+    }
+
+    /**
+     * For {@code createRule} tool calls the model only supplies natural-language {@code
+     * sourceText}. Run it through the shared {@link RuleCompilerService} (the same compiler the
+     * manual rule builder uses) so the preview card and the confirm-time handler both see a
+     * structured, validated {@code displayName}/{@code matcherAst}/{@code actionIntents}. Other
+     * tools pass through unchanged. If compilation does not yield a usable draft the original input
+     * is returned unchanged -- backend code never fabricates matcher/action fields from the raw
+     * text.
+     */
+    private String enrichWriteToolInput(UUID tenantId, ChatToolName toolName, String inputJson) {
+        if (toolName != ChatToolName.CREATE_RULE) {
+            return inputJson;
+        }
+        Map<String, Object> input = parseJsonObject(inputJson);
+        Object sourceTextValue = input.get("sourceText");
+        if (!(sourceTextValue instanceof String sourceText) || sourceText.isBlank()) {
+            return inputJson;
+        }
+        RuleCompileResult compileResult;
+        try {
+            compileResult =
+                    ruleCompilerService.compile(new RuleCompileCommand(tenantId, sourceText));
+        } catch (RuntimeException compileFailure) {
+            log.warn("event=chat_rule_compile_failed tenantId={}", tenantId, compileFailure);
+            return inputJson;
+        }
+        if (!compileResult.isCompiled()) {
+            log.info(
+                    "event=chat_rule_compile_unresolved tenantId={} status={}",
+                    tenantId,
+                    compileResult.status());
+            return inputJson;
+        }
+        Map<String, Object> enrichedInput = new LinkedHashMap<>(input);
+        enrichedInput.put("displayName", compileResult.displayName());
+        enrichedInput.put("matcherAst", compileResult.matcherAst());
+        enrichedInput.put("actionIntents", compileResult.actionIntents());
+        return writeJson(enrichedInput);
     }
 
     private UUID persistToolCall(
