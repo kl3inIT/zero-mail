@@ -31,6 +31,12 @@ export function useInboxMessages() {
     gcTime: 30 * 60_000,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    // Poll so mail that Pub/Sub has already written to the projection appears without a manual
+    // refresh. TanStack pauses this while the tab is unfocused (refetchIntervalInBackground defaults
+    // to false), so idle tabs don't poll; refetchOnWindowFocus catches up the moment the user
+    // returns. Note: refetching an infinite query refetches every loaded page, so keep the interval
+    // generous rather than chasing real-time — true push would be SSE, not a tighter poll.
+    refetchInterval: 60_000,
   });
 }
 
