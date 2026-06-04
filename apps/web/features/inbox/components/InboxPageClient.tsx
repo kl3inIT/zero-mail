@@ -16,6 +16,7 @@ import {
 import {
   ArrowLeft,
   Bold,
+  Check,
   Clipboard,
   ExternalLink,
   Forward,
@@ -33,10 +34,12 @@ import {
   Search,
   Send,
   Sparkles,
+  Tag,
   Trash2,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { EmptyState } from '@/components/states/EmptyState';
@@ -51,6 +54,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
@@ -63,13 +67,14 @@ import {
   parseMaybeJsonObject,
   type PreviewCardAction,
 } from '@/features/chat/components/preview-card/preview-card-state';
-import type { InboxLabel, InboxMessage } from '@/features/inbox/api/inbox-api';
+import type { InboxLabel, InboxMessage, InboxMessageDetail } from '@/features/inbox/api/inbox-api';
 import {
   flattenInboxMessages,
   latestInboxDataSource,
   latestInboxMaxMessages,
   useInboxMessageDetail,
   useInboxMessages,
+  useInboxThreadDetail,
   useMarkInboxMessageRead,
 } from '@/features/inbox/hooks/useInboxMessages';
 import {
@@ -78,6 +83,7 @@ import {
   useUpsertComposerDraft,
 } from '@/features/inbox/hooks/useComposerDraft';
 import type { ComposerDraftMode } from '@/features/inbox/api/composer-draft-api';
+import { inboxKeys } from '@/features/inbox/query-keys';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -86,13 +92,24 @@ export function InboxPageClient() {
   const locale = useLocale();
   const [requestedSelectedMessageId, setRequestedSelectedMessageId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLabelIds, setSelectedLabelIds] = useState<Set<string>>(() => new Set());
   const currentUser = useCurrentUser();
   const inboxQuery = useInboxMessages();
   const messages = useMemo(() => flattenInboxMessages(inboxQuery.data), [inboxQuery.data]);
+  const availableLabels = useMemo(() => collectAvailableLabels(messages), [messages]);
   const filteredMessages = useMemo(
-    () => filterInboxMessages(messages, searchQuery),
-    [messages, searchQuery],
+    () => filterInboxMessages(messages, searchQuery, selectedLabelIds),
+    [messages, searchQuery, selectedLabelIds],
   );
+  const toggleLabelFilter = useCallback((labelId: string) => {
+    setSelectedLabelIds((current) => {
+      const next = new Set(current);
+      if (next.has(labelId)) next.delete(labelId);
+      else next.add(labelId);
+      return next;
+    });
+  }, []);
+  const clearLabelFilter = useCallback(() => setSelectedLabelIds(new Set()), []);
   const maxMessages = latestInboxMaxMessages(inboxQuery.data);
   const inboxDataSource = latestInboxDataSource(inboxQuery.data);
   const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
@@ -201,29 +218,37 @@ export function InboxPageClient() {
                 </Button>
               </div>
             </div>
-            <div className="relative mt-2">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2"
-                aria-hidden="true"
+            <div className="mt-2 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2"
+                  aria-hidden="true"
+                />
+                <Input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={t('inbox.search.placeholder')}
+                  className="bg-background h-9 pr-9 pl-8 text-sm"
+                  data-testid="inbox-search-input"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded-md transition-colors"
+                    aria-label={t('inbox.search.clear')}
+                    onClick={() => setSearchQuery('')}
+                    data-testid="inbox-search-clear"
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+              <InboxLabelFilter
+                availableLabels={availableLabels}
+                selectedLabelIds={selectedLabelIds}
+                onToggle={toggleLabelFilter}
+                onClear={clearLabelFilter}
               />
-              <Input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={t('inbox.search.placeholder')}
-                className="bg-background h-9 pr-9 pl-8 text-sm"
-                data-testid="inbox-search-input"
-              />
-              {searchQuery ? (
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded-md transition-colors"
-                  aria-label={t('inbox.search.clear')}
-                  onClick={() => setSearchQuery('')}
-                  data-testid="inbox-search-clear"
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </button>
-              ) : null}
             </div>
           </div>
           <InboxMessageList
@@ -541,7 +566,7 @@ function InboxMessageDetailPanel({
     <article className="relative h-full min-h-0">
       <div
         className={cn(
-          'h-full min-h-0 overflow-y-auto bg-white',
+          'bg-background h-full min-h-0 overflow-y-auto',
           activeComposerState && 'pb-[560px]',
         )}
         data-testid="inbox-detail-scroll"
@@ -658,19 +683,14 @@ function InboxMessageDetailPanel({
             </div>
           </div>
         </header>
-        <div>
-          {renderedHtml ? (
-            <EmailHtmlFrame
-              renderedHtml={renderedHtml}
-              title={selectedMessage.subject || t('inbox.message.noSubject')}
-              locale={locale}
-            />
-          ) : readableText ? (
-            <PlainEmailContent text={readableText} />
-          ) : (
-            <p className="text-muted-foreground p-5 text-sm">{t('inbox.state.noBody')}</p>
-          )}
-        </div>
+        <ThreadConversation
+          gmailThreadId={selectedMessage.gmailThreadId}
+          selectedMessageId={selectedMessage.gmailMessageId}
+          fallbackRenderedHtml={renderedHtml}
+          fallbackReadableText={readableText}
+          locale={locale}
+          currentUserEmail={currentUserEmail}
+        />
         <MessageActionBar
           onReply={() => openComposer('reply')}
           onReplyAll={() => openComposer('replyAll')}
@@ -694,6 +714,148 @@ function InboxMessageDetailPanel({
   );
 }
 
+/**
+ * The conversation body: every message in the thread (received + the user's own sent replies),
+ * oldest-first, each collapsible. The latest message is expanded by default. While the thread is
+ * still loading it falls back to the single selected-message body the parent already fetched, so
+ * the reader never flashes empty. This is what lets a user confirm "I already replied" — including
+ * AI-composed messages sent immediately, which never enter the needs-reply queue.
+ */
+function ThreadConversation({
+  gmailThreadId,
+  selectedMessageId,
+  fallbackRenderedHtml,
+  fallbackReadableText,
+  locale,
+  currentUserEmail,
+}: {
+  gmailThreadId: string;
+  selectedMessageId: string;
+  fallbackRenderedHtml: string;
+  fallbackReadableText: string;
+  locale: string;
+  currentUserEmail: string | null;
+}) {
+  const t = useTranslations();
+  const threadQuery = useInboxThreadDetail(gmailThreadId);
+  const messages = threadQuery.data?.messages ?? [];
+
+  if (messages.length === 0) {
+    return (
+      <div>
+        {fallbackRenderedHtml ? (
+          <EmailHtmlFrame
+            renderedHtml={fallbackRenderedHtml}
+            title={t('inbox.message.noSubject')}
+            locale={locale}
+          />
+        ) : fallbackReadableText ? (
+          <PlainEmailContent text={fallbackReadableText} />
+        ) : threadQuery.isPending ? (
+          <div className="flex items-center justify-center p-6">
+            <Loader2 className="text-muted-foreground size-5 animate-spin" aria-hidden="true" />
+          </div>
+        ) : (
+          <p className="text-muted-foreground p-5 text-sm">{t('inbox.state.noBody')}</p>
+        )}
+      </div>
+    );
+  }
+
+  const lastIndex = messages.length - 1;
+  return (
+    <div className="divide-border divide-y" data-testid="inbox-thread-conversation">
+      {messages.map((detail, index) => (
+        <ThreadMessageItem
+          key={detail.message.gmailMessageId}
+          detail={detail}
+          locale={locale}
+          currentUserEmail={currentUserEmail}
+          defaultExpanded={
+            index === lastIndex || detail.message.gmailMessageId === selectedMessageId
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+function ThreadMessageItem({
+  detail,
+  locale,
+  currentUserEmail,
+  defaultExpanded,
+}: {
+  detail: InboxMessageDetail;
+  locale: string;
+  currentUserEmail: string | null;
+  defaultExpanded: boolean;
+}) {
+  const t = useTranslations();
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const message = detail.message;
+  const senderName = inboxSenderDisplayName(message.from) || message.from || '?';
+  const isSent =
+    message.labelIds.includes('SENT') ||
+    Boolean(currentUserEmail && message.from.includes(currentUserEmail));
+  const readableBody = detail.renderedText.trim() || message.snippet;
+
+  return (
+    <div data-testid="inbox-thread-message">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="hover:bg-muted/40 flex w-full items-start gap-3 px-5 py-3 text-left transition-colors"
+        aria-expanded={expanded}
+      >
+        <InboxSenderAvatar from={message.from} size="sm" unread={false} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="text-foreground min-w-0 truncate text-sm font-medium">
+              {senderName}
+            </span>
+            {isSent ? (
+              <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[10px]">
+                {t('inbox.badge.sent')}
+              </Badge>
+            ) : null}
+            <time
+              className="text-muted-foreground ml-auto shrink-0 text-xs whitespace-nowrap"
+              dateTime={message.receivedAt}
+            >
+              {formatDateTime(message.receivedAt, locale)}
+            </time>
+          </div>
+          <p className="text-muted-foreground mt-0.5 truncate text-xs">
+            {expanded
+              ? `${t('inbox.detail.to')}: ${
+                  currentUserEmail && message.to.includes(currentUserEmail)
+                    ? t('inbox.detail.you')
+                    : message.to[0] || t('inbox.detail.you')
+                }`
+              : message.snippet}
+          </p>
+        </div>
+      </button>
+      {expanded ? (
+        <div className="pb-1">
+          {detail.renderedHtml ? (
+            <EmailHtmlFrame
+              renderedHtml={detail.renderedHtml}
+              title={message.subject || t('inbox.message.noSubject')}
+              locale={locale}
+            />
+          ) : readableBody ? (
+            <PlainEmailContent text={readableBody} />
+          ) : (
+            <p className="text-muted-foreground px-5 py-2 text-sm">{t('inbox.state.noBody')}</p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function MessageActionBar({
   onReply,
   onReplyAll,
@@ -707,7 +869,7 @@ function MessageActionBar({
 }) {
   const t = useTranslations();
   return (
-    <div className="border-border flex flex-wrap items-center gap-2 border-t bg-white p-4">
+    <div className="border-border bg-background flex flex-wrap items-center gap-2 border-t p-4">
       <Button type="button" variant="outline" size="sm" onClick={onReply}>
         <Reply className="size-4" aria-hidden="true" />
         {t('inbox.action.reply')}
@@ -776,6 +938,7 @@ function InboxReplyComposer({
 }) {
   const t = useTranslations();
   const locale = useLocale();
+  const queryClient = useQueryClient();
   const initialMessages = useMemo<UIMessage[]>(() => [], []);
   const chatId = useMemo(() => createInboxComposerChatId(), []);
   const generationChatId = useMemo(() => createInboxComposerChatId(), []);
@@ -808,6 +971,20 @@ function InboxReplyComposer({
   const upsertDraftMutation = useUpsertComposerDraft();
   const deleteDraftMutation = useDeleteComposerDraft();
   const [draftId, setDraftId] = useState<string | null>(null);
+  // Refs that mirror state without going through the React commit cycle, so
+  // handleSentSuccess can read the latest draftId AFTER awaiting an in-flight
+  // upsert. Without this, a Send click during the ~200-500ms upsert HTTP
+  // window reads stale `null` draftId, skips the delete, and leaves the
+  // freshly-created draft orphaned in Gmail after the email goes out.
+  const latestDraftIdRef = useRef<string | null>(null);
+  // Mirror draftId into the ref from an effect rather than mutating the ref
+  // during render (which React forbids). Event handlers and async callbacks
+  // below still set the ref synchronously when they need the latest value
+  // immediately; this effect keeps it in sync for render-phase state updates.
+  useEffect(() => {
+    latestDraftIdRef.current = draftId;
+  }, [draftId]);
+  const inFlightUpsertRef = useRef<Promise<unknown> | null>(null);
   const [hydrationSettled, setHydrationSettled] = useState(false);
   // Hydrate exactly once and only while the composer is still pristine. "Pristine" means
   // every visible field still matches the preset that we initialised state from. As soon as
@@ -933,8 +1110,8 @@ function InboxReplyComposer({
     if (previewSubmitted) return;
     const timeoutId = window.setTimeout(() => {
       pendingDraftSaveTimeoutRef.current = null;
-      upsertDraftMutation.mutate(
-        {
+      const upsertPromise = upsertDraftMutation
+        .mutateAsync({
           gmailThreadId: selectedMessage.gmailThreadId,
           sourceGmailMessageId: selectedMessage.gmailMessageId,
           rfc822MessageId: null,
@@ -945,11 +1122,16 @@ function InboxReplyComposer({
           bccAddresses: showBcc ? bccText : '',
           subject: subjectText,
           body: bodyText,
-        },
-        {
-          onSuccess: (snapshot) => setDraftId(snapshot.draftId),
-        },
-      );
+        })
+        .then((snapshot) => {
+          setDraftId(snapshot.draftId);
+          latestDraftIdRef.current = snapshot.draftId;
+          return snapshot;
+        });
+      inFlightUpsertRef.current = upsertPromise;
+      // Silent failure — error path is owned by the mutation cache; this
+      // catch only prevents an unhandled rejection from the awaited copy.
+      upsertPromise.catch(() => {});
     }, 1500);
     pendingDraftSaveTimeoutRef.current = timeoutId;
     return () => {
@@ -984,8 +1166,8 @@ function InboxReplyComposer({
       pendingDraftSaveTimeoutRef.current = null;
     }
     if (hydrationSettled && !previewSubmitted) {
-      upsertDraftMutation.mutate(
-        {
+      const upsertPromise = upsertDraftMutation
+        .mutateAsync({
           gmailThreadId: selectedMessage.gmailThreadId,
           sourceGmailMessageId: selectedMessage.gmailMessageId,
           rfc822MessageId: null,
@@ -996,11 +1178,14 @@ function InboxReplyComposer({
           bccAddresses: showBcc ? bccText : '',
           subject: subjectText,
           body: bodyText,
-        },
-        {
-          onSuccess: (snapshot) => setDraftId(snapshot.draftId),
-        },
-      );
+        })
+        .then((snapshot) => {
+          setDraftId(snapshot.draftId);
+          latestDraftIdRef.current = snapshot.draftId;
+          return snapshot;
+        });
+      inFlightUpsertRef.current = upsertPromise;
+      upsertPromise.catch(() => {});
     }
     onCancel();
   }, [
@@ -1020,20 +1205,46 @@ function InboxReplyComposer({
     upsertDraftMutation,
   ]);
 
-  const handleSentSuccess = useCallback(() => {
-    const currentDraftId = draftId;
+  const handleSentSuccess = useCallback(async () => {
+    // Wait for any in-flight upsertDraftMutation to settle BEFORE checking
+    // the draftId. The debounced save (1.5s) can fire ~200-500ms before a
+    // Send click; reading draftId state at that moment yields stale null
+    // because setDraftId from onSuccess hasn't committed yet. Awaiting the
+    // ref guarantees the latest draftId is in latestDraftIdRef.current by
+    // the time we issue the delete.
+    if (inFlightUpsertRef.current) {
+      try {
+        await inFlightUpsertRef.current;
+      } catch {
+        // Upsert failure should not block the post-send delete attempt —
+        // fall back to whatever draftId we already had.
+      }
+    }
+    const currentDraftId = latestDraftIdRef.current;
     if (currentDraftId) {
       deleteDraftMutation.mutate(
         { draftId: currentDraftId, gmailThreadId: selectedMessage.gmailThreadId },
-        { onSuccess: () => setDraftId(null) },
+        {
+          onSuccess: () => {
+            setDraftId(null);
+            latestDraftIdRef.current = null;
+          },
+        },
       );
     }
+    // Refresh the conversation + list so the message just sent shows up immediately (with its
+    // "Đã gửi" badge) without the user reopening the thread — the reader stays mounted on this
+    // thread after the composer closes.
+    void queryClient.invalidateQueries({
+      queryKey: inboxKeys.thread(selectedMessage.gmailThreadId),
+    });
+    void queryClient.invalidateQueries({ queryKey: inboxKeys.pages() });
     // Confirm success with a toast (composer is about to unmount, the in-card "Đã gửi" badge
     // would only flash for one frame), then close the composer so the user gets the inbox
     // back instead of staring at a stale form.
     toast.success(t('inbox.composer.sentSuccess'));
     onCancel();
-  }, [deleteDraftMutation, draftId, onCancel, selectedMessage.gmailThreadId, t]);
+  }, [deleteDraftMutation, onCancel, queryClient, selectedMessage.gmailThreadId, t]);
 
   function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.currentTarget.files ?? []);
@@ -1900,23 +2111,57 @@ function prefixedSubject(prefix: 'Re' | 'Fwd', subject: string): string {
     : `${prefix}: ${trimmedSubject}`;
 }
 
-function filterInboxMessages(messages: InboxMessage[], query: string): InboxMessage[] {
+function filterInboxMessages(
+  messages: InboxMessage[],
+  query: string,
+  selectedLabelIds: Set<string>,
+): InboxMessage[] {
   const normalizedTokens = normalizeSearchText(query).split(/\s+/).filter(Boolean);
-  if (normalizedTokens.length === 0) {
+  const hasSearch = normalizedTokens.length > 0;
+  const hasLabelFilter = selectedLabelIds.size > 0;
+  if (!hasSearch && !hasLabelFilter) {
     return messages;
   }
 
   return messages.filter((message) => {
-    const searchableText = normalizeSearchText(
-      [
-        inboxSenderDisplayName(message.from),
-        message.from,
-        message.subject,
-        ...visibleInboxLabels(message.labels).flatMap((label) => [label.id, inboxLabelName(label)]),
-      ].join(' '),
-    );
-    return normalizedTokens.every((token) => searchableText.includes(token));
+    if (hasLabelFilter) {
+      // OR semantics: keep the message if it carries ANY of the selected
+      // labels. Most users think of "show me Promotions or Updates" as an
+      // additive choice — the label chips already render a per-message
+      // intersection so AND semantics would feel redundant.
+      const labelMatched = message.labelIds.some((labelId) => selectedLabelIds.has(labelId));
+      if (!labelMatched) return false;
+    }
+    if (hasSearch) {
+      const searchableText = normalizeSearchText(
+        [
+          inboxSenderDisplayName(message.from),
+          message.from,
+          message.subject,
+          ...visibleInboxLabels(message.labels).flatMap((label) => [
+            label.id,
+            inboxLabelName(label),
+          ]),
+        ].join(' '),
+      );
+      if (!normalizedTokens.every((token) => searchableText.includes(token))) {
+        return false;
+      }
+    }
+    return true;
   });
+}
+
+function collectAvailableLabels(messages: InboxMessage[]): InboxLabel[] {
+  const seen = new Map<string, InboxLabel>();
+  for (const message of messages) {
+    for (const label of visibleInboxLabels(message.labels)) {
+      if (!seen.has(label.id)) seen.set(label.id, label);
+    }
+  }
+  return [...seen.values()].sort((leftLabel, rightLabel) =>
+    inboxLabelName(leftLabel).localeCompare(inboxLabelName(rightLabel)),
+  );
 }
 
 function normalizeSearchText(value: string): string {
@@ -2004,10 +2249,12 @@ function InboxSenderAvatar({
     setTrackedRootDomain(rootDomain);
     setIconFailed(false);
   }
+  // Use Google's public s2/favicons endpoint instead of t1.gstatic.com/faviconV2: faviconV2
+  // returns HTTP 404 for unknown brand domains and spams DevTools with one 404 per inbox row.
+  // s2/favicons returns HTTP 200 + a small globe placeholder for the same unknown case, so the
+  // network log stays clean. The naturalWidth ≤ 16 check below still catches the placeholder.
   const faviconUrl = rootDomain
-    ? `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(
-        `https://${rootDomain}`,
-      )}&size=64`
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(rootDomain)}&sz=64`
     : null;
   const displayName = inboxSenderDisplayName(from);
   const initial = (displayName || email || '?').trim().charAt(0).toUpperCase() || '?';
@@ -2027,7 +2274,7 @@ function InboxSenderAvatar({
       aria-hidden="true"
     >
       {showFavicon ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Inbox Zero-style sender favicon via Google faviconV2; not worth a next/image domain entry.
+        // eslint-disable-next-line @next/next/no-img-element -- Inbox Zero-style sender favicon via Google s2/favicons; not worth a next/image domain entry.
         <img
           src={faviconUrl!}
           alt=""
@@ -2036,9 +2283,9 @@ function InboxSenderAvatar({
           referrerPolicy="no-referrer"
           onError={() => setIconFailed(true)}
           onLoad={(event) => {
-            // faviconV2 answers 404 with a 16×16 globe placeholder body the browser still
-            // renders (onError never fires). Real favicons honor size=64; treat the tiny
-            // placeholder as a miss so we show the sender initial instead of a blurry globe.
+            // s2/favicons answers with a tiny globe placeholder for unknown brand domains. Real
+            // favicons honor sz=64; treat the small placeholder as a miss so we show the sender
+            // initial instead of a blurry upscaled globe.
             if (event.currentTarget.naturalWidth > 0 && event.currentTarget.naturalWidth <= 16) {
               setIconFailed(true);
             }
@@ -2120,6 +2367,115 @@ function InboxLabelChip({ label }: { label: InboxLabel }) {
     >
       {inboxLabelName(label)}
     </span>
+  );
+}
+
+function InboxLabelFilter({
+  availableLabels,
+  selectedLabelIds,
+  onToggle,
+  onClear,
+}: {
+  availableLabels: InboxLabel[];
+  selectedLabelIds: Set<string>;
+  onToggle: (labelId: string) => void;
+  onClear: () => void;
+}) {
+  const t = useTranslations();
+  const selectedCount = selectedLabelIds.size;
+  const triggerLabel =
+    selectedCount === 0
+      ? t('inbox.labelFilter.all')
+      : t('inbox.labelFilter.count', { count: selectedCount });
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 shrink-0 gap-1.5 px-2.5 text-sm font-normal"
+            aria-label={t('inbox.labelFilter.trigger')}
+            data-testid="inbox-label-filter-trigger"
+          />
+        }
+      >
+        <Tag className="size-4" aria-hidden="true" />
+        <span className="hidden sm:inline">{triggerLabel}</span>
+        {selectedCount > 0 ? (
+          <Badge
+            variant="secondary"
+            className="ml-0.5 h-5 min-w-5 justify-center px-1.5 text-[10px] tabular-nums sm:hidden"
+          >
+            {selectedCount}
+          </Badge>
+        ) : null}
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={6}
+        className="w-72 p-0"
+        data-testid="inbox-label-filter-content"
+      >
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <span className="text-foreground text-sm font-medium">
+            {t('inbox.labelFilter.trigger')}
+          </span>
+          {selectedCount > 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="h-7 text-xs"
+              onClick={onClear}
+              data-testid="inbox-label-filter-clear"
+            >
+              {t('inbox.labelFilter.clear')}
+            </Button>
+          ) : null}
+        </div>
+        {availableLabels.length === 0 ? (
+          <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+            {t('inbox.labelFilter.empty')}
+          </p>
+        ) : (
+          <div className="max-h-72 overflow-y-auto py-1" role="listbox" aria-multiselectable="true">
+            {availableLabels.map((label) => {
+              const isChecked = selectedLabelIds.has(label.id);
+              return (
+                <button
+                  key={label.id}
+                  type="button"
+                  role="option"
+                  aria-selected={isChecked}
+                  onClick={() => onToggle(label.id)}
+                  className="hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm focus-visible:outline-none"
+                  data-testid={`inbox-label-filter-option-${label.id}`}
+                >
+                  <span
+                    className={cn(
+                      'border-input flex size-4 shrink-0 items-center justify-center rounded-sm border',
+                      isChecked
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background',
+                    )}
+                    aria-hidden="true"
+                  >
+                    {isChecked ? <Check className="size-3" /> : null}
+                  </span>
+                  <InboxLabelChip label={label} />
+                  <span className="text-foreground flex-1 truncate text-sm">
+                    {inboxLabelName(label)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 

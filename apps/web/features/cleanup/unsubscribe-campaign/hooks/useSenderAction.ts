@@ -11,6 +11,7 @@ import {
   type CleanupSenderActionResponse,
   type UnsubscribeCandidateResponse,
 } from '@/features/cleanup/unsubscribe-campaign/api/unsubscribe-campaign-api';
+import type { DateRangeSpec } from '@/features/cleanup/unsubscribe-campaign/date-range-spec';
 import { unsubscribeCampaignKeys } from '@/features/cleanup/unsubscribe-campaign/query-keys';
 
 /** Client-only flag that drives which toast message fires; never sent to the backend. */
@@ -25,9 +26,10 @@ type MutationContext = { previous: OptimisticSnapshot };
 
 type CandidateStatus = 'APPROVED' | 'UNSUBSCRIBED' | 'AUTO_ARCHIVED' | null;
 
-export function useSenderAction(window: string, limit: number) {
+export function useSenderAction(spec: DateRangeSpec, limit: number) {
   const queryClient = useQueryClient();
   const t = useTranslations();
+  const candidatesKey = unsubscribeCampaignKeys.candidatesPrefix(spec);
 
   return useMutation<
     CleanupSenderActionResponse,
@@ -37,15 +39,15 @@ export function useSenderAction(window: string, limit: number) {
   >({
     mutationFn: ({ toastIntent: _toastIntent, ...request }) => runSenderAction(request),
     onMutate: async (variables) => {
-      const queryKey = [...unsubscribeCampaignKeys.all, 'candidates', window];
-      await queryClient.cancelQueries({ queryKey });
-      const previous =
-        queryClient.getQueriesData<UnsubscribeCandidateResponse[]>({ queryKey });
+      await queryClient.cancelQueries({ queryKey: candidatesKey });
+      const previous = queryClient.getQueriesData<UnsubscribeCandidateResponse[]>({
+        queryKey: candidatesKey,
+      });
       const nextStatus = optimisticNextStatus(variables.action);
       if (nextStatus !== 'noop') {
         const targets = new Set(variables.senderEmails);
         queryClient.setQueriesData<UnsubscribeCandidateResponse[]>(
-          { queryKey },
+          { queryKey: candidatesKey },
           (current) => {
             if (!current) return current;
             return current.map((candidate) =>
@@ -59,9 +61,7 @@ export function useSenderAction(window: string, limit: number) {
       return { previous };
     },
     onSuccess: (response, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: [...unsubscribeCampaignKeys.all, 'candidates', window],
-      });
+      void queryClient.invalidateQueries({ queryKey: candidatesKey });
       toast.success(t(actionSuccessKey(variables)), {
         description:
           response.affectedMessageCount > 0

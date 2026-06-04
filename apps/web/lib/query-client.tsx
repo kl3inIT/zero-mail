@@ -1,6 +1,8 @@
 'use client';
 
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider, type Persister } from '@tanstack/react-query-persist-client';
 import dynamic from 'next/dynamic';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -8,7 +10,18 @@ import { toast } from 'sonner';
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 const THIRTY_MINUTES_MS = 30 * 60 * 1000;
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 const FALLBACK_ERROR_MESSAGE = 'Có lỗi xảy ra. Vui lòng thử lại.';
+
+// localStorage key used by the persist plugin. Exported so the logout flow
+// can wipe it after queryClient.clear() — otherwise the next user on this
+// browser would rehydrate the prior user's cached UI projections.
+export const PERSIST_STORAGE_KEY = 'zm:rq-cache:v1';
+
+// Buster — bump when the dehydrate shape changes (renamed query keys, new
+// privacy excludes, etc.). Stale persisted entries with a different buster
+// are discarded on hydrate.
+const PERSIST_BUSTER = 'zm-v2-unsub-no-candidates';
 
 const ReactQueryDevtools =
   process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_QUERY_DEVTOOLS === 'true'
@@ -85,12 +98,84 @@ function createAppQueryClient(): QueryClient {
   });
 }
 
+// Whitelist of query-key shapes that are safe to persist to localStorage.
+// Privacy invariant (CLAUDE.md): no raw email bodies / snippets in long-term
+// storage. Sender headers + aggregate counts are OK; per-message subject+
+// snippet and message body are not.
+function shouldDehydrateUnsubscribeQuery(queryKey: readonly unknown[]): boolean {
+  if (queryKey[0] !== 'cleanup' || queryKey[1] !== 'unsubscribe-campaign') return false;
+  // ['cleanup', 'unsubscribe-campaign', 'candidates', spec, limit] — sender emails
+  // + counts only, so privacy-wise it would be OK to persist. We deliberately do
+  // NOT, because this query drives the SSR-rendered candidates table: the server
+  // has no localStorage and renders the loading skeleton, but restoring persisted
+  // candidates on the client makes the first client render show the <table> — a
+  // hydration mismatch (server skeleton vs client table). Keeping it memory-only
+  // restores SSR/client symmetry; the 5-min staleTime + keepPreviousData still
+  // avoid re-fetch on in-session navigation, and a hard reload simply re-fetches.
+  if (queryKey[2] === 'candidates') return false;
+  // ['cleanup', 'unsubscribe-campaign', 'stats', 'timeline', email, days] —
+  // {date, count}[] aggregates. OK.
+  if (queryKey[2] === 'stats' && queryKey[3] === 'timeline') return true;
+  // 'stats/messages' (subject+snippet) and 'stats/body' (full body) stay
+  // memory-only — body content must not persist.
+  return false;
+}
+
+// Storage proxy that lazily resolves window.localStorage. Created once at
+// module load — both server and client get the SAME persister instance, so
+// PersistQueryClientProvider's internal useState/useId calls produce
+// identical sequences on SSR and first client render. Without this, the
+// `useState(createPersister)` initializer returned a no-op stub on the
+// server and a real persister on the client; the differing prop identity
+// flowed into base-ui's useId counter via PersistQueryClientProvider's
+// internals and produced base-ui hydration mismatches on every dropdown.
+const lazyLocalStorage: Storage = {
+  get length() {
+    return typeof window === 'undefined' ? 0 : window.localStorage.length;
+  },
+  clear() {
+    if (typeof window !== 'undefined') window.localStorage.clear();
+  },
+  getItem(key) {
+    return typeof window === 'undefined' ? null : window.localStorage.getItem(key);
+  },
+  key(index) {
+    return typeof window === 'undefined' ? null : window.localStorage.key(index);
+  },
+  removeItem(key) {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(key);
+  },
+  setItem(key, value) {
+    if (typeof window !== 'undefined') window.localStorage.setItem(key, value);
+  },
+};
+
+const sharedPersister: Persister = createSyncStoragePersister({
+  storage: lazyLocalStorage,
+  key: PERSIST_STORAGE_KEY,
+  throttleTime: 1000,
+});
+
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [client] = useState(createAppQueryClient);
+
   return (
-    <QueryClientProvider client={client}>
+    <PersistQueryClientProvider
+      client={client}
+      persistOptions={{
+        persister: sharedPersister,
+        maxAge: TWENTY_FOUR_HOURS_MS,
+        buster: PERSIST_BUSTER,
+        dehydrateOptions: {
+          // Persist only successful queries on the unsubscribe-campaign
+          // allowlist. Everything else (and all failures) stay memory-only.
+          shouldDehydrateQuery: (query) =>
+            query.state.status === 'success' && shouldDehydrateUnsubscribeQuery(query.queryKey),
+        },
+      }}
+    >
       {children}
       {ReactQueryDevtools ? <ReactQueryDevtools initialIsOpen={false} /> : null}
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

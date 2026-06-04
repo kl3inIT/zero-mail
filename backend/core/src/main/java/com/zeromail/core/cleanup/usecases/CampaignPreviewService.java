@@ -6,10 +6,8 @@ import com.zeromail.core.cleanup.exception.CampaignCapExceededException;
 import com.zeromail.core.cleanup.persistence.SenderSuppressionRepository;
 import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.SenderWorkingSet;
 import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.WorkingSet;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -34,10 +32,13 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link CampaignCapExceededException.Kind} so the controller can map to the correct error code
  * without case-splitting on exception type.
  *
- * <p>Per-sender lookup reads {@code mail_message_observed} for the 30-day window matching {@link
- * CandidateQueryService}'s default, and cross-checks {@code sender_suppression} via both {@code
- * sender_email} and {@code sender_domain} so a tenant-blocked sender never enters a campaign even
- * when the controller forgot to filter.
+ * <p>Per-sender lookup reads {@code mail_message_observed} <i>without</i> a time window — the
+ * worker archives every historical row regardless of age, so the preview's archivable detection
+ * must mirror that reach. The candidate list query ({@link CandidateQueryService}) is what scopes
+ * the user's browsing view to their selected window; the preview only validates the selection
+ * against policy caps and supplies per-sender archivability. The service also cross-checks {@code
+ * sender_suppression} via both {@code sender_email} and {@code sender_domain} so a tenant-blocked
+ * sender never enters a campaign even when the controller forgot to filter.
  *
  * <p>Privacy invariant (UNS-09): the log line records counts only, never the targeted sender list.
  */
@@ -47,8 +48,18 @@ public class CampaignPreviewService {
 
     private static final Logger log = LoggerFactory.getLogger(CampaignPreviewService.class);
 
-    /** History window mirrors {@code CandidateQueryService} default (UNS-01 / D-09). */
-    private static final Duration HISTORY_WINDOW = Duration.ofDays(30);
+    /**
+     * Working-set lookup window (live Gmail preview path). Independent of the DB aggregate — the
+     * working set is "what's currently in the inbox", which is naturally recent. The DB aggregate
+     * below intentionally has NO window: the worker's {@code LOOKUP_*_SQL} queries archive every
+     * matching observed row regardless of age, so the preview must mirror that reach. A 30-day
+     * window here under-reported {@code has_one_click}/{@code has_mailto} for senders whose only
+     * header-bearing messages were older than 30 days — execute then saw {@code
+     * archivable.isEmpty()} and threw {@code IllegalStateException} → 409 even though the candidate
+     * list showed the row as unsubscribable. (The candidate query already filters {@code
+     * mail_message_observed} for the user-selected window.)
+     */
+    private static final Duration WORKING_SET_WINDOW = Duration.ofDays(30);
 
     private static final String PER_SENDER_AGGREGATE_SQL =
             "SELECT COUNT(*) AS message_count, "
@@ -56,9 +67,7 @@ public class CampaignPreviewService {
                     + "       BOOL_OR(list_unsubscribe_mailto IS NOT NULL) AS has_mailto "
                     + "FROM mail_message_observed "
                     + "WHERE tenant_id = ? "
-                    + "  AND sender_email = ? "
-                    + "  AND observed_at >= ? "
-                    + "  AND observed_at < ?";
+                    + "  AND sender_email = ?";
 
     private final JdbcTemplate jdbcTemplate;
     private final SenderSuppressionRepository senderSuppressionRepository;
@@ -100,7 +109,7 @@ public class CampaignPreviewService {
 
         Optional<WorkingSet> recentInboxWorkingSet =
                 cleanupRecentInboxWorkingSetService.findRecentInboxWorkingSet(
-                        tenantId, HISTORY_WINDOW);
+                        tenantId, WORKING_SET_WINDOW);
 
         List<PerSenderPreview> perSender = new ArrayList<>(senderEmails.size());
         long archivableHistoryCount = 0L;
@@ -161,22 +170,13 @@ public class CampaignPreviewService {
                                 .findByTenantIdAndSenderDomain(tenantId, senderDomain)
                                 .isPresent();
 
-        Instant now = clock.instant();
-        Instant windowStartInclusive = now.minus(HISTORY_WINDOW);
-        Timestamp windowStartTimestamp = Timestamp.from(windowStartInclusive);
-        Timestamp windowEndTimestamp = Timestamp.from(now);
-
         long messageCount = 0L;
         boolean hasOneClick = false;
         boolean hasMailto = false;
         try {
             Map<String, Object> aggregateRow =
                     jdbcTemplate.queryForMap(
-                            PER_SENDER_AGGREGATE_SQL,
-                            tenantId,
-                            normalizedSenderEmail,
-                            windowStartTimestamp,
-                            windowEndTimestamp);
+                            PER_SENDER_AGGREGATE_SQL, tenantId, normalizedSenderEmail);
             Object messageCountValue = aggregateRow.get("message_count");
             if (messageCountValue instanceof Number messageCountNumber) {
                 messageCount = messageCountNumber.longValue();

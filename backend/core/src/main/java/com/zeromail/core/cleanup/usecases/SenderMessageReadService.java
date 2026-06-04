@@ -38,8 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Privacy: this service is the only path that decodes raw email body bytes and is therefore
  * tightly scoped. Bodies are returned only inline in the HTTP response — no DB write, no log line
- * containing body content, no inclusion in chat/assistant pipelines (the body-content ban
- * ARCH-02 still applies to those surfaces).
+ * containing body content, no inclusion in chat/assistant pipelines (the body-content ban ARCH-02
+ * still applies to those surfaces).
  */
 @Service
 @Transactional(readOnly = true)
@@ -70,9 +70,9 @@ public class SenderMessageReadService {
 
     /**
      * List recent messages from {@code senderEmail} via {@code users.messages.list q=from:...}.
-     * Returns up to {@code limit} rows (hard-capped at {@value #HARD_LIMIT_MESSAGES}). When
-     * {@code archivedOnly} is true the Gmail query is {@code from:X -in:inbox} — only archived
-     * messages surface. Otherwise the query lists every message Gmail knows about.
+     * Returns up to {@code limit} rows (hard-capped at {@value #HARD_LIMIT_MESSAGES}). When {@code
+     * archivedOnly} is true the Gmail query is {@code from:X -in:inbox} — only archived messages
+     * surface. Otherwise the query lists every message Gmail knows about.
      *
      * @throws SenderMessagesUnavailableException when Gmail is not reachable or the tenant has no
      *     active connection
@@ -83,6 +83,50 @@ public class SenderMessageReadService {
             boolean archivedOnly,
             int limit,
             Duration fetchBudget) {
+        return fetchMessagesFromSender(
+                tenantId, senderEmail, archivedOnly, limit, null, fetchBudget);
+    }
+
+    /**
+     * Overload that restricts the Gmail listing to messages received after {@code now - window}.
+     * Drives the stats dialog's 7d / 30d / 90d filter so the message list and the timeline chart
+     * agree on the same physical messages — without the window the list returned every message
+     * Gmail had from the sender even when the chart only counted the last seven days, giving the
+     * user a confusing mismatch where the chart showed "3 emails this week" but the list scrolled
+     * back into January.
+     */
+    public List<SenderMessageSummary> fetchMessagesFromSender(
+            UUID tenantId,
+            String senderEmail,
+            boolean archivedOnly,
+            int limit,
+            Duration window,
+            Duration fetchBudget) {
+        Instant from = null;
+        Instant to = null;
+        if (window != null && !window.isNegative() && !window.isZero()) {
+            to = Instant.now();
+            from = to.minus(window);
+        }
+        return fetchMessagesFromSender(
+                tenantId, senderEmail, archivedOnly, limit, from, to, fetchBudget);
+    }
+
+    /**
+     * Range overload — appends both {@code after:<from-unix>} and {@code before:<to-unix>} to the
+     * Gmail query so callers can list messages in an arbitrary historical window (e.g. May 1 – May
+     * 15) instead of being capped to "last N days from now". {@code from} / {@code to} may be null
+     * individually; null clauses are skipped so passing both null preserves the legacy unbounded
+     * behaviour.
+     */
+    public List<SenderMessageSummary> fetchMessagesFromSender(
+            UUID tenantId,
+            String senderEmail,
+            boolean archivedOnly,
+            int limit,
+            Instant from,
+            Instant to,
+            Duration fetchBudget) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         Objects.requireNonNull(senderEmail, "senderEmail must not be null");
         Objects.requireNonNull(fetchBudget, "fetchBudget must not be null");
@@ -90,11 +134,24 @@ public class SenderMessageReadService {
         if (normalizedSenderEmail.isEmpty()) {
             throw new IllegalArgumentException("senderEmail must not be blank");
         }
+        if (from != null && to != null && !from.isBefore(to)) {
+            throw new IllegalArgumentException("from must be strictly before to");
+        }
         int effectiveLimit = Math.min(Math.max(limit, 0), HARD_LIMIT_MESSAGES);
         if (effectiveLimit == 0) return List.of();
 
         Gmail gmail = buildGmailClient(tenantId, fetchBudget);
-        String query = "from:" + normalizedSenderEmail + (archivedOnly ? " -in:inbox" : "");
+        StringBuilder queryBuilder = new StringBuilder("from:").append(normalizedSenderEmail);
+        if (archivedOnly) {
+            queryBuilder.append(" -in:inbox");
+        }
+        if (from != null) {
+            queryBuilder.append(" after:").append(from.getEpochSecond());
+        }
+        if (to != null) {
+            queryBuilder.append(" before:").append(to.getEpochSecond());
+        }
+        String query = queryBuilder.toString();
         try {
             ListMessagesResponse listResponse =
                     gmail.users()
@@ -194,7 +251,8 @@ public class SenderMessageReadService {
             throw new SenderMessagesUnavailableException(UnavailableReason.DISCONNECTED);
         }
         try {
-            return gmailApiClientFactory.buildClientForConnection(connection, tenantId, fetchBudget);
+            return gmailApiClientFactory.buildClientForConnection(
+                    connection, tenantId, fetchBudget);
         } catch (InvalidGrantException invalidGrantException) {
             throw new SenderMessagesUnavailableException(UnavailableReason.REVOKED);
         } catch (IOException ioException) {
@@ -208,7 +266,8 @@ public class SenderMessageReadService {
                 truncate(
                         GmailMessageHeaders.firstValue(payload, "Subject").orElse(""),
                         SUBJECT_MAX_LENGTH);
-        String snippet = truncate(Objects.requireNonNullElse(message.getSnippet(), ""), SNIPPET_MAX_LENGTH);
+        String snippet =
+                truncate(Objects.requireNonNullElse(message.getSnippet(), ""), SNIPPET_MAX_LENGTH);
         Instant internalDate =
                 Instant.ofEpochMilli(
                         message.getInternalDate() == null ? 0L : message.getInternalDate());
@@ -256,8 +315,10 @@ public class SenderMessageReadService {
         if (payload.getParts() != null) {
             for (MessagePart part : payload.getParts()) {
                 BodyParts childBody = walkPayload(part);
-                if (htmlBody == null && childBody.htmlBody() != null) htmlBody = childBody.htmlBody();
-                if (plainBody == null && childBody.plainBody() != null) plainBody = childBody.plainBody();
+                if (htmlBody == null && childBody.htmlBody() != null)
+                    htmlBody = childBody.htmlBody();
+                if (plainBody == null && childBody.plainBody() != null)
+                    plainBody = childBody.plainBody();
                 if (htmlBody != null && plainBody != null) break;
             }
         }

@@ -705,13 +705,16 @@
         "deleteOk": "History mail moved to Trash.",
         "errCapMessage": "History mail limit of 2,000 exceeded. Please deselect some.",
         "errCapSender": "Sender limit of 25 exceeded. Please deselect some.",
+        "errConflict": "This sender is already being processed or has been blocked. Refresh the list and try again.",
         "errGeneric": "Could not create the unsubscribe task. Please try again shortly.",
         "genericError": "Action failed. Please try again shortly.",
         "labelFutureOk": "Future-mail label rule created.",
         "mailAffected": "{count} mail processed.",
         "markUnsubscribedOk": "Marked as unsubscribed.",
-        "submitDescription": "Zero Mail is processing {count} senders in the background.",
-        "submitOk": "Unsubscribe started",
+        "submitDescription": "Unsubscribe requested for {count} senders. Results will update in the list shortly.",
+        "submitOk": "Unsubscribe requested",
+        "submitting": "Submitting unsubscribe…",
+        "submittingDescription": "Sending the request for {count} senders…",
         "unapproveOk": "Approval removed."
       },
       "confirm": {
@@ -726,8 +729,7 @@
         "all": "All senders",
         "approved": "Kept",
         "autoArchived": "Auto archived",
-        "unhandled": "Unhandled",
-        "unsubscribed": "Unsubscribed"
+        "unhandled": "Unhandled"
       },
       "labelFuture": {
         "body": "Zero Mail will create a rule that auto-labels new mail from {sender}. History mail is left alone.",
@@ -746,6 +748,7 @@
           "labelFuture": "Label future mail",
           "menu": "More options",
           "unapprove": "Stop keeping",
+          "unblock": "Unblock",
           "unsubscribe": "Unsubscribe",
           "unsubscribeBlock": "Unsubscribe / Block",
           "viewGmail": "Open in Gmail",
@@ -765,6 +768,7 @@
         },
         "error": "Could not load the sender list. Please try again shortly.",
         "loadMore": "Load more",
+        "loadingMore": "Loading more…",
         "retry": "Retry",
         "searchPlaceholder": "Search sender or domain",
         "selectAll": "Select all visible senders",
@@ -778,7 +782,10 @@
       "stats": {
         "chartEmpty": "No data in the last {days} days.",
         "chartError": "Could not load the chart. Please try again shortly.",
+        "chartHide": "Hide chart",
         "chartLoading": "Loading chart…",
+        "chartShow": "Show chart",
+        "chartTooltipCount": "Total {count} emails",
         "closePreview": "Close preview",
         "messagesEmpty": "No mail in this tab.",
         "messagesError": "Could not load the mail list. Please try again shortly.",
@@ -802,7 +809,15 @@
       "window": {
         "30d": "Last 30 days",
         "7d": "Last 7 days",
-        "90d": "Last 3 months"
+        "90d": "Last 3 months",
+        "custom": "Custom",
+        "customLabel": "{startDate} – {endDate}",
+        "customApply": "Apply",
+        "customStart": "From",
+        "customEnd": "To",
+        "customInvalidOrder": "Start date must be on or before end date",
+        "customMissing": "Pick both a start and an end date",
+        "customTitle": "Pick a date range"
       }
     }
   },
@@ -1184,6 +1199,7 @@
     },
     "badge": {
       "attachment": "Attachment",
+      "sent": "Sent",
       "unread": "Unread"
     },
     "composer": {
@@ -1280,6 +1296,13 @@
       "clear": "Clear search",
       "empty": "No loaded messages match this search.",
       "placeholder": "Search sender, subject, label"
+    },
+    "labelFilter": {
+      "all": "All labels",
+      "clear": "Clear all",
+      "count": "{count} labels",
+      "empty": "No labels yet",
+      "trigger": "Filter by label"
     },
     "state": {
       "empty": {

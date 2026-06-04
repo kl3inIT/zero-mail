@@ -8,10 +8,6 @@ export const unsubscribeCampaignMessages = {
     vi: 'Tất cả người gửi',
     en: 'All senders',
   },
-  'cleanup.unsubscribe.filter.unsubscribed': {
-    vi: 'Đã hủy đăng ký',
-    en: 'Unsubscribed',
-  },
   'cleanup.unsubscribe.filter.autoArchived': {
     vi: 'Tự động lưu trữ',
     en: 'Auto archived',

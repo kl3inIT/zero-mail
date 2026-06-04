@@ -17,6 +17,7 @@ import { SaveMemoryBody } from './body/save-memory-body';
 import { SendEmailBody } from './body/send-email-body';
 import { UpdatePersonalInstructionsBody } from './body/update-personal-instructions-body';
 import {
+  actionStatus,
   type BodySlotToolName,
   BODY_SLOT_TOOL_NAMES,
   type PreviewCardAction,
@@ -151,7 +152,15 @@ export function PreviewCard({
       });
       setLocalState(response.state);
       setEditing(false);
-      if (response.state === 'sent' && !sentReportedRef.current) {
+      // Backend returns `state: "CONFIRMED"` for every committed action (see
+      // AssistantSendExecutor#execute). For send/reply/forward we map that to
+      // the UI status 'sent' via actionStatus(). Compare against the mapped
+      // status, not the raw backend string — otherwise `onSent` never fires,
+      // the inbox composer's autoConfirmRequested stays true, and the user
+      // is stuck staring at "Đang gửi email..." forever even though the
+      // mail already went out.
+      const mappedStatus = actionStatus({ ...action, state: response.state });
+      if (mappedStatus === 'sent' && !sentReportedRef.current) {
         sentReportedRef.current = true;
         onSent?.();
       }

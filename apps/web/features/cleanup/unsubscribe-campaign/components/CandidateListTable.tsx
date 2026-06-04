@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   ArchiveIcon,
+  ArchiveRestoreIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   ExternalLinkIcon,
@@ -238,6 +239,8 @@ export function CandidateListTable({
                     >
                       {isPending ? (
                         <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />
+                      ) : autoArchived ? (
+                        <ArchiveRestoreIcon className="size-4" aria-hidden="true" />
                       ) : (
                         <MailXIcon className="size-4" aria-hidden="true" />
                       )}
@@ -346,9 +349,9 @@ function SenderAvatar({
   senderName: string | null;
 }) {
   const domain = senderDomain.trim();
-  // Inbox Zero pattern: always resolve to the second-level domain — Google's s2/favicons
-  // returns the real brand logo for `domain=http://miro.com` but a globe placeholder for
-  // subdomains like `product.miro.com`.
+  // Inbox Zero pattern: always resolve to the second-level domain — Google's favicon service
+  // returns the real brand logo for `domain=miro.com` but a globe placeholder for subdomains
+  // like `product.miro.com`.
   const rootDomain = useMemo(() => {
     if (!domain) return null;
     const parts = domain.split('.');
@@ -357,15 +360,15 @@ function SenderAvatar({
   }, [domain]);
   const [iconFailed, setIconFailed] = useState(false);
   const initials = senderInitials(senderName, senderDomain, senderEmail);
-  // faviconV2 (Chrome's internal API) returns the real brand favicon at size=64 when the root
-  // domain has one. When it doesn't, it answers HTTP 404 with a 16×16 globe placeholder PNG —
-  // and the browser still renders that body, so onError never fires. We therefore also detect
-  // the tiny placeholder in onLoad (naturalWidth <= 16) and fall back to initials, instead of
-  // showing a blurry upscaled globe.
+  // Use Google's public s2/favicons endpoint (NOT t1.gstatic.com/faviconV2). Both return the
+  // brand favicon when one exists, but for unknown domains faviconV2 answers HTTP 404 + a 16×16
+  // globe placeholder, which spams the DevTools console with 404s for every newsletter sender
+  // the user has never visited. s2/favicons returns HTTP 200 + a placeholder for the same
+  // unknown-domain case, so the network log stays clean. We still detect the placeholder by
+  // its small natural size in onLoad and fall back to initials, instead of upscaling the blurry
+  // globe to 32×32.
   const faviconUrl = rootDomain
-    ? `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(
-        `https://${rootDomain}`,
-      )}&size=64`
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(rootDomain)}&sz=64`
     : null;
   return (
     <div
@@ -373,7 +376,7 @@ function SenderAvatar({
       aria-hidden="true"
     >
       {faviconUrl && !iconFailed ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Inbox Zero-style sender favicon via Google faviconV2; not worth a next/image domain entry.
+        // eslint-disable-next-line @next/next/no-img-element -- Inbox Zero-style sender favicon via Google s2/favicons; not worth a next/image domain entry.
         <img
           src={faviconUrl}
           alt=""
@@ -465,6 +468,15 @@ function primaryActionLabel(
   candidate: CandidateRow,
   t: ReturnType<typeof useTranslations<'cleanup.unsubscribe'>>,
 ) {
+  // AUTO_ARCHIVED already has the cleanup rule wired — the primary action
+  // flips to the inverse so the user can undo it. UNSUBSCRIBED is terminal
+  // and the button is disabled at the call site, so it doesn't need a label
+  // swap here. Senders with no List-Unsubscribe header are blocked instead
+  // of unsubscribed; once they are auto-archived, the same row offers
+  // "Unblock" to restore them.
+  if (candidate.status === 'AUTO_ARCHIVED') {
+    return t('list.action.unblock');
+  }
   if (candidate.unsubscribeMethod === 'NONE') {
     return t('list.action.block');
   }

@@ -1,6 +1,10 @@
 import { getApiUrl } from '@/lib/api/base-url';
 import { api, xsrfHeader } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
+import {
+  appendDateRangeSpec,
+  type DateRangeSpec,
+} from '@/features/cleanup/unsubscribe-campaign/date-range-spec';
 
 export type UnsubscribeCandidateResponse = components['schemas']['UnsubscribeCandidateResponse'];
 export type UnsubscribeCandidateListResponse =
@@ -44,18 +48,27 @@ function unwrap<T>(
 }
 
 export async function fetchCandidates(
-  window: string = '30d',
+  spec: DateRangeSpec,
   limit: number = 25,
 ): Promise<UnsubscribeCandidateResponse[]> {
-  const result = await api.GET('/api/unsubscribe/candidates', {
-    params: { query: { window, limit } },
-  });
-  const data = unwrap(result, `/api/unsubscribe/candidates failed: ${result.response.status}`);
-  // Defensively unwrap either { items: [...] } or bare array (Playwright fixtures use the bare
-  // array form).
-  if (Array.isArray(data)) {
-    return data as UnsubscribeCandidateResponse[];
+  // The typed openapi-fetch client only knows about the legacy `window=7d|30d|90d` query
+  // shape because the schema has not been regenerated since the date-range params were added.
+  // Drop down to manual URLSearchParams so the request carries `startDate=/endDate=` when the
+  // user picks a custom calendar range, and fall back to the same `window=...` shape the
+  // typed client used to emit for the preset case.
+  const searchParams = new URLSearchParams({ limit: String(limit) });
+  appendDateRangeSpec(searchParams, spec, { windowParamName: 'window' });
+  const response = await fetch(
+    getApiUrl(`/api/unsubscribe/candidates?${searchParams.toString()}`),
+    { credentials: 'include' },
+  );
+  if (!response.ok) {
+    throw new Error(`/api/unsubscribe/candidates failed: ${response.status}`);
   }
+  const data = (await response.json()) as
+    | UnsubscribeCandidateListResponse
+    | UnsubscribeCandidateResponse[];
+  if (Array.isArray(data)) return data;
   return data.items ?? [];
 }
 
@@ -117,12 +130,10 @@ export type SenderMessageBody = {
 
 export async function fetchSenderTimeline(
   senderEmail: string,
-  windowDays: number,
+  spec: DateRangeSpec,
 ): Promise<SenderTimelineEntry[]> {
-  const searchParams = new URLSearchParams({
-    senderEmail,
-    windowDays: String(windowDays),
-  });
+  const searchParams = new URLSearchParams({ senderEmail });
+  appendDateRangeSpec(searchParams, spec);
   const response = await fetch(
     getApiUrl(`/api/unsubscribe/stats/timeline?${searchParams.toString()}`),
     { credentials: 'include' },
@@ -137,12 +148,14 @@ export async function fetchSenderMessages(
   senderEmail: string,
   archivedOnly: boolean,
   limit: number,
+  spec: DateRangeSpec,
 ): Promise<SenderMessageSummary[]> {
   const searchParams = new URLSearchParams({
     senderEmail,
     archivedOnly: String(archivedOnly),
     limit: String(limit),
   });
+  appendDateRangeSpec(searchParams, spec);
   const response = await fetch(
     getApiUrl(`/api/unsubscribe/stats/messages?${searchParams.toString()}`),
     { credentials: 'include' },

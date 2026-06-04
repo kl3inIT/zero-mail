@@ -70,7 +70,11 @@ export function SenderAvatar({ sender, size = 'default', className }: SenderAvat
 }
 
 function faviconUrl(domain: string): string {
-  return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=64`;
+  // s2/favicons (NOT t1.gstatic.com/faviconV2): both serve brand favicons when one exists, but
+  // faviconV2 returns HTTP 404 for unknown domains and pollutes DevTools with one 404 per row.
+  // s2/favicons returns HTTP 200 with a globe placeholder for the same unknown case, keeping the
+  // network log clean. The base-ui Avatar's natural-size fallback still hides the placeholder.
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
 }
 
 function extractEmail(sender: string): string {

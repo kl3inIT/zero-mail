@@ -35,6 +35,26 @@ export const inboxMessages = {
     vi: 'Không có email đã tải nào khớp tìm kiếm.',
     en: 'No loaded messages match this search.',
   },
+  'inbox.labelFilter.trigger': {
+    vi: 'Lọc theo nhãn',
+    en: 'Filter by label',
+  },
+  'inbox.labelFilter.all': {
+    vi: 'Tất cả nhãn',
+    en: 'All labels',
+  },
+  'inbox.labelFilter.count': {
+    vi: '{count} nhãn',
+    en: '{count} labels',
+  },
+  'inbox.labelFilter.clear': {
+    vi: 'Bỏ chọn tất cả',
+    en: 'Clear all',
+  },
+  'inbox.labelFilter.empty': {
+    vi: 'Chưa có nhãn nào',
+    en: 'No labels yet',
+  },
   'inbox.action.openInGmail': {
     vi: 'Mở Gmail',
     en: 'Open Gmail',

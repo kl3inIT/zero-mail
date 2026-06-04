@@ -10,12 +10,13 @@ import {
   type SenderMessageSummary,
   type SenderTimelineEntry,
 } from '@/features/cleanup/unsubscribe-campaign/api/unsubscribe-campaign-api';
+import type { DateRangeSpec } from '@/features/cleanup/unsubscribe-campaign/date-range-spec';
 import { unsubscribeCampaignKeys } from '@/features/cleanup/unsubscribe-campaign/query-keys';
 
-export function useSenderTimeline(senderEmail: string | null, windowDays: number) {
+export function useSenderTimeline(senderEmail: string | null, spec: DateRangeSpec) {
   return useQuery<SenderTimelineEntry[]>({
-    queryKey: unsubscribeCampaignKeys.senderTimeline(senderEmail ?? '', windowDays),
-    queryFn: () => fetchSenderTimeline(senderEmail ?? '', windowDays),
+    queryKey: unsubscribeCampaignKeys.senderTimeline(senderEmail ?? '', spec),
+    queryFn: () => fetchSenderTimeline(senderEmail ?? '', spec),
     enabled: !!senderEmail,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
@@ -23,10 +24,14 @@ export function useSenderTimeline(senderEmail: string | null, windowDays: number
   });
 }
 
-export function useSenderMessages(senderEmail: string | null, archivedOnly: boolean) {
+export function useSenderMessages(
+  senderEmail: string | null,
+  archivedOnly: boolean,
+  spec: DateRangeSpec,
+) {
   return useQuery<SenderMessageSummary[]>({
-    queryKey: unsubscribeCampaignKeys.senderMessages(senderEmail ?? '', archivedOnly),
-    queryFn: () => fetchSenderMessages(senderEmail ?? '', archivedOnly, 50),
+    queryKey: unsubscribeCampaignKeys.senderMessages(senderEmail ?? '', archivedOnly, spec),
+    queryFn: () => fetchSenderMessages(senderEmail ?? '', archivedOnly, 50, spec),
     enabled: !!senderEmail,
     staleTime: 30_000,
     refetchOnWindowFocus: false,

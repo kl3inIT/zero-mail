@@ -22,11 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>CQRS-lite — direct {@link JdbcTemplate} over the {@code mail_message_observed} + {@code
  * sender_suppression} tables as the source of truth. When the DB returns zero rows for a tenant
- * (typically a fresh onboarding before the observer pipeline catches up) the service falls back
- * to a live Gmail-preview read so the candidate table is never empty for a real inbox. Once the
- * DB has at least one observed row inside the window, the Gmail path is skipped — that keeps the
- * Inbox Zero-style UX where Archive doesn't make a sender disappear (DB snapshot persists even
- * after Gmail removes the INBOX label).
+ * (typically a fresh onboarding before the observer pipeline catches up) the service falls back to
+ * a live Gmail-preview read so the candidate table is never empty for a real inbox. Once the DB has
+ * at least one observed row inside the window, the Gmail path is skipped — that keeps the Inbox
+ * Zero-style UX where Archive doesn't make a sender disappear (DB snapshot persists even after
+ * Gmail removes the INBOX label).
  *
  * <p>Privacy invariant: this service never logs raw {@code senderEmail} values. Only count +
  * tenantId scoped to the {@code event=cleanup_candidates_queried} log line.
@@ -115,25 +115,43 @@ public class CandidateQueryService {
      * still have at least one of {@code list_unsubscribe_url} / {@code list_unsubscribe_mailto}
      * populated and are NOT in the tenant's suppression list.
      *
-     * <p>{@code limit} is hard-capped to {@link UnsubscribeCampaignPolicy#MAX_CANDIDATE_SENDERS}
-     * so the browsing table can load more than one execution batch without an unbounded query.
+     * <p>{@code limit} is hard-capped to {@link UnsubscribeCampaignPolicy#MAX_CANDIDATE_SENDERS} so
+     * the browsing table can load more than one execution batch without an unbounded query.
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public List<UnsubscribeCandidateProjection> findCandidates(
             UUID tenantId, Duration window, int limit) {
-        Objects.requireNonNull(tenantId, "tenantId must not be null");
         Objects.requireNonNull(window, "window must not be null");
         if (window.isNegative() || window.isZero()) {
             throw new IllegalArgumentException("window must be a positive Duration, was " + window);
+        }
+        Instant now = clock.instant();
+        return findCandidates(tenantId, now.minus(window), now, limit);
+    }
+
+    /**
+     * Range-based overload powering the date-picker filter ("from {@code fromInclusive}" through
+     * "to {@code toExclusive}"). Callers that want the legacy 7d/30d/90d preset continue to use the
+     * {@link Duration}-based method above; the date picker UI calls this one directly so users can
+     * target an arbitrary historical window (e.g. May 1 – May 15) instead of only "last N days from
+     * now".
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public List<UnsubscribeCandidateProjection> findCandidates(
+            UUID tenantId, Instant fromInclusive, Instant toExclusive, int limit) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(fromInclusive, "fromInclusive must not be null");
+        Objects.requireNonNull(toExclusive, "toExclusive must not be null");
+        if (!fromInclusive.isBefore(toExclusive)) {
+            throw new IllegalArgumentException("fromInclusive must be strictly before toExclusive");
         }
         if (limit <= 0) {
             throw new IllegalArgumentException("limit must be > 0, was " + limit);
         }
         int effectiveLimit = Math.min(limit, UnsubscribeCampaignPolicy.MAX_CANDIDATE_SENDERS);
-        Instant now = clock.instant();
-        Instant windowStartInclusive = now.minus(window);
-        Timestamp windowStartTimestamp = Timestamp.from(windowStartInclusive);
-        Timestamp windowEndTimestamp = Timestamp.from(now);
+        Duration window = Duration.between(fromInclusive, toExclusive);
+        Timestamp windowStartTimestamp = Timestamp.from(fromInclusive);
+        Timestamp windowEndTimestamp = Timestamp.from(toExclusive);
 
         List<UnsubscribeCandidateProjection> candidates =
                 jdbcTemplate.query(

@@ -24,6 +24,9 @@ export default function ZMLogoMark({ size = 16, className }: Props) {
         priority={size <= 16}
         unoptimized
         sizes={`${size}px`}
+        // The mark is a black-on-transparent brushstroke; invert it under .dark so
+        // it renders white and stays visible on dark surfaces instead of vanishing.
+        className="dark:invert"
         style={{
           width: size,
           height: size,

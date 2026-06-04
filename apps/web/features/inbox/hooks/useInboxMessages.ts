@@ -13,11 +13,13 @@ import {
   getGmailDraftDetail,
   getInboxMessageDetail,
   getInboxPage,
+  getInboxThreadDetail,
   markInboxMessageRead,
   type InboxLabel,
   type InboxMessage,
   type InboxMessageDetail,
   type InboxPage,
+  type InboxThreadDetail,
 } from '@/features/inbox/api/inbox-api';
 import { inboxKeys } from '@/features/inbox/query-keys';
 
@@ -61,6 +63,23 @@ export function useInboxMessageDetail(gmailMessageId: string | null) {
     queryKey: inboxKeys.detail(gmailMessageId),
     queryFn: () => getInboxMessageDetail(gmailMessageId!),
     enabled: Boolean(gmailMessageId),
+    staleTime: 30_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * Fetch a whole conversation (received + the user's sent replies) for the reader. Keyed on the
+ * thread id and reusing a short staleTime so reopening a thread is instant; `refetchOnMount:
+ * 'always'` keeps it fresh so a reply just sent shows up when the reader re-renders.
+ */
+export function useInboxThreadDetail(gmailThreadId: string | null) {
+  return useQuery<InboxThreadDetail>({
+    queryKey: inboxKeys.thread(gmailThreadId),
+    queryFn: () => getInboxThreadDetail(gmailThreadId!),
+    enabled: Boolean(gmailThreadId),
     staleTime: 30_000,
     gcTime: 30 * 60_000,
     refetchOnMount: 'always',

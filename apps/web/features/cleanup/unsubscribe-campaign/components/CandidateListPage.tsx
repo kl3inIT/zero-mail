@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArchiveIcon,
   CalendarIcon,
@@ -8,12 +8,18 @@ import {
   ChevronDownIcon,
   InboxIcon,
   ListIcon,
+  Loader2Icon,
   MailXIcon,
-  RefreshCwIcon,
   SearchIcon,
   ThumbsUpIcon,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import type { DateRangeSpec } from '@/features/cleanup/unsubscribe-campaign/date-range-spec';
+import { cn } from '@/lib/utils';
+import type { DateRange } from 'react-day-picker';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -48,11 +54,15 @@ import { useCandidates } from '@/features/cleanup/unsubscribe-campaign/hooks/use
 import { useExecuteCampaign } from '@/features/cleanup/unsubscribe-campaign/hooks/useExecuteCampaign';
 import { useSenderAction } from '@/features/cleanup/unsubscribe-campaign/hooks/useSenderAction';
 
-type FilterType = 'unhandled' | 'all' | 'unsubscribed' | 'autoArchived' | 'approved';
-type WindowId = '7d' | '30d' | '90d';
+type FilterType = 'unhandled' | 'all' | 'autoArchived' | 'approved';
+type WindowId = '7d' | '30d' | '90d' | 'custom';
 
 const DEFAULT_LIMIT = 50;
-const EXPANDED_LIMIT = 500;
+const LIMIT_STEP = 50;
+// Hard ceiling matching `UnsubscribeCampaignPolicy.MAX_CANDIDATE_SENDERS` on the backend so we
+// stop bumping the limit (and stop firing requests) once the user has scrolled to the cap.
+const HARD_LIMIT = 500;
+const PRESET_DAYS: Record<Exclude<WindowId, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
 export function CandidateListPage() {
   const t = useTranslations('cleanup.unsubscribe');
@@ -60,31 +70,89 @@ export function CandidateListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('unhandled');
   const [windowId, setWindowId] = useState<WindowId>('90d');
+  const [customRange, setCustomRange] = useState<{ startDate: string; endDate: string } | null>(
+    null,
+  );
   const [limit, setLimit] = useState(DEFAULT_LIMIT);
+
+  // Effective window spec — preset windows resolve to a "last N days" Duration on the BE,
+  // custom range carries explicit `[startDate, endDate]`. Memoize so identity is stable across
+  // unrelated re-renders (avoids TanStack queryKey diffing churn).
+  const dateRangeSpec = useMemo<DateRangeSpec>(() => {
+    if (windowId === 'custom' && customRange) {
+      return {
+        kind: 'range',
+        startDate: customRange.startDate,
+        endDate: customRange.endDate,
+      };
+    }
+    const presetId = windowId === 'custom' ? '90d' : windowId;
+    return { kind: 'window', windowDays: PRESET_DAYS[presetId] };
+  }, [windowId, customRange]);
   const [sortColumn, setSortColumn] = useState<SortColumn>('emails');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [statsCandidate, setStatsCandidate] = useState<CandidateRow | null>(null);
   const [labelCandidate, setLabelCandidate] = useState<CandidateRow | null>(null);
   const [labelName, setLabelName] = useState('');
 
-  const candidatesQuery = useCandidates(windowId, limit);
+  const candidatesQuery = useCandidates(dateRangeSpec, limit);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  // True only when the last response returned exactly `limit` rows AND the limit is below the
+  // backend hard cap — meaning BE may have more rows we haven't asked for yet. When fewer than
+  // `limit` come back the dataset is exhausted; when limit == HARD_LIMIT we're at the ceiling
+  // and would just refetch the same 500 rows.
+  const hasMoreToLoad =
+    !candidatesQuery.isError &&
+    !candidatesQuery.isPending &&
+    (candidatesQuery.data?.length ?? 0) >= limit &&
+    limit < HARD_LIMIT;
   const clearSelection = useCallback(() => setSelectedEmails(new Set()), []);
-  const executeMutation = useExecuteCampaign(windowId, {
+  const executeMutation = useExecuteCampaign(dateRangeSpec, {
     onSuccess: () => {
       clearSelection();
       void candidatesQuery.refetch();
     },
   });
-  const senderActionMutation = useSenderAction(windowId, limit);
+  const senderActionMutation = useSenderAction(dateRangeSpec, limit);
 
   const rawCandidates = useMemo<CandidateRow[]>(
     () => (candidatesQuery.data ?? []) as CandidateRow[],
     [candidatesQuery.data],
   );
 
+  // Reset the pagination limit whenever the user changes the window/range so a stale 200-row
+  // limit from a previous search isn't carried into the new query (would just waste a fetch
+  // for data we don't render anyway).
+  const [trackedSpecKey, setTrackedSpecKey] = useState(JSON.stringify(dateRangeSpec));
+  const currentSpecKey = JSON.stringify(dateRangeSpec);
+  if (trackedSpecKey !== currentSpecKey) {
+    setTrackedSpecKey(currentSpecKey);
+    setLimit(DEFAULT_LIMIT);
+  }
+
+  // IntersectionObserver-driven infinite scroll. The sentinel sits just below the candidate
+  // table; when it enters the viewport (200px early) we bump the limit by another page. The
+  // bump triggers a TanStack refetch with `placeholderData: keepPreviousData`, so the existing
+  // rows stay on screen and the new ones append underneath — no flash, no scroll jump.
+  useEffect(() => {
+    if (!hasMoreToLoad) return;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !candidatesQuery.isFetching) {
+          setLimit((current) => Math.min(current + LIMIT_STEP, HARD_LIMIT));
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMoreToLoad, candidatesQuery.isFetching]);
+
   // Clear the multi-select whenever the filter/search/window changes, via render-time state
   // adjustment (React-recommended) instead of an effect — avoids a cascading re-render.
-  const selectionResetKey = JSON.stringify([filter, searchQuery, windowId]);
+  const selectionResetKey = JSON.stringify([filter, searchQuery, dateRangeSpec]);
   const [trackedSelectionResetKey, setTrackedSelectionResetKey] = useState(selectionResetKey);
   if (trackedSelectionResetKey !== selectionResetKey) {
     setTrackedSelectionResetKey(selectionResetKey);
@@ -191,6 +259,14 @@ export function CandidateListPage() {
     (candidate: CandidateRow) => {
       const senderEmail = candidate.senderEmail;
       if (!senderEmail) return;
+      // Undo path: an AUTO_ARCHIVED sender's row button is "Bỏ chặn" / "Unblock".
+      // Backend extends UNAPPROVE to also disable the auto-archive cleanup rule
+      // for this sender, so clicking it both restores the row and stops future
+      // emails from being silently archived.
+      if (candidate.status === 'AUTO_ARCHIVED') {
+        runSenderAction('UNAPPROVE', [senderEmail]);
+        return;
+      }
       if (candidate.unsubscribeMethod === 'NONE') {
         runSenderAction('AUTO_ARCHIVE', [senderEmail], { toastIntent: 'block' });
       } else {
@@ -229,7 +305,13 @@ export function CandidateListPage() {
   );
 
   const filterOption = filterOptions(t).find((option) => option.value === filter);
-  const windowOption = windowOptions(t).find((option) => option.value === windowId);
+  const windowDisplayLabel =
+    windowId === 'custom' && customRange
+      ? t('window.customLabel', {
+          startDate: formatIsoDateForDisplay(customRange.startDate),
+          endDate: formatIsoDateForDisplay(customRange.endDate),
+        })
+      : (windowOptions(t).find((option) => option.value === windowId)?.label ?? t('window.90d'));
 
   return (
     <div className="flex flex-col gap-4">
@@ -242,12 +324,18 @@ export function CandidateListPage() {
             value={filter}
             onSelect={(value) => setFilter(value as FilterType)}
           />
-          <OptionMenu
-            label={windowOption?.label ?? t('window.90d')}
-            icon={<CalendarIcon className="size-4" aria-hidden="true" />}
-            options={windowOptions(t)}
+          <DateRangePicker
             value={windowId}
-            onSelect={(value) => setWindowId(value as WindowId)}
+            customRange={customRange}
+            label={windowDisplayLabel}
+            onSelectPreset={(preset) => {
+              setWindowId(preset);
+              setCustomRange(null);
+            }}
+            onApplyRange={(range) => {
+              setCustomRange(range);
+              setWindowId('custom');
+            }}
           />
           <div className="relative w-full sm:max-w-[320px]">
             <SearchIcon
@@ -262,20 +350,6 @@ export function CandidateListPage() {
             />
           </div>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="h-11 w-full sm:w-auto"
-          disabled={limit >= EXPANDED_LIMIT || candidatesQuery.isFetching}
-          onClick={() => setLimit(EXPANDED_LIMIT)}
-        >
-          <RefreshCwIcon
-            className={candidatesQuery.isFetching ? 'size-4 animate-spin' : 'size-4'}
-            aria-hidden="true"
-          />
-          {t('list.loadMore')}
-        </Button>
       </div>
 
       {selectedEmails.size > 0 && (
@@ -368,12 +442,30 @@ export function CandidateListPage() {
         />
       )}
 
+      {/* Infinite-scroll sentinel + footer status. The sentinel triggers the limit bump via
+          IntersectionObserver above; the footer shows a spinner while the background refetch
+          settles, then disappears once the dataset is exhausted (hasMoreToLoad = false). */}
+      {rawCandidates.length > 0 && (
+        <div
+          ref={loadMoreSentinelRef}
+          className="text-muted-foreground flex h-10 items-center justify-center text-xs"
+          data-testid="cleanup-load-more-sentinel"
+        >
+          {candidatesQuery.isFetching && limit > DEFAULT_LIMIT ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />
+              {t('list.loadingMore')}
+            </span>
+          ) : null}
+        </div>
+      )}
+
       <SenderStatsDialog
         senderEmail={statsCandidate?.senderEmail ?? null}
         senderName={statsCandidate?.senderName ?? null}
         senderDomain={statsCandidate?.senderDomain ?? null}
         unsubscribeMethod={statsCandidate?.unsubscribeMethod ?? null}
-        windowDays={windowId === '7d' ? 7 : windowId === '30d' ? 30 : 90}
+        dateRangeSpec={dateRangeSpec}
         onOpenChange={(open) => !open && setStatsCandidate(null)}
         onUnsubscribe={() => {
           if (!statsCandidate?.senderEmail) return;
@@ -491,11 +583,6 @@ function filterOptions(t: ReturnType<typeof useTranslations<'cleanup.unsubscribe
       separatorAfter: true,
     },
     {
-      label: t('filter.unsubscribed'),
-      value: 'unsubscribed',
-      icon: <MailXIcon className="size-4" />,
-    },
-    {
       label: t('filter.autoArchived'),
       value: 'autoArchived',
       icon: <ArchiveIcon className="size-4" />,
@@ -506,10 +593,193 @@ function filterOptions(t: ReturnType<typeof useTranslations<'cleanup.unsubscribe
 
 function windowOptions(t: ReturnType<typeof useTranslations<'cleanup.unsubscribe'>>) {
   return [
-    { label: t('window.7d'), value: '7d' },
-    { label: t('window.30d'), value: '30d' },
-    { label: t('window.90d'), value: '90d' },
+    { label: t('window.7d'), value: '7d' as const },
+    { label: t('window.30d'), value: '30d' as const },
+    { label: t('window.90d'), value: '90d' as const },
+    { label: t('window.custom'), value: 'custom' as const },
   ];
+}
+
+function formatIsoDateForDisplay(isoDate: string): string {
+  const parsed = new Date(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return isoDate;
+  return parsed.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function DateRangePicker({
+  value,
+  customRange,
+  label,
+  onSelectPreset,
+  onApplyRange,
+}: {
+  value: WindowId;
+  customRange: { startDate: string; endDate: string } | null;
+  label: string;
+  onSelectPreset: (preset: Exclude<WindowId, 'custom'>) => void;
+  onApplyRange: (range: { startDate: string; endDate: string }) => void;
+}) {
+  const t = useTranslations('cleanup.unsubscribe');
+  const [open, setOpen] = useState(false);
+  const [draftRange, setDraftRange] = useState<DateRange | undefined>(() =>
+    isoRangeToDateRange(customRange),
+  );
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const today = useMemo(() => new Date(), []);
+  const presets = windowOptions(t).filter((option) => option.value !== 'custom');
+
+  // Reset the popover form whenever it reopens so a stale draft from a previous open does not
+  // override the currently-applied range.
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (nextOpen) {
+      setDraftRange(isoRangeToDateRange(customRange));
+      setValidationError(null);
+    }
+  }
+
+  function handleApply() {
+    if (!draftRange?.from || !draftRange?.to) {
+      setValidationError(t('window.customMissing'));
+      return;
+    }
+    if (draftRange.from > draftRange.to) {
+      setValidationError(t('window.customInvalidOrder'));
+      return;
+    }
+    setValidationError(null);
+    onApplyRange({
+      startDate: dateToIsoDate(draftRange.from),
+      endDate: dateToIsoDate(draftRange.to),
+    });
+    setOpen(false);
+  }
+
+  // Default the visible months to the active range's start (or two months ago for first open),
+  // so users land near their last picked window instead of always today.
+  const defaultMonth = useMemo(() => {
+    if (draftRange?.from) return draftRange.from;
+    const previousMonth = new Date(today);
+    previousMonth.setMonth(previousMonth.getMonth() - 1);
+    return previousMonth;
+  }, [draftRange, today]);
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="h-11 w-full justify-between sm:w-auto sm:min-w-[220px]"
+          />
+        }
+      >
+        <span className="flex items-center gap-2 truncate">
+          <CalendarIcon className="size-4" aria-hidden="true" />
+          {label}
+        </span>
+        <ChevronDownIcon className="text-muted-foreground size-4" aria-hidden="true" />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-0" data-testid="cleanup-date-range-picker">
+        <div className="flex flex-col gap-0 sm:flex-row">
+          <div className="border-border sm:border-r">
+            <Calendar
+              mode="range"
+              numberOfMonths={2}
+              defaultMonth={defaultMonth}
+              selected={draftRange}
+              onSelect={(range) => {
+                setDraftRange(range);
+                setValidationError(null);
+              }}
+              disabled={{ after: today }}
+              // Hide outside days so the same calendar date never renders in two adjacent
+              // months. With outside days on, picking "June 1" lit up both the real cell in
+              // the June grid and the trailing outside cell in May's last row, producing the
+              // confusing double-selection and stray lavender highlights the user reported.
+              showOutsideDays={false}
+            />
+            {validationError && (
+              <p className="text-destructive border-border border-t px-3 py-2 text-xs" role="alert">
+                {validationError}
+              </p>
+            )}
+            <div className="border-border flex items-center justify-between gap-2 border-t px-3 py-2">
+              <p className="text-muted-foreground text-xs">
+                {draftRange?.from && draftRange?.to
+                  ? t('window.customLabel', {
+                      startDate: formatDayMonthYear(draftRange.from),
+                      endDate: formatDayMonthYear(draftRange.to),
+                    })
+                  : t('window.customMissing')}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!draftRange?.from || !draftRange?.to}
+                onClick={handleApply}
+              >
+                {t('window.customApply')}
+              </Button>
+            </div>
+          </div>
+          <ul className="bg-background flex w-full shrink-0 flex-col gap-0.5 p-2 sm:w-44">
+            {presets.map((preset) => {
+              const active = value === preset.value;
+              return (
+                <li key={preset.value}>
+                  <button
+                    type="button"
+                    className={cn(
+                      'hover:bg-accent hover:text-accent-foreground flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors',
+                      active && 'bg-accent text-accent-foreground font-medium',
+                    )}
+                    onClick={() => {
+                      onSelectPreset(preset.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <span>{preset.label}</span>
+                    {active && <CheckIcon className="size-4" aria-hidden="true" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function isoRangeToDateRange(
+  range: { startDate: string; endDate: string } | null,
+): DateRange | undefined {
+  if (!range) return undefined;
+  const from = new Date(`${range.startDate}T00:00:00`);
+  const to = new Date(`${range.endDate}T00:00:00`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return undefined;
+  return { from, to };
+}
+
+function dateToIsoDate(date: Date): string {
+  // Use the local-calendar date (year-month-day) rather than UTC, so a click on "March 6" in
+  // Vietnam time records 2026-03-06 instead of slipping to 2026-03-05 via toISOString() when
+  // local midnight is still the prior UTC day.
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDayMonthYear(date: Date): string {
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
 
 function matchesFilter(status: CandidateStatus | null, filter: FilterType): boolean {
@@ -518,8 +788,6 @@ function matchesFilter(status: CandidateStatus | null, filter: FilterType): bool
       return true;
     case 'unhandled':
       return status === null;
-    case 'unsubscribed':
-      return status === 'UNSUBSCRIBED';
     case 'autoArchived':
       return status === 'AUTO_ARCHIVED';
     case 'approved':

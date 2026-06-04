@@ -13,6 +13,7 @@ import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartBody;
+import com.google.api.services.gmail.model.Thread;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
@@ -36,6 +37,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -89,6 +91,8 @@ public class RecentInboxReadService {
             "id,threadId,labelIds,internalDate,snippet,payload/headers,payload/parts/filename,"
                     + "payload/parts/parts/filename";
     private static final String FULL_FIELDS = "id,threadId,labelIds,internalDate,snippet,payload";
+    private static final String THREAD_FULL_FIELDS =
+            "id,messages(id,threadId,labelIds,internalDate,snippet,payload)";
 
     private final GmailConnectionRepository gmailConnectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
@@ -381,10 +385,86 @@ public class RecentInboxReadService {
         }
     }
 
+    /**
+     * Fetch a whole Gmail conversation (every message in the thread, including the tenant's own
+     * SENT replies) and render each one, oldest-first — the conversation view the inbox reader
+     * shows so a user can see at a glance that they already replied. Bodies are rendered live and
+     * never persisted, mirroring {@link #fetchMessageDetail} (privacy: transient render only).
+     *
+     * @param gmailMessageId any message id belonging to the target thread (the reader passes the
+     *     selected message; Gmail's threads.get is keyed by threadId, which equals the messageId
+     *     for the first message and is otherwise resolvable, so we accept the threadId the FE
+     *     already holds).
+     */
+    @Transactional(readOnly = true)
+    public RecentInboxThreadDetail fetchThreadDetail(UUID tenantId, String gmailThreadId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        String threadId = requireThreadId(gmailThreadId);
+        try {
+            Gmail gmail = gmailForTenant(tenantId);
+            Thread thread =
+                    gmail.users()
+                            .threads()
+                            .get("me", threadId)
+                            .setFormat("full")
+                            .setFields(THREAD_FULL_FIELDS)
+                            .execute();
+            List<Message> threadMessages =
+                    thread.getMessages() == null ? List.of() : thread.getMessages();
+            if (threadMessages.isEmpty()) {
+                throw new RecentInboxUnavailableException(
+                        RecentInboxUnavailableReason.MESSAGE_NOT_FOUND);
+            }
+            // Fetch the label catalogue once and reuse it for every message in the thread instead
+            // of one Gmail labels.list per rendered message.
+            Map<String, String> labelNamesById = fetchLabelNamesById(gmail);
+            List<Message> orderedOldestFirst =
+                    threadMessages.stream()
+                            .sorted(
+                                    Comparator.comparingLong(
+                                            RecentInboxReadService::internalDateOf))
+                            .toList();
+            ArrayList<RecentInboxMessageDetail> renderedMessages =
+                    new ArrayList<>(orderedOldestFirst.size());
+            String threadSubject = null;
+            for (Message threadMessage : orderedOldestFirst) {
+                RecentInboxMessageDetail renderedMessage =
+                        renderMessageDetail(gmail, threadMessage, labelNamesById);
+                if (threadSubject == null && renderedMessage.message().subject() != null) {
+                    threadSubject = renderedMessage.message().subject();
+                }
+                renderedMessages.add(renderedMessage);
+            }
+            return new RecentInboxThreadDetail(
+                    threadId,
+                    threadSubject == null ? "" : threadSubject,
+                    List.copyOf(renderedMessages));
+        } catch (InvalidGrantException invalidGrantException) {
+            throw new RecentInboxUnavailableException(
+                    RecentInboxUnavailableReason.REVOKED, invalidGrantException);
+        } catch (GoogleJsonResponseException googleResponseException) {
+            throw new RecentInboxUnavailableException(
+                    mapGoogleResponse(googleResponseException), googleResponseException);
+        } catch (IOException ioException) {
+            throw new RecentInboxUnavailableException(
+                    RecentInboxUnavailableReason.GMAIL_UNAVAILABLE, ioException);
+        }
+    }
+
+    private static long internalDateOf(Message gmailMessage) {
+        return gmailMessage.getInternalDate() == null ? 0L : gmailMessage.getInternalDate();
+    }
+
     private RecentInboxMessageDetail renderMessageDetail(Gmail gmail, Message gmailMessage)
             throws IOException {
+        return renderMessageDetail(gmail, gmailMessage, fetchLabelNamesById(gmail));
+    }
+
+    private RecentInboxMessageDetail renderMessageDetail(
+            Gmail gmail, Message gmailMessage, Map<String, String> labelNamesById)
+            throws IOException {
         String messageId = gmailMessage.getId();
-        RecentInboxMessage message = toRecentInboxMessage(gmailMessage, fetchLabelNamesById(gmail));
+        RecentInboxMessage message = toRecentInboxMessage(gmailMessage, labelNamesById);
         MessagePart payload = gmailMessage.getPayload();
         String renderedText =
                 cap(decodedMimeBody(payload, "text/plain", true), RENDERED_TEXT_MAX_LENGTH);
@@ -464,6 +544,13 @@ public class RecentInboxReadService {
             throw new IllegalArgumentException("gmailMessageId must not be blank");
         }
         return gmailMessageId.trim();
+    }
+
+    private static String requireThreadId(String gmailThreadId) {
+        if (gmailThreadId == null || gmailThreadId.isBlank()) {
+            throw new IllegalArgumentException("gmailThreadId must not be blank");
+        }
+        return gmailThreadId.trim();
     }
 
     private static List<RecentInboxMessage> fetchMessageMetadata(
@@ -900,6 +987,18 @@ public class RecentInboxReadService {
 
     public record RecentInboxMessageDetail(
             RecentInboxMessage message, String renderedText, String renderedHtml) {}
+
+    /**
+     * A full conversation: every message in a Gmail thread (received + the tenant's own sent
+     * replies), rendered oldest-first for the inbox conversation reader.
+     */
+    public record RecentInboxThreadDetail(
+            String gmailThreadId, String subject, List<RecentInboxMessageDetail> messages) {
+
+        public RecentInboxThreadDetail {
+            messages = List.copyOf(messages);
+        }
+    }
 
     public enum RecentInboxUnavailableReason {
         NOT_CONNECTED,

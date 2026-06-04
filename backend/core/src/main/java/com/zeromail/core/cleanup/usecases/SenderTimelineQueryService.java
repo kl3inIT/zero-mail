@@ -74,18 +74,37 @@ public class SenderTimelineQueryService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public List<SenderTimelineEntry> findTimeline(
             UUID tenantId, String senderEmail, Duration window) {
-        Objects.requireNonNull(tenantId, "tenantId must not be null");
-        Objects.requireNonNull(senderEmail, "senderEmail must not be null");
         Objects.requireNonNull(window, "window must not be null");
         if (window.isNegative() || window.isZero()) {
             throw new IllegalArgumentException("window must be a positive Duration, was " + window);
+        }
+        Instant now = clock.instant();
+        return findTimeline(tenantId, senderEmail, now.minus(window), now);
+    }
+
+    /**
+     * Range overload — chart aggregates {@code mail_message_observed} rows whose {@code
+     * observed_at} falls in {@code [fromInclusive, toExclusive)}. Used when the user picks a custom
+     * start / end date from the calendar picker instead of a 7d/30d/90d preset, so the chart can
+     * span any arbitrary historical window the user is curious about.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public List<SenderTimelineEntry> findTimeline(
+            UUID tenantId, String senderEmail, Instant fromInclusive, Instant toExclusive) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(senderEmail, "senderEmail must not be null");
+        Objects.requireNonNull(fromInclusive, "fromInclusive must not be null");
+        Objects.requireNonNull(toExclusive, "toExclusive must not be null");
+        if (!fromInclusive.isBefore(toExclusive)) {
+            throw new IllegalArgumentException("fromInclusive must be strictly before toExclusive");
         }
         String normalizedSenderEmail = senderEmail.trim().toLowerCase(Locale.ROOT);
         if (normalizedSenderEmail.isEmpty()) {
             throw new IllegalArgumentException("senderEmail must not be blank");
         }
-        Instant now = clock.instant();
-        Instant windowStart = now.minus(window);
+        Duration window = Duration.between(fromInclusive, toExclusive);
+        Instant windowStart = fromInclusive;
+        Instant now = toExclusive;
 
         List<SenderTimelineEntry> entries =
                 jdbcTemplate.query(

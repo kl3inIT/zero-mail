@@ -308,6 +308,24 @@ async function installInboxApiMock(
       return;
     }
 
+    const threadMatch = url.pathname.match(/^\/api\/gmail\/inbox\/threads\/([^/]+)$/);
+    if (threadMatch && request.method() === 'GET') {
+      const gmailThreadId = decodeURIComponent(threadMatch[1]!);
+      const threadMessages = INBOX_FIXTURES.filter(
+        (fixture) => fixture.gmailThreadId === gmailThreadId,
+      );
+      await fulfillJson(route, {
+        gmailThreadId,
+        subject: threadMessages[0]?.subject ?? '',
+        messages: threadMessages.map((message) => ({
+          message: toMessageResponse(message, readMessageIds),
+          renderedText: message.renderedText,
+          renderedHtml: message.renderedHtml,
+        })),
+      });
+      return;
+    }
+
     const detailMatch = url.pathname.match(/^\/api\/gmail\/inbox\/([^/]+)$/);
     if (detailMatch && request.method() === 'GET') {
       const gmailMessageId = decodeURIComponent(detailMatch[1]!);
