@@ -49,12 +49,17 @@ public class UnsubscribeCandidateController {
             @RequestParam(value = "startDate", required = false) String rawStartDate,
             @RequestParam(value = "endDate", required = false) String rawEndDate,
             @RequestParam(value = "limit", required = false, defaultValue = "50") int limit) {
-        UUID tenantId = TenantContext.currentTenantUuid();
         int effectiveLimit =
                 Math.min(Math.max(limit, 1), UnsubscribeCampaignPolicy.MAX_CANDIDATE_SENDERS);
-        boolean hasRange = rawStartDate != null && rawEndDate != null;
+        boolean hasStartDate = rawStartDate != null;
+        boolean hasEndDate = rawEndDate != null;
+        if (hasStartDate != hasEndDate) {
+            throw new IllegalArgumentException("startDate and endDate must be supplied together");
+        }
+        boolean hasRange = hasStartDate;
         List<UnsubscribeCandidateProjection> projections;
         String logWindow;
+        UUID tenantId = TenantContext.currentTenantUuid();
         if (hasRange) {
             Instant fromInclusive = parseStartOfUtcDay(rawStartDate);
             Instant toExclusive = parseEndOfUtcDay(rawEndDate);

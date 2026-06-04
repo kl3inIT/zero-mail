@@ -1,4 +1,4 @@
-package com.zeromail.core.inbox.usecases;
+package com.zeromail.core.gmail.usecases;
 
 import com.google.api.client.googleapis.batch.BatchRequest;
 import com.google.api.client.googleapis.batch.json.JsonBatchCallback;
@@ -14,6 +14,8 @@ import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
+import com.zeromail.core.inbox.usecases.InboxProjectionUpsertCommand;
+import com.zeromail.core.inbox.usecases.InboxProjectionWriteService;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;

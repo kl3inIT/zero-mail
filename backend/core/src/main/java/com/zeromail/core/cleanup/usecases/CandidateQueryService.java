@@ -72,6 +72,10 @@ public class CandidateQueryService {
                       AND mmo.observed_at >= ?
                       AND mmo.observed_at < ?
                       AND mmo.sender_email IS NOT NULL
+                      AND (
+                          mmo.list_unsubscribe_url IS NOT NULL
+                          OR mmo.list_unsubscribe_mailto IS NOT NULL
+                      )
                       AND NOT EXISTS (
                           SELECT 1 FROM sender_suppression ss
                           WHERE ss.tenant_id = mmo.tenant_id

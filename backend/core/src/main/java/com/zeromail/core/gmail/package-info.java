@@ -3,6 +3,9 @@
         allowedDependencies = {
             "tenant",
             "config",
+            "inbox :: domain",
+            "inbox :: persistence",
+            "inbox :: usecases",
             "shared :: crypto",
             "shared :: html",
             "shared :: privacy",

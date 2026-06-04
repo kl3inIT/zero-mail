@@ -719,8 +719,8 @@
         "labelFutureOk": "Future-mail label rule created.",
         "mailAffected": "{count} mail processed.",
         "markUnsubscribedOk": "Marked as unsubscribed.",
-        "submitDescription": "Unsubscribe requested for {count} senders. Results will update in the list shortly.",
-        "submitOk": "Unsubscribe requested",
+        "submitDescription": "Zero Mail is processing {count} senders in the background.",
+        "submitOk": "Unsubscribe started",
         "submitting": "Submitting unsubscribe…",
         "submittingDescription": "Sending the request for {count} senders…",
         "unapproveOk": "Approval removed."
@@ -735,7 +735,7 @@
       },
       "filter": {
         "all": "All senders",
-        "approved": "Kept",
+        "approved": "Approved",
         "autoArchived": "Auto archived",
         "unhandled": "Unhandled"
       },
@@ -746,7 +746,7 @@
       },
       "list": {
         "action": {
-          "approve": "Keep",
+          "approve": "Approve",
           "archive": "Archive",
           "archiveAll": "Archive all mail from this sender",
           "autoArchive": "Auto-archive",
@@ -755,7 +755,7 @@
           "deleteAll": "Delete all mail from this sender",
           "labelFuture": "Label future mail",
           "menu": "More options",
-          "unapprove": "Stop keeping",
+          "unapprove": "Unapprove",
           "unblock": "Unblock",
           "unsubscribe": "Unsubscribe",
           "unsubscribeBlock": "Unsubscribe / Block",
@@ -775,8 +775,8 @@
           "title": "No senders yet"
         },
         "error": "Could not load the sender list. Please try again shortly.",
-        "loadMore": "Load more",
         "loadingMore": "Loading more…",
+        "loadMore": "Load more",
         "retry": "Retry",
         "searchPlaceholder": "Search sender or domain",
         "selectAll": "Select all visible senders",
@@ -788,7 +788,7 @@
         "oneClick": "Safe unsubscribe"
       },
       "stats": {
-        "chartEmpty": "No data in the last {days} days.",
+        "chartEmpty": "No data in the last 30 days.",
         "chartError": "Could not load the chart. Please try again shortly.",
         "chartHide": "Hide chart",
         "chartLoading": "Loading chart…",
@@ -809,7 +809,7 @@
         "titleWith": "Stats for {sender}"
       },
       "statusLabel": {
-        "approved": "Kept",
+        "approved": "Approved",
         "autoArchived": "Auto archived",
         "unhandled": "Unhandled",
         "unsubscribed": "Unsubscribed"
@@ -819,12 +819,12 @@
         "7d": "Last 7 days",
         "90d": "Last 3 months",
         "custom": "Custom",
-        "customLabel": "{startDate} – {endDate}",
         "customApply": "Apply",
-        "customStart": "From",
         "customEnd": "To",
         "customInvalidOrder": "Start date must be on or before end date",
+        "customLabel": "{startDate} – {endDate}",
         "customMissing": "Pick both a start and an end date",
+        "customStart": "From",
         "customTitle": "Pick a date range"
       }
     }
@@ -1289,6 +1289,13 @@
       "body": "Check your Gmail connection and try again.",
       "title": "Couldn't load inbox"
     },
+    "labelFilter": {
+      "all": "All labels",
+      "clear": "Clear all",
+      "count": "{count} labels",
+      "empty": "No labels yet",
+      "trigger": "Filter by label"
+    },
     "limit": {
       "caption": "{max} messages"
     },
@@ -1304,13 +1311,6 @@
       "clear": "Clear search",
       "empty": "No loaded messages match this search.",
       "placeholder": "Search sender, subject, label"
-    },
-    "labelFilter": {
-      "all": "All labels",
-      "clear": "Clear all",
-      "count": "{count} labels",
-      "empty": "No labels yet",
-      "trigger": "Filter by label"
     },
     "state": {
       "empty": {

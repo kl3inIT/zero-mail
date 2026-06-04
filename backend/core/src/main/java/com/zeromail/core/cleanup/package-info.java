@@ -13,6 +13,9 @@
         displayName = "Cleanup",
         allowedDependencies = {
             "gmail",
+            "gmail :: domain",
+            "gmail :: gateway",
+            "gmail :: persistence",
             "gmail :: usecases",
             "triage",
             "triage :: usecases",

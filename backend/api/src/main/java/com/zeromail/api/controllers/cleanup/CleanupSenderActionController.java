@@ -34,6 +34,7 @@ public class CleanupSenderActionController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public CleanupSenderActionResponse action(
             @Valid @RequestBody CleanupSenderActionRequest request) {
+        validateRequest(request);
         UUID tenantId = TenantContext.currentTenantUuid();
         BulkSenderActionResult result =
                 switch (request.action()) {
@@ -63,5 +64,12 @@ public class CleanupSenderActionController {
                 request.action(),
                 result.senderCount());
         return CleanupSenderActionResponse.from(result);
+    }
+
+    static void validateRequest(CleanupSenderActionRequest request) {
+        if (request.action() == CleanupSenderActionRequest.Action.LABEL_FUTURE
+                && (request.labelName() == null || request.labelName().isBlank())) {
+            throw new IllegalArgumentException("labelName is required for LABEL_FUTURE");
+        }
     }
 }

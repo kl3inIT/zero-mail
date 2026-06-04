@@ -19,6 +19,7 @@ vi.mock('next/headers', () => ({
 vi.mock('next-intl/server', () => ({
   getLocale: vi.fn(async () => 'en'),
   getMessages: vi.fn(async () => ({})),
+  getTranslations: vi.fn(async () => (key: string) => key),
 }));
 
 import RootLayout from '@/app/layout';

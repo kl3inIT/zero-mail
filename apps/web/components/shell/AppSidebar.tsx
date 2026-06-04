@@ -88,7 +88,7 @@ const AUTOMATION_NAV: NavItem[] = [
 ];
 
 const TOOLS_NAV: NavItem[] = [
-  { href: '/cleanup/bulk-unsubscribe', labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
+  { href: '/cleanup/bulk-unsubscribe' as Route, labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
 ];
 

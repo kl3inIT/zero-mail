@@ -18,6 +18,7 @@
             "draft",
             "thread",
             "thread :: usecases",
+            "inbox :: usecases",
             "outbound",
             "outbound :: api",
             "billing",

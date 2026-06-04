@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
  *
  * Inline content only — NOT lucide-react / next/link (STATE.md line 149: the
  * vitest React-dedupe boundary won't survive those imports). The big "404"
- * glyph is decorative (aria-hidden); the heading carries the accessible name.rob
+ * glyph is decorative (aria-hidden); the heading carries the accessible name.
  */
 export default async function NotFound() {
   const t = await getTranslations('errors.notFound');

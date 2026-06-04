@@ -67,6 +67,15 @@ public abstract class ApiPostgresTestBase {
                 "zero-mail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         dynamicPropertyRegistry.add(
+                "zero-mail.crypto.inbox-projection-key-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        dynamicPropertyRegistry.add(
+                "zero-mail.crypto.inbox-projection-sender-hash-key-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        dynamicPropertyRegistry.add(
+                "zero-mail.admin.audit.hmac-kek-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        dynamicPropertyRegistry.add(
                 "zero-mail.api.gmail.pubsub.push-audience-url",
                 () -> "https://test.example/internal/pubsub/gmail");
         dynamicPropertyRegistry.add(

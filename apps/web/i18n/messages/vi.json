@@ -719,8 +719,8 @@
         "labelFutureOk": "Đã tạo quy tắc gắn nhãn cho email tương lai.",
         "mailAffected": "{count} email đã được xử lý.",
         "markUnsubscribedOk": "Đã đánh dấu đã hủy đăng ký.",
-        "submitDescription": "Đã yêu cầu hủy đăng ký {count} người gửi. Kết quả sẽ tự cập nhật trong danh sách.",
-        "submitOk": "Đã yêu cầu hủy đăng ký",
+        "submitDescription": "Zero Mail đang xử lý {count} người gửi trong nền.",
+        "submitOk": "Đang hủy đăng ký",
         "submitting": "Đang hủy đăng ký…",
         "submittingDescription": "Đang gửi yêu cầu cho {count} người gửi…",
         "unapproveOk": "Đã bỏ phê duyệt."
@@ -735,7 +735,7 @@
       },
       "filter": {
         "all": "Tất cả người gửi",
-        "approved": "Đã giữ lại",
+        "approved": "Đã phê duyệt",
         "autoArchived": "Tự động lưu trữ",
         "unhandled": "Chưa xử lý"
       },
@@ -746,7 +746,7 @@
       },
       "list": {
         "action": {
-          "approve": "Giữ lại",
+          "approve": "Phê duyệt",
           "archive": "Lưu trữ",
           "archiveAll": "Lưu trữ toàn bộ email từ người này",
           "autoArchive": "Tự động lưu trữ",
@@ -755,7 +755,7 @@
           "deleteAll": "Xóa toàn bộ email từ người này",
           "labelFuture": "Gắn nhãn cho email tương lai",
           "menu": "Tùy chọn thêm",
-          "unapprove": "Bỏ giữ lại",
+          "unapprove": "Bỏ phê duyệt",
           "unblock": "Bỏ chặn",
           "unsubscribe": "Hủy đăng ký",
           "unsubscribeBlock": "Hủy đăng ký / Chặn",
@@ -775,8 +775,8 @@
           "title": "Chưa tìm thấy người gửi nào"
         },
         "error": "Không tải được danh sách người gửi. Hãy thử lại sau một chút.",
-        "loadMore": "Tải thêm",
         "loadingMore": "Đang tải thêm…",
+        "loadMore": "Tải thêm",
         "retry": "Thử lại",
         "searchPlaceholder": "Tìm người gửi hoặc tên miền",
         "selectAll": "Chọn tất cả người gửi đang hiển thị",
@@ -788,7 +788,7 @@
         "oneClick": "Hủy nhận an toàn"
       },
       "stats": {
-        "chartEmpty": "Chưa có dữ liệu trong {days} ngày qua.",
+        "chartEmpty": "Chưa có dữ liệu trong 30 ngày qua.",
         "chartError": "Không tải được biểu đồ. Hãy thử lại sau một chút.",
         "chartHide": "Ẩn biểu đồ",
         "chartLoading": "Đang tải biểu đồ…",
@@ -809,7 +809,7 @@
         "titleWith": "Thống kê cho {sender}"
       },
       "statusLabel": {
-        "approved": "Đã giữ lại",
+        "approved": "Đã phê duyệt",
         "autoArchived": "Tự động lưu trữ",
         "unhandled": "Chưa xử lý",
         "unsubscribed": "Đã hủy đăng ký"
@@ -819,12 +819,12 @@
         "7d": "7 ngày qua",
         "90d": "3 tháng qua",
         "custom": "Tuỳ chỉnh",
-        "customLabel": "{startDate} – {endDate}",
         "customApply": "Áp dụng",
-        "customStart": "Từ ngày",
         "customEnd": "Đến ngày",
         "customInvalidOrder": "Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc",
+        "customLabel": "{startDate} – {endDate}",
         "customMissing": "Hãy chọn cả ngày bắt đầu và ngày kết thúc",
+        "customStart": "Từ ngày",
         "customTitle": "Chọn khoảng thời gian"
       }
     }
@@ -1289,6 +1289,13 @@
       "body": "Kiểm tra kết nối Gmail rồi thử lại.",
       "title": "Không tải được inbox"
     },
+    "labelFilter": {
+      "all": "Tất cả nhãn",
+      "clear": "Bỏ chọn tất cả",
+      "count": "{count} nhãn",
+      "empty": "Chưa có nhãn nào",
+      "trigger": "Lọc theo nhãn"
+    },
     "limit": {
       "caption": "{max} email"
     },
@@ -1304,13 +1311,6 @@
       "clear": "Xóa tìm kiếm",
       "empty": "Không có email đã tải nào khớp tìm kiếm.",
       "placeholder": "Tìm người gửi, tiêu đề, nhãn"
-    },
-    "labelFilter": {
-      "all": "Tất cả nhãn",
-      "clear": "Bỏ chọn tất cả",
-      "count": "{count} nhãn",
-      "empty": "Chưa có nhãn nào",
-      "trigger": "Lọc theo nhãn"
     },
     "state": {
       "empty": {
