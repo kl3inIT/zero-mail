@@ -4,35 +4,30 @@ import {
   type PreviewCardAction,
   textValue,
 } from '@/features/chat/components/preview-card/preview-card-state';
-
-function readableJson(value: unknown): string {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
-  return JSON.stringify(value, null, 2);
-}
+import { ActionBadges } from '@/features/chat/components/tool-results/action-badges';
 
 export function CreateRuleBody({ action }: { action: PreviewCardAction }) {
   const t = useTranslations('chat.preview');
+  const sourceText = textValue(action.input.sourceText);
+  const name = textValue(action.input.displayName) || sourceText;
 
   return (
     <div className="grid gap-3 text-sm">
       <div>
         <p className="text-muted-foreground text-xs font-medium uppercase">{t('ruleName')}</p>
-        <p className="font-semibold">
-          {textValue(action.input.displayName) || textValue(action.input.sourceText)}
-        </p>
+        <p className="font-semibold">{name}</p>
       </div>
-      <div>
-        <p className="text-muted-foreground text-xs font-medium uppercase">{t('when')}</p>
-        <pre className="bg-muted mt-1 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
-          {readableJson(action.input.matcherAst ?? action.input.when ?? action.input.sourceText)}
-        </pre>
-      </div>
+      {sourceText && sourceText !== name && (
+        <div>
+          <p className="text-muted-foreground text-xs font-medium uppercase">{t('when')}</p>
+          <p className="mt-1">{sourceText}</p>
+        </div>
+      )}
       <div>
         <p className="text-muted-foreground text-xs font-medium uppercase">{t('then')}</p>
-        <pre className="bg-muted mt-1 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
-          {readableJson(action.input.actionIntents ?? action.input.then)}
-        </pre>
+        <div className="mt-1">
+          <ActionBadges actionIntents={action.input.actionIntents} />
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
-import { EmailRowsList } from './email-rows-list';
 import { asArray, asString, getField, type EmailRowData } from './helpers';
+import { InlineEmailCardList } from './inline-email-card';
 import { SubtleToolCollapsible } from './subtle-tool-collapsible';
-import { ToolDetailRow } from './tool-detail-row';
 
 export function SearchInboxResult({ input, output }: { input: unknown; output: unknown }) {
   const query = asString(getField(input, 'query'));
@@ -12,12 +11,11 @@ export function SearchInboxResult({ input, output }: { input: unknown; output: u
       defaultOpen={messages.length > 0}
     >
       {query && (
-        <ToolDetailRow
-          label="Truy vấn"
-          value={<span className="font-mono text-xs">{query}</span>}
-        />
+        <p className="text-muted-foreground text-xs">
+          Truy vấn: <span className="font-mono">{query}</span>
+        </p>
       )}
-      <EmailRowsList emails={messages} />
+      <InlineEmailCardList emails={messages} />
     </SubtleToolCollapsible>
   );
 }

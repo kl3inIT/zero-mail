@@ -9,10 +9,15 @@ import { cn } from '@/lib/utils';
 export function SubtleToolCollapsible({
   title,
   defaultOpen = false,
+  bordered = false,
   children,
 }: {
   title: React.ReactNode;
   defaultOpen?: boolean;
+  // Tool results render flat by default (content sits directly under the title)
+  // so we never nest a redundant outer frame around self-bordered cards or body
+  // boxes. Opt into a grouping frame with bordered only when it genuinely helps.
+  bordered?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -25,7 +30,14 @@ export function SubtleToolCollapsible({
         <span>{title}</span>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="border-border mt-2 space-y-3 rounded-md border p-3">{children}</div>
+        <div
+          className={cn(
+            'mt-2 space-y-2',
+            bordered && 'border-border space-y-3 rounded-md border p-3',
+          )}
+        >
+          {children}
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );

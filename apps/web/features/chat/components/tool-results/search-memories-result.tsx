@@ -1,7 +1,9 @@
+import { ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+
 import { EmptyHint } from './empty-hint';
 import { asArray, asString, formatRelativeDate, getField } from './helpers';
 import { SubtleToolCollapsible } from './subtle-tool-collapsible';
-import { ToolDetailRow } from './tool-detail-row';
 
 export function SearchMemoriesResult({ input, output }: { input: unknown; output: unknown }) {
   const query = asString(getField(input, 'query'));
@@ -14,10 +16,9 @@ export function SearchMemoriesResult({ input, output }: { input: unknown; output
       defaultOpen={memories.length > 0}
     >
       {query && (
-        <ToolDetailRow
-          label="Truy vấn"
-          value={<span className="font-mono text-xs">{query}</span>}
-        />
+        <p className="text-muted-foreground text-xs">
+          Truy vấn: <span className="font-mono">{query}</span>
+        </p>
       )}
       {memories.length === 0 ? (
         <EmptyHint>Không tìm thấy kiến thức nào khớp.</EmptyHint>
@@ -35,6 +36,12 @@ export function SearchMemoriesResult({ input, output }: { input: unknown; output
           ))}
         </ul>
       )}
+      <Link
+        href="/ai"
+        className="text-primary inline-flex items-center gap-1 text-xs hover:underline"
+      >
+        <ExternalLink className="size-3" /> Mở Kho kiến thức
+      </Link>
     </SubtleToolCollapsible>
   );
 }
