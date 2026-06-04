@@ -274,15 +274,17 @@ export function RulesWorkspace() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = normalizeRulesTab(searchParams.get('tab'));
-  // Base UI Tabs runs UNCONTROLLED (defaultValue): a click flips aria-selected immediately from
-  // base-ui's own state, with no dependency on the async router (a controlled value driven by
-  // router.replace left the clicked trigger reporting aria-selected="false" and flaked the
-  // rules-history e2e). defaultValue must stay stable across renders, so capture the initial tab
-  // once; the live URL-derived activeTab still drives the count-chip styling and the URL sync.
-  const [initialTab] = useState(activeTab);
+  // The tab bar is a plain role="tablist" of buttons whose aria-selected is bound directly to this
+  // React state, so a click flips selection synchronously with no dependency on the async router
+  // (Base UI Tabs, whether controlled or uncontrolled, intermittently kept the clicked trigger
+  // aria-selected="false" in the prod build at mobile widths and failed the rules-history e2e).
+  // router.replace just mirrors the choice into the URL for deep-linking.
+  const [activeTab, setActiveTabState] = useState<RulesTab>(() =>
+    normalizeRulesTab(searchParams.get('tab')),
+  );
 
   const setActiveTab = (nextTab: RulesTab) => {
+    setActiveTabState(nextTab);
     router.replace(`/rules?tab=${nextTab}`, { scroll: false });
   };
 
@@ -472,33 +474,15 @@ export function RulesWorkspace() {
         <p className="text-muted-foreground text-sm">{t('rules.page.intro')}</p>
       </header>
 
-      <Tabs
-        defaultValue={initialTab}
-        onValueChange={(value) => setActiveTab(normalizeRulesTab(value))}
-      >
-        <div className="overflow-x-auto">
-          <TabsList className="h-9 min-w-max gap-0.5" aria-label={t('rules.tabs.label')}>
-            <TabsTrigger value="list" className="gap-2 px-3">
-              <span>{t('rules.tabs.list')}</span>
-              <span
-                className={cn(
-                  'bg-foreground/10 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
-                  activeTab === 'list' ? 'text-foreground' : 'text-muted-foreground',
-                )}
-              >
-                {rules.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="test" className="px-3">
-              {t('rules.tabs.test')}
-            </TabsTrigger>
-            <TabsTrigger value="history" className="px-3">
-              {t('rules.tabs.history')}
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      <RulesTabBar activeTab={activeTab} ruleCount={rules.length} onTabChange={setActiveTab} />
 
-        <TabsContent value="list" className="space-y-6">
+      {activeTab === 'list' && (
+        <section
+          id="rules-tabpanel-list"
+          role="tabpanel"
+          aria-labelledby="rules-tab-list"
+          className="space-y-6"
+        >
           <RuleList
             rules={rules}
             selectedRuleId={state.selectedRuleId}
@@ -520,9 +504,16 @@ export function RulesWorkspace() {
               </Button>
             }
           />
-        </TabsContent>
+        </section>
+      )}
 
-        <TabsContent value="test" className="space-y-6">
+      {activeTab === 'test' && (
+        <section
+          id="rules-tabpanel-test"
+          role="tabpanel"
+          aria-labelledby="rules-tab-test"
+          className="space-y-6"
+        >
           <p className="text-muted-foreground text-sm">
             {t('rules.tabs.testIntro', { count: enabledRulesCount })}
           </p>
@@ -551,13 +542,20 @@ export function RulesWorkspace() {
               <GmailRuleTester enabledRulesCount={enabledRulesCount} />
             </TabsContent>
           </Tabs>
-        </TabsContent>
+        </section>
+      )}
 
-        <TabsContent value="history" className="space-y-4">
+      {activeTab === 'history' && (
+        <section
+          id="rules-tabpanel-history"
+          role="tabpanel"
+          aria-labelledby="rules-tab-history"
+          className="space-y-4"
+        >
           <p className="text-muted-foreground text-sm">{t('rules.tabs.historyIntro')}</p>
           <AuditLog />
-        </TabsContent>
-      </Tabs>
+        </section>
+      )}
 
       {/* Composer dialog — for creating and editing rules */}
       <Dialog
@@ -608,6 +606,69 @@ export function RulesWorkspace() {
 
 const RULES_TABS = ['list', 'test', 'history'] as const;
 type RulesTab = (typeof RULES_TABS)[number];
+
+// Plain role="tablist" of buttons styled to match the Needs-reply tab bar (segmented pill, active
+// = elevated card, count chip). aria-selected is bound straight to React state so a click flips it
+// synchronously — Base UI Tabs intermittently failed that assertion in the prod build at mobile.
+function RulesTabBar({
+  activeTab,
+  ruleCount,
+  onTabChange,
+}: {
+  activeTab: RulesTab;
+  ruleCount: number;
+  onTabChange: (tab: RulesTab) => void;
+}) {
+  const t = useTranslations();
+  const tabs: { id: RulesTab; label: string; count?: number }[] = [
+    { id: 'list', label: t('rules.tabs.list'), count: ruleCount },
+    { id: 'test', label: t('rules.tabs.test') },
+    { id: 'history', label: t('rules.tabs.history') },
+  ];
+
+  return (
+    <div className="overflow-x-auto">
+      <div
+        role="tablist"
+        aria-label={t('rules.tabs.label')}
+        className="bg-muted text-muted-foreground inline-flex h-9 w-max items-center gap-0.5 rounded-lg p-[3px]"
+      >
+        {tabs.map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-controls={`rules-tabpanel-${tab.id}`}
+              id={`rules-tab-${tab.id}`}
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                'focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-full items-center justify-center gap-2 rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1',
+                active
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-foreground/60 hover:text-foreground',
+              )}
+            >
+              <span>{tab.label}</span>
+              {typeof tab.count === 'number' && (
+                <span
+                  className={cn(
+                    'bg-foreground/10 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
+                    active ? 'text-foreground' : 'text-muted-foreground',
+                  )}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function normalizeRulesTab(value: string | null): RulesTab {
   return RULES_TABS.includes(value as RulesTab) ? (value as RulesTab) : 'list';
