@@ -98,7 +98,7 @@ jobs:
           script: |
             set -euo pipefail
             cd /apps/zero-mail
-            git fetch --quiet origin "refs/tags/${DEPLOY_TAG}":"refs/tags/${DEPLOY_TAG}"
+            git fetch --quiet --force origin "refs/tags/${DEPLOY_TAG}":"refs/tags/${DEPLOY_TAG}"
             git checkout --quiet "${DEPLOY_TAG}" -- docker-compose.yml
             echo "::group::Snapshot previous image digests for rollback"
             docker inspect --format='zeromail-api {{index .Image}}' zeromail-api 2>/dev/null | tee /apps/zero-mail/.last-deploy.txt || true
