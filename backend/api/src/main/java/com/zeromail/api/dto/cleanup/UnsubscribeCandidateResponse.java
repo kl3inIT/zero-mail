@@ -7,15 +7,15 @@ import java.time.Instant;
 /**
  * One candidate sender surfaced by {@code GET /api/unsubscribe/candidates} (UNS-01).
  *
- * <p>{@code senderName} is the best-effort display name extracted from the From header (e.g.
- * "John Doe" from {@code "John Doe" <john@x>}). Frontend falls back to a local-part formatter
- * when this is {@code null}.
+ * <p>{@code senderName} is the best-effort display name extracted from the From header (e.g. "John
+ * Doe" from {@code "John Doe" <john@x>}). Frontend falls back to a local-part formatter when this
+ * is {@code null}.
  *
- * <p>{@code unsubscribeMethod} is the {@link com.zeromail.core.cleanup.domain.UnsubscribeMethod}
- * id string ({@code ONE_CLICK} / {@code MAILTO} / {@code NONE}). {@code suppressed} is always
- * {@code false} for the candidate list — the SQL anti-join in {@code CandidateQueryService}
- * already excludes suppressed senders; the field is kept on the wire for forward-compat with a
- * future admin-side view that surfaces suppressed senders.
+ * <p>{@code unsubscribeMethod} is the {@link com.zeromail.core.cleanup.domain.UnsubscribeMethod} id
+ * string ({@code ONE_CLICK} / {@code MAILTO} / {@code NONE}). {@code suppressed} is always {@code
+ * false} for the candidate list — the SQL anti-join in {@code CandidateQueryService} already
+ * excludes suppressed senders; the field is kept on the wire for forward-compat with a future
+ * admin-side view that surfaces suppressed senders.
  */
 public record UnsubscribeCandidateResponse(
         String senderEmail,

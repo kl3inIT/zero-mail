@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
  * Wire-shape contract for {@code POST /api/unsubscribe/campaigns/execute}.
  *
  * <p>The Inbox Zero-style UI dropped the preview dialog, the campaign status polling page, the
- * retry button, and the undo banner — and so did the HTTP surface. The remaining controller path
- * is the execute endpoint; its cap-violation behavior is asserted at the service level by {@link
+ * retry button, and the undo banner — and so did the HTTP surface. The remaining controller path is
+ * the execute endpoint; its cap-violation behavior is asserted at the service level by {@link
  * com.zeromail.core.cleanup.usecases.CampaignPreviewService} (still used internally as defense-in-
  * depth by {@link com.zeromail.core.cleanup.usecases.CampaignExecuteService}).
  */

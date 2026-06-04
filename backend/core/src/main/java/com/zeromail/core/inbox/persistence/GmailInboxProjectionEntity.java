@@ -45,13 +45,13 @@ public class GmailInboxProjectionEntity {
     private byte[] senderEmailCiphertext;
 
     @Column(name = "sender_display_name_ciphertext")
-    private byte[]senderDisplayNameCiphertext;
+    private byte[] senderDisplayNameCiphertext;
 
     @Column(name = "subject_ciphertext")
-    private byte[]subjectCiphertext;
+    private byte[] subjectCiphertext;
 
     @Column(name = "snippet_ciphertext")
-    private byte[]snippetCiphertext;
+    private byte[] snippetCiphertext;
 
     @Column(name = "has_attachment", nullable = false)
     private boolean hasAttachment;
@@ -92,9 +92,9 @@ public class GmailInboxProjectionEntity {
             String gmailThreadId,
             byte[] senderEmailHash,
             byte[] senderEmailCiphertext,
-            byte[]senderDisplayNameCiphertext,
-            byte[]subjectCiphertext,
-            byte[]snippetCiphertext,
+            byte[] senderDisplayNameCiphertext,
+            byte[] subjectCiphertext,
+            byte[] snippetCiphertext,
             boolean hasAttachment,
             Instant receivedAt,
             String[] labelIds,
@@ -145,15 +145,15 @@ public class GmailInboxProjectionEntity {
         return senderEmailCiphertext;
     }
 
-    public byte[]getSenderDisplayNameCiphertext() {
+    public byte[] getSenderDisplayNameCiphertext() {
         return senderDisplayNameCiphertext;
     }
 
-    public byte[]getSubjectCiphertext() {
+    public byte[] getSubjectCiphertext() {
         return subjectCiphertext;
     }
 
-    public byte[]getSnippetCiphertext() {
+    public byte[] getSnippetCiphertext() {
         return snippetCiphertext;
     }
 

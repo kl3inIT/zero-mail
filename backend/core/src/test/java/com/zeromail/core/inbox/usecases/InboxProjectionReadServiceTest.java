@@ -19,8 +19,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * to the same plaintext, paginates correctly, filters by {@code inbox_state} and {@code
  * expires_at}, and isolates tenants.
  *
- * <p>Wave 0 verifies the standalone DB path. The orchestrator (Wave 1) wraps these results with
- * the fallback logic; nothing in this test exercises that.
+ * <p>Wave 0 verifies the standalone DB path. The orchestrator (Wave 1) wraps these results with the
+ * fallback logic; nothing in this test exercises that.
  */
 class InboxProjectionReadServiceTest extends PostgresContainerTest {
 

@@ -99,9 +99,9 @@ public class TriageGmailWriter {
 
     /**
      * Drop the Gmail {@code UNREAD} system label AND mirror the change into the inbox projection so
-     * the next DB-backed read returns the same state the optimistic UI already shows (Phase B
-     * Wave 2). Gmail call happens first; the projection write runs only after Gmail confirms — if
-     * Gmail throws, the projection stays untouched and the next Pub/Sub event will reconcile.
+     * the next DB-backed read returns the same state the optimistic UI already shows (Phase B Wave
+     * 2). Gmail call happens first; the projection write runs only after Gmail confirms — if Gmail
+     * throws, the projection stays untouched and the next Pub/Sub event will reconcile.
      */
     public void markRead(UUID tenantId, String gmailMessageId) throws IOException {
         removeSystemLabel(tenantId, gmailMessageId, UNREAD_LABEL_ID, "markRead");

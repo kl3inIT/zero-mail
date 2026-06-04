@@ -15,8 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
  * Read-side query for the inbox list backed by {@code gmail_inbox_projection} (Phase B Wave 0).
  *
  * <p>Wave 0 deliverable: standalone DB read + decrypt path. The orchestrator that decides between
- * this service and the live-Gmail fallback lands in Wave 1; {@code RecentInboxReadService.fetchPage}
- * stays untouched here so the existing API + tests remain green during the refactor.
+ * this service and the live-Gmail fallback lands in Wave 1; {@code
+ * RecentInboxReadService.fetchPage} stays untouched here so the existing API + tests remain green
+ * during the refactor.
  *
  * <p>Decrypt happens at this use-case boundary (single cipher entry point). Per-row {@code
  * expires_at > NOW()} filter is enforced in the native query so stale rows do not leak into the
@@ -31,6 +32,7 @@ public class InboxProjectionReadService {
      * service is usable in isolation.
      */
     public static final int DEFAULT_PAGE_SIZE = 20;
+
     public static final int MAX_PAGE_SIZE = 20;
 
     private final GmailInboxProjectionRepository projectionRepository;
@@ -74,7 +76,8 @@ public class InboxProjectionReadService {
         }
 
         String nextCursor = nextCursorFor(rows, pageLimit);
-        return new InboxProjectionPage(List.copyOf(items), nextCursor, InboxProjectionDataSource.PROJECTION);
+        return new InboxProjectionPage(
+                List.copyOf(items), nextCursor, InboxProjectionDataSource.PROJECTION);
     }
 
     private static int effectiveLimit(int requestedLimit) {
@@ -160,8 +163,11 @@ public class InboxProjectionReadService {
     private static boolean needsQuoting(String displayName) {
         for (int characterIndex = 0; characterIndex < displayName.length(); characterIndex++) {
             char currentChar = displayName.charAt(characterIndex);
-            if (currentChar == ',' || currentChar == '<' || currentChar == '>'
-                    || currentChar == '"' || currentChar == ';') {
+            if (currentChar == ','
+                    || currentChar == '<'
+                    || currentChar == '>'
+                    || currentChar == '"'
+                    || currentChar == ';') {
                 return true;
             }
         }

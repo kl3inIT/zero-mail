@@ -24,9 +24,9 @@ public class EmailAddressCanonicalizer {
     }
 
     /**
-     * Extract the display-name portion of a From header value, e.g. {@code "John Doe"
-     * <john@x>} → {@code "John Doe"}. Returns {@code Optional.empty()} when the header is
-     * bare-address ({@code john@x}) or the display-name is blank/quote-only.
+     * Extract the display-name portion of a From header value, e.g. {@code "John Doe" <john@x>} →
+     * {@code "John Doe"}. Returns {@code Optional.empty()} when the header is bare-address ({@code
+     * john@x}) or the display-name is blank/quote-only.
      *
      * <p>Same privacy class as {@link #canonicalize(String)} — the result is sanitized From-header
      * metadata, not email body content. Output is trimmed, surrounding quotes stripped, and

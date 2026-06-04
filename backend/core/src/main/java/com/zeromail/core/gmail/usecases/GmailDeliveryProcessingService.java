@@ -307,9 +307,11 @@ public class GmailDeliveryProcessingService {
                             }
                             return newRowCount;
                         });
-        // Always refresh the inbox projection — the observed table is append-once (insertObservedIfAbsent
+        // Always refresh the inbox projection — the observed table is append-once
+        // (insertObservedIfAbsent
         // returns 0 on redelivery) but the projection MUST track current label / state changes
-        // (e.g. UNREAD → read, INBOX → archived) every time we see a history record for the message.
+        // (e.g. UNREAD → read, INBOX → archived) every time we see a history record for the
+        // message.
         // The projection write runs in its own REQUIRES_NEW transaction so a failure here does not
         // roll back the observed insert above (which is part of the same delivery ack contract).
         if (senderEmail != null && !senderEmail.isBlank()) {

@@ -13,13 +13,13 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
 
 /**
- * Opaque-encode the keyset cursor for {@code InboxProjectionReadService} page queries (Phase B
- * Wave 0).
+ * Opaque-encode the keyset cursor for {@code InboxProjectionReadService} page queries (Phase B Wave
+ * 0).
  *
  * <p>The cursor is {@code (receivedAt, gmailMessageId)} — the partial index already orders by that
  * pair, so the next page is a single index range scan past the previous page's last row. Different
- * shape from the existing Gmail {@code pageToken} cursor used by {@code RecentInboxReadService},
- * so this codec is deliberately separate; Wave 1 will pick which encoding to use at the orchestrator
+ * shape from the existing Gmail {@code pageToken} cursor used by {@code RecentInboxReadService}, so
+ * this codec is deliberately separate; Wave 1 will pick which encoding to use at the orchestrator
  * boundary.
  *
  * <p>Format: {@code base64url(v1\n<epochMicros>\n<gmailMessageId>\n<HMAC-SHA256 signature>)}. The
@@ -40,7 +40,8 @@ public class InboxProjectionCursorCodec {
         Objects.requireNonNull(cryptoProperties, "cryptoProperties must not be null");
         byte[] decodedSigningKey;
         try {
-            decodedSigningKey = Base64.getDecoder().decode(cryptoProperties.refreshTokenKeyBase64());
+            decodedSigningKey =
+                    Base64.getDecoder().decode(cryptoProperties.refreshTokenKeyBase64());
         } catch (IllegalArgumentException invalidSigningKey) {
             throw new IllegalStateException(
                     "Invalid inbox projection cursor signing key", invalidSigningKey);
@@ -67,7 +68,8 @@ public class InboxProjectionCursorCodec {
         try {
             payload = new String(DECODER.decode(cursor.trim()), StandardCharsets.UTF_8);
         } catch (IllegalArgumentException invalidBase64) {
-            throw new InvalidProjectionCursorException("Cursor is not valid base64url", invalidBase64);
+            throw new InvalidProjectionCursorException(
+                    "Cursor is not valid base64url", invalidBase64);
         }
         String[] parts = payload.split("\n", 4);
         if (parts.length != 4 || !VERSION.equals(parts[0])) {

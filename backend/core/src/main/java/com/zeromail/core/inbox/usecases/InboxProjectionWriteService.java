@@ -26,8 +26,8 @@ public class InboxProjectionWriteService {
 
     /**
      * Refresh-based TTL. Re-observing a message bumps {@code expires_at} forward by 90 days so
-     * actively-touched rows do not expire. See the Phase A plan for the rationale (received_at +
-     * 90 would expire backfilled-old-mail accounts immediately).
+     * actively-touched rows do not expire. See the Phase A plan for the rationale (received_at + 90
+     * would expire backfilled-old-mail accounts immediately).
      */
     private static final Duration PROJECTION_TTL = Duration.ofDays(90);
 
@@ -43,7 +43,8 @@ public class InboxProjectionWriteService {
             InboxProjectionCipher cipher,
             java.time.Clock clock) {
         this.projectionRepository =
-                Objects.requireNonNull(projectionRepository, "projectionRepository must not be null");
+                Objects.requireNonNull(
+                        projectionRepository, "projectionRepository must not be null");
         this.cipher = Objects.requireNonNull(cipher, "cipher must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
@@ -57,8 +58,8 @@ public class InboxProjectionWriteService {
      * the richer payload later without breaking observed flow. Backfill (Wave 3) supplies the full
      * set.
      *
-     * <p>The {@code inbox_state} value is derived from the Gmail label set so callers don't have
-     * to make the decision: INBOX label present → INBOX; otherwise → OUT_OF_INBOX. TOMBSTONED is
+     * <p>The {@code inbox_state} value is derived from the Gmail label set so callers don't have to
+     * make the decision: INBOX label present → INBOX; otherwise → OUT_OF_INBOX. TOMBSTONED is
      * reserved for explicit Gmail 404 / messageDeleted detection in a later phase.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -71,7 +72,10 @@ public class InboxProjectionWriteService {
 
         byte[] senderEmailCiphertext =
                 cipher.encrypt(
-                        command.senderEmail(), tenantId, gmailMessageId, EncryptedField.SENDER_EMAIL);
+                        command.senderEmail(),
+                        tenantId,
+                        gmailMessageId,
+                        EncryptedField.SENDER_EMAIL);
         byte[] senderDisplayNameCiphertext =
                 cipher.encrypt(
                         command.senderDisplayName(),
@@ -79,11 +83,9 @@ public class InboxProjectionWriteService {
                         gmailMessageId,
                         EncryptedField.SENDER_DISPLAY_NAME);
         byte[] subjectCiphertext =
-                cipher.encrypt(
-                        command.subject(), tenantId, gmailMessageId, EncryptedField.SUBJECT);
+                cipher.encrypt(command.subject(), tenantId, gmailMessageId, EncryptedField.SUBJECT);
         byte[] snippetCiphertext =
-                cipher.encrypt(
-                        command.snippet(), tenantId, gmailMessageId, EncryptedField.SNIPPET);
+                cipher.encrypt(command.snippet(), tenantId, gmailMessageId, EncryptedField.SNIPPET);
         byte[] senderEmailHash = cipher.hashSenderEmail(command.senderEmail());
 
         String[] labelIds = command.labelIds().toArray(new String[0]);
@@ -113,12 +115,12 @@ public class InboxProjectionWriteService {
     /**
      * Local mark-read write hook (Phase B Wave 2). Called by {@code TriageGmailWriter.markRead}
      * after the corresponding Gmail {@code users.messages.modify} succeeds, so the projection row
-     * reflects the new state immediately and the next inbox-list fetch from the DB returns the
-     * same value the optimistic UI already shows.
+     * reflects the new state immediately and the next inbox-list fetch from the DB returns the same
+     * value the optimistic UI already shows.
      *
      * <p>Ciphertext columns and AAD are untouched — only {@code unread} and the {@code label_ids}
-     * UNREAD entry change. Returns silently when the projection has no row for the message yet;
-     * the next Pub/Sub UPSERT will reconcile.
+     * UNREAD entry change. Returns silently when the projection has no row for the message yet; the
+     * next Pub/Sub UPSERT will reconcile.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markRead(UUID tenantId, String gmailMessageId) {

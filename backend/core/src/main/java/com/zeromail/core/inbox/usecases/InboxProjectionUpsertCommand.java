@@ -8,10 +8,10 @@ import java.util.UUID;
  * Command DTO for {@link InboxProjectionWriteService#upsert(InboxProjectionUpsertCommand)}.
  *
  * <p>Plaintext metadata fields are nullable because the Pub/Sub observed listener intentionally
- * keeps the initial projection minimal (no extra Gmail metadata header fetch) and lets the
- * backfill service in Wave 3 enrich the row later. {@code senderEmail} is mandatory because it
- * feeds the deterministic HMAC column ({@code sender_email_hash}); without it the row would lose
- * its future lookup ability.
+ * keeps the initial projection minimal (no extra Gmail metadata header fetch) and lets the backfill
+ * service in Wave 3 enrich the row later. {@code senderEmail} is mandatory because it feeds the
+ * deterministic HMAC column ({@code sender_email_hash}); without it the row would lose its future
+ * lookup ability.
  */
 public record InboxProjectionUpsertCommand(
         UUID tenantId,

@@ -791,10 +791,10 @@ public class GmailPreviewReadService {
     }
 
     /**
-     * Best-effort display-name extraction from a {@code From}-style header value (e.g. {@code
-     * "John Doe" <john@x>} → {@code "John Doe"}). Returns {@code ""} when the header is
-     * bare-address or unparseable. Result is sanitized + trimmed + length-capped at 320 chars to
-     * match {@code mail_message_observed.sender_name}.
+     * Best-effort display-name extraction from a {@code From}-style header value (e.g. {@code "John
+     * Doe" <john@x>} → {@code "John Doe"}). Returns {@code ""} when the header is bare-address or
+     * unparseable. Result is sanitized + trimmed + length-capped at 320 chars to match {@code
+     * mail_message_observed.sender_name}.
      */
     private static String extractDisplayName(String headerValue) {
         if (headerValue == null) {

@@ -13,8 +13,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Verifies enqueue idempotency: even when called repeatedly while a job is open (PENDING or
- * PROCESSING) the enqueuer must not stack duplicate rows on the {@code processing_job} table.
- * This is the dedup contract the trigger callers (OAuth provisioning + lazy fetchPage) rely on.
+ * PROCESSING) the enqueuer must not stack duplicate rows on the {@code processing_job} table. This
+ * is the dedup contract the trigger callers (OAuth provisioning + lazy fetchPage) rely on.
  */
 class InboxBackfillEnqueuerTest extends PostgresContainerTest {
 

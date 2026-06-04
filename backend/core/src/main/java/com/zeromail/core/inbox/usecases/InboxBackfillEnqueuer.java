@@ -14,11 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Idempotent enqueue for {@link #JOB_TYPE} backfill jobs.
  *
- * <p>Both call sites (eager trigger from OAuth provisioning; lazy trigger from
- * {@code RecentInboxReadService.fetchPage}) invoke {@link #enqueueIfNotPending(UUID)}. The method
- * checks the {@code processing_job} table for an open (PENDING / PROCESSING) row of the same
- * {@code job_type} for the tenant; if absent, it inserts a fresh row + flips {@code sync_state.status}
- * to {@code BACKFILLING}. This dedup runs in a {@code REQUIRES_NEW} transaction so a caller's outer
+ * <p>Both call sites (eager trigger from OAuth provisioning; lazy trigger from {@code
+ * RecentInboxReadService.fetchPage}) invoke {@link #enqueueIfNotPending(UUID)}. The method checks
+ * the {@code processing_job} table for an open (PENDING / PROCESSING) row of the same {@code
+ * job_type} for the tenant; if absent, it inserts a fresh row + flips {@code sync_state.status} to
+ * {@code BACKFILLING}. This dedup runs in a {@code REQUIRES_NEW} transaction so a caller's outer
  * transaction does not see partial state when the dedup races with another concurrent enqueue.
  */
 @Service
@@ -41,8 +41,7 @@ public class InboxBackfillEnqueuer {
     public InboxBackfillEnqueuer(
             GmailInboxSyncStateRepository syncStateRepository, JdbcTemplate jdbcTemplate) {
         this.syncStateRepository =
-                Objects.requireNonNull(
-                        syncStateRepository, "syncStateRepository must not be null");
+                Objects.requireNonNull(syncStateRepository, "syncStateRepository must not be null");
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
     }
 
@@ -67,7 +66,8 @@ public class InboxBackfillEnqueuer {
                         JOB_TYPE);
         if (openJobCount != null && openJobCount > 0) {
             log.debug(
-                    "event=inbox_backfill_enqueue_skipped tenantId={} reason=already_open", tenantId);
+                    "event=inbox_backfill_enqueue_skipped tenantId={} reason=already_open",
+                    tenantId);
             return false;
         }
 

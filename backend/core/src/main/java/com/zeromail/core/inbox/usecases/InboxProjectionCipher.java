@@ -20,13 +20,13 @@ import org.springframework.stereotype.Service;
  *
  * <p>Wraps {@link PlatformSecretCipher} with a per-tenant + per-message + per-field AAD so a
  * ciphertext copied from one row/field cannot be silently decrypted in another row/field. Owns its
- * own AES-256 KEK ({@code inboxProjectionKeyBase64}) and its own HMAC-SHA256 key
- * ({@code inboxProjectionSenderHashKeyBase64}), both separate from the OAuth refresh-token KEK so
- * a single leak does not cross-contaminate.
+ * own AES-256 KEK ({@code inboxProjectionKeyBase64}) and its own HMAC-SHA256 key ({@code
+ * inboxProjectionSenderHashKeyBase64}), both separate from the OAuth refresh-token KEK so a single
+ * leak does not cross-contaminate.
  *
  * <p>AAD format: {@code "<tenantId>:<gmailMessageId>:<fieldName>"} — UTF-8 bytes are passed to
- * {@link PlatformSecretCipher#encrypt(byte[], String)} which in turn calls
- * {@code Cipher.updateAAD}.
+ * {@link PlatformSecretCipher#encrypt(byte[], String)} which in turn calls {@code
+ * Cipher.updateAAD}.
  *
  * <p>Sender hash: HMAC-SHA256 of the lowercase-normalized sender email under the dedicated hash
  * key. Deterministic so future lookups by sender can use the hash without exposing plaintext.
@@ -49,12 +49,10 @@ public class InboxProjectionCipher {
                             + fieldKeyBytes.length);
         }
         this.fieldCipher =
-                new PlatformSecretCipher(
-                        Map.of(1, new SecretKeySpec(fieldKeyBytes, "AES")), 1);
+                new PlatformSecretCipher(Map.of(1, new SecretKeySpec(fieldKeyBytes, "AES")), 1);
 
         byte[] senderHashKeyBytes =
-                Base64.getDecoder()
-                        .decode(cryptoProperties.inboxProjectionSenderHashKeyBase64());
+                Base64.getDecoder().decode(cryptoProperties.inboxProjectionSenderHashKeyBase64());
         if (senderHashKeyBytes.length != 32) {
             throw new IllegalStateException(
                     "inbox-projection-sender-hash-key-base64 must decode to exactly 32 bytes, got "
@@ -64,15 +62,12 @@ public class InboxProjectionCipher {
     }
 
     /**
-     * Encrypt a UTF-8 plaintext field. Returns null when the input is null so persistence can
-     * pass through nullable columns (e.g. sender display name) without an explicit null check at
-     * every call site.
+     * Encrypt a UTF-8 plaintext field. Returns null when the input is null so persistence can pass
+     * through nullable columns (e.g. sender display name) without an explicit null check at every
+     * call site.
      */
     public byte[] encrypt(
-            String plaintext,
-            UUID tenantId,
-            String gmailMessageId,
-            EncryptedField field) {
+            String plaintext, UUID tenantId, String gmailMessageId, EncryptedField field) {
         if (plaintext == null) {
             return null;
         }
@@ -86,10 +81,7 @@ public class InboxProjectionCipher {
 
     /** Decrypt a ciphertext envelope back to UTF-8 plaintext; mirrors {@link #encrypt} nullness. */
     public String decrypt(
-            byte[] envelope,
-            UUID tenantId,
-            String gmailMessageId,
-            EncryptedField field) {
+            byte[] envelope, UUID tenantId, String gmailMessageId, EncryptedField field) {
         if (envelope == null) {
             return null;
         }
@@ -124,7 +116,8 @@ public class InboxProjectionCipher {
 
     private static String normalizeSenderEmail(String senderEmail) {
         // Lowercase + trim so casing and surrounding whitespace from headers do not produce
-        // different hashes for the same logical sender. Stop short of full RFC 5321 canonicalisation
+        // different hashes for the same logical sender. Stop short of full RFC 5321
+        // canonicalisation
         // (no plus-tag stripping, no Punycode normalization) — over-normalization is reversible
         // and risks collapsing distinct senders.
         return senderEmail.trim().toLowerCase(Locale.ROOT);

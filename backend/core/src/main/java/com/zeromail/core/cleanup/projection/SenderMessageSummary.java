@@ -5,11 +5,11 @@ import java.util.Objects;
 
 /**
  * One email-row metadata for the Stats dialog email list (UNS-stats-02). Fetched live from Gmail
- * with {@code q=from:<senderEmail>} so the listing reflects the user's <i>current</i> Gmail state
- * — not a DB snapshot which could be stale after archive/trash.
+ * with {@code q=from:<senderEmail>} so the listing reflects the user's <i>current</i> Gmail state —
+ * not a DB snapshot which could be stale after archive/trash.
  *
- * <p>{@code archived} = the message is not in INBOX label (covers archived + already moved to
- * other label by the user). {@code unread} = UNREAD label is present.
+ * <p>{@code archived} = the message is not in INBOX label (covers archived + already moved to other
+ * label by the user). {@code unread} = UNREAD label is present.
  */
 public record SenderMessageSummary(
         String gmailMessageId,

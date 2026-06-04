@@ -4,9 +4,9 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Decoded keyset cursor for the inbox projection page query. {@code receivedAt = null} and
- * {@code gmailMessageId = null} means "first page" — the read service short-circuits the keyset
- * predicate and returns the newest rows by index order.
+ * Decoded keyset cursor for the inbox projection page query. {@code receivedAt = null} and {@code
+ * gmailMessageId = null} means "first page" — the read service short-circuits the keyset predicate
+ * and returns the newest rows by index order.
  */
 public record InboxProjectionCursor(Instant receivedAt, String gmailMessageId) {
 

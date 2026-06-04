@@ -113,12 +113,7 @@ class CandidateQueryServiceTest extends PostgresContainerTest {
     void senderNameAggregatesIntoCandidateRow() {
         UUID tenantId = seedTenant();
         seedObservedRow(
-                tenantId,
-                "john@brand.test",
-                "John from Brand",
-                "https://brand.test/u",
-                null,
-                true);
+                tenantId, "john@brand.test", "John from Brand", "https://brand.test/u", null, true);
         seedObservedRow(tenantId, "john@brand.test", null, "https://brand.test/u", null, true);
 
         List<UnsubscribeCandidateProjection> candidates =

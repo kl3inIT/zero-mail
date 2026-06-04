@@ -22,44 +22,41 @@ import com.tngtech.archunit.lang.ArchRule;
  *       projection is an owned read model, not a generic data store.
  * </ol>
  *
- * <p>Privacy log lint ("no plaintext field name in a log call") is handled separately by
- * {@link InboxProjectionPrivacyLogTest} since ArchUnit's call inspection cannot easily distinguish
- * a literal SLF4J argument from any other String parameter.
+ * <p>Privacy log lint ("no plaintext field name in a log call") is handled separately by {@link
+ * InboxProjectionPrivacyLogTest} since ArchUnit's call inspection cannot easily distinguish a
+ * literal SLF4J argument from any other String parameter.
  */
-@AnalyzeClasses(
-        packages = "com.zeromail",
-        importOptions = ImportOption.DoNotIncludeTests.class)
+@AnalyzeClasses(packages = "com.zeromail", importOptions = ImportOption.DoNotIncludeTests.class)
 class InboxProjectionArchTest {
 
     @ArchTest
-    static final ArchRule
-            only_inbox_projection_write_service_may_invoke_native_upsert_projection =
-                    noClasses()
-                            .that()
-                            .resideOutsideOfPackage("com.zeromail.core.inbox.usecases")
-                            .should()
-                            .callMethod(
-                                    "com.zeromail.core.inbox.persistence.GmailInboxProjectionRepository",
-                                    "upsertProjection",
-                                    "java.util.UUID",
-                                    "java.lang.String",
-                                    "java.lang.String",
-                                    "byte[]",
-                                    "byte[]",
-                                    "byte[]",
-                                    "byte[]",
-                                    "byte[]",
-                                    "boolean",
-                                    "java.time.Instant",
-                                    "java.lang.String[]",
-                                    "java.lang.String",
-                                    "boolean",
-                                    "long",
-                                    "java.time.Instant",
-                                    "java.time.Instant")
-                            .because(
-                                    "InboxProjectionWriteService is the single entry point; bypassing it would skip"
-                                        + " the cipher + AAD + sender-hash + expires_at derivation.");
+    static final ArchRule only_inbox_projection_write_service_may_invoke_native_upsert_projection =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackage("com.zeromail.core.inbox.usecases")
+                    .should()
+                    .callMethod(
+                            "com.zeromail.core.inbox.persistence.GmailInboxProjectionRepository",
+                            "upsertProjection",
+                            "java.util.UUID",
+                            "java.lang.String",
+                            "java.lang.String",
+                            "byte[]",
+                            "byte[]",
+                            "byte[]",
+                            "byte[]",
+                            "byte[]",
+                            "boolean",
+                            "java.time.Instant",
+                            "java.lang.String[]",
+                            "java.lang.String",
+                            "boolean",
+                            "long",
+                            "java.time.Instant",
+                            "java.time.Instant")
+                    .because(
+                            "InboxProjectionWriteService is the single entry point; bypassing it would skip"
+                                    + " the cipher + AAD + sender-hash + expires_at derivation.");
 
     @ArchTest
     static final ArchRule projection_repository_only_injected_inside_inbox_module =
@@ -73,7 +70,7 @@ class InboxProjectionArchTest {
                             "com.zeromail.core.inbox.persistence.GmailInboxProjectionRepository")
                     .because(
                             "Inbox projection repository is an owned read model — only the inbox module"
-                                + " and the Pub/Sub delivery hook in core.gmail.usecases may depend on it.");
+                                    + " and the Pub/Sub delivery hook in core.gmail.usecases may depend on it.");
 
     @ArchTest
     static final ArchRule sync_state_repository_only_injected_inside_inbox_module =
@@ -87,15 +84,14 @@ class InboxProjectionArchTest {
                             "com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository")
                     .because(
                             "Sync state cursor belongs to the inbox module; the lazy backfill trigger in"
-                                + " RecentInboxReadService is the only external reader allowed.");
+                                    + " RecentInboxReadService is the only external reader allowed.");
 
     @ArchTest
     static final ArchRule only_listener_and_backfill_invoke_projection_write_service_upsert =
             noClasses()
                     .that()
                     .resideOutsideOfPackages(
-                            "com.zeromail.core.inbox.usecases",
-                            "com.zeromail.core.gmail.usecases")
+                            "com.zeromail.core.inbox.usecases", "com.zeromail.core.gmail.usecases")
                     .should()
                     .callMethod(
                             "com.zeromail.core.inbox.usecases.InboxProjectionWriteService",
@@ -103,15 +99,15 @@ class InboxProjectionArchTest {
                             "com.zeromail.core.inbox.usecases.InboxProjectionUpsertCommand")
                     .because(
                             "Allowed callers: GmailDeliveryProcessingService (Pub/Sub observed hook) and"
-                                + " InboxBackfillService. Phase B may add the read-swap path; any other caller"
-                                + " is scope creep.");
+                                    + " InboxBackfillService. Phase B may add the read-swap path; any other caller"
+                                    + " is scope creep.");
 
     /**
      * Phase B Wave 4 — the projection cipher's {@code encrypt} and {@code decrypt} entry points
-     * carry tenant + message-scoped AAD; any caller outside the dedicated read/write services
-     * would either reconstruct that AAD ad-hoc (drift risk) or skip it entirely (decrypt-anywhere
-     * risk). Tests are excluded by {@code ImportOption.DoNotIncludeTests} so cipher round-trip
-     * fixtures can still exercise the API directly.
+     * carry tenant + message-scoped AAD; any caller outside the dedicated read/write services would
+     * either reconstruct that AAD ad-hoc (drift risk) or skip it entirely (decrypt-anywhere risk).
+     * Tests are excluded by {@code ImportOption.DoNotIncludeTests} so cipher round-trip fixtures
+     * can still exercise the API directly.
      */
     @ArchTest
     static final ArchRule only_read_and_write_services_call_projection_cipher_encrypt =
@@ -128,7 +124,7 @@ class InboxProjectionArchTest {
                             "com.zeromail.core.inbox.domain.EncryptedField")
                     .because(
                             "InboxProjectionWriteService is the only production encrypt caller; any"
-                                + " other call site would bypass the AAD construction.");
+                                    + " other call site would bypass the AAD construction.");
 
     @ArchTest
     static final ArchRule only_read_and_write_services_call_projection_cipher_decrypt =
@@ -145,8 +141,8 @@ class InboxProjectionArchTest {
                             "com.zeromail.core.inbox.domain.EncryptedField")
                     .because(
                             "InboxProjectionReadService is the only production decrypt caller; any"
-                                + " other call site would either reconstruct the AAD ad-hoc or skip"
-                                + " it entirely, both of which break the cipher boundary.");
+                                    + " other call site would either reconstruct the AAD ad-hoc or skip"
+                                    + " it entirely, both of which break the cipher boundary.");
 
     /**
      * Phase B Wave 4 — mark-read is the only projection mutator added in Wave 2; restrict callers
@@ -159,8 +155,7 @@ class InboxProjectionArchTest {
             noClasses()
                     .that()
                     .resideOutsideOfPackages(
-                            "com.zeromail.core.inbox.usecases",
-                            "com.zeromail.core.triage.usecases")
+                            "com.zeromail.core.inbox.usecases", "com.zeromail.core.triage.usecases")
                     .should()
                     .callMethod(
                             "com.zeromail.core.inbox.usecases.InboxProjectionWriteService",
@@ -169,6 +164,6 @@ class InboxProjectionArchTest {
                             "java.lang.String")
                     .because(
                             "TriageGmailWriter is the single Gmail-write boundary that mirrors mark-read"
-                                + " into the projection. Any other caller would skip the Gmail label modify"
-                                + " step, leaving Gmail and the projection in divergent states.");
+                                    + " into the projection. Any other caller would skip the Gmail label modify"
+                                    + " step, leaving Gmail and the projection in divergent states.");
 }

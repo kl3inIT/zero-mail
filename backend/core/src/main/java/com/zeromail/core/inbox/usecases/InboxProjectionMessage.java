@@ -10,6 +10,7 @@ import java.util.Objects;
  * page response.
  *
  * <p>Fields the projection does not store come back as their empty equivalents:
+ *
  * <ul>
  *   <li>{@code to} / {@code cc} — projection is per-message metadata only (no recipient list);
  *       always empty list.

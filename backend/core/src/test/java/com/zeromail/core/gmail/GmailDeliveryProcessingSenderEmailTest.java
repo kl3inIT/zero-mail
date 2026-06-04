@@ -195,8 +195,8 @@ class GmailDeliveryProcessingSenderEmailTest {
                             deliveryRepository,
                             observedRepository,
                             mock(
-                                    com.zeromail.core.inbox.usecases
-                                            .InboxProjectionWriteService.class),
+                                    com.zeromail.core.inbox.usecases.InboxProjectionWriteService
+                                            .class),
                             connectionService,
                             connectionRepository,
                             gmailApiClientFactory,

@@ -18,7 +18,8 @@ class InboxProjectionCipherTest {
     private static final String ZERO_KEY_BASE64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
     private final InboxProjectionCipher cipher =
-            new InboxProjectionCipher(new CryptoProperties(ZERO_KEY_BASE64, ZERO_KEY_BASE64, ZERO_KEY_BASE64));
+            new InboxProjectionCipher(
+                    new CryptoProperties(ZERO_KEY_BASE64, ZERO_KEY_BASE64, ZERO_KEY_BASE64));
 
     private static final UUID TENANT_A = UUID.fromString("00000000-0000-0000-0000-000000000a01");
     private static final UUID TENANT_B = UUID.fromString("00000000-0000-0000-0000-000000000b02");
@@ -91,13 +92,13 @@ class InboxProjectionCipherTest {
 
         assertThatThrownBy(() -> new InboxProjectionCipher(shortKey))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("inbox-projection-key-base64 must decode to exactly 32 bytes");
+                .hasMessageContaining(
+                        "inbox-projection-key-base64 must decode to exactly 32 bytes");
     }
 
     @Test
     void constructor_rejects_non_32_byte_sender_hash_key() {
-        CryptoProperties shortKey =
-                new CryptoProperties(ZERO_KEY_BASE64, ZERO_KEY_BASE64, "QUJD");
+        CryptoProperties shortKey = new CryptoProperties(ZERO_KEY_BASE64, ZERO_KEY_BASE64, "QUJD");
 
         assertThatThrownBy(() -> new InboxProjectionCipher(shortKey))
                 .isInstanceOf(IllegalStateException.class)

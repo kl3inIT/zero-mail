@@ -32,18 +32,27 @@ public class CleanupSenderActionController {
 
     @PostMapping("/action")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public CleanupSenderActionResponse action(@Valid @RequestBody CleanupSenderActionRequest request) {
+    public CleanupSenderActionResponse action(
+            @Valid @RequestBody CleanupSenderActionRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
         BulkSenderActionResult result =
                 switch (request.action()) {
-                    case APPROVE -> cleanupSenderActionService.approve(tenantId, request.senderEmails());
-                    case UNAPPROVE -> cleanupSenderActionService.unapprove(tenantId, request.senderEmails());
+                    case APPROVE ->
+                            cleanupSenderActionService.approve(tenantId, request.senderEmails());
+                    case UNAPPROVE ->
+                            cleanupSenderActionService.unapprove(tenantId, request.senderEmails());
                     case MARK_UNSUBSCRIBED ->
-                            cleanupSenderActionService.markUnsubscribed(tenantId, request.senderEmails());
+                            cleanupSenderActionService.markUnsubscribed(
+                                    tenantId, request.senderEmails());
                     case AUTO_ARCHIVE ->
-                            cleanupSenderActionService.autoArchive(tenantId, request.senderEmails());
-                    case ARCHIVE -> cleanupSenderActionService.archiveHistory(tenantId, request.senderEmails());
-                    case DELETE -> cleanupSenderActionService.trashHistory(tenantId, request.senderEmails());
+                            cleanupSenderActionService.autoArchive(
+                                    tenantId, request.senderEmails());
+                    case ARCHIVE ->
+                            cleanupSenderActionService.archiveHistory(
+                                    tenantId, request.senderEmails());
+                    case DELETE ->
+                            cleanupSenderActionService.trashHistory(
+                                    tenantId, request.senderEmails());
                     case LABEL_FUTURE ->
                             cleanupSenderActionService.labelFuture(
                                     tenantId, request.senderEmails(), request.labelName());

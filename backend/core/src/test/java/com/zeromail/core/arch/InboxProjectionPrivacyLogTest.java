@@ -36,12 +36,7 @@ class InboxProjectionPrivacyLogTest {
      * it is bytes, not plaintext).
      */
     private static final List<String> FORBIDDEN_PLAINTEXT_IDENTIFIERS =
-            List.of(
-                    "subject",
-                    "snippet",
-                    "senderEmail",
-                    "senderDisplayName",
-                    "plaintext");
+            List.of("subject", "snippet", "senderEmail", "senderDisplayName", "plaintext");
 
     /**
      * Captures the argument list of a log invocation. Group 1 is the method name; group 2 is the
@@ -56,7 +51,8 @@ class InboxProjectionPrivacyLogTest {
      * Matches a JVM identifier outside of string literals. We strip double-quoted literals first
      * (see {@link #stripStringLiterals(String)}) so this regex never has to differentiate.
      */
-    private static final Pattern BARE_IDENTIFIER = Pattern.compile("\\b([A-Za-z_][A-Za-z_0-9]*)\\b");
+    private static final Pattern BARE_IDENTIFIER =
+            Pattern.compile("\\b([A-Za-z_][A-Za-z_0-9]*)\\b");
 
     @Test
     void no_inbox_module_log_call_passes_a_plaintext_field_identifier() throws IOException {
@@ -111,11 +107,11 @@ class InboxProjectionPrivacyLogTest {
     }
 
     /**
-     * Replace every double-quoted string literal with a placeholder so the identifier scan does
-     * not match symbol-like substrings inside log message templates (e.g.
-     * {@code "event=inbox_backfill_subject_failed"} contains "subject" only as text and is fine).
-     * Handles backslash escapes ({@code \\}, {@code \"}) so an escaped quote does not terminate
-     * the literal prematurely.
+     * Replace every double-quoted string literal with a placeholder so the identifier scan does not
+     * match symbol-like substrings inside log message templates (e.g. {@code
+     * "event=inbox_backfill_subject_failed"} contains "subject" only as text and is fine). Handles
+     * backslash escapes ({@code \\}, {@code \"}) so an escaped quote does not terminate the literal
+     * prematurely.
      */
     private static String stripStringLiterals(String input) {
         StringBuilder result = new StringBuilder(input.length());

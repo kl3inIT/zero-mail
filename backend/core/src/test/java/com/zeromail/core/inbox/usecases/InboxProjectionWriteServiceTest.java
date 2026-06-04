@@ -18,8 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * Integration test for the write service end-to-end: encrypt → UPSERT → decryptable round-trip
- * via the cipher, and idempotent re-observe semantics (inbox_state flips with the label set).
+ * Integration test for the write service end-to-end: encrypt → UPSERT → decryptable round-trip via
+ * the cipher, and idempotent re-observe semantics (inbox_state flips with the label set).
  */
 class InboxProjectionWriteServiceTest extends PostgresContainerTest {
 
@@ -236,5 +236,4 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                 "tenant-" + tenantId);
         return tenantId;
     }
-
 }

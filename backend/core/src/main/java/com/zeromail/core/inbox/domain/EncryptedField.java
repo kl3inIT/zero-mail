@@ -1,8 +1,8 @@
 package com.zeromail.core.inbox.domain;
 
 /**
- * Field names used in the AAD of the inbox projection cipher. Stable enum on purpose so a typo in
- * a string literal cannot silently break decryption invariants.
+ * Field names used in the AAD of the inbox projection cipher. Stable enum on purpose so a typo in a
+ * string literal cannot silently break decryption invariants.
  */
 public enum EncryptedField {
     SENDER_EMAIL("sender_email"),

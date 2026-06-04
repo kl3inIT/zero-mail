@@ -53,7 +53,8 @@ public class CleanupSenderActionService {
                 Objects.requireNonNull(
                         cleanupSenderStatusService, "cleanupSenderStatusService must not be null");
         this.ruleManagementService =
-                Objects.requireNonNull(ruleManagementService, "ruleManagementService must not be null");
+                Objects.requireNonNull(
+                        ruleManagementService, "ruleManagementService must not be null");
         this.triageGmailWriter =
                 Objects.requireNonNull(triageGmailWriter, "triageGmailWriter must not be null");
     }
@@ -102,8 +103,9 @@ public class CleanupSenderActionService {
 
     public BulkSenderActionResult archiveHistory(UUID tenantId, Collection<String> senderEmails) {
         List<String> normalizedSenderEmails = normalize(senderEmails);
-        MessageMutationCounts mutationCounts = mutateHistoryMessages(
-                tenantId, normalizedSenderEmails, triageGmailWriter::archiveSkipInbox);
+        MessageMutationCounts mutationCounts =
+                mutateHistoryMessages(
+                        tenantId, normalizedSenderEmails, triageGmailWriter::archiveSkipInbox);
         return result(
                 normalizedSenderEmails,
                 mutationCounts.affectedMessageCount(),
@@ -114,8 +116,9 @@ public class CleanupSenderActionService {
 
     public BulkSenderActionResult trashHistory(UUID tenantId, Collection<String> senderEmails) {
         List<String> normalizedSenderEmails = normalize(senderEmails);
-        MessageMutationCounts mutationCounts = mutateHistoryMessages(
-                tenantId, normalizedSenderEmails, triageGmailWriter::moveToTrash);
+        MessageMutationCounts mutationCounts =
+                mutateHistoryMessages(
+                        tenantId, normalizedSenderEmails, triageGmailWriter::moveToTrash);
         return result(
                 normalizedSenderEmails,
                 mutationCounts.affectedMessageCount(),
@@ -179,13 +182,7 @@ public class CleanupSenderActionService {
                         writeJson(actionIntents));
         ruleManagementService.createOrEnable(
                 new RuleCreateCommand(
-                        null,
-                        tenantId,
-                        displayName,
-                        sourceText,
-                        compileResult,
-                        templateKey,
-                        1));
+                        null, tenantId, displayName, sourceText, compileResult, templateKey, 1));
     }
 
     private static ObjectNode senderMatcher(String senderEmail) {

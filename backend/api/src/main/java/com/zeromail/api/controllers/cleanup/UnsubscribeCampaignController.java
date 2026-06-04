@@ -26,9 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
  * §1.
  *
  * <p>The Inbox Zero-style UI dropped the preview dialog, the campaign status polling page, the
- * retry button, and the undo banner — the HTTP surface follows suit. The remaining endpoint
- * commits a campaign + N attempts + processing_job inside {@link CampaignExecuteService} and
- * returns the job id for the worker to pick up.
+ * retry button, and the undo banner — the HTTP surface follows suit. The remaining endpoint commits
+ * a campaign + N attempts + processing_job inside {@link CampaignExecuteService} and returns the
+ * job id for the worker to pick up.
  *
  * <p><b>Exception → HTTP code mapping</b> (controller-local overrides of the {@code
  * GlobalExceptionHandler}'s {@code ErrorClass} defaults):

@@ -85,8 +85,8 @@ public interface GmailInboxProjectionRepository
     /**
      * Read-side page query for the inbox list (Phase B Wave 0).
      *
-     * <p>Hits the partial index {@code idx_gmail_inbox_projection_list (tenant_id, received_at DESC,
-     * gmail_message_id DESC) WHERE inbox_state = 'INBOX'} for a single range scan. Per-row
+     * <p>Hits the partial index {@code idx_gmail_inbox_projection_list (tenant_id, received_at
+     * DESC, gmail_message_id DESC) WHERE inbox_state = 'INBOX'} for a single range scan. Per-row
      * {@code expires_at > NOW()} predicate is filtered after the index seek so stale rows drop out
      * of the page and the orchestrator (Wave 1) can fall back to live Gmail for the gap.
      *
@@ -149,6 +149,5 @@ public interface GmailInboxProjectionRepository
                     """,
             nativeQuery = true)
     @Transactional
-    int markRead(
-            @Param("tenantId") UUID tenantId, @Param("gmailMessageId") String gmailMessageId);
+    int markRead(@Param("tenantId") UUID tenantId, @Param("gmailMessageId") String gmailMessageId);
 }

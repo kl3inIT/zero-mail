@@ -8,9 +8,9 @@ import java.util.stream.Stream;
  * Informational status of the inbox projection sync cursor for a tenant.
  *
  * <p>This is a write-through observability field. The authoritative answer to "is a backfill
- * currently queued or running" is the {@code processing_job} table (job_type =
- * {@code INBOX_PROJECTION_BACKFILL}, idempotency_key = tenantId). Two values for "in flight" would
- * fork the dedup logic; keep the surface here small.
+ * currently queued or running" is the {@code processing_job} table (job_type = {@code
+ * INBOX_PROJECTION_BACKFILL}, idempotency_key = tenantId). Two values for "in flight" would fork
+ * the dedup logic; keep the surface here small.
  *
  * <ul>
  *   <li>{@link #IDLE} — no backfill in flight, last_full_sync_at populated.
@@ -32,7 +32,6 @@ public enum InboxSyncStatus implements IdentifiedEnum {
         return Stream.of(values())
                 .filter(status -> status.id().equals(id))
                 .findFirst()
-                .orElseThrow(
-                        () -> new NoSuchElementException("Unknown InboxSyncStatus id: " + id));
+                .orElseThrow(() -> new NoSuchElementException("Unknown InboxSyncStatus id: " + id));
     }
 }
