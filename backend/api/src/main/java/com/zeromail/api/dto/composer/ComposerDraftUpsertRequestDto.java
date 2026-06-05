@@ -15,7 +15,6 @@ import jakarta.validation.constraints.Size;
  *
  * <p>Body and recipients are user-authored draft data (CLAUDE.md draft-body carve-out).
  */
-@Schema(allowableValues = {"reply", "reply_all", "forward"})
 public record ComposerDraftUpsertRequestDto(
         @NotBlank @Size(max = 256) String gmailThreadId,
         @Schema(

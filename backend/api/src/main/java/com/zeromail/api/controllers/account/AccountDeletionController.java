@@ -7,7 +7,10 @@ import com.zeromail.core.notification.usecases.NotificationPreferenceService;
 import com.zeromail.core.onboarding.usecases.OnboardingService;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.usecases.TenantService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.UUID;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,14 +51,32 @@ public class AccountDeletionController {
 
     @DeleteMapping("/api/me/account")
     @Transactional
-    public void deleteAccount() {
+    public void deleteAccount(HttpServletRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
         onboardingService.deleteSelectionsForCurrentTenant(tenantId);
+        // Revoke the OAuth grant + stop the Gmail watch at Google BEFORE dropping the row, so the
+        // grant does not linger in the user's Google account and Pub/Sub stops pushing. Best-effort
+        // (never throws); the row delete proceeds regardless.
+        gmailConnectionService.revokeGrantForCurrentTenant(tenantId);
         gmailConnectionService.deleteForCurrentTenant(tenantId);
         // Defensive cleanup; both tables also cascade from tenants(id) on successful tenant delete.
         notificationPreferenceService.deleteForTenant(tenantId);
         digestDeliveryService.deleteForTenant(tenantId);
         accountService.deleteCurrentUser(tenantId);
         tenantService.deleteCurrentTenant(tenantId);
+        // The account is gone; drop the caller's session so its now-orphaned blob does not linger
+        // in
+        // Redis until TTL. Other-device sessions are already inert (TenantBindingFilter finds no
+        // user
+        // → 401) and a full multi-session purge would require an indexed session repository.
+        invalidateCurrentSession(request);
+    }
+
+    private static void invalidateCurrentSession(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
     }
 }

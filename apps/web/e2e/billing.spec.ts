@@ -28,12 +28,6 @@ test('credits page shows balance, paginates history, and keeps upgrade in accoun
   await expect(page.getByTestId('ledger-row')).toHaveCount(12);
   await expect(page.getByRole('button', { name: 'Đã hết' })).toBeDisabled();
 
-  await page.getByTestId('user-menu-trigger').click();
-  await expect(page.getByText('Tài khoản Gmail')).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Thêm hoặc quản lý tài khoản' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Nâng cấp gói' })).toHaveCount(0);
-
-  await page.keyboard.press('Escape');
   await page.getByTestId('sidebar-footer-account').click();
   await expect(page.getByRole('menuitem', { name: 'Tín dụng' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Nâng cấp gói' })).toBeVisible();

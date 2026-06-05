@@ -1831,6 +1831,10 @@ export interface components {
             preferredLanguage: string;
             triagePaused: boolean;
             gmailConnectionStatus: components["schemas"]["GmailConnectionStatusExtended"];
+            /** @description Google profile display name. Read transiently from the OAuth session principal on each request — never persisted to the database (privacy). */
+            displayName?: string | null;
+            /** @description Google profile picture URL. Read transiently from the OAuth session principal on each request — never persisted to the database (privacy). */
+            avatarUrl?: string | null;
         };
         UnsubscribeCandidateListResponse: {
             items?: components["schemas"]["UnsubscribeCandidateResponse"][];

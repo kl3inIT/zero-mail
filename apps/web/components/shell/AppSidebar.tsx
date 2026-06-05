@@ -16,13 +16,13 @@ import {
   LogOut,
   MailX,
   PanelLeft,
-  Plus,
   RefreshCw,
   Reply,
   Settings,
   Sparkles,
 } from 'lucide-react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -115,13 +115,7 @@ function planLabel(planCode: string): string {
   }
 }
 
-function AccountMenu({
-  collapsed,
-  placement,
-}: {
-  collapsed: boolean;
-  placement: 'header' | 'footer';
-}) {
+function AccountMenu({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations();
   const router = useRouter();
   const currentUser = useCurrentUser();
@@ -129,16 +123,18 @@ function AccountMenu({
   const logout = useLogout();
   const email =
     currentUser.data?.gmailConnectionStatus?.googleEmail ?? currentUser.data?.email ?? '';
-  const displayName = email ? email.split('@')[0] : t('shell.userMenu.label');
-  const initial = email.charAt(0).toUpperCase();
+  // Prefer the real Google profile name (read transiently from the OAuth session,
+  // never persisted); fall back to the email local-part, then a generic label.
+  const displayName =
+    currentUser.data?.displayName?.trim() ||
+    (email ? email.split('@')[0] : t('shell.userMenu.label'));
+  const avatarUrl = currentUser.data?.avatarUrl ?? undefined;
+  const initial = (displayName || email).charAt(0).toUpperCase() || '?';
   const currentPlanLabel = billingPlans.data?.currentPlanCode
     ? planLabel(billingPlans.data.currentPlanCode)
     : t('shell.userMenu.planLoading');
   const triggerClassName = cn(
-    'group/account flex w-full items-center gap-3 rounded-xl text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-    placement === 'header'
-      ? 'border border-sidebar-border/70 bg-sidebar-accent/35 hover:bg-sidebar-accent/60'
-      : 'hover:bg-sidebar-accent/60',
+    'group/account hover:bg-sidebar-accent/60 focus-visible:ring-ring flex w-full items-center gap-3 rounded-xl text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
     collapsed ? 'mx-auto size-10 justify-center p-0' : 'px-2 py-2',
   );
 
@@ -150,27 +146,23 @@ function AccountMenu({
             type="button"
             className={triggerClassName}
             aria-label={t('shell.userMenu.label')}
-            data-testid={placement === 'header' ? 'user-menu-trigger' : 'sidebar-footer-account'}
+            data-testid="sidebar-footer-account"
           />
         }
       >
-        <div
-          className={cn(
-            'bg-primary text-primary-foreground flex shrink-0 items-center justify-center rounded-full font-semibold',
-            collapsed ? 'size-9 text-sm' : 'size-10 text-base',
-          )}
-        >
-          {initial || '?'}
-        </div>
+        <Avatar className={collapsed ? 'size-9' : 'size-10'}>
+          {avatarUrl ? <AvatarImage src={avatarUrl} alt="" referrerPolicy="no-referrer" /> : null}
+          <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+            {initial}
+          </AvatarFallback>
+        </Avatar>
         {!collapsed && (
           <>
             <div className="min-w-0 flex-1">
               <p className="text-sidebar-foreground truncate text-sm font-semibold capitalize">
                 {displayName}
               </p>
-              <p className="text-sidebar-foreground/60 truncate text-xs">
-                {placement === 'header' ? email || currentPlanLabel : currentPlanLabel}
-              </p>
+              <p className="text-sidebar-foreground/60 truncate text-xs">{currentPlanLabel}</p>
             </div>
             <ChevronsUpDown
               className="text-sidebar-foreground/45 group-hover/account:text-sidebar-foreground size-4 shrink-0 transition-colors"
@@ -179,72 +171,51 @@ function AccountMenu({
           </>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent side={collapsed ? 'right' : 'bottom'} align="start" className="w-64">
-        {placement === 'header' ? (
-          <>
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-muted-foreground text-xs font-semibold">
-                {t('shell.accounts.title')}
-              </DropdownMenuLabel>
-              <DropdownMenuItem className="gap-3" onClick={() => router.push('/settings')}>
-                <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                  {initial || '?'}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold capitalize">{displayName}</p>
-                  {email && <p className="text-muted-foreground truncate text-xs">{email}</p>}
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push('/settings')}>
-              <Plus className="size-4" aria-hidden="true" />
-              {t('shell.accounts.addManage')}
-            </DropdownMenuItem>
-          </>
-        ) : (
-          <>
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                    {initial || '?'}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold capitalize">{displayName}</p>
-                    {email && <p className="text-muted-foreground truncate text-xs">{email}</p>}
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              {ACCOUNT_NAV.map((accountNavItem) => {
-                const Icon = accountNavItem.icon;
-                return (
-                  <DropdownMenuItem
-                    key={accountNavItem.href}
-                    onClick={() => router.push(accountNavItem.href)}
-                  >
-                    <Icon className="size-4" aria-hidden="true" />
-                    {t(accountNavItem.labelKey)}
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
+      <DropdownMenuContent side={collapsed ? 'right' : 'top'} align="start" className="w-64">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex items-center gap-3">
+              <Avatar className="size-9">
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt="" referrerPolicy="no-referrer" />
+                ) : null}
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                  {initial}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold capitalize">{displayName}</p>
+                {email && <p className="text-muted-foreground truncate text-xs">{email}</p>}
+              </div>
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          {ACCOUNT_NAV.map((accountNavItem) => {
+            const Icon = accountNavItem.icon;
+            return (
               <DropdownMenuItem
-                variant="destructive"
-                disabled={logout.isPending}
-                onClick={() => logout.mutate()}
+                key={accountNavItem.href}
+                onClick={() => router.push(accountNavItem.href)}
               >
-                <LogOut className="size-4" aria-hidden="true" />
-                {t('shell.userMenu.signOut')}
+                <Icon className="size-4" aria-hidden="true" />
+                {t(accountNavItem.labelKey)}
               </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </>
-        )}
+            );
+          })}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={logout.isPending}
+            onClick={() => logout.mutate()}
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            {t('shell.userMenu.signOut')}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -336,7 +307,6 @@ export function AppSidebar() {
             <PanelLeft className="size-4" aria-hidden="true" />
           </button>
         </div>
-        <AccountMenu collapsed={isCollapsed} placement="header" />
       </SidebarHeader>
 
       <SidebarContent className="gap-3 py-1">
@@ -377,7 +347,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className={cn('border-sidebar-border/50 border-t', isCollapsed && 'px-2')}>
-        <AccountMenu collapsed={isCollapsed} placement="footer" />
+        <AccountMenu collapsed={isCollapsed} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
