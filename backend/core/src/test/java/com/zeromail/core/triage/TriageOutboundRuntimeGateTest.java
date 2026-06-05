@@ -167,22 +167,23 @@ class TriageOutboundRuntimeGateTest {
     }
 
     @Test
-    void low_trust_static_matcher_falls_back_to_draft_for_outbound_actions() throws Exception {
+    void intent_only_rule_sends_outbound_when_toggle_on_and_sender_not_protected()
+            throws Exception {
+        // The low-trust sender-anchor requirement was removed by product decision: an intent-only
+        // matcher (no sender email/domain anchor) now auto-sends, gated only by the Auto-send
+        // toggle and the user-managed safety-net list.
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, false, subjectMatcher(), sendEmailAction());
         when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
                 .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
-        when(triageAuditSaga.outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("LOW_TRUST_STATIC_FROM")))
-                .thenReturn(applied("draft-low-trust"));
+        when(triageAuditSaga.outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID)))
+                .thenReturn(applied("sent-intent-rule"));
 
         withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
 
+        verify(triageAuditSaga).outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
         verify(triageAuditSaga, never())
-                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga)
-                .outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("LOW_TRUST_STATIC_FROM"));
+                .outboundDraftFallbackPhase(any(TriageAuditCommand.class), eq(AUDIT_ID), any());
     }
 
     @Test

@@ -33,7 +33,7 @@ class SenderSafetyNetServiceContractTest {
     }
 
     @Test
-    void frequent_sent_history_marks_sender_protected_until_opt_in_overrides_it() throws Exception {
+    void protected_set_is_user_managed_only_with_no_gmail_auto_derivation() throws Exception {
         Class<?> senderSafetyNetServiceClass = Class.forName(SENDER_SAFETY_NET_SERVICE);
         Method isProtectedMethod =
                 senderSafetyNetServiceClass.getMethod("isProtected", UUID.class, String.class);
@@ -43,10 +43,16 @@ class SenderSafetyNetServiceContractTest {
         assertThat(isProtectedMethod).isNotNull();
         assertThat(optInMethod).isNotNull();
         assertThat(senderSafetyNetSource())
-                .contains("newer_than:90d")
-                .contains("setMaxResults(3L)")
+                // Protection comes only from the user-managed list (created_by_user rows), with the
+                // opt-in exemption still honoured.
                 .contains("existsByTenantIdAndSenderEmail")
-                .contains("upsertProtectedObservation");
+                .contains("isCreatedByUser")
+                // The former Gmail sent-history auto-derivation (≥3 sent in 90d, fail-safe) is
+                // gone.
+                .doesNotContain("newer_than:90d")
+                .doesNotContain("setMaxResults(3L)")
+                .doesNotContain("upsertProtectedObservation")
+                .doesNotContain("queryGmailSentHistory");
     }
 
     @Test

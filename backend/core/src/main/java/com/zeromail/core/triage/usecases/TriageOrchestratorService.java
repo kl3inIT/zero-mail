@@ -110,7 +110,6 @@ public class TriageOrchestratorService {
             new RetryTemplate(TRANSIENT_TRIAGE_RETRY_POLICY);
     private static final String AUTO_SEND_DISABLED = "AUTO_SEND_DISABLED";
     private static final String SENDER_SAFETY_NET = "SENDER_SAFETY_NET";
-    private static final String LOW_TRUST_STATIC_FROM = "LOW_TRUST_STATIC_FROM";
     private static final String TENANT_CONTEXT_MISMATCH = "TENANT_CONTEXT_MISMATCH";
     private static final String OUTBOUND_SEND_FAILED = "OUTBOUND_SEND_FAILED";
 
@@ -274,7 +273,6 @@ public class TriageOrchestratorService {
         }
         boolean autoSendRulesEnabled =
                 ruleAutomationSettingsService.readOrDefault(tenantId).autoSendRulesEnabled();
-        Map<UUID, Boolean> senderAnchoredByRuleId = senderAnchoredByRuleId(ruleExecutionCandidates);
 
         // semanticEvalContent is a sanitized subject excerpt plus content-free metadata flags only.
         String semanticEvalContent = buildSemanticEvalContent(ruleEvaluationInput);
@@ -302,8 +300,7 @@ public class TriageOrchestratorService {
                         triageRuleEvaluationInput,
                         safetyNetEvaluation.blocksOutboundSend(),
                         safetyNetEvaluation.matchedPattern(),
-                        autoSendRulesEnabled,
-                        senderAnchoredByRuleId);
+                        autoSendRulesEnabled);
         return handleProposals(dispatchContext, mergeResult.proposals());
     }
 
@@ -319,12 +316,7 @@ public class TriageOrchestratorService {
             TriageRuleEvaluationInput triageRuleEvaluationInput,
             boolean blockedBySafetyNet,
             String blockedBySafetyNetPattern,
-            boolean autoSendRulesEnabled,
-            Map<UUID, Boolean> senderAnchoredByRuleId) {
-
-        private TriageDispatchContext {
-            senderAnchoredByRuleId = Map.copyOf(senderAnchoredByRuleId);
-        }
+            boolean autoSendRulesEnabled) {
 
         String gmailThreadId() {
             return triageRuleEvaluationInput.gmailThreadId();
@@ -1246,46 +1238,10 @@ public class TriageOrchestratorService {
         if (dispatchContext.blockedBySafetyNet()) {
             return SENDER_SAFETY_NET;
         }
-        if (!allContributingRulesHaveSenderAnchor(dispatchContext, actionProposal)) {
-            return LOW_TRUST_STATIC_FROM;
-        }
+        // Outbound sends are gated only by the global Auto-send toggle and the user-managed sender
+        // safety-net list. The former low-trust sender-anchor requirement was removed by product
+        // decision so intent-only rules (e.g. "reply to any invite") can auto-send.
         return null;
-    }
-
-    private static boolean allContributingRulesHaveSenderAnchor(
-            TriageDispatchContext dispatchContext, ActionProposal actionProposal) {
-        for (UUID ruleId : actionProposal.contributingRuleIds()) {
-            if (!dispatchContext.senderAnchoredByRuleId().getOrDefault(ruleId, false)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static Map<UUID, Boolean> senderAnchoredByRuleId(
-            List<RuleExecutionCandidate> ruleExecutionCandidates) {
-        LinkedHashMap<UUID, Boolean> senderAnchoredByRuleId = new LinkedHashMap<>();
-        for (RuleExecutionCandidate ruleExecutionCandidate : ruleExecutionCandidates) {
-            senderAnchoredByRuleId.put(
-                    ruleExecutionCandidate.ruleId(),
-                    matcherRequiresTrustedSender(ruleExecutionCandidate.matcherNode()));
-        }
-        return Map.copyOf(senderAnchoredByRuleId);
-    }
-
-    private static boolean matcherRequiresTrustedSender(MatcherNode matcherNode) {
-        return switch (matcherNode) {
-            case MatcherNode.SenderEmailMatcher _ -> true;
-            case MatcherNode.SenderDomainMatcher _ -> true;
-            case MatcherNode.AllMatcher allMatcher ->
-                    allMatcher.children().stream()
-                            .anyMatch(TriageOrchestratorService::matcherRequiresTrustedSender);
-            case MatcherNode.AnyMatcher anyMatcher ->
-                    anyMatcher.children().stream()
-                            .allMatch(TriageOrchestratorService::matcherRequiresTrustedSender);
-            case MatcherNode.NotMatcher _ -> false;
-            default -> false;
-        };
     }
 
     private static String join(List<UUID> values) {

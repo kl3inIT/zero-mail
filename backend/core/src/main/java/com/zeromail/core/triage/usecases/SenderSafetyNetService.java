@@ -1,95 +1,70 @@
 package com.zeromail.core.triage.usecases;
 
-import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.model.ListMessagesResponse;
-import com.google.api.services.gmail.model.Message;
-import com.zeromail.core.gmail.exception.InvalidGrantException;
-import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.triage.exception.SenderSafetyNetException;
 import com.zeromail.core.triage.persistence.TenantProtectedSenderObservationEntity;
 import com.zeromail.core.triage.persistence.TenantProtectedSenderObservationRepository;
 import com.zeromail.core.triage.persistence.TenantSenderOptInRepository;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.io.IOException;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
- * Protects frequent correspondents before Gmail writes run.
+ * Decides whether automated Gmail writes (label, archive, save-draft, and outbound send) may run
+ * for a given sender.
  *
- * <p>A protected verdict suppresses all auto-actions on the message (label, archive, and
- * save-draft), not just destructive tiers. SPEC req 8 point b says "skip Gmail writes" with no
- * per-tier carve-out. Gmail lookup failures fail safe by returning protected=true.
+ * <p>A sender is <b>protected</b> only when it matches an entry the tenant has explicitly added to
+ * their protected-sender list in settings ({@code tenant_protected_sender_observation} rows with
+ * {@code created_by_user = true}). There is no automatic derivation from Gmail send history — the
+ * protected set is entirely user-managed via {@link #optInSender}/{@link #listProtectedSenders}/
+ * {@link #deleteByIdAndTenant}. A protected verdict downgrades outbound sends to a Gmail draft.
+ *
+ * <p>A sender on the {@code tenant_sender_opt_in} exemption list is never protected.
  */
 @Component
 public class SenderSafetyNetService {
 
     private static final Logger log = LoggerFactory.getLogger(SenderSafetyNetService.class);
-    private static final Duration CACHE_TTL = Duration.ofHours(24);
-    private static final String CACHE_KEY_PREFIX = "triage:sender-protect:";
 
-    private final GmailApiClientFactory gmailApiClientFactory;
     private final SenderEmailCanonicalizer senderEmailCanonicalizer;
     private final SafetyNetMatcher safetyNetMatcher;
     private final TenantSenderOptInRepository tenantSenderOptInRepository;
     private final TenantProtectedSenderObservationRepository
             tenantProtectedSenderObservationRepository;
-    private final ObjectProvider<StringRedisTemplate> stringRedisTemplateProvider;
     private final Clock clock;
-    private final MeterRegistry meterRegistry;
 
     @Autowired
     public SenderSafetyNetService(
-            GmailApiClientFactory gmailApiClientFactory,
             SenderEmailCanonicalizer senderEmailCanonicalizer,
             SafetyNetMatcher safetyNetMatcher,
             TenantSenderOptInRepository tenantSenderOptInRepository,
-            TenantProtectedSenderObservationRepository tenantProtectedSenderObservationRepository,
-            ObjectProvider<StringRedisTemplate> stringRedisTemplateProvider,
-            ObjectProvider<MeterRegistry> meterRegistryProvider) {
+            TenantProtectedSenderObservationRepository tenantProtectedSenderObservationRepository) {
         this(
-                gmailApiClientFactory,
                 senderEmailCanonicalizer,
                 safetyNetMatcher,
                 tenantSenderOptInRepository,
                 tenantProtectedSenderObservationRepository,
-                stringRedisTemplateProvider,
-                Clock.systemUTC(),
-                meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new));
+                Clock.systemUTC());
     }
 
     SenderSafetyNetService(
-            GmailApiClientFactory gmailApiClientFactory,
             SenderEmailCanonicalizer senderEmailCanonicalizer,
             SafetyNetMatcher safetyNetMatcher,
             TenantSenderOptInRepository tenantSenderOptInRepository,
             TenantProtectedSenderObservationRepository tenantProtectedSenderObservationRepository,
-            ObjectProvider<StringRedisTemplate> stringRedisTemplateProvider,
-            Clock clock,
-            MeterRegistry meterRegistry) {
-        this.gmailApiClientFactory = gmailApiClientFactory;
+            Clock clock) {
         this.senderEmailCanonicalizer = senderEmailCanonicalizer;
         this.safetyNetMatcher = safetyNetMatcher;
         this.tenantSenderOptInRepository = tenantSenderOptInRepository;
         this.tenantProtectedSenderObservationRepository =
                 tenantProtectedSenderObservationRepository;
-        this.stringRedisTemplateProvider = stringRedisTemplateProvider;
         this.clock = clock;
-        this.meterRegistry = meterRegistry;
     }
 
     public boolean isProtected(UUID tenantId, String senderEmail) {
@@ -108,31 +83,8 @@ public class SenderSafetyNetService {
 
         Optional<String> storedProtectedPattern =
                 storedProtectedPattern(tenantId, canonicalSenderEmail);
-        if (storedProtectedPattern.isPresent()) {
-            logChecked(tenantId, senderEmailHash, true, "stored_pattern");
-            return storedProtectedPattern;
-        }
-
-        Optional<Boolean> cachedProtected = readCachedProtectedFlag(tenantId, senderEmailHash);
-        if (cachedProtected.isPresent()) {
-            meterRegistry.counter("triage.sender_safety_net.cache_hit").increment();
-            boolean protectedFlag = cachedProtected.get();
-            if (protectedFlag) {
-                upsertProtectedObservation(tenantId, canonicalSenderEmail);
-            }
-            logChecked(tenantId, senderEmailHash, protectedFlag, "cache");
-            return protectedFlag ? Optional.of(canonicalSenderEmail) : Optional.empty();
-        }
-        meterRegistry.counter("triage.sender_safety_net.cache_miss").increment();
-
-        boolean protectedFlag =
-                queryGmailSentHistory(tenantId, canonicalSenderEmail, senderEmailHash);
-        writeCachedProtectedFlag(tenantId, senderEmailHash, protectedFlag);
-        if (protectedFlag) {
-            upsertProtectedObservation(tenantId, canonicalSenderEmail);
-        }
-        logChecked(tenantId, senderEmailHash, protectedFlag, "gmail");
-        return protectedFlag ? Optional.of(canonicalSenderEmail) : Optional.empty();
+        logChecked(tenantId, senderEmailHash, storedProtectedPattern.isPresent(), "user_list");
+        return storedProtectedPattern;
     }
 
     @Transactional
@@ -154,18 +106,6 @@ public class SenderSafetyNetService {
                 == TenantProtectedSenderObservationEntity.PatternKind.EMAIL) {
             String senderEmailHash =
                     senderEmailCanonicalizer.redisCacheKeyComponent(canonicalizedPattern.value());
-            Runnable cacheDelete = () -> deleteCachedProtectedFlag(tenantId, senderEmailHash);
-            if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                TransactionSynchronizationManager.registerSynchronization(
-                        new TransactionSynchronization() {
-                            @Override
-                            public void afterCommit() {
-                                cacheDelete.run();
-                            }
-                        });
-            } else {
-                cacheDelete.run();
-            }
             log.info(
                     "event=triage_sender_opt_in tenantId={} senderEmailHash={}",
                     tenantId,
@@ -196,7 +136,7 @@ public class SenderSafetyNetService {
 
     @Transactional(readOnly = true)
     public List<ProtectedSenderListItem> listProtectedSenders(UUID tenantId) {
-        return tenantProtectedSenderObservationRepository.findByTenantId(tenantId).stream()
+        return userManagedObservations(tenantId).stream()
                 .sorted(
                         java.util.Comparator.comparing(
                                         TenantProtectedSenderObservationEntity::getLastObservedAt)
@@ -206,95 +146,18 @@ public class SenderSafetyNetService {
     }
 
     private Optional<String> storedProtectedPattern(UUID tenantId, String canonicalSenderEmail) {
-        return safetyNetMatcher.findMatch(
-                canonicalSenderEmail,
-                tenantProtectedSenderObservationRepository.findByTenantId(tenantId));
+        return safetyNetMatcher.findMatch(canonicalSenderEmail, userManagedObservations(tenantId));
     }
 
-    private boolean queryGmailSentHistory(
-            UUID tenantId, String canonicalSenderEmail, String senderEmailHash) {
-        try {
-            Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
-            ListMessagesResponse response =
-                    gmail.users()
-                            .messages()
-                            .list("me")
-                            .setQ(
-                                    "in:sent to:"
-                                            + senderEmailCanonicalizer.gmailSearchToken(
-                                                    canonicalSenderEmail)
-                                            + " newer_than:90d")
-                            .setMaxResults(3L)
-                            .execute();
-            List<Message> sentMessages = response.getMessages();
-            return sentMessages != null && sentMessages.size() >= 3;
-        } catch (InvalidGrantException
-                | IllegalStateException
-                | IOException senderSafetyNetLookupFailure) {
-            logLookupFailed(tenantId, senderEmailHash);
-            return true;
-        }
-    }
-
-    private Optional<Boolean> readCachedProtectedFlag(UUID tenantId, String senderEmailHash) {
-        StringRedisTemplate stringRedisTemplate = stringRedisTemplateProvider.getIfAvailable();
-        if (stringRedisTemplate == null) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.ofNullable(
-                            stringRedisTemplate
-                                    .opsForValue()
-                                    .get(cacheKey(tenantId, senderEmailHash)))
-                    .map(Boolean::parseBoolean);
-        } catch (RuntimeException redisException) {
-            log.debug(
-                    "event=triage_sender_safety_net_cache_unavailable tenantId={} senderEmailHash={}",
-                    tenantId,
-                    senderEmailHash);
-            return Optional.empty();
-        }
-    }
-
-    private void writeCachedProtectedFlag(
-            UUID tenantId, String senderEmailHash, boolean protectedFlag) {
-        StringRedisTemplate stringRedisTemplate = stringRedisTemplateProvider.getIfAvailable();
-        if (stringRedisTemplate == null) {
-            return;
-        }
-        try {
-            stringRedisTemplate
-                    .opsForValue()
-                    .set(
-                            cacheKey(tenantId, senderEmailHash),
-                            Boolean.toString(protectedFlag),
-                            CACHE_TTL);
-        } catch (RuntimeException redisException) {
-            log.debug(
-                    "event=triage_sender_safety_net_cache_unavailable tenantId={} senderEmailHash={}",
-                    tenantId,
-                    senderEmailHash);
-        }
-    }
-
-    private void deleteCachedProtectedFlag(UUID tenantId, String senderEmailHash) {
-        StringRedisTemplate stringRedisTemplate = stringRedisTemplateProvider.getIfAvailable();
-        if (stringRedisTemplate == null) {
-            return;
-        }
-        try {
-            stringRedisTemplate.delete(cacheKey(tenantId, senderEmailHash));
-        } catch (RuntimeException redisException) {
-            log.debug(
-                    "event=triage_sender_safety_net_cache_unavailable tenantId={} senderEmailHash={}",
-                    tenantId,
-                    senderEmailHash);
-        }
-    }
-
-    private void upsertProtectedObservation(UUID tenantId, String canonicalSenderEmail) {
-        tenantProtectedSenderObservationRepository.upsertObservation(
-                UUID.randomUUID(), tenantId, canonicalSenderEmail, clock.instant());
+    /**
+     * Only user-added entries protect a sender. Any legacy auto-observed rows ({@code
+     * created_by_user = false}) are ignored so the protected set is exactly what the tenant
+     * configured.
+     */
+    private List<TenantProtectedSenderObservationEntity> userManagedObservations(UUID tenantId) {
+        return tenantProtectedSenderObservationRepository.findByTenantId(tenantId).stream()
+                .filter(TenantProtectedSenderObservationEntity::isCreatedByUser)
+                .toList();
     }
 
     private void logChecked(
@@ -305,17 +168,6 @@ public class SenderSafetyNetService {
                 senderEmailHash,
                 protectedFlag,
                 source);
-    }
-
-    private static void logLookupFailed(UUID tenantId, String senderEmailHash) {
-        log.warn(
-                "event=triage_sender_safety_net_lookup_failed tenantId={} senderEmailHash={}",
-                tenantId,
-                senderEmailHash);
-    }
-
-    private static String cacheKey(UUID tenantId, String senderEmailHash) {
-        return CACHE_KEY_PREFIX + tenantId + ":" + senderEmailHash;
     }
 
     private static ProtectedSenderListItem toProtectedSenderListItem(
