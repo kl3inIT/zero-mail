@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Languages, Mail, Moon, Palette, Sun, TriangleAlert, UserCircle } from 'lucide-react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import type { CurrentUser } from '@/features/account/api/account-api';
 import { DeleteAccountDialog } from '@/features/account/components/DeleteAccountDialog';
@@ -94,114 +95,139 @@ export function SettingsClient({
       : 'NOT_CONNECTED';
   const ingestionHealth = gmailConnection?.ingestionHealth ?? 'HEALTHY';
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
+  const accountEmail = me.data?.email ?? '';
+  // Google profile name/picture come straight from the OAuth session (never stored);
+  // fall back to the email local-part + a letter tile when absent.
+  const accountDisplayName =
+    me.data?.displayName?.trim() || (accountEmail ? accountEmail.split('@')[0] : '');
+  const accountAvatarUrl = me.data?.avatarUrl ?? undefined;
+  const accountInitial = (accountDisplayName || accountEmail || '?').charAt(0).toUpperCase();
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-8 overflow-auto p-3 sm:p-4">
-        <header className="space-y-1">
-          <h1 className="text-foreground text-2xl font-semibold tracking-normal">
-            {t('settings.title')}
-          </h1>
-          <p className="text-muted-foreground text-sm">{t('settings.description')}</p>
-        </header>
+      <div className="flex-1 overflow-auto p-3 sm:p-6">
+        <div className="mx-auto w-full max-w-3xl space-y-8">
+          <header className="space-y-1">
+            <h1 className="text-foreground text-2xl font-semibold tracking-normal">
+              {t('settings.title')}
+            </h1>
+            <p className="text-muted-foreground text-sm">{t('settings.description')}</p>
+          </header>
 
-        {/* Tài khoản */}
-        <section className="space-y-4" aria-labelledby="settings-section-account">
-          <SectionHeader
-            id="settings-section-account"
-            title={t('settings.account.heading')}
-            icon={UserCircle}
-          />
-          <SettingCard>
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                {me.data?.email?.[0]?.toUpperCase() ?? '?'}
+          {/* Tài khoản */}
+          <section className="space-y-4" aria-labelledby="settings-section-account">
+            <SectionHeader
+              id="settings-section-account"
+              title={t('settings.account.heading')}
+              icon={UserCircle}
+            />
+            <SettingCard>
+              <div className="flex items-center gap-3">
+                <Avatar className="size-10">
+                  {accountAvatarUrl ? (
+                    <AvatarImage src={accountAvatarUrl} alt="" referrerPolicy="no-referrer" />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                    {accountInitial}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  {accountDisplayName ? (
+                    <p className="text-foreground truncate text-sm font-medium capitalize">
+                      {accountDisplayName}
+                    </p>
+                  ) : null}
+                  <p className="text-muted-foreground truncate text-sm">
+                    {accountEmail || t('common.loading')}
+                  </p>
+                </div>
               </div>
-              <p className="text-foreground truncate text-sm">
-                {me.data?.email ?? t('common.loading')}
-              </p>
-            </div>
-          </SettingCard>
-        </section>
+            </SettingCard>
+          </section>
 
-        {/* Hiển thị */}
-        <section className="space-y-4" aria-labelledby="settings-section-display">
-          <SectionHeader
-            id="settings-section-display"
-            title={t('settings.display.heading')}
-            helperText={t('settings.display.helper')}
-            icon={Palette}
-          />
-          <div className="space-y-3">
-            <SettingCard
-              title={t('settings.language.label')}
-              icon={Languages}
-              rightSlot={
-                <LanguageSwitcher
-                  currentLocale={preferredLanguage}
-                  authenticated={true}
-                  variant="compact"
-                />
-              }
+          {/* Hiển thị */}
+          <section className="space-y-4" aria-labelledby="settings-section-display">
+            <SectionHeader
+              id="settings-section-display"
+              title={t('settings.display.heading')}
+              helperText={t('settings.display.helper')}
+              icon={Palette}
             />
-            <SettingCard
-              title={t('settings.theme.heading')}
-              icon={initialTheme === 'light' ? Sun : Moon}
-              rightSlot={<ThemeSwitcher currentTheme={initialTheme} />}
-            />
-          </div>
-        </section>
-
-        {/* Kết nối Gmail */}
-        <section className="space-y-4" aria-labelledby="settings-section-gmail">
-          <SectionHeader
-            id="settings-section-gmail"
-            title={t('settings.gmailConnection.heading')}
-            helperText={t('settings.gmailConnection.singleAccountNote')}
-            icon={Mail}
-          />
-          <SettingCard>
             <div className="space-y-3">
-              <ConnectionHealthBadge status={connStatus} />
-              <ReconnectPromptGate
-                status={connStatus}
-                ingestionHealth={ingestionHealth}
-                onReconnect={reconnect}
+              <SettingCard
+                // overflow-visible: the language popup is absolutely positioned and
+                // the Card primitive clips with overflow-hidden, which otherwise
+                // shears the open dropdown to a thin sliver inside the card.
+                className="overflow-visible"
+                title={t('settings.language.label')}
+                icon={Languages}
+                rightSlot={
+                  <LanguageSwitcher
+                    currentLocale={preferredLanguage}
+                    authenticated={true}
+                    variant="compact"
+                  />
+                }
               />
-              {connStatus === 'NOT_CONNECTED' && (
-                <Button onClick={reconnect}>{t('onboarding.connect.cta')}</Button>
-              )}
+              <SettingCard
+                title={t('settings.theme.heading')}
+                icon={initialTheme === 'light' ? Sun : Moon}
+                rightSlot={<ThemeSwitcher currentTheme={initialTheme} />}
+              />
             </div>
-          </SettingCard>
-        </section>
+          </section>
 
-        {/* Vùng nguy hiểm */}
-        <section className="space-y-4" aria-labelledby="settings-section-danger">
-          <SectionHeader
-            id="settings-section-danger"
-            title={t('settings.dangerZone.heading')}
-            helperText={t('deleteAccount.body')}
-            icon={TriangleAlert}
-          />
-          <SettingCard className="border-destructive/40 bg-destructive/5">
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="destructive"
-                disabled={disconnect.isPending}
-                onClick={() => disconnect.mutate()}
-              >
-                {t('settings.gmailConnection.disconnectCta')}
-              </Button>
-              <DeleteAccountDialog
-                isPending={del.isPending}
-                onConfirm={async () => {
-                  await del.mutateAsync();
-                  window.location.href = '/login';
-                }}
-              />
-            </div>
-          </SettingCard>
-        </section>
+          {/* Kết nối Gmail */}
+          <section className="space-y-4" aria-labelledby="settings-section-gmail">
+            <SectionHeader
+              id="settings-section-gmail"
+              title={t('settings.gmailConnection.heading')}
+              helperText={t('settings.gmailConnection.singleAccountNote')}
+              icon={Mail}
+            />
+            <SettingCard>
+              <div className="space-y-3">
+                <ConnectionHealthBadge status={connStatus} />
+                <ReconnectPromptGate
+                  status={connStatus}
+                  ingestionHealth={ingestionHealth}
+                  onReconnect={reconnect}
+                />
+                {connStatus === 'NOT_CONNECTED' && (
+                  <Button onClick={reconnect}>{t('onboarding.connect.cta')}</Button>
+                )}
+              </div>
+            </SettingCard>
+          </section>
+
+          {/* Vùng nguy hiểm */}
+          <section className="space-y-4" aria-labelledby="settings-section-danger">
+            <SectionHeader
+              id="settings-section-danger"
+              title={t('settings.dangerZone.heading')}
+              helperText={t('deleteAccount.body')}
+              icon={TriangleAlert}
+            />
+            <SettingCard className="border-destructive/40 bg-destructive/5">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="destructive"
+                  disabled={disconnect.isPending}
+                  onClick={() => disconnect.mutate()}
+                >
+                  {t('settings.gmailConnection.disconnectCta')}
+                </Button>
+                <DeleteAccountDialog
+                  isPending={del.isPending}
+                  onConfirm={async () => {
+                    await del.mutateAsync();
+                    window.location.href = '/login';
+                  }}
+                />
+              </div>
+            </SettingCard>
+          </section>
+        </div>
       </div>
     </div>
   );

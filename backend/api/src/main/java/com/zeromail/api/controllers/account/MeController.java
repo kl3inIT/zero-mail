@@ -10,6 +10,8 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.usecases.TenantService;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,12 +48,17 @@ public class MeController {
     }
 
     @GetMapping("/api/me")
-    public MeResponse me() {
+    public MeResponse me(@AuthenticationPrincipal OidcUser oidcUser) {
         UUID tenantId = TenantContext.currentTenantUuid();
         CurrentUserProjection user = accountService.requireCurrentUser(tenantId);
         boolean triagePaused = tenantService.isTriagePaused(tenantId);
         GmailConnectionProjection gmailConnection = gmailConnectionService.currentStatus(tenantId);
-        return MeResponse.from(user, triagePaused, gmailConnection);
+        return MeResponse.from(
+                user,
+                triagePaused,
+                gmailConnection,
+                displayNameOf(oidcUser),
+                avatarUrlOf(oidcUser));
     }
 
     /**
@@ -62,12 +69,37 @@ public class MeController {
      * DB CHECK constraint added in Plan 01 is the second line of defense (D-B2).
      */
     @PatchMapping("/api/me/language")
-    public MeResponse updateLanguage(@Valid @RequestBody UpdateLanguageRequest request) {
+    public MeResponse updateLanguage(
+            @Valid @RequestBody UpdateLanguageRequest request,
+            @AuthenticationPrincipal OidcUser oidcUser) {
         UUID tenantId = TenantContext.currentTenantUuid();
         CurrentUserProjection updated =
                 accountService.updateCurrentUserLanguage(tenantId, request.language());
         boolean triagePaused = tenantService.isTriagePaused(tenantId);
         GmailConnectionProjection gmailConnection = gmailConnectionService.currentStatus(tenantId);
-        return MeResponse.from(updated, triagePaused, gmailConnection);
+        return MeResponse.from(
+                updated,
+                triagePaused,
+                gmailConnection,
+                displayNameOf(oidcUser),
+                avatarUrlOf(oidcUser));
+    }
+
+    /**
+     * Google profile display name, read straight from the OAuth session principal (the {@link
+     * OidcUser} held in the Redis-backed session). Returned transiently to the client and never
+     * written to the database — the privacy lock forbids persisting profile identity we can derive
+     * from the live session. Null-safe: returns {@code null} when the principal or claim is absent.
+     */
+    private static String displayNameOf(OidcUser oidcUser) {
+        return oidcUser == null ? null : oidcUser.getFullName();
+    }
+
+    /**
+     * Google profile picture URL from the OAuth session principal — same transient, never-persisted
+     * contract as {@link #displayNameOf(OidcUser)}.
+     */
+    private static String avatarUrlOf(OidcUser oidcUser) {
+        return oidcUser == null ? null : oidcUser.getPicture();
     }
 }

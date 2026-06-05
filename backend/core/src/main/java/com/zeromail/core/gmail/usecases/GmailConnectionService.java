@@ -75,9 +75,23 @@ public class GmailConnectionService {
      * user-initiated logout/disconnect, not just clearing the local session.
      */
     public void disconnect(UUID tenantId) {
+        revokeGrantForCurrentTenant(tenantId);
+        markDisconnected(tenantId);
+    }
+
+    /**
+     * Best-effort teardown of the Google-side grant for a tenant: stop the Gmail watch ({@code
+     * users.stop}) and revoke the stored refresh token. Ordering matches {@link #disconnect(UUID)}
+     * — stop FIRST while the refresh-token ciphertext is still present, then revoke. Both calls
+     * swallow their own exceptions so a failed external call never blocks the caller.
+     *
+     * <p>Exposed so the account-deletion cascade can revoke at Google BEFORE the rows are dropped —
+     * otherwise deleting the connection row alone leaves the OAuth grant active in the user's
+     * Google account and the Pub/Sub watch running until it expires (CASA Tier 2 V3.3.1 / V13.1.5).
+     */
+    public void revokeGrantForCurrentTenant(UUID tenantId) {
         tryStopWatch(tenantId);
         revokeStoredRefreshToken(tenantId);
-        markDisconnected(tenantId);
     }
 
     public void markDisconnected(UUID tenantId) {

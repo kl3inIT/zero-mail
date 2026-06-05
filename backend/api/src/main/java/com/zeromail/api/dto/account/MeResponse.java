@@ -21,7 +21,21 @@ public record MeResponse(
         String onboardingStep,
         String preferredLanguage,
         boolean triagePaused,
-        GmailConnectionStatusExtended gmailConnectionStatus) {
+        GmailConnectionStatusExtended gmailConnectionStatus,
+        @Schema(
+                        nullable = true,
+                        description =
+                                "Google profile display name. Read transiently from the OAuth"
+                                        + " session principal on each request — never persisted to the"
+                                        + " database (privacy).")
+                String displayName,
+        @Schema(
+                        nullable = true,
+                        description =
+                                "Google profile picture URL. Read transiently from the OAuth"
+                                        + " session principal on each request — never persisted to the"
+                                        + " database (privacy).")
+                String avatarUrl) {
 
     @Schema(requiredProperties = {"status", "ingestionHealth", "googleEmail"})
     public record GmailConnectionStatusExtended(
@@ -30,7 +44,9 @@ public record MeResponse(
     public static MeResponse from(
             CurrentUserProjection user,
             boolean triagePaused,
-            GmailConnectionStatusExtended gmailStatus) {
+            GmailConnectionStatusExtended gmailStatus,
+            String displayName,
+            String avatarUrl) {
         return new MeResponse(
                 user.userId().toString(),
                 user.tenantId().toString(),
@@ -38,19 +54,25 @@ public record MeResponse(
                 user.onboardingStep(),
                 user.preferredLanguage(),
                 triagePaused,
-                gmailStatus);
+                gmailStatus,
+                displayName,
+                avatarUrl);
     }
 
     public static MeResponse from(
             CurrentUserProjection user,
             boolean triagePaused,
-            GmailConnectionProjection gmailConnection) {
+            GmailConnectionProjection gmailConnection,
+            String displayName,
+            String avatarUrl) {
         return from(
                 user,
                 triagePaused,
                 new GmailConnectionStatusExtended(
                         gmailConnection.status(),
                         gmailConnection.ingestionHealth(),
-                        gmailConnection.googleEmail()));
+                        gmailConnection.googleEmail()),
+                displayName,
+                avatarUrl);
     }
 }

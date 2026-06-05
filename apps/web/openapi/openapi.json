@@ -10034,6 +10034,14 @@
           },
           "gmailConnectionStatus": {
             "$ref": "#/components/schemas/GmailConnectionStatusExtended"
+          },
+          "displayName": {
+            "type": ["string", "null"],
+            "description": "Google profile display name. Read transiently from the OAuth session principal on each request — never persisted to the database (privacy)."
+          },
+          "avatarUrl": {
+            "type": ["string", "null"],
+            "description": "Google profile picture URL. Read transiently from the OAuth session principal on each request — never persisted to the database (privacy)."
           }
         },
         "required": [

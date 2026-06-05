@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test")
@@ -53,7 +54,7 @@ class AccountDeletionE2ETest extends ApiPostgresTestBase {
                             gc.setRefreshTokenEncrypted(new byte[] {1, 2, 3});
                             conns.save(gc);
 
-                            deletion.deleteAccount();
+                            deletion.deleteAccount(new MockHttpServletRequest());
 
                             assertThat(onboarding.findByTenantId(tenantId)).isEmpty();
                             assertThat(conns.findByTenantId(tenantId)).isEmpty();
