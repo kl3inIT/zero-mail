@@ -18,4 +18,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: millionco/react-doctor@24425b113adcd965545b8c790af85c13a0d86c86 # main as of 2026-06-04
+      - uses: millionco/react-doctor@f75ec7a1e7f4bf23654e5deb26dbdd9765b09ff5 # main as of 2026-06-04
