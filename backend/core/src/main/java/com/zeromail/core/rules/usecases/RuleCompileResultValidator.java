@@ -659,7 +659,18 @@ public class RuleCompileResultValidator {
         // valid recipient) instead of a brittle no-whitespace regex. Keeping this in one place also
         // means the rule-compile path and the outbound send path agree on what a valid recipient
         // is.
-        return EmailRecipientValidator.optional(recipientValues, primaryFieldName);
+        try {
+            return EmailRecipientValidator.optional(recipientValues, primaryFieldName);
+        } catch (IllegalArgumentException invalidRecipient) {
+            // Log the raw recipient values the LLM emitted so a recurring "invalid recipient" is
+            // diagnosable. These are rule-builder config the user authored (NOT email content
+            // received from Gmail), so they are loggable under the privacy scope.
+            log.info(
+                    "event=rule_compile_recipient_rejected field={} rawRecipients={}",
+                    primaryFieldName,
+                    recipientValues);
+            throw invalidRecipient;
+        }
     }
 
     private static boolean containsVietnameseSignal(String normalizedText) {

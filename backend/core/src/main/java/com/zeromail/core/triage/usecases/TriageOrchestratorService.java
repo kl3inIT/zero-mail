@@ -409,7 +409,7 @@ public class TriageOrchestratorService {
             boolean outboundAction = isOutboundAction(actionType);
             String outboundFallbackReason =
                     outboundAction ? outboundFallbackReason(dispatchContext, actionProposal) : null;
-            if (shouldSkipDraftWrite(dispatchContext, actionType, outboundFallbackReason)) {
+            if (shouldSkipDraftWrite(dispatchContext, actionType)) {
                 continue;
             }
 
@@ -458,10 +458,10 @@ public class TriageOrchestratorService {
     }
 
     private boolean shouldSkipDraftWrite(
-            TriageDispatchContext dispatchContext,
-            RuleActionType actionType,
-            String outboundFallbackReason) {
-        if (!wouldWriteDraft(actionType, outboundFallbackReason)) {
+            TriageDispatchContext dispatchContext, RuleActionType actionType) {
+        // Only an explicit save_draft action writes a draft now — outbound actions never downgrade
+        // to one — so the auto-draft toggle only gates save_draft.
+        if (actionType != RuleActionType.SAVE_DRAFT) {
             return false;
         }
         if (triageDraftSettings.autoDraftRepliesEnabled(dispatchContext.tenantId())) {
@@ -474,11 +474,6 @@ public class TriageOrchestratorService {
         return true;
     }
 
-    private static boolean wouldWriteDraft(
-            RuleActionType actionType, String outboundFallbackReason) {
-        return actionType == RuleActionType.SAVE_DRAFT || outboundFallbackReason != null;
-    }
-
     private GmailWriteResult executeGmailPhase(
             TriageAuditCommand command,
             UUID auditId,
@@ -488,31 +483,23 @@ public class TriageOrchestratorService {
         if (!outboundAction) {
             return triageAuditSaga.gmailWritePhase(command);
         }
-        if (TENANT_CONTEXT_MISMATCH.equals(outboundFallbackReason)) {
-            return GmailWriteResult.failed(TENANT_CONTEXT_MISMATCH);
-        }
+        // Outbound actions are NEVER downgraded to a Gmail draft (product decision). A blocked send
+        // (auto-send off, protected sender, rate-limited, tenant-context mismatch) or a failed send
+        // is recorded as a failed audit with its reason — no draft is written, so a send/forward
+        // rule that cannot send simply does nothing rather than leaving a surprise draft.
         if (outboundFallbackReason != null) {
-            return triageAuditSaga.outboundDraftFallbackPhase(
-                    command, auditId, outboundFallbackReason);
+            return GmailWriteResult.failed(outboundFallbackReason);
         }
         try {
             return triageAuditSaga.outboundSendPhase(command, auditId);
         } catch (IOException | RuntimeException outboundSendFailure) {
             log.warn(
-                    "event=triage_outbound_send_fallback tenantId={} gmailMessageId={} actionType={} failureClass={}",
+                    "event=triage_outbound_send_failed tenantId={} gmailMessageId={} actionType={} failureClass={}",
                     command.tenantId(),
                     command.gmailMessageId(),
                     command.actionType(),
                     outboundSendFailure.getClass().getSimpleName());
-            if (!triageDraftSettings.autoDraftRepliesEnabled(command.tenantId())) {
-                log.info(
-                        "event=draft.skipped reason=auto_disabled tenantId={} gmailMessageId={}",
-                        command.tenantId(),
-                        command.gmailMessageId());
-                return GmailWriteResult.failed("AUTO_DRAFT_DISABLED");
-            }
-            return triageAuditSaga.outboundDraftFallbackPhase(
-                    command, auditId, OUTBOUND_SEND_FAILED);
+            return GmailWriteResult.failed(OUTBOUND_SEND_FAILED);
         }
     }
 

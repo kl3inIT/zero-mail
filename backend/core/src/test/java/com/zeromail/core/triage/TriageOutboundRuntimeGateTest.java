@@ -74,64 +74,27 @@ class TriageOutboundRuntimeGateTest {
             mock(PlatformTransactionManager.class);
 
     @Test
-    void global_auto_send_disabled_saves_draft_and_never_sends() throws Exception {
+    void global_auto_send_disabled_fails_audit_and_never_sends() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(false, false, senderDomainMatcher(), sendEmailAction());
-        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
-                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
-        when(triageAuditSaga.outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("AUTO_SEND_DISABLED")))
-                .thenReturn(applied("draft-auto-disabled"));
-
-        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
-
-        verify(triageAuditSaga, never())
-                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga)
-                .outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("AUTO_SEND_DISABLED"));
-        verifyFinalizedApplied();
+        verifyOutboundFailsWithReason(orchestratorService, "AUTO_SEND_DISABLED");
     }
 
     @Test
-    void protected_sender_falls_back_to_draft_for_outbound_actions() throws Exception {
+    void protected_sender_fails_audit_for_outbound_actions() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, true, senderDomainMatcher(), sendReplyAction());
         when(draftBodyGenerator.generate(eq(TENANT_ID), eq(GMAIL_THREAD_ID), any(), any()))
                 .thenReturn("Generated safe reply");
-        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
-                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
-        when(triageAuditSaga.outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("SENDER_SAFETY_NET")))
-                .thenReturn(applied("draft-sender-net"));
-
-        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
-
-        verify(triageAuditSaga, never())
-                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga)
-                .outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("SENDER_SAFETY_NET"));
+        verifyOutboundFailsWithReason(orchestratorService, "SENDER_SAFETY_NET");
     }
 
     @Test
-    void missing_sender_still_falls_back_to_draft_for_outbound_actions() throws Exception {
+    void missing_sender_fails_audit_for_outbound_actions() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(
                         true, false, senderDomainMatcher(), sendEmailAction(), triageInput(null));
-        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
-                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
-        when(triageAuditSaga.outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("SENDER_SAFETY_NET")))
-                .thenReturn(applied("draft-missing-sender"));
-
-        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
-
-        verify(triageAuditSaga, never())
-                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga)
-                .outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("SENDER_SAFETY_NET"));
+        verifyOutboundFailsWithReason(orchestratorService, "SENDER_SAFETY_NET");
     }
 
     @Test
@@ -163,8 +126,6 @@ class TriageOutboundRuntimeGateTest {
         verify(triageAuditSaga).gmailWritePhase(any(TriageAuditCommand.class));
         verify(triageAuditSaga, never())
                 .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga, never())
-                .outboundDraftFallbackPhase(any(TriageAuditCommand.class), eq(AUDIT_ID), any());
         verifyFinalizedApplied();
     }
 
@@ -184,8 +145,6 @@ class TriageOutboundRuntimeGateTest {
         withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
 
         verify(triageAuditSaga).outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga, never())
-                .outboundDraftFallbackPhase(any(TriageAuditCommand.class), eq(AUDIT_ID), any());
     }
 
     @Test
@@ -213,45 +172,33 @@ class TriageOutboundRuntimeGateTest {
     }
 
     @Test
-    void outbound_send_throttle_exhausted_falls_back_to_draft() throws Exception {
-        // Defense-in-depth: when the per-tenant auto-send cap is exhausted, the outbound action
-        // downgrades to a Gmail draft instead of sending, bounding the blast radius of any runaway.
+    void outbound_send_throttle_exhausted_fails_audit_and_never_sends() throws Exception {
+        // Defense-in-depth: when the per-tenant auto-send cap is exhausted, the outbound action is
+        // dropped (failed audit, no draft), bounding the blast radius of any runaway.
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, false, subjectMatcher(), sendEmailAction());
         when(outboundSendThrottle.acquire(TENANT_ID)).thenReturn(false);
-        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
-                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
-        when(triageAuditSaga.outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("OUTBOUND_RATE_LIMITED")))
-                .thenReturn(applied("draft-rate-limited"));
-
-        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
-
-        verify(triageAuditSaga, never())
-                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga)
-                .outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("OUTBOUND_RATE_LIMITED"));
+        verifyOutboundFailsWithReason(orchestratorService, "OUTBOUND_RATE_LIMITED");
     }
 
     @Test
-    void outbound_send_failure_falls_back_to_draft() throws Exception {
+    void outbound_send_failure_fails_audit_without_drafting() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, false, senderDomainMatcher(), sendEmailAction());
         when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
                 .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
         when(triageAuditSaga.outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID)))
                 .thenThrow(new IOException("missing send scope"));
-        when(triageAuditSaga.outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("OUTBOUND_SEND_FAILED")))
-                .thenReturn(applied("draft-send-failed"));
 
         withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
 
         verify(triageAuditSaga).outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
+        ArgumentCaptor<GmailWriteResult> writeResultCaptor =
+                ArgumentCaptor.forClass(GmailWriteResult.class);
         verify(triageAuditSaga)
-                .outboundDraftFallbackPhase(
-                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("OUTBOUND_SEND_FAILED"));
+                .finalizePhase(eq(TENANT_ID), eq(AUDIT_ID), writeResultCaptor.capture());
+        assertThat(writeResultCaptor.getValue().applied()).isFalse();
+        assertThat(writeResultCaptor.getValue().failureReason()).isEqualTo("OUTBOUND_SEND_FAILED");
     }
 
     @Test
@@ -265,8 +212,6 @@ class TriageOutboundRuntimeGateTest {
 
         verify(triageAuditSaga, never())
                 .outboundSendPhase(any(TriageAuditCommand.class), any(UUID.class));
-        verify(triageAuditSaga, never())
-                .outboundDraftFallbackPhase(any(TriageAuditCommand.class), any(UUID.class), any());
     }
 
     @Test
@@ -466,14 +411,32 @@ class TriageOutboundRuntimeGateTest {
 
         verify(triageAuditSaga, never())
                 .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga, never())
-                .outboundDraftFallbackPhase(any(TriageAuditCommand.class), eq(AUDIT_ID), any());
         ArgumentCaptor<GmailWriteResult> writeResultCaptor =
                 ArgumentCaptor.forClass(GmailWriteResult.class);
         verify(triageAuditSaga)
                 .finalizePhase(eq(TENANT_ID), eq(AUDIT_ID), writeResultCaptor.capture());
         org.assertj.core.api.Assertions.assertThat(writeResultCaptor.getValue().failureReason())
                 .isEqualTo("TENANT_CONTEXT_MISMATCH");
+    }
+
+    private void verifyOutboundFailsWithReason(
+            TriageOrchestratorService orchestratorService, String expectedReason)
+            throws IOException {
+        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
+                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
+
+        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        // Blocked outbound is never sent and never drafted — it is recorded as a failed audit
+        // carrying the block reason (no Gmail draft is written).
+        verify(triageAuditSaga, never())
+                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
+        ArgumentCaptor<GmailWriteResult> writeResultCaptor =
+                ArgumentCaptor.forClass(GmailWriteResult.class);
+        verify(triageAuditSaga)
+                .finalizePhase(eq(TENANT_ID), eq(AUDIT_ID), writeResultCaptor.capture());
+        assertThat(writeResultCaptor.getValue().applied()).isFalse();
+        assertThat(writeResultCaptor.getValue().failureReason()).isEqualTo(expectedReason);
     }
 
     private static <T> T withTenant(UUID tenantId, TenantSupplier<T> tenantSupplier) {

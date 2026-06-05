@@ -219,58 +219,6 @@ public class TriageAuditSaga {
                 actionArgsJson(command.preWriteIntent()));
     }
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public GmailWriteResult outboundDraftFallbackPhase(
-            TriageAuditCommand command, UUID auditId, String fallbackReason) throws IOException {
-        Objects.requireNonNull(command, "command must not be null");
-        Objects.requireNonNull(auditId, "auditId must not be null");
-        requireText(fallbackReason, "fallbackReason");
-        try {
-            String draftId =
-                    switch (command.preWriteIntent()) {
-                        case TriageActionResult.SendReply sendReply ->
-                                triageGmailWriter.saveDraft(
-                                        command.tenantId(),
-                                        command.replyHeaders(),
-                                        sendReply.draftBody(),
-                                        sendReply.gmailThreadId());
-                        case TriageActionResult.ForwardEmail _ -> {
-                            com.google.api.services.gmail.model.Message draftMessage =
-                                    outboundRuleMessageBuilder.build(
-                                            command.preWriteIntent(),
-                                            command.replyHeaders(),
-                                            command.sanitizedSubject(),
-                                            command.gmailMessageId(),
-                                            command.tenantId(),
-                                            auditId + "-draft");
-                            yield triageGmailWriter.saveDraftMessage(
-                                    command.tenantId(), draftMessage, command.gmailThreadId());
-                        }
-                        case TriageActionResult.SendEmail _ -> {
-                            com.google.api.services.gmail.model.Message draftMessage =
-                                    outboundRuleMessageBuilder.build(
-                                            command.preWriteIntent(),
-                                            command.replyHeaders(),
-                                            command.sanitizedSubject(),
-                                            command.gmailMessageId(),
-                                            command.tenantId(),
-                                            auditId + "-draft");
-                            yield triageGmailWriter.saveDraftMessage(
-                                    command.tenantId(), draftMessage, command.gmailThreadId());
-                        }
-                        default ->
-                                throw new IllegalArgumentException(
-                                        "fallback requires an outbound action intent");
-                    };
-            return GmailWriteResult.applied(
-                    draftId,
-                    changeToken(Map.of("fallbackReason", fallbackReason)),
-                    actionArgsJson(command.preWriteIntent()));
-        } catch (MissingMessageIdException | ThreadingHeaderInvalidException threadingException) {
-            return GmailWriteResult.failed("draft_threading_invalid");
-        }
-    }
-
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void finalizePhase(UUID tenantId, UUID auditId, GmailWriteResult gmailWriteResult) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");

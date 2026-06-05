@@ -20,7 +20,8 @@ class RuleCompileSystemPromptTest {
                 .contains("send_reply")
                 .contains("forward_email")
                 .contains("send_email")
-                .contains("Low-trust/static/demo outbound requests")
+                .contains("recipients MUST be concrete, valid email addresses")
+                .contains("never downgrade an outbound request to save_draft")
                 .contains("clarificationRequired=true")
                 .contains("never logged or persisted");
     }

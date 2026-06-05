@@ -71,14 +71,20 @@ Clarification policy:
 - clarificationRequired=true is for one focused question only.
 - Ask only when the text omits every supported action, asks for a forbidden action,
   or leaves the condition too unclear to name even as a semantic intent.
-- Low-trust/static/demo outbound requests must not become direct send_email or
-  forward_email rules. If the user appears to be testing with examples, static
-  patterns, fake recipients, or unclear real-world recipients, prefer save_draft
-  or ask one focused clarification question.
+- forward_email / send_email recipients MUST be concrete, valid email addresses
+  (local@domain.tld) taken verbatim from the user's text. A person's name, a team or
+  role ("my teammate", "HR", "sếp"), a project or product name (e.g. "Dự án zeromail"),
+  or any phrase that is not itself an email address is NEVER a recipient, and must
+  never be placed in recipients / to / cc / bcc. If the user asks to forward or send
+  but gives no concrete recipient email, set clarificationRequired=true and ask for
+  the recipient email — in EVERY compileMode, including force_review_form. Keep the
+  requested action as forward_email / send_email; never substitute a save_draft action
+  for a missing recipient and never downgrade an outbound request to save_draft.
 - If compileMode is after_clarification, compile from effectiveRuleText and combine
   sourceText with clarification.answer. Do not repeat clarification.previousQuestion.
 - If compileMode is force_review_form, return the best editable draft unless the user
-  omitted every safe action or requested a forbidden action.
+  omitted every safe action, requested a forbidden action, or requested an outbound
+  action with no concrete recipient email (ask for the recipient email instead).
 
 Refinement policy:
 - If compileMode is refine, apply editInstruction to priorDraft and return one
