@@ -8,6 +8,7 @@ import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.domain.SemanticIntentMatcher;
+import com.zeromail.core.shared.validation.EmailRecipientValidator;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +19,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -38,8 +38,6 @@ public class RuleCompileResultValidator {
     private static final int MAX_ACTION_BODY_LENGTH = 4000;
     private static final int MAX_RECIPIENTS = 10;
     private static final int MAX_CHILDREN = 24;
-    private static final Pattern EMAIL_ADDRESS_PATTERN =
-            Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
     private static final Set<String> TOP_LEVEL_FIELDS =
             Set.of(
                     "schemaVersion",
@@ -656,19 +654,12 @@ public class RuleCompileResultValidator {
         } else {
             throw new IllegalArgumentException(primaryFieldName + " must be a list");
         }
-        ArrayList<String> normalizedRecipients = new ArrayList<>();
-        for (String recipient : recipientValues) {
-            String normalizedRecipient = recipient == null ? "" : recipient.trim();
-            if (normalizedRecipient.isBlank()) {
-                throw new IllegalArgumentException(primaryFieldName + " contains blank recipient");
-            }
-            if (!EMAIL_ADDRESS_PATTERN.matcher(normalizedRecipient).matches()) {
-                throw new IllegalArgumentException(
-                        primaryFieldName + " contains invalid email address");
-            }
-            normalizedRecipients.add(normalizedRecipient);
-        }
-        return List.copyOf(normalizedRecipients);
+        // Delegate the final syntax check to the shared validator, which normalizes via RFC 822
+        // parsing (accepts "Name <addr>" and comma-joined strings the LLM legitimately emits for a
+        // valid recipient) instead of a brittle no-whitespace regex. Keeping this in one place also
+        // means the rule-compile path and the outbound send path agree on what a valid recipient
+        // is.
+        return EmailRecipientValidator.optional(recipientValues, primaryFieldName);
     }
 
     private static boolean containsVietnameseSignal(String normalizedText) {

@@ -20,6 +20,7 @@ import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.domain.RuleEvaluationResult;
 import com.zeromail.core.rules.domain.RuleEvaluator;
+import com.zeromail.core.rules.domain.SemanticEvalContentBuilder;
 import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 import com.zeromail.core.rules.usecases.RuleAutomationSettingsService;
 import com.zeromail.core.rules.usecases.RuleManagementService;
@@ -862,17 +863,8 @@ public class TriageOrchestratorService {
      * display-name, prompt, completion, or drafted-reply content without a new privacy review.
      */
     private String buildSemanticEvalContent(RuleEvaluationInput ruleEvaluationInput) {
-        // NOTE: do NOT add body/snippet/raw-header fetch here.
-        return String.join(
-                "\n",
-                "subjectExcerpt=" + ruleEvaluationInput.sanitizedSubjectExcerpt(),
-                "senderDomain=" + ruleEvaluationInput.sanitizedSenderDomain(),
-                "labelCount=" + ruleEvaluationInput.gmailLabelIds().size(),
-                "categories=" + String.join(",", ruleEvaluationInput.gmailCategories()),
-                "hasAttachment=" + ruleEvaluationInput.hasAttachment(),
-                "listUnsubscribePresent=" + ruleEvaluationInput.listUnsubscribePresent(),
-                "newsletterIndicatorPresent=" + ruleEvaluationInput.newsletterIndicatorPresent(),
-                "internalDate=" + ruleEvaluationInput.internalDate());
+        // Single source of truth shared with the rule test/preview path so test ≡ runtime.
+        return SemanticEvalContentBuilder.build(ruleEvaluationInput);
     }
 
     private void reserveDeterministicMessageCredit(UUID tenantId) {

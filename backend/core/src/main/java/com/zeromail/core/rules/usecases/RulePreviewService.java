@@ -14,6 +14,7 @@ import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.domain.RuleEvaluationResult;
 import com.zeromail.core.rules.domain.RuleEvaluator;
+import com.zeromail.core.rules.domain.SemanticEvalContentBuilder;
 import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
@@ -566,22 +567,11 @@ public class RulePreviewService {
     }
 
     private static String buildSemanticEvaluationContent(RuleEvaluationInput evaluationInput) {
-        // Privacy + token-budget: preview path never has the raw body, so we
-        // pass the sanitized subject plus a deterministic flag summary that
-        // matches what the triage path builds (LlmGateway javadoc).
-        StringBuilder content = new StringBuilder();
-        content.append("subject: ").append(evaluationInput.sanitizedSubjectExcerpt());
-        content.append("\nsender_domain: ").append(evaluationInput.sanitizedSenderDomain());
-        if (evaluationInput.listUnsubscribePresent()) {
-            content.append("\nflag: list_unsubscribe_present");
-        }
-        if (evaluationInput.newsletterIndicatorPresent()) {
-            content.append("\nflag: newsletter_indicator");
-        }
-        if (evaluationInput.hasAttachment()) {
-            content.append("\nflag: has_attachment");
-        }
-        return content.toString();
+        // Delegate to the shared builder so the LLM receives the EXACT same semanticEvalContent the
+        // live triage runtime sends for this message. Owning a second, differently-formatted
+        // builder
+        // here is what made a rule test as "not matched" yet act on the same email at runtime.
+        return SemanticEvalContentBuilder.build(evaluationInput);
     }
 
     private PreviewTarget savedPreviewTarget(RulePreviewCommand command) {
