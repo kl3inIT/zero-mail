@@ -240,15 +240,33 @@ public class GmailDeliveryProcessingService {
 
     private int fetchAndObserve(Gmail gmail, UUID tenantId, History history, String gmailMessageId)
             throws java.io.IOException {
-        Message gmailMessage =
-                gmail.users()
-                        .messages()
-                        .get("me", gmailMessageId)
-                        .setFormat("metadata")
-                        .setMetadataHeaders(
-                                List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post"))
-                        .setFields("id,threadId,labelIds,internalDate,payload/headers")
-                        .execute();
+        Message gmailMessage;
+        try {
+            gmailMessage =
+                    gmail.users()
+                            .messages()
+                            .get("me", gmailMessageId)
+                            .setFormat("metadata")
+                            .setMetadataHeaders(
+                                    List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post"))
+                            .setFields("id,threadId,labelIds,internalDate,payload/headers")
+                            .execute();
+        } catch (GoogleJsonResponseException messageFetchFailure) {
+            if (messageFetchFailure.getStatusCode() == 404) {
+                // The message was deleted between the history record being written and this fetch,
+                // so there is nothing to observe. Skip it instead of letting the 404 abort the
+                // whole batch and dead-letter the delivery — that would strand the history pointer
+                // (it only advances on a fully successful batch) and trap the tenant in a permanent
+                // redelivery-death loop where every Pub/Sub push re-hits the same gone message, so
+                // no inbound mail is ever observed and triage never runs.
+                log.warn(
+                        "event=gmail_message_fetch_skipped tenantId={} httpStatus=404"
+                                + " googleReason=notFound",
+                        tenantId);
+                return 0;
+            }
+            throw messageFetchFailure;
+        }
         List<String> labelIds = gmailMessage.getLabelIds();
         if (labelIds == null || (!labelIds.contains("INBOX") && !labelIds.contains("SENT"))) {
             return 0;
