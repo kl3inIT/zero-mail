@@ -85,7 +85,12 @@ jobs:
           ref: ${{ needs.verify-gates.outputs.tag }}
 
       - name: SSH deploy prod stack
-        uses: appleboy/ssh-action@v1.2.5
+        # Pinned to v1.0.0 to match the known-good config on the user's other VPS deploys
+        # (shoes-shopping uses v1.0.0 and never times out). appleboy/ssh-action 1.2.x has a
+        # documented intermittent "dial tcp i/o timeout" regression (appleboy/ssh-action#348).
+        # If timeouts persist on v1.0.0 the cause is Hostinger-side network filtering of GitHub
+        # runner egress IPs, not the action — escalate to a self-hosted runner on the VPS.
+        uses: appleboy/ssh-action@v1.0.0
         env:
           DEPLOY_TAG: ${{ needs.verify-gates.outputs.tag }}
         with:
