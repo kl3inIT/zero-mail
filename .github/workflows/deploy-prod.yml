@@ -1,10 +1,11 @@
-# Production deploy with manual approval.
+# Production deploy.
 #
-# Triggers only when an immutable version tag (v*.*.*, not -rc) is pushed,
-# AND requires Environment "prod" reviewer approval before the SSH step runs.
+# Manually dispatched (workflow_dispatch) with a version tag input, gated by the
+# `prod` GitHub Environment. The deploy job runs on the self-hosted runner ON the
+# VPS (no inbound SSH — see the `deploy` job for why).
 #
 # Pre-conditions checked in `verify-gates`:
-#   1. release.yml ran on this tag and concluded successfully.
+#   1. The version input matches v<major>.<minor>.<patch> and the tag exists on origin.
 #   2. Build and Push Images workflow published :prod tag images for this version.
 name: Deploy Prod
 
