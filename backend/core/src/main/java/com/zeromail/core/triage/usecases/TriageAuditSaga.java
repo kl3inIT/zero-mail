@@ -206,6 +206,7 @@ public class TriageAuditSaga {
                         command.preWriteIntent(),
                         command.replyHeaders(),
                         command.sanitizedSubject(),
+                        command.gmailMessageId(),
                         command.tenantId(),
                         auditId.toString());
         OutboundSendResult sendResult =
@@ -239,6 +240,7 @@ public class TriageAuditSaga {
                                             command.preWriteIntent(),
                                             command.replyHeaders(),
                                             command.sanitizedSubject(),
+                                            command.gmailMessageId(),
                                             command.tenantId(),
                                             auditId + "-draft");
                             yield triageGmailWriter.saveDraftMessage(
@@ -250,6 +252,7 @@ public class TriageAuditSaga {
                                             command.preWriteIntent(),
                                             command.replyHeaders(),
                                             command.sanitizedSubject(),
+                                            command.gmailMessageId(),
                                             command.tenantId(),
                                             auditId + "-draft");
                             yield triageGmailWriter.saveDraftMessage(

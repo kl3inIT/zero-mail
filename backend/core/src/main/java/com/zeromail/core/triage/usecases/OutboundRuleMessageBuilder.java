@@ -1,6 +1,7 @@
 package com.zeromail.core.triage.usecases;
 
 import com.google.api.services.gmail.model.Message;
+import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import jakarta.mail.MessagingException;
@@ -20,10 +21,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class OutboundRuleMessageBuilder {
 
+    private final ForwardMessageAssembler forwardMessageAssembler;
+
+    public OutboundRuleMessageBuilder(ForwardMessageAssembler forwardMessageAssembler) {
+        this.forwardMessageAssembler =
+                Objects.requireNonNull(
+                        forwardMessageAssembler, "forwardMessageAssembler must not be null");
+    }
+
     public Message build(
             TriageActionResult outboundIntent,
             ReplyHeaders replyHeaders,
             String inboundSubject,
+            String sourceMessageId,
             UUID tenantId,
             String idempotencyKey)
             throws IOException {
@@ -37,14 +47,14 @@ public class OutboundRuleMessageBuilder {
                             tenantId,
                             idempotencyKey);
             case TriageActionResult.ForwardEmail forwardEmail ->
-                    buildNewEmail(
+                    forwardMessageAssembler.buildForward(
+                            tenantId,
+                            sourceMessageId,
                             forwardEmail.recipients(),
-                            List.of(),
                             List.of(),
                             forwardSubject(inboundSubject),
                             forwardEmail.draftBody(),
-                            tenantId,
-                            idempotencyKey);
+                            deterministicMessageId(tenantId, idempotencyKey));
             case TriageActionResult.SendEmail sendEmail ->
                     buildNewEmail(
                             sendEmail.to(),

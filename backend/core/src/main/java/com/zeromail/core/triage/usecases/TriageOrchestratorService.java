@@ -9,6 +9,7 @@ import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
 import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.SemanticIntentRequest;
+import com.zeromail.core.outbound.usecases.OutboundSendThrottle;
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
 import com.zeromail.core.rules.domain.ActionProposalMerger;
@@ -112,6 +113,7 @@ public class TriageOrchestratorService {
     private static final String SENDER_SAFETY_NET = "SENDER_SAFETY_NET";
     private static final String TENANT_CONTEXT_MISMATCH = "TENANT_CONTEXT_MISMATCH";
     private static final String OUTBOUND_SEND_FAILED = "OUTBOUND_SEND_FAILED";
+    private static final String OUTBOUND_RATE_LIMITED = "OUTBOUND_RATE_LIMITED";
 
     private final TenantService tenantService;
     private final TriageRuleEvaluationInputFactory triageRuleEvaluationInputFactory;
@@ -127,6 +129,7 @@ public class TriageOrchestratorService {
     private final TriageDraftBodyGenerator draftBodyGenerator;
     private final TriageDraftSettings triageDraftSettings;
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
+    private final OutboundSendThrottle outboundSendThrottle;
     private final MeterRegistry meterRegistry;
     private final TransactionTemplate tenantScopedOrchestrationTransaction;
 
@@ -142,6 +145,7 @@ public class TriageOrchestratorService {
             TriageDraftBodyGenerator draftBodyGenerator,
             TriageDraftSettings triageDraftSettings,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
+            OutboundSendThrottle outboundSendThrottle,
             PlatformTransactionManager transactionManager,
             ObjectProvider<MeterRegistry> meterRegistryProvider) {
         this.tenantService = tenantService;
@@ -158,6 +162,7 @@ public class TriageOrchestratorService {
         this.draftBodyGenerator = draftBodyGenerator;
         this.triageDraftSettings = triageDraftSettings;
         this.classifyThreadReplyStatusService = classifyThreadReplyStatusService;
+        this.outboundSendThrottle = outboundSendThrottle;
         this.meterRegistry = meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new);
         this.tenantScopedOrchestrationTransaction = new TransactionTemplate(transactionManager);
         this.tenantScopedOrchestrationTransaction.setPropagationBehavior(
@@ -267,6 +272,28 @@ public class TriageOrchestratorService {
             MailMessageObserved observedEvent,
             TriageRuleEvaluationInput triageRuleEvaluationInput) {
         RuleEvaluationInput ruleEvaluationInput = triageRuleEvaluationInput.evaluationInput();
+        // Loop-breaker (mail-loop guard): never run the inbound rules engine against a message the
+        // tenant themselves authored. An auto-send action drops a copy into SENT; the
+        // label-agnostic
+        // history sweep (history.list has no INBOX filter) re-observes it, and an intent-only
+        // matcher
+        // (e.g. "reply to any invite") can re-match that SENT copy → another auto-send → unbounded
+        // loop. The triage idempotency index keys on gmail_message_id, so each loop hop is a NEW
+        // row
+        // and never deduplicates. Rules are an INBOUND concern; the SENT half is handled separately
+        // by MailOutboundObserved reply-status classification, which still runs after this
+        // pipeline.
+        // Self-addressed mail (INBOX + SENT) is intentionally skipped too — safety outranks the
+        // rare
+        // note-to-self rule.
+        if (ruleEvaluationInput.gmailLabelIds() != null
+                && ruleEvaluationInput.gmailLabelIds().contains("SENT")) {
+            log.info(
+                    "event=triage_rules_skipped_self_sent tenantId={} gmailMessageId={}",
+                    tenantId,
+                    observedEvent.gmailMessageId());
+            return DispatchOutcome.none();
+        }
         List<RuleExecutionCandidate> ruleExecutionCandidates = loadEnabledCandidates(tenantId);
         if (ruleExecutionCandidates.isEmpty()) {
             return DispatchOutcome.none();
@@ -1237,6 +1264,12 @@ public class TriageOrchestratorService {
         }
         if (dispatchContext.blockedBySafetyNet()) {
             return SENDER_SAFETY_NET;
+        }
+        // Defense-in-depth blast-radius cap: this is the LAST gate, so a slot is consumed only when
+        // the send is otherwise greenlit. On deny we downgrade to a Gmail draft (no mail lost) and
+        // keep the rest of this tenant's burst from flooding Gmail / burning credits.
+        if (!outboundSendThrottle.acquire(dispatchContext.tenantId())) {
+            return OUTBOUND_RATE_LIMITED;
         }
         // Outbound sends are gated only by the global Auto-send toggle and the user-managed sender
         // safety-net list. The former low-trust sender-anchor requirement was removed by product

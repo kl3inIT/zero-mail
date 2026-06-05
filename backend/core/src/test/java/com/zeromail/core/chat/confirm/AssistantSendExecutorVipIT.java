@@ -21,6 +21,7 @@ import com.zeromail.core.chat.confirm.send.GmailMessageBuilder;
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.outbound.usecases.GmailOutboundSendGateway;
 import com.zeromail.core.shared.privacy.Sensitive;
 import com.zeromail.core.tenant.TenantContext;
@@ -84,6 +85,7 @@ class AssistantSendExecutorVipIT {
                 new AssistantSendExecutor(
                         new GmailOutboundSendGateway(gmailApiClientFactory),
                         new GmailMessageBuilder(),
+                        mock(ForwardMessageAssembler.class),
                         confirmationStateMachine,
                         confirmationLeaseService,
                         senderSafetyNetService,

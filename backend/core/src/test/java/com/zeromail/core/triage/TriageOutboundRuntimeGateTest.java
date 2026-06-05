@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.outbound.usecases.OutboundSendThrottle;
 import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.projection.EnabledRuleSnapshot;
 import com.zeromail.core.rules.projection.RuleAutomationSettingsView;
@@ -66,6 +67,7 @@ class TriageOutboundRuntimeGateTest {
     private final TriageDraftSettings triageDraftSettings = mock(TriageDraftSettings.class);
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService =
             mock(ClassifyThreadReplyStatusService.class);
+    private final OutboundSendThrottle outboundSendThrottle = mock(OutboundSendThrottle.class);
     // Bare mock: TransactionTemplate.getTransaction returns null and commit is a no-op, so the
     // executeWithoutResult callback still runs synchronously in the test.
     private final PlatformTransactionManager transactionManager =
@@ -187,6 +189,52 @@ class TriageOutboundRuntimeGateTest {
     }
 
     @Test
+    void self_sent_message_skips_rules_pipeline_entirely() throws Exception {
+        // Mail-loop guard: a message the tenant authored (label SENT) — e.g. the copy created by a
+        // prior auto-send — must never re-enter the inbound rules engine, or an intent-only matcher
+        // re-matches it and fires another send, looping unbounded. Nothing should be reserved/sent.
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(
+                        true,
+                        false,
+                        subjectMatcher(),
+                        sendEmailAction(),
+                        triageInputWithLabels(List.of("SENT")));
+
+        TriageOrchestratorService.OrchestrationResult orchestrationResult =
+                withTenant(
+                        TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        assertThat(orchestrationResult.appliedActions()).isZero();
+        verify(triageAuditSaga, never()).reservePhase(any(TriageAuditCommand.class), any());
+        verify(triageAuditSaga, never())
+                .outboundSendPhase(any(TriageAuditCommand.class), any(UUID.class));
+        verify(outboundSendThrottle, never()).acquire(any());
+    }
+
+    @Test
+    void outbound_send_throttle_exhausted_falls_back_to_draft() throws Exception {
+        // Defense-in-depth: when the per-tenant auto-send cap is exhausted, the outbound action
+        // downgrades to a Gmail draft instead of sending, bounding the blast radius of any runaway.
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(true, false, subjectMatcher(), sendEmailAction());
+        when(outboundSendThrottle.acquire(TENANT_ID)).thenReturn(false);
+        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
+                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
+        when(triageAuditSaga.outboundDraftFallbackPhase(
+                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("OUTBOUND_RATE_LIMITED")))
+                .thenReturn(applied("draft-rate-limited"));
+
+        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        verify(triageAuditSaga, never())
+                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
+        verify(triageAuditSaga)
+                .outboundDraftFallbackPhase(
+                        any(TriageAuditCommand.class), eq(AUDIT_ID), eq("OUTBOUND_RATE_LIMITED"));
+    }
+
+    @Test
     void outbound_send_failure_falls_back_to_draft() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, false, senderDomainMatcher(), sendEmailAction());
@@ -292,6 +340,8 @@ class TriageOutboundRuntimeGateTest {
         when(triageDraftSettings.autoDraftRepliesEnabled(TENANT_ID)).thenReturn(true);
         when(senderSafetyNetService.matchedProtectedPattern(TENANT_ID, "sender@example.com"))
                 .thenReturn(senderProtected ? Optional.of("sender@example.com") : Optional.empty());
+        // Default: throttle has budget. Individual tests override to exercise the rate-limit gate.
+        when(outboundSendThrottle.acquire(TENANT_ID)).thenReturn(true);
 
         @SuppressWarnings("unchecked")
         ObjectProvider<MeterRegistry> meterRegistryProvider = mock(ObjectProvider.class);
@@ -309,11 +359,21 @@ class TriageOutboundRuntimeGateTest {
                 draftBodyGenerator,
                 triageDraftSettings,
                 classifyThreadReplyStatusService,
+                outboundSendThrottle,
                 transactionManager,
                 meterRegistryProvider);
     }
 
     private static TriageRuleEvaluationInput triageInput(String sanitizedSenderEmail) {
+        return triageInput(sanitizedSenderEmail, List.of("INBOX"));
+    }
+
+    private static TriageRuleEvaluationInput triageInputWithLabels(List<String> gmailLabelIds) {
+        return triageInput("sender@example.com", gmailLabelIds);
+    }
+
+    private static TriageRuleEvaluationInput triageInput(
+            String sanitizedSenderEmail, List<String> gmailLabelIds) {
         Instant observedAt = Instant.parse("2026-05-23T00:00:00Z");
         RuleEvaluationInput ruleEvaluationInput =
                 new RuleEvaluationInput(
@@ -322,7 +382,7 @@ class TriageOutboundRuntimeGateTest {
                         List.of("me@example.com"),
                         List.of(),
                         "Planning update",
-                        List.of("INBOX"),
+                        gmailLabelIds,
                         List.of("personal"),
                         observedAt,
                         observedAt,
