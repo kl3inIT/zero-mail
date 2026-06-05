@@ -39,13 +39,11 @@ public class PlanUpgradeWebhookController {
             @RequestBody(required = false) String payload, @RequestHeader HttpHeaders headers) {
         LemonSqueezyWebhookIngestResult ingestResult =
                 lemonSqueezyWebhookIngestService.ingest(payload, eventId(headers));
-        System.out.println(
-                "event=lemon_squeezy_webhook_received eventId="
-                        + ingestResult.eventId()
-                        + " eventName="
-                        + ingestResult.eventName()
-                        + " payload="
-                        + ingestResult.redactedPayloadJson());
+        log.info(
+                "event=lemon_squeezy_webhook_received eventId={} eventName={} payload={}",
+                ingestResult.eventId(),
+                ingestResult.eventName(),
+                ingestResult.redactedPayloadJson());
         return ResponseEntity.ok().build();
     }
 

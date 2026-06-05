@@ -38,7 +38,9 @@ public class GmailPubSubController {
             byte[] decoded = Base64.getDecoder().decode(envelope.message().data());
             notification = objectMapper.readValue(decoded, GmailNotification.class);
         } catch (Exception decodeException) {
-            log.warn("event=pubsub_payload_decode_failed");
+            log.warn(
+                    "event=pubsub_payload_decode_failed failureType={}",
+                    decodeException.getClass().getSimpleName());
             return;
         }
 

@@ -379,20 +379,27 @@ public class GmailDeliveryProcessingService {
             PubSubDeliveryEntity delivery, UUID tenantId, Exception processingException) {
         int attempts = delivery.getAttempts();
         String failureType = failureClassName(processingException);
+        GoogleFailureDetail googleDetail = extractGoogleFailureDetail(processingException);
         if (attempts >= 3) {
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
             log.warn(
-                    "event=gmail_delivery_dead tenantId={} attempts={} failureType={}",
+                    "event=gmail_delivery_dead tenantId={} attempts={} failureType={} httpStatus={}"
+                            + " googleReason={}",
                     tenantId,
                     attempts,
-                    failureType);
+                    failureType,
+                    googleDetail.statusCode(),
+                    googleDetail.reason());
         } else {
             deliveryRepository.releaseForRetry(delivery.getId(), Instant.now().plusSeconds(30));
             log.warn(
-                    "event=gmail_delivery_retry tenantId={} attempt={} failureType={}",
+                    "event=gmail_delivery_retry tenantId={} attempt={} failureType={} httpStatus={}"
+                            + " googleReason={}",
                     tenantId,
                     attempts,
-                    failureType);
+                    failureType,
+                    googleDetail.statusCode(),
+                    googleDetail.reason());
         }
     }
 
@@ -413,6 +420,47 @@ public class GmailDeliveryProcessingService {
         Throwable cause = processingException.getCause();
         Throwable failureToLog = cause == null ? processingException : cause;
         return failureToLog.getClass().getSimpleName();
+    }
+
+    /**
+     * Surfaces the Gmail API HTTP status and Google error reason (e.g. {@code rateLimitExceeded},
+     * {@code userRateLimitExceeded}, {@code insufficientPermissions}) so a stuck per-tenant
+     * ingestion loop is diagnosable from logs. The status code and reason are technical metadata,
+     * not email content, so logging them honours the privacy convention; the Google error message
+     * (which can echo request input) is deliberately not logged.
+     */
+    private record GoogleFailureDetail(int statusCode, String reason) {}
+
+    private static GoogleFailureDetail extractGoogleFailureDetail(Throwable failure) {
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth < 5) {
+            if (current instanceof GoogleJsonResponseException googleResponseException) {
+                return new GoogleFailureDetail(
+                        googleResponseException.getStatusCode(),
+                        extractGoogleReason(googleResponseException));
+            }
+            current = current.getCause();
+            depth++;
+        }
+        return new GoogleFailureDetail(-1, "none");
+    }
+
+    private static String extractGoogleReason(GoogleJsonResponseException googleResponseException) {
+        try {
+            var errorDetails = googleResponseException.getDetails();
+            if (errorDetails != null
+                    && errorDetails.getErrors() != null
+                    && !errorDetails.getErrors().isEmpty()) {
+                String firstReason = errorDetails.getErrors().get(0).getReason();
+                if (firstReason != null && !firstReason.isBlank()) {
+                    return firstReason;
+                }
+            }
+        } catch (RuntimeException reasonExtractionFailure) {
+            return "unparseable";
+        }
+        return "unknown";
     }
 
     private static final class NonRetryableGmailDeliveryException extends RuntimeException {

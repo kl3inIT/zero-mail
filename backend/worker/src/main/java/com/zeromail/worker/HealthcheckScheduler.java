@@ -12,6 +12,6 @@ public class HealthcheckScheduler {
 
     @Scheduled(fixedRate = 60_000L)
     public void tick() {
-        log.info("worker healthcheck tick");
+        log.info("event=worker_healthcheck_tick");
     }
 }

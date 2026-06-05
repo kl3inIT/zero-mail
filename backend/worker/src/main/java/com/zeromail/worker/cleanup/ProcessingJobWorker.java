@@ -149,7 +149,10 @@ public class ProcessingJobWorker {
                 Thread.currentThread().interrupt();
                 return;
             } catch (RuntimeException unexpectedFailure) {
-                log.error("event=processing_job_worker_error", unexpectedFailure);
+                log.error(
+                        "event=processing_job_worker_error failureType={}",
+                        unexpectedFailure.getClass().getSimpleName(),
+                        unexpectedFailure);
                 try {
                     Thread.sleep(POLL_INTERVAL);
                 } catch (InterruptedException sleepInterrupted) {
@@ -197,12 +200,26 @@ public class ProcessingJobWorker {
                     throttleDeferred.reason());
         } catch (RuntimeException handlerFailure) {
             JobFailureReason mappedFailureReason = mapToFailureReason(handlerFailure);
-            log.error(
-                    "event=processing_job_handler_failed tenantId={} jobId={} failureReason={}",
-                    claimedJob.tenantId(),
-                    claimedJob.jobId(),
-                    mappedFailureReason.id(),
-                    handlerFailure);
+            if (isTransientConcurrencyConflict(handlerFailure)) {
+                // Two workers raced the same aggregate row (JPA optimistic lock). This is a benign,
+                // expected-degraded outcome under concurrent polling — not an actionable server
+                // fault — so it is logged at WARN without a stack trace instead of drowning the
+                // ERROR stream. The row is still failed-and-recorded below for operator visibility.
+                log.warn(
+                        "event=processing_job_handler_conflict tenantId={} jobId={} failureType={}",
+                        claimedJob.tenantId(),
+                        claimedJob.jobId(),
+                        handlerFailure.getClass().getSimpleName());
+            } else {
+                log.error(
+                        "event=processing_job_handler_failed tenantId={} jobId={} failureReason={}"
+                                + " failureType={}",
+                        claimedJob.tenantId(),
+                        claimedJob.jobId(),
+                        mappedFailureReason.id(),
+                        handlerFailure.getClass().getSimpleName(),
+                        handlerFailure);
+            }
             markFailed(claimedJob.jobId(), mappedFailureReason);
         }
     }
@@ -234,6 +251,32 @@ public class ProcessingJobWorker {
             case "CampaignCapExceededException" -> JobFailureReason.VALIDATION_FAILED;
             default -> JobFailureReason.UNKNOWN;
         };
+    }
+
+    /**
+     * Detects a transient JPA optimistic-lock / concurrency conflict anywhere in the cause chain.
+     * Matched by simple class name so the worker module does not need a compile dependency on
+     * spring-orm's exception types (they are raised by core's JPA handler). Such conflicts mean two
+     * workers picked up work touching the same aggregate; they are benign and self-correct on the
+     * next poll, so they are logged at WARN rather than ERROR.
+     */
+    private static boolean isTransientConcurrencyConflict(RuntimeException handlerFailure) {
+        Throwable current = handlerFailure;
+        int depth = 0;
+        while (current != null && depth < 5) {
+            String simpleName = current.getClass().getSimpleName();
+            if ("ObjectOptimisticLockingFailureException".equals(simpleName)
+                    || "OptimisticLockingFailureException".equals(simpleName)
+                    || "StaleObjectStateException".equals(simpleName)
+                    || "StaleStateException".equals(simpleName)
+                    || "CannotAcquireLockException".equals(simpleName)
+                    || "ConcurrencyFailureException".equals(simpleName)) {
+                return true;
+            }
+            current = current.getCause();
+            depth++;
+        }
+        return false;
     }
 
     private void markCompleted(UUID jobId) {
