@@ -70,75 +70,64 @@ jobs:
           fi
 
   deploy:
-    name: SSH deploy prod
+    name: Deploy prod (self-hosted VPS runner)
     needs: verify-gates
-    runs-on: ubuntu-latest
+    # Runs on a self-hosted runner ON the prod VPS, so the deploy is a local process on the box —
+    # there is no inbound SSH from rotating GitHub-hosted runner IPs for Hostinger's edge DDoS
+    # filter to intermittently drop. That filtering (by source IP / country, automated, no
+    # whitelist) was the confirmed cause of the "dial tcp i/o timeout" on appleboy/ssh-action — it
+    # is network-side, not the action (v1.0.0 timed out too). Only this workflow_dispatch +
+    # prod-environment-gated job targets [self-hosted, prod]; every PR-triggered workflow
+    # (ci/security/react-doctor/i18n) stays on GitHub-hosted runners so fork PRs never reach it.
+    runs-on: [self-hosted, prod]
     environment:
       name: prod
       url: https://zeromail.vn
     timeout-minutes: 20
 
     steps:
-      - name: Checkout tag
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.verify-gates.outputs.tag }}
-
-      - name: SSH deploy prod stack
-        # Pinned to v1.0.0 to match the known-good config on the user's other VPS deploys
-        # (shoes-shopping uses v1.0.0 and never times out). appleboy/ssh-action 1.2.x has a
-        # documented intermittent "dial tcp i/o timeout" regression (appleboy/ssh-action#348).
-        # If timeouts persist on v1.0.0 the cause is Hostinger-side network filtering of GitHub
-        # runner egress IPs, not the action — escalate to a self-hosted runner on the VPS.
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Deploy prod stack
         env:
           DEPLOY_TAG: ${{ needs.verify-gates.outputs.tag }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT || 22 }}
-          envs: DEPLOY_TAG
-          command_timeout: 10m
-          script: |
-            set -euo pipefail
-            cd /apps/zero-mail
-            git fetch --quiet --force origin "refs/tags/${DEPLOY_TAG}":"refs/tags/${DEPLOY_TAG}"
-            git checkout --quiet "${DEPLOY_TAG}" -- docker/docker-compose.yml
-            echo "::group::Snapshot previous image digests for rollback"
-            docker inspect --format='zeromail-api {{index .Image}}' zeromail-api 2>/dev/null | tee /apps/zero-mail/.last-deploy.txt || true
-            docker inspect --format='zeromail-worker {{index .Image}}' zeromail-worker 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
-            docker inspect --format='zeromail-frontend {{index .Image}}' zeromail-frontend 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
-            docker inspect --format='zeromail-admin {{index .Image}}' zeromail-admin 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
-            echo "::endgroup::"
-            echo "::group::Pull versioned images"
-            ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
-            ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
-            ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
-            ZEROMAIL_ADMIN_IMAGE="ghcr.io/kl3init/zero-mail-admin:${DEPLOY_TAG}" \
-              docker compose -f docker/docker-compose.yml pull api worker frontend admin
-            echo "::endgroup::"
-            echo "::group::Recreate prod containers"
-            ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
-            ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
-            ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
-            ZEROMAIL_ADMIN_IMAGE="ghcr.io/kl3init/zero-mail-admin:${DEPLOY_TAG}" \
-              docker compose -f docker/docker-compose.yml up -d --no-build api worker frontend admin
-            echo "::endgroup::"
-            echo "::group::Wait for prod readiness"
-            for attempt in {1..60}; do
-              if docker exec zeromail-api curl -fsS http://localhost:8080/actuator/health/readiness >/dev/null 2>&1; then
-                echo "api ready"
-                break
-              fi
-              if [[ $attempt -eq 60 ]]; then
-                echo "::error::api failed readiness within 120s — initiating rollback"
-                docker compose -f docker/docker-compose.yml logs --tail=200 api worker admin
-                exit 1
-              fi
-              sleep 2
-            done
-            echo "::endgroup::"
+        run: |
+          set -euo pipefail
+          cd /apps/zero-mail
+          git fetch --quiet --force origin "refs/tags/${DEPLOY_TAG}":"refs/tags/${DEPLOY_TAG}"
+          git checkout --quiet "${DEPLOY_TAG}" -- docker/docker-compose.yml
+          echo "::group::Snapshot previous image digests for rollback"
+          docker inspect --format='zeromail-api {{index .Image}}' zeromail-api 2>/dev/null | tee /apps/zero-mail/.last-deploy.txt || true
+          docker inspect --format='zeromail-worker {{index .Image}}' zeromail-worker 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
+          docker inspect --format='zeromail-frontend {{index .Image}}' zeromail-frontend 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
+          docker inspect --format='zeromail-admin {{index .Image}}' zeromail-admin 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
+          echo "::endgroup::"
+          echo "::group::Pull versioned images"
+          ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
+          ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
+          ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
+          ZEROMAIL_ADMIN_IMAGE="ghcr.io/kl3init/zero-mail-admin:${DEPLOY_TAG}" \
+            docker compose -f docker/docker-compose.yml pull api worker frontend admin
+          echo "::endgroup::"
+          echo "::group::Recreate prod containers"
+          ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
+          ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
+          ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
+          ZEROMAIL_ADMIN_IMAGE="ghcr.io/kl3init/zero-mail-admin:${DEPLOY_TAG}" \
+            docker compose -f docker/docker-compose.yml up -d --no-build api worker frontend admin
+          echo "::endgroup::"
+          echo "::group::Wait for prod readiness"
+          for attempt in {1..60}; do
+            if docker exec zeromail-api curl -fsS http://localhost:8080/actuator/health/readiness >/dev/null 2>&1; then
+              echo "api ready"
+              break
+            fi
+            if [[ $attempt -eq 60 ]]; then
+              echo "::error::api failed readiness within 120s"
+              docker compose -f docker/docker-compose.yml logs --tail=200 api worker admin
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::endgroup::"
 
       - name: Post-deploy smoke check
         run: |
