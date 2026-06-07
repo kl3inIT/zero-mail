@@ -111,6 +111,39 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
     }
 
     @Test
+    void seeded_billing_plans_have_permission_rows_for_every_feature_catalog_entry() {
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                """
+                                select bp.code || ':' || fc.code
+                                  from billing_plan bp
+                                  cross join feature_catalog fc
+                                 where bp.code in ('FREE', 'PLUS', 'PRO')
+                                   and not exists (
+                                     select 1
+                                       from plan_feature_permission pfp
+                                      where pfp.plan_id = bp.id
+                                        and pfp.feature_code = fc.code
+                                   )
+                                 order by bp.code, fc.code
+                                """,
+                                String.class))
+                .isEmpty();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                """
+                                select count(*)
+                                  from billing_plan bp
+                                  join plan_feature_permission pfp on pfp.plan_id = bp.id
+                                 where bp.code in ('FREE', 'PLUS', 'PRO')
+                                   and pfp.feature_code in ('NEEDS_REPLY', 'DIGEST')
+                                   and pfp.enabled
+                                """,
+                                Integer.class))
+                .isEqualTo(6);
+    }
+
+    @Test
     void assistant_action_audit_state_check_allows_failed_without_sent_at_only() {
         UUID tenantId = UUID.randomUUID();
         UUID chatId = UUID.randomUUID();

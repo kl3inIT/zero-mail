@@ -11,3 +11,6 @@ args = [
   "-File",
   "scripts/mcp/postgres-mcp.ps1",
 ]
+
+[mcp_servers.jetbrains]
+url = "http://127.0.0.1:65030/stream"

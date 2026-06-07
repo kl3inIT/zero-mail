@@ -31,18 +31,40 @@ const ReactQueryDevtools =
       )
     : null;
 
+type MutationToastContext = {
+  data?: unknown;
+  error?: unknown;
+  variables: unknown;
+};
+
+type MutationToastValue = string | ((toastContext: MutationToastContext) => string | undefined);
+
+interface AppQueryMeta extends Record<string, unknown> {
+  errorMessage?: string;
+  silent?: boolean;
+}
+
+interface AppMutationMeta extends Record<string, unknown> {
+  successMessage?: MutationToastValue;
+  successDescription?: MutationToastValue;
+  errorMessage?: MutationToastValue;
+  errorDescription?: MutationToastValue;
+  silent?: boolean;
+}
+
 declare module '@tanstack/react-query' {
   interface Register {
-    queryMeta: {
-      errorMessage?: string;
-      silent?: boolean;
-    };
-    mutationMeta: {
-      successMessage?: string;
-      errorMessage?: string;
-      silent?: boolean;
-    };
+    queryMeta: AppQueryMeta;
+    mutationMeta: AppMutationMeta;
   }
+}
+
+function resolveMutationToastValue(
+  value: MutationToastValue | undefined,
+  toastContext: MutationToastContext,
+): string | undefined {
+  if (!value) return undefined;
+  return typeof value === 'function' ? value(toastContext) : value;
 }
 
 function extractFallbackMessage(error: unknown): string {
@@ -76,13 +98,26 @@ function createAppQueryClient(): QueryClient {
       },
     }),
     mutationCache: new MutationCache({
-      onError: (error, _variables, _context, mutation) => {
-        if (mutation.meta?.silent || !mutation.meta?.errorMessage) return;
-        toast.error(mutation.meta.errorMessage);
+      onError: (error, variables, _context, mutation) => {
+        if (mutation.meta?.silent) return;
+        const toastContext = { error, variables };
+        const errorMessage = resolveMutationToastValue(mutation.meta?.errorMessage, toastContext);
+        if (!errorMessage) return;
+        toast.error(errorMessage, {
+          description: resolveMutationToastValue(mutation.meta?.errorDescription, toastContext),
+        });
       },
-      onSuccess: (_data, _variables, _context, mutation) => {
-        if (mutation.meta?.silent || !mutation.meta?.successMessage) return;
-        toast.success(mutation.meta.successMessage);
+      onSuccess: (data, variables, _context, mutation) => {
+        if (mutation.meta?.silent) return;
+        const toastContext = { data, variables };
+        const successMessage = resolveMutationToastValue(
+          mutation.meta?.successMessage,
+          toastContext,
+        );
+        if (!successMessage) return;
+        toast.success(successMessage, {
+          description: resolveMutationToastValue(mutation.meta?.successDescription, toastContext),
+        });
       },
     }),
     defaultOptions: {

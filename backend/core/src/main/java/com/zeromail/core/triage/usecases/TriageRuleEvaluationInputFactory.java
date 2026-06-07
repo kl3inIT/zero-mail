@@ -51,6 +51,7 @@ public class TriageRuleEvaluationInputFactory {
                         previewMessage.hasAttachment(),
                         previewMessage.listUnsubscribePresent(),
                         previewMessage.newsletterIndicatorPresent(),
+                        previewMessage.autoReplyIndicatorPresent(),
                         previewMessage.sanitizedBodyEvidencePresent(),
                         previewMessage.bodyDerivedFlags());
         return new TriageRuleEvaluationInput(

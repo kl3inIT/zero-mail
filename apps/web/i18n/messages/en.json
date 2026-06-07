@@ -1783,13 +1783,9 @@
       "openInGmail": "Open in Gmail",
       "regenerateDraft": "Regenerate draft",
       "regenerating": "Regenerating…",
-      "resync": "Re-sync inbox",
-      "sync": "Sync inbox",
-      "syncing": "Syncing…",
       "viewContent": "View content"
     },
     "banner": {
-      "syncing": "Syncing your inbox to classify mail…",
       "updating": "Updating your needs-reply list…"
     },
     "columns": {
@@ -1819,7 +1815,6 @@
       },
       "toReply": {
         "body": "Nothing needs a reply right now.",
-        "syncHint": "New mail is classified automatically. To classify mail already in your inbox, sync now.",
         "title": "Inbox zero 🎉"
       }
     },
@@ -1864,8 +1859,6 @@
       "toReplyHint": "Emails from others that are waiting on your reply."
     },
     "toast": {
-      "backfillDone": "Inbox synced — your needs-reply list is up to date.",
-      "backfillFailed": "Couldn't sync your inbox. Try again.",
       "draftSaved": "Draft saved in Gmail — review and send it there."
     }
   },

@@ -216,6 +216,7 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
                         false,
                         false,
                         false,
+                        false,
                         Optional.of(true),
                         Set.of(
                                 RAW_HEADER_SENTINEL,

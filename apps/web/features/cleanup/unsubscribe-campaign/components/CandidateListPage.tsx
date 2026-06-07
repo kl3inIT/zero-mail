@@ -113,7 +113,7 @@ export function CandidateListPage() {
       void candidatesQuery.refetch();
     },
   });
-  const senderActionMutation = useSenderAction(dateRangeSpec, limit);
+  const senderActionMutation = useSenderAction(dateRangeSpec);
 
   const rawCandidates = useMemo<CandidateRow[]>(
     () => (candidatesQuery.data ?? []) as CandidateRow[],

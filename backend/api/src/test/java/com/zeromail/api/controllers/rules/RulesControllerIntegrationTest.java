@@ -535,6 +535,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         false,
                         false,
                         false,
+                        false,
                         Optional.empty(),
                         Set.of()));
     }

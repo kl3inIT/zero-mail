@@ -43,6 +43,9 @@ public class NeedsReplyInboxReadRepository {
         } else {
             sql.append(" and bucket = ? and resolved = false");
             parameters.add(pageQuery.bucket().id());
+            if (pageQuery.draftedOnly()) {
+                sql.append(" and has_draft = true");
+            }
         }
         if (decodedCursor.isPresent()) {
             appendCursorPredicate(sql, parameters, decodedCursor.orElseThrow());

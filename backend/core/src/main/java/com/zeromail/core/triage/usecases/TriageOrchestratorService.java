@@ -3,6 +3,7 @@ package com.zeromail.core.triage.usecases;
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.usecases.CreditLedger;
+import com.zeromail.core.gmail.domain.GmailCategory;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import org.slf4j.Logger;
@@ -115,6 +117,12 @@ public class TriageOrchestratorService {
     private static final String TENANT_CONTEXT_MISMATCH = "TENANT_CONTEXT_MISMATCH";
     private static final String OUTBOUND_SEND_FAILED = "OUTBOUND_SEND_FAILED";
     private static final String OUTBOUND_RATE_LIMITED = "OUTBOUND_RATE_LIMITED";
+    private static final Set<String> AUTOMATED_FYI_GMAIL_CATEGORIES =
+            Set.of(
+                    GmailCategory.PROMOTIONS.id(),
+                    GmailCategory.SOCIAL.id(),
+                    GmailCategory.UPDATES.id(),
+                    GmailCategory.FORUMS.id());
 
     private final TenantService tenantService;
     private final TriageRuleEvaluationInputFactory triageRuleEvaluationInputFactory;
@@ -646,7 +654,7 @@ public class TriageOrchestratorService {
                         ruleEvaluationInput.gmailLabelIds().contains("SENT"),
                         dispatchOutcome.draftSaved(),
                         dispatchOutcome.draftId(),
-                        false,
+                        ruleEvaluationInput.autoReplyIndicatorPresent(),
                         inboundReplyNeeded);
         if (forceReclassify) {
             classifyThreadReplyStatusService.reclassify(classificationInput);
@@ -668,8 +676,10 @@ public class TriageOrchestratorService {
         if (dispatchOutcome.draftSaved()) {
             return true;
         }
-        if (ruleEvaluationInput.newsletterIndicatorPresent()
+        if (ruleEvaluationInput.autoReplyIndicatorPresent()
+                || ruleEvaluationInput.newsletterIndicatorPresent()
                 || ruleEvaluationInput.listUnsubscribePresent()
+                || hasAutomatedFyiCategory(ruleEvaluationInput)
                 || isNoReplySender(ruleEvaluationInput.sanitizedSenderEmail())) {
             // Bulk / no-reply / automated mail is FYI; skip the LLM call entirely.
             return false;
@@ -705,6 +715,11 @@ public class TriageOrchestratorService {
         String localPart =
                 atIndex > 0 ? sanitizedSenderEmail.substring(0, atIndex) : sanitizedSenderEmail;
         return NO_REPLY_LOCAL_PART_MARKERS.stream().anyMatch(localPart::contains);
+    }
+
+    private static boolean hasAutomatedFyiCategory(RuleEvaluationInput ruleEvaluationInput) {
+        return AUTOMATED_FYI_GMAIL_CATEGORIES.stream()
+                .anyMatch(ruleEvaluationInput::hasGmailCategory);
     }
 
     /**

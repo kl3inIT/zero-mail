@@ -52,14 +52,21 @@ public class NeedsReplyInboxController {
     public NeedsReplyListResponse list(
             @RequestParam String bucket,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false, defaultValue = "false") boolean resolved) {
         UUID tenantId = TenantContext.currentTenantUuid();
         validateCursor(cursor);
-        ThreadReplyBucket replyBucket = resolved ? null : publicBucket(bucket);
+        BucketSelection bucketSelection =
+                resolved ? BucketSelection.resolved() : publicBucket(bucket);
         NeedsReplyPage page =
                 needsReplyInboxQueryService.page(
-                        tenantId, new NeedsReplyPageQuery(replyBucket, resolved, limit, cursor));
+                        tenantId,
+                        new NeedsReplyPageQuery(
+                                bucketSelection.bucket(),
+                                resolved,
+                                bucketSelection.draftedOnly(),
+                                limit,
+                                cursor));
         List<String> gmailThreadIds =
                 page.items().stream().map(NeedsReplyRow::gmailThreadId).toList();
         Map<String, GmailThreadDisplay> displaysByThreadId =
@@ -98,11 +105,21 @@ public class NeedsReplyInboxController {
         }
     }
 
-    private static ThreadReplyBucket publicBucket(String bucket) {
+    private static BucketSelection publicBucket(String bucket) {
+        String normalizedBucket = bucket == null ? "" : bucket.trim().toLowerCase(Locale.ROOT);
+        if ("drafted".equals(normalizedBucket)) {
+            return new BucketSelection(ThreadReplyBucket.TO_REPLY, true);
+        }
         try {
-            return ThreadReplyBucket.fromPublicSlug(bucket.trim().toLowerCase(Locale.ROOT));
+            return new BucketSelection(ThreadReplyBucket.fromPublicSlug(normalizedBucket), false);
         } catch (NoSuchElementException unknownBucket) {
             throw new IllegalArgumentException("unknown thread bucket", unknownBucket);
+        }
+    }
+
+    private record BucketSelection(ThreadReplyBucket bucket, boolean draftedOnly) {
+        static BucketSelection resolved() {
+            return new BucketSelection(null, false);
         }
     }
 }
