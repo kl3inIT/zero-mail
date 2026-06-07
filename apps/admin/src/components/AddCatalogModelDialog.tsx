@@ -20,6 +20,7 @@ import type {
   CatalogProvider,
 } from '@/features/catalog/catalog-api';
 import { useCreateModel } from '@/features/catalog/use-create-model';
+import { useEnableModel } from '@/features/catalog/use-enable-model';
 
 const formSchema = z.object({
   modelId: z.string().min(1, 'Bắt buộc.').max(200),
@@ -65,8 +66,23 @@ function AddCatalogModelForm({
   onSuccess: () => void;
 }) {
   const createMutation = useCreateModel();
+  const enableMutation = useEnableModel();
   const [failedVerification, setFailedVerification] =
     useState<CatalogModelVerificationResponse | null>(null);
+  const [deprecatedModelId, setDeprecatedModelId] = useState<string | null>(null);
+
+  const isPending = createMutation.isPending || enableMutation.isPending;
+
+  async function handleReEnable() {
+    if (!deprecatedModelId) return;
+    const result = await enableMutation.mutateAsync(deprecatedModelId);
+    if (result.status === 'VERIFIED' || result.status === 'STALE') {
+      onSuccess();
+    } else {
+      setFailedVerification(result);
+      setDeprecatedModelId(null);
+    }
+  }
 
   const form = useForm({
     defaultValues: {
@@ -77,12 +93,23 @@ function AddCatalogModelForm({
     validators: { onChange: formSchema },
     onSubmit: async ({ value }) => {
       setFailedVerification(null);
-      const { verification } = await createMutation.mutateAsync({
+      setDeprecatedModelId(null);
+      const { outcome, verification } = await createMutation.mutateAsync({
         provider,
         modelId: value.modelId.trim(),
         displayName: value.displayName.trim(),
         recommended: value.recommended,
       });
+      if (outcome === 'already-exists') {
+        // Row exists (either active or deprecated). If verify fails it's likely deprecated
+        // and needs re-enable, not a new insert.
+        if (verification.status === 'VERIFIED' || verification.status === 'STALE') {
+          onSuccess();
+          return;
+        }
+        setDeprecatedModelId(value.modelId.trim());
+        return;
+      }
       if (verification.status === 'VERIFIED' || verification.status === 'STALE') {
         onSuccess();
         return;
@@ -164,6 +191,15 @@ function AddCatalogModelForm({
           )}
         </form.Field>
 
+        {deprecatedModelId && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
+            <p className="font-medium text-amber-700 dark:text-amber-400">
+              Model <code>{deprecatedModelId}</code> đã tồn tại nhưng đang bị vô hiệu. Bấm "Kích
+              hoạt lại" để bật lại và verify.
+            </p>
+          </div>
+        )}
+
         {failedVerification && (
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
             <p className="font-medium text-destructive">
@@ -181,15 +217,21 @@ function AddCatalogModelForm({
 
         <DialogFooter className="gap-2">
           <DialogClose render={(closeProps) => <Button variant="ghost" {...closeProps} />}>
-            {failedVerification ? 'Đóng' : 'Hủy'}
+            {failedVerification || deprecatedModelId ? 'Đóng' : 'Hủy'}
           </DialogClose>
-          <form.Subscribe selector={(state) => state.canSubmit}>
-            {(canSubmit) => (
-              <Button type="submit" disabled={!canSubmit || createMutation.isPending}>
-                {createMutation.isPending ? 'Đang lưu + verify…' : 'Thêm'}
-              </Button>
-            )}
-          </form.Subscribe>
+          {deprecatedModelId ? (
+            <Button onClick={handleReEnable} disabled={isPending}>
+              {enableMutation.isPending ? 'Đang kích hoạt…' : 'Kích hoạt lại'}
+            </Button>
+          ) : (
+            <form.Subscribe selector={(state) => state.canSubmit}>
+              {(canSubmit) => (
+                <Button type="submit" disabled={!canSubmit || isPending}>
+                  {createMutation.isPending ? 'Đang lưu + verify…' : 'Thêm'}
+                </Button>
+              )}
+            </form.Subscribe>
+          )}
         </DialogFooter>
       </form>
     </DialogContent>

@@ -161,6 +161,39 @@ public class CatalogAdminService {
     }
 
     @Transactional
+    public void enableModel(String modelId, String requestIp, UUID requestId) {
+        AdminContext.currentOrThrow();
+        LlmProvider provider =
+                modelCatalogWriteRepository
+                        .findProviderForModel(modelId)
+                        .orElseThrow(
+                                () ->
+                                        new FeatureDefaultProviderService
+                                                .CatalogModelNotFoundException(modelId));
+        int updatedRows = modelCatalogWriteRepository.enableModel(modelId);
+        if (updatedRows == 0) {
+            throw new FeatureDefaultProviderService.CatalogModelNotFoundException(modelId);
+        }
+        long catalogVersion = modelCatalogWriteRepository.bumpProviderCatalogVersion(provider);
+        adminAuditWriter.append(
+                AdminAuditAction.CATALOG_MODEL_ENABLED,
+                "model_catalog",
+                null,
+                null,
+                Map.of("model_id", modelId),
+                "Manual catalog model re-enable",
+                requestIp,
+                requestId);
+        applicationEventPublisher.publishEvent(
+                new CatalogChangedEvent(
+                        provider,
+                        List.of(modelId),
+                        EnumSet.allOf(Feature.class),
+                        clock.instant(),
+                        catalogVersion));
+    }
+
+    @Transactional
     public void setDefault(
             LlmProvider provider,
             Feature feature,

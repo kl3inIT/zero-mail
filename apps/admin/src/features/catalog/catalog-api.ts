@@ -39,6 +39,10 @@ export type DisableCatalogModelInput = {
   pinnedCountAcknowledged: number;
 };
 
+export type EnableCatalogModelInput = {
+  modelId: string;
+};
+
 export type SetCatalogDefaultInput = {
   provider: CatalogProvider;
   feature: CatalogFeature;
@@ -171,6 +175,17 @@ export async function disableCatalogModel(input: DisableCatalogModelInput): Prom
   });
   if (error) {
     throw errorFor('vô hiệu mô hình danh mục');
+  }
+}
+
+export async function enableCatalogModel(input: EnableCatalogModelInput): Promise<void> {
+  // TODO: regenerate admin-schema once backend is running; use typed api.POST when path is in schema
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (api as any).POST('/api/admin/catalog/models/enable', {
+    body: { modelId: input.modelId },
+  });
+  if (error) {
+    throw errorFor('kích hoạt model');
   }
 }
 

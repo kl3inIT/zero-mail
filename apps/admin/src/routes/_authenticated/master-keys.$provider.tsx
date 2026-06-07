@@ -5,6 +5,7 @@ import {
   KeyRoundIcon,
   PencilIcon,
   PlusIcon,
+  RotateCcwIcon,
   TrashIcon,
 } from 'lucide-react';
 import {useMemo, useState} from 'react';
@@ -38,6 +39,7 @@ import {
 import {Skeleton} from '@/components/ui/skeleton';
 import {useCatalog} from '@/features/catalog/use-catalog';
 import {useDisableModel} from '@/features/catalog/use-disable-model';
+import {useEnableModel} from '@/features/catalog/use-enable-model';
 import type {CatalogModel, CatalogProvider} from '@/features/catalog/catalog-api';
 import type {
   LlmProvider,
@@ -112,11 +114,13 @@ function MasterKeyProviderRoute() {
   const deleteProviderMutation = useDeleteProvider();
   const testKeyMutation = useTestProviderKey();
   const disableModelMutation = useDisableModel();
+  const enableModelMutation = useEnableModel();
   const [addKeyOpen, setAddKeyOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<ProviderKey | null>(null);
   const [keyToDelete, setKeyToDelete] = useState<ProviderKey | null>(null);
   const [addModelOpen, setAddModelOpen] = useState(false);
   const [modelToDisable, setModelToDisable] = useState<CatalogModel | null>(null);
+  const [modelToEnable, setModelToEnable] = useState<CatalogModel | null>(null);
   const [deleteProviderOpen, setDeleteProviderOpen] = useState(false);
 
   const keys = keysQuery.data?.keys ?? [];
@@ -166,6 +170,10 @@ function MasterKeyProviderRoute() {
 
   function disableModel(model: CatalogModel) {
     setModelToDisable(model);
+  }
+
+  function enableModel(model: CatalogModel) {
+    setModelToEnable(model);
   }
 
   const models = useMemo<CatalogModel[]>(() => {
@@ -248,10 +256,13 @@ function MasterKeyProviderRoute() {
 
       <ModelsCard
         models={models}
+        keyFormat={masterKey.data?.compatibleType ?? null}
         pending={catalogQuery.isPending}
         onAddModel={() => setAddModelOpen(true)}
         onDisableModel={disableModel}
+        onEnableModel={enableModel}
         disabling={disableModelMutation.isPending}
+        enabling={enableModelMutation.isPending}
       />
 
       <AddProviderKeyDialog
@@ -298,6 +309,15 @@ function MasterKeyProviderRoute() {
             },
             {onSuccess: () => setModelToDisable(null)},
           )
+        }
+      />
+
+      <EnableModelDialog
+        model={modelToEnable}
+        pending={enableModelMutation.isPending}
+        onClose={() => setModelToEnable(null)}
+        onConfirm={(model) =>
+          enableModelMutation.mutate(model.modelId, {onSuccess: () => setModelToEnable(null)})
         }
       />
 
@@ -528,23 +548,41 @@ function ConnectionStatusBadge({status}: { status: ProviderKeyStatus }) {
 
 function ModelsCard({
                       models,
+                      keyFormat,
                       pending,
                       onAddModel,
                       onDisableModel,
+                      onEnableModel,
                       disabling,
+                      enabling,
                     }: {
   models: CatalogModel[];
+  keyFormat: string | null;
   pending: boolean;
   onAddModel: () => void;
   onDisableModel: (model: CatalogModel) => void;
+  onEnableModel: (model: CatalogModel) => void;
   disabling: boolean;
+  enabling: boolean;
 }) {
+  const keyFormatLabel =
+    keyFormat === 'OPENAI_FORMAT'
+      ? 'OpenAI-compatible'
+      : keyFormat === 'ANTHROPIC_FORMAT'
+        ? 'Anthropic-compatible'
+        : keyFormat === 'GOOGLE_FORMAT'
+          ? 'Google GenAI'
+          : null;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Models</CardTitle>
         <CardDescription>
           Chỉ model VERIFIED hoặc STALE mới hiện trong dropdown tier routing.
+          {keyFormatLabel && (
+            <> Tất cả model trong provider này gọi qua <strong>{keyFormatLabel}</strong> API.</>
+          )}
         </CardDescription>
         <CardAction>
           <Button size="sm" onClick={onAddModel} disabled={pending}>
@@ -564,7 +602,9 @@ function ModelsCard({
               key={model.modelId}
               model={model}
               onDisable={() => onDisableModel(model)}
+              onEnable={() => onEnableModel(model)}
               disabling={disabling}
+              enabling={enabling}
             />
           ))
         )}
@@ -576,11 +616,15 @@ function ModelsCard({
 function ModelRow({
                     model,
                     onDisable,
+                    onEnable,
                     disabling,
+                    enabling,
                   }: {
   model: CatalogModel;
   onDisable: () => void;
+  onEnable: () => void;
   disabling: boolean;
+  enabling: boolean;
 }) {
   const isDeprecated = Boolean(model.deprecatedAt);
   const status = model.verificationStatus ?? 'UNTESTED';
@@ -599,7 +643,17 @@ function ModelRow({
       </div>
       {model.recommended && <Badge variant="secondary">Đề xuất</Badge>}
       <ModelStatusBadge deprecated={isDeprecated} status={status}/>
-      {!isDeprecated && (
+      {isDeprecated ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Kích hoạt lại model"
+          onClick={onEnable}
+          disabled={enabling}
+        >
+          <RotateCcwIcon className="size-4"/>
+        </Button>
+      ) : (
         <Button
           variant="ghost"
           size="icon"
@@ -701,6 +755,43 @@ function DisableModelDialog({
               onClick={() => onConfirm(model)}
             >
               {pending ? 'Đang lưu…' : 'Vô hiệu'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      )}
+    </AlertDialog>
+  );
+}
+
+function EnableModelDialog({
+                             model,
+                             pending,
+                             onClose,
+                             onConfirm,
+                           }: {
+  model: CatalogModel | null;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: (model: CatalogModel) => void;
+}) {
+  return (
+    <AlertDialog open={model !== null} onOpenChange={(open) => !open && onClose()}>
+      {model && (
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <RotateCcwIcon className="size-5"/>
+            </AlertDialogMedia>
+            <AlertDialogTitle>Kích hoạt lại model?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Model <code>{model.modelId}</code> sẽ được bật lại và verify ngay.
+              Nếu provider xác nhận, model trở về trạng thái VERIFIED và có thể gán vào tier.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction disabled={pending} onClick={() => onConfirm(model)}>
+              {pending ? 'Đang kích hoạt…' : 'Kích hoạt lại'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

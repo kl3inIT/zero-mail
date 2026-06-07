@@ -4,6 +4,7 @@ import com.zeromail.api.dto.admin.cat.CatalogFeatureDefaultRequest;
 import com.zeromail.api.dto.admin.cat.CatalogListResponse;
 import com.zeromail.api.dto.admin.cat.CatalogModelCreateRequest;
 import com.zeromail.api.dto.admin.cat.CatalogModelDisableRequest;
+import com.zeromail.api.dto.admin.cat.CatalogModelEnableRequest;
 import com.zeromail.api.dto.admin.cat.CatalogModelVerificationResponse;
 import com.zeromail.api.dto.admin.cat.CatalogModelVerifyRequest;
 import com.zeromail.api.dto.admin.cat.CatalogSyncConfirmRequest;
@@ -153,6 +154,16 @@ public class AdminCatalogController {
                 request.pinnedCountAcknowledged(),
                 httpServletRequest.getRemoteAddr(),
                 UUID.randomUUID());
+    }
+
+    @PostMapping("/models/enable")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void enableModel(
+            @Valid @RequestBody CatalogModelEnableRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        catalogAdminService.enableModel(
+                request.modelId(), httpServletRequest.getRemoteAddr(), UUID.randomUUID());
     }
 
     @PostMapping("/models/verify")

@@ -116,6 +116,17 @@ public class ModelCatalogWriteRepository {
                 modelId);
     }
 
+    public int enableModel(String modelId) {
+        return jdbcTemplate.update(
+                """
+                UPDATE model_catalog
+                SET deprecated_at = NULL,
+                    updated_at = NOW()
+                WHERE model_id = ?
+                """,
+                modelId);
+    }
+
     public void upsertFeatureBinding(String modelId, Feature feature) {
         jdbcTemplate.update(
                 """
