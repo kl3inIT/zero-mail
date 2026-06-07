@@ -1,6 +1,7 @@
 # Requirements: Zero Mail v1.3 Gmail Workspace Foundation
 
 **Defined:** 2026-06-07
+**Status:** Reconciled after code research (`.planning/research/V1.3-CODE-RESEARCH.md`). The initial requirements were draft v0; this version reflects the single-Gmail assumptions found in Zero Mail and the mailbox-scoping pattern found in Inbox Zero.
 **Core Value:** AI auto-triage that users trust with their real Gmail inbox.
 
 ## Scope Inputs
@@ -9,6 +10,7 @@
 - `SEED-019` - ai-communication-ops-zalo-crm-vietnam. Directional context only: Gmail remains the production channel for v1.3; Zalo OA, CRM, and omnichannel work stay deferred.
 - Lightweight market check: Crisp validates shared inbox + CRM positioning for SMB support teams; Shortwave validates team collaboration primitives such as shared threads, private comments, assignment, shared labels, and shared prompts/templates. v1.3 intentionally stops before those full collaboration features.
 - Codebase constraint: current Gmail integration is single-connection-per-tenant (`gmail_connections.tenant_id` unique, `findByTenantId(...)`, tenant-only idempotency and projection keys). v1.3 must treat this as a core migration, not a UI-only account picker.
+- Code research: Inbox Zero's transferable implementation pattern is a stable mailbox/account id (`emailAccountId`) that scopes OAuth tokens, watch state, rules, actions, executed rules, labels, messages, API request context, and UI switching. Zero Mail should copy that concept, not its Next/Prisma architecture or raw-email logging posture.
 
 ## v1.3 Requirements
 
@@ -19,6 +21,7 @@
 - [ ] **WSP-03**: System stores a stable Gmail mailbox identifier on every new mailbox-scoped record that can contain per-account state or provenance.
 - [ ] **WSP-04**: Backend APIs, UI labels, and logs consistently distinguish workspace, user, and Gmail mailbox without exposing future team/member controls.
 - [ ] **WSP-05**: System fails closed when a mailbox id is missing, invalid, disconnected, or not owned by the current tenant/workspace.
+- [ ] **WSP-06**: Mailbox-scoped API requests go through a shared backend guard/context that validates `(tenantId, gmailMailboxId)` ownership before controller/service execution; tenant-only default mailbox fallback is allowed only for explicitly legacy/default surfaces, never for internal Gmail write paths.
 
 ### Gmail Account Management
 
@@ -28,6 +31,7 @@
 - [ ] **GMA-04**: User can reconnect one mailbox and refresh its encrypted token/scopes without touching other mailboxes.
 - [ ] **GMA-05**: User can disconnect one mailbox; the app stops watch renewal, ingestion, and automation for that mailbox without disconnecting the workspace.
 - [ ] **GMA-06**: System prevents duplicate active Gmail addresses in the same workspace and returns a clear error when a Gmail address is already connected elsewhere.
+- [ ] **GMA-07**: OAuth flow separates first-login Gmail provisioning from add-mailbox and reconnect-mailbox flows, so connecting another Gmail never replaces the current mailbox row by accident.
 
 ### Ingestion and Inbox Data
 
@@ -36,6 +40,7 @@
 - [ ] **ING-03**: Idempotency keys for Pub/Sub deliveries, observed messages, processing jobs, and inbox projections include mailbox scope wherever Gmail ids are not sufficient across accounts.
 - [ ] **ING-04**: User can filter inbox, needs-reply, and analytics data by one mailbox or all mailboxes without duplicate or cross-account rows.
 - [ ] **ING-05**: Multi-Gmail ingestion preserves the existing no-long-term raw body, prompt/completion, and embedding storage posture.
+- [ ] **ING-06**: Gmail client lookup, access-token cache, watch renewal, backfill, history cursor updates, and projection encryption/decryption compatibility are mailbox-aware; any encryption AAD change has an explicit compatibility or app-level re-encryption plan.
 
 ### Account-Scoped Automation
 
@@ -54,6 +59,7 @@
 - [ ] **AUD-04**: Admin/operator tenant inspection shows metadata-only multi-mailbox health without exposing tokens, raw bodies, prompts, or completions.
 - [ ] **AUD-05**: Architectural tests forbid tenant-only Gmail client lookup in new mailbox-scoped flows where mailbox context is required.
 - [ ] **AUD-06**: Cross-account isolation tests prove one mailbox cannot read, write, archive, draft, or send as another mailbox through crafted ids.
+- [ ] **AUD-07**: Application logs and external error telemetry do not emit raw connected mailbox emails, sender/recipient emails, subjects, snippets, bodies, raw headers, tokens, prompts, or completions; use tenant id, mailbox id, technical status, and optional masked/hash values instead. Storing connected mailbox email in DB/UI remains allowed product state.
 
 ### User Experience
 
@@ -117,6 +123,7 @@
 | WSP-03 | Phase 10 | Pending |
 | WSP-04 | Phase 10 | Pending |
 | WSP-05 | Phase 10 | Pending |
+| WSP-06 | Phase 10 | Pending |
 | VER-01 | Phase 10 | Pending |
 | GMA-01 | Phase 11 | Pending |
 | GMA-02 | Phase 11 | Pending |
@@ -124,12 +131,14 @@
 | GMA-04 | Phase 11 | Pending |
 | GMA-05 | Phase 11 | Pending |
 | GMA-06 | Phase 11 | Pending |
+| GMA-07 | Phase 11 | Pending |
 | AUD-04 | Phase 11 | Pending |
 | ING-01 | Phase 12 | Pending |
 | ING-02 | Phase 12 | Pending |
 | ING-03 | Phase 12 | Pending |
 | ING-04 | Phase 12 | Pending |
 | ING-05 | Phase 12 | Pending |
+| ING-06 | Phase 12 | Pending |
 | AUTO-01 | Phase 13 | Pending |
 | AUTO-02 | Phase 13 | Pending |
 | AUTO-03 | Phase 13 | Pending |
@@ -141,6 +150,7 @@
 | AUD-03 | Phase 13 | Pending |
 | AUD-05 | Phase 13 | Pending |
 | AUD-06 | Phase 13 | Pending |
+| AUD-07 | Phase 13 | Pending |
 | UX-01 | Phase 14 | Pending |
 | UX-02 | Phase 14 | Pending |
 | UX-03 | Phase 14 | Pending |
@@ -152,10 +162,10 @@
 | VER-05 | Phase 14 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 38 total
-- Mapped to phases: 38
+- v1.3 requirements: 42 total
+- Mapped to phases: 42
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-07*
-*Last updated: 2026-06-07 after v1.3 Gmail Workspace Foundation scoping*
+*Last updated: 2026-06-07 after v1.3 code research reconciliation*
