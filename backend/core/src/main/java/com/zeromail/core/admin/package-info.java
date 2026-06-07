@@ -2,6 +2,7 @@
         displayName = "Admin",
         allowedDependencies = {
             "tenant",
+            "tenant :: usecases",
             "config",
             "billing :: persistence",
             "gmail",
