@@ -2,11 +2,10 @@ package com.zeromail.core.cleanup.usecases;
 
 import com.zeromail.core.cleanup.domain.UnsubscribeMethod;
 import com.zeromail.core.cleanup.projection.UnsubscribeCandidateProjection;
+import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.SenderWorkingSetDailyCount;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -177,11 +176,22 @@ public class CleanupSenderProjectionService {
         if (senderEmail.isBlank()) {
             return;
         }
-        String senderDomain = senderWorkingSet.senderDomain();
-        if (senderDomain == null || senderDomain.isBlank()) {
+        String senderDomain = normalizeSenderDomain(senderWorkingSet.senderDomain());
+        if (senderDomain.isBlank()) {
             senderDomain = senderDomain(senderEmail);
         }
-        LocalDate activityDate = LocalDate.ofInstant(senderWorkingSet.lastSeenAt(), ZoneOffset.UTC);
+        for (SenderWorkingSetDailyCount dailyCount : senderWorkingSet.dailyCounts()) {
+            upsertSenderWorkingSetDay(
+                    tenantId, senderWorkingSet, senderEmail, senderDomain, dailyCount);
+        }
+    }
+
+    private void upsertSenderWorkingSetDay(
+            UUID tenantId,
+            CleanupRecentInboxWorkingSetService.SenderWorkingSet senderWorkingSet,
+            String senderEmail,
+            String senderDomain,
+            SenderWorkingSetDailyCount dailyCount) {
         jdbcTemplate.update(
                 """
                 INSERT INTO cleanup_sender_projection (
@@ -211,13 +221,13 @@ public class CleanupSenderProjectionService {
                     refreshed_at = NOW()
                 """,
                 tenantId,
-                Date.valueOf(activityDate),
+                Date.valueOf(dailyCount.activityDate()),
                 senderEmail,
                 senderDomain,
                 senderWorkingSet.senderName(),
-                senderWorkingSet.messageCount(),
-                senderWorkingSet.readMessageCount(),
-                Timestamp.from(senderWorkingSet.lastSeenAt()),
+                dailyCount.messageCount(),
+                dailyCount.readMessageCount(),
+                Timestamp.from(dailyCount.lastSeenAt()),
                 senderWorkingSet.unsubscribeMethod().id(),
                 SOURCE_GMAIL_WORKING_SET);
     }
@@ -228,5 +238,12 @@ public class CleanupSenderProjectionService {
             return "";
         }
         return senderEmail.substring(atIndex + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeSenderDomain(String senderDomain) {
+        if (senderDomain == null) {
+            return "";
+        }
+        return senderDomain.trim().toLowerCase(Locale.ROOT);
     }
 }
