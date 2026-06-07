@@ -2,7 +2,6 @@
 
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import {
   runSenderAction,
@@ -24,9 +23,11 @@ export type SenderActionMutationVariables = CleanupSenderActionRequest & {
 type OptimisticSnapshot = Array<[QueryKey, UnsubscribeCandidateResponse[] | undefined]>;
 type MutationContext = { previous: OptimisticSnapshot };
 
-type CandidateStatus = 'APPROVED' | 'UNSUBSCRIBED' | 'AUTO_ARCHIVED' | null;
+type CandidateStatus = 'APPROVED' | 'UNSUBSCRIBED' | 'AUTO_ARCHIVED';
 
-export function useSenderAction(spec: DateRangeSpec, limit: number) {
+const SENDER_ACTION_BATCH_SIZE = 25;
+
+export function useSenderAction(spec: DateRangeSpec) {
   const queryClient = useQueryClient();
   const t = useTranslations();
   const candidatesKey = unsubscribeCampaignKeys.candidatesPrefix(spec);
@@ -37,7 +38,36 @@ export function useSenderAction(spec: DateRangeSpec, limit: number) {
     SenderActionMutationVariables,
     MutationContext
   >({
-    mutationFn: ({ toastIntent: _toastIntent, ...request }) => runSenderAction(request),
+    mutationFn: async (variables) => {
+      if (variables.senderEmails.length === 0) {
+        throw new Error('Sender list must not be empty');
+      }
+
+      const responses: CleanupSenderActionResponse[] = [];
+      for (const senderEmails of chunkSenderEmails(variables.senderEmails)) {
+        responses.push(
+          await runSenderAction({
+            action: variables.action,
+            senderEmails,
+            labelName: variables.labelName,
+          }),
+        );
+      }
+      return aggregateSenderActionResponses(responses);
+    },
+    meta: {
+      successMessage: ({ variables }) =>
+        t(actionSuccessKey(variables as SenderActionMutationVariables)),
+      successDescription: ({ data }) => {
+        const response = data as CleanupSenderActionResponse;
+        return response.affectedMessageCount > 0
+          ? t('cleanup.unsubscribe.action.mailAffected', {
+              count: response.affectedMessageCount,
+            })
+          : undefined;
+      },
+      errorMessage: t('cleanup.unsubscribe.action.genericError'),
+    },
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: candidatesKey });
       const previous = queryClient.getQueriesData<UnsubscribeCandidateResponse[]>({
@@ -52,7 +82,7 @@ export function useSenderAction(spec: DateRangeSpec, limit: number) {
             if (!current) return current;
             return current.map((candidate) =>
               candidate.senderEmail && targets.has(candidate.senderEmail)
-                ? { ...candidate, status: nextStatus as CandidateStatus }
+                ? optimisticCandidate(candidate, nextStatus)
                 : candidate,
             );
           },
@@ -60,16 +90,8 @@ export function useSenderAction(spec: DateRangeSpec, limit: number) {
       }
       return { previous };
     },
-    onSuccess: (response, variables) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: candidatesKey });
-      toast.success(t(actionSuccessKey(variables)), {
-        description:
-          response.affectedMessageCount > 0
-            ? t('cleanup.unsubscribe.action.mailAffected', {
-                count: response.affectedMessageCount,
-              })
-            : undefined,
-      });
     },
     onError: (_error, _variables, context) => {
       if (context) {
@@ -77,17 +99,53 @@ export function useSenderAction(spec: DateRangeSpec, limit: number) {
           queryClient.setQueryData(key, data);
         }
       }
-      toast.error(t('cleanup.unsubscribe.action.genericError'));
     },
   });
 }
 
-function optimisticNextStatus(action: CleanupSenderAction): CandidateStatus | 'noop' {
+function chunkSenderEmails(senderEmails: string[]): string[][] {
+  const chunks: string[][] = [];
+  for (
+    let startIndex = 0;
+    startIndex < senderEmails.length;
+    startIndex += SENDER_ACTION_BATCH_SIZE
+  ) {
+    chunks.push(senderEmails.slice(startIndex, startIndex + SENDER_ACTION_BATCH_SIZE));
+  }
+  return chunks;
+}
+
+function aggregateSenderActionResponses(
+  responses: CleanupSenderActionResponse[],
+): CleanupSenderActionResponse {
+  return responses.reduce(
+    (total, response) => ({
+      senderCount: total.senderCount + (response.senderCount ?? 0),
+      affectedMessageCount: total.affectedMessageCount + (response.affectedMessageCount ?? 0),
+      failedMessageCount: total.failedMessageCount + (response.failedMessageCount ?? 0),
+    }),
+    { senderCount: 0, affectedMessageCount: 0, failedMessageCount: 0 },
+  );
+}
+
+function optimisticCandidate(
+  candidate: UnsubscribeCandidateResponse,
+  nextStatus: CandidateStatus | 'clear',
+): UnsubscribeCandidateResponse {
+  if (nextStatus === 'clear') {
+    const candidateWithoutStatus = { ...candidate };
+    delete candidateWithoutStatus.status;
+    return candidateWithoutStatus;
+  }
+  return { ...candidate, status: nextStatus };
+}
+
+function optimisticNextStatus(action: CleanupSenderAction): CandidateStatus | 'clear' | 'noop' {
   switch (action) {
     case 'APPROVE':
       return 'APPROVED';
     case 'UNAPPROVE':
-      return null;
+      return 'clear';
     case 'MARK_UNSUBSCRIBED':
       return 'UNSUBSCRIBED';
     case 'AUTO_ARCHIVE':

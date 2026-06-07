@@ -132,6 +132,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/composer/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["find"];
+        put: operations["upsert"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/byok/model": {
         parameters: {
             query?: never;
@@ -164,7 +180,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/unsubscribe/campaigns/{jobId}/undo": {
+    "/api/unsubscribe/senders/action": {
         parameters: {
             query?: never;
             header?: never;
@@ -173,39 +189,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["undo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/unsubscribe/campaigns/{jobId}/senders/{senderEmail}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["retrySender"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/unsubscribe/campaigns/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["preview"];
+        post: operations["action"];
         delete?: never;
         options?: never;
         head?: never;
@@ -253,7 +237,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["undo_1"];
+        post: operations["undo"];
         delete?: never;
         options?: never;
         head?: never;
@@ -772,14 +756,14 @@ export interface paths {
         patch: operations["updateLanguage"];
         trace?: never;
     };
-    "/api/unsubscribe/candidates": {
+    "/api/unsubscribe/stats/timeline": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listCandidates"];
+        get: operations["timeline"];
         put?: never;
         post?: never;
         delete?: never;
@@ -788,14 +772,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/unsubscribe/campaigns/{jobId}": {
+    "/api/unsubscribe/stats/messages": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getStatus"];
+        get: operations["messages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/unsubscribe/stats/messages/{gmailMessageId}/body": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["messageBody"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/unsubscribe/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listCandidates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1108,6 +1124,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/gmail/inbox/threads/{gmailThreadId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["threadDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/gmail/inbox/drafts/{gmailDraftId}": {
         parameters: {
             query?: never;
@@ -1252,6 +1284,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/composer/drafts/{draftId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_5"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cleanup/suppression/{suppressionId}": {
         parameters: {
             query?: never;
@@ -1359,6 +1407,30 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        ComposerDraftUpsertRequestDto: {
+            gmailThreadId: string;
+            /** @description Gmail draftId of the existing draft for this thread, if the client already knows it. When present the backend updates that draft directly instead of scanning Gmail, which avoids the create-create race that flooded the user's drafts folder with duplicates. */
+            draftId?: string;
+            sourceGmailMessageId?: string;
+            rfc822MessageId?: string;
+            priorReferences?: string;
+            /** @enum {string} */
+            mode: "reply" | "reply_all" | "forward";
+            toAddresses?: string;
+            ccAddresses?: string;
+            bccAddresses?: string;
+            subject?: string;
+            body?: string;
+        };
+        ComposerDraftResponseDto: {
+            draftId: string;
+            gmailThreadId: string;
+            toAddresses: string[];
+            ccAddresses: string[];
+            bccAddresses: string[];
+            subject: string;
+            body: string;
+        };
         ByokModelRequest: {
             modelId: string;
         };
@@ -1377,22 +1449,19 @@ export interface components {
         ByokActivateRequest: {
             active: boolean;
         };
-        CampaignPreviewRequest: {
+        CleanupSenderActionRequest: {
+            /** @enum {string} */
+            action: "APPROVE" | "UNAPPROVE" | "MARK_UNSUBSCRIBED" | "AUTO_ARCHIVE" | "ARCHIVE" | "DELETE" | "LABEL_FUTURE";
             senderEmails: string[];
+            labelName?: string;
         };
-        CampaignPreviewResponse: {
-            perSender?: components["schemas"]["PerSenderPreviewResponse"][];
-            /** Format: int64 */
-            totalHistoryCount?: number;
-        };
-        PerSenderPreviewResponse: {
-            senderEmail?: string;
-            senderDomain?: string;
-            unsubscribeMethod?: string;
-            /** Format: int64 */
-            historyMessageCount?: number;
-            willArchive?: boolean;
-            riskBadge?: string;
+        CleanupSenderActionResponse: {
+            /** Format: int32 */
+            senderCount?: number;
+            /** Format: int32 */
+            affectedMessageCount?: number;
+            /** Format: int32 */
+            failedMessageCount?: number;
         };
         CampaignExecuteRequest: {
             senderEmails: string[];
@@ -1598,8 +1667,8 @@ export interface components {
             filename?: string;
             charset?: string;
             inline?: boolean;
-            attachment?: boolean;
             formData?: boolean;
+            attachment?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -1643,41 +1712,41 @@ export interface components {
             ifModifiedSince?: number;
             contentType?: components["schemas"]["MediaType"];
             origin?: string;
-            ifNoneMatch?: string[];
-            /** Format: int64 */
-            ifUnmodifiedSince?: number;
-            ifMatch?: string[];
             range?: components["schemas"]["HttpRange"][];
+            cacheControl?: string;
             contentDisposition?: components["schemas"]["ContentDisposition"];
             acceptCharset?: string[];
-            allow?: components["schemas"]["HttpMethod"][];
             bearerAuth?: string;
-            cacheControl?: string;
+            etag?: string;
+            /** Format: int64 */
+            ifUnmodifiedSince?: number;
+            ifNoneMatch?: string[];
+            allow?: components["schemas"]["HttpMethod"][];
+            contentLanguage?: string;
+            ifMatch?: string[];
+            accept?: components["schemas"]["MediaType"][];
+            pragma?: string;
+            upgrade?: string;
+            vary?: string[];
+            /** Format: int64 */
+            expires?: number;
+            acceptPatch?: components["schemas"]["MediaType"][];
+            acceptLanguageAsLocales?: string[];
+            basicAuth?: string;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
-            acceptPatch?: components["schemas"]["MediaType"][];
-            basicAuth?: string;
             /** Format: int64 */
             accessControlMaxAge?: number;
-            acceptLanguageAsLocales?: string[];
-            contentLanguage?: string;
-            accessControlExposeHeaders?: string[];
+            accessControlAllowOrigin?: string;
             accessControlRequestHeaders?: string[];
             accessControlRequestMethod?: components["schemas"]["HttpMethod"];
-            accessControlAllowOrigin?: string;
             accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
-            accessControlAllowCredentials?: boolean;
+            accessControlExposeHeaders?: string[];
             accessControlAllowHeaders?: string[];
-            accept?: components["schemas"]["MediaType"][];
-            /** Format: int64 */
-            expires?: number;
-            etag?: string;
-            vary?: string[];
-            pragma?: string;
-            upgrade?: string;
+            accessControlAllowCredentials?: boolean;
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -1691,8 +1760,8 @@ export interface components {
             qualityValue?: number;
             charset?: string;
             concrete?: boolean;
-            wildcardSubtype?: boolean;
             wildcardType?: boolean;
+            wildcardSubtype?: boolean;
             subtypeSuffix?: string;
         };
         BankTransferIntentResponse: {
@@ -1836,50 +1905,47 @@ export interface components {
             /** @description Google profile picture URL. Read transiently from the OAuth session principal on each request — never persisted to the database (privacy). */
             avatarUrl?: string | null;
         };
+        SenderTimelineEntryResponse: {
+            /** Format: date */
+            date?: string;
+            /** Format: int64 */
+            count?: number;
+        };
+        SenderMessageSummaryResponse: {
+            gmailMessageId?: string;
+            gmailThreadId?: string;
+            subject?: string;
+            snippet?: string;
+            /** Format: date-time */
+            internalDate?: string;
+            archived?: boolean;
+            unread?: boolean;
+        };
+        SenderMessageBodyResponse: {
+            gmailMessageId?: string;
+            subject?: string;
+            fromHeader?: string;
+            /** Format: date-time */
+            internalDate?: string;
+            htmlBody?: string;
+            plainBody?: string;
+        };
         UnsubscribeCandidateListResponse: {
             items?: components["schemas"]["UnsubscribeCandidateResponse"][];
         };
         UnsubscribeCandidateResponse: {
             senderEmail?: string;
             senderDomain?: string;
+            senderName?: string;
             /** Format: int64 */
             messageCount?: number;
+            /** Format: int64 */
+            readMessageCount?: number;
             /** Format: date-time */
             lastSeenAt?: string;
             unsubscribeMethod?: string;
-            suppressed?: boolean;
-        };
-        CampaignStatusResponse: {
-            /** Format: uuid */
-            campaignId?: string;
-            /** Format: uuid */
-            jobId?: string;
             status?: string;
-            /** Format: int32 */
-            progressPct?: number;
-            /** Format: date-time */
-            appliedAt?: string;
-            /** Format: date-time */
-            revertedAt?: string;
-            /** Format: int32 */
-            totalSenderCount?: number;
-            /** Format: int32 */
-            totalHistoryMessageCount?: number;
-            perSender?: components["schemas"]["PerSenderStateResponse"][];
-            undoAvailable?: boolean;
-        };
-        PerSenderStateResponse: {
-            senderEmail?: string;
-            senderDomain?: string;
-            unsubscribeMethod?: string;
-            state?: string;
-            failureReason?: string;
-            /** Format: int32 */
-            archivedMessageCount?: number;
-            /** Format: date-time */
-            startedAt?: string;
-            /** Format: date-time */
-            finishedAt?: string;
+            suppressed?: boolean;
         };
         ProtectedSendersResponse: {
             senders: components["schemas"]["ProtectedSenderResponse"][];
@@ -2102,6 +2168,11 @@ export interface components {
             loadedCount: number;
             /** Format: int32 */
             maxMessages: number;
+            /**
+             * @description Source of this page. PROJECTION = DB-backed inbox projection; LIVE_GMAIL = live Gmail metadata fallback; SYNCING = backfill in flight, items is empty, render a syncing banner.
+             * @enum {string}
+             */
+            dataSource: "PROJECTION" | "LIVE_GMAIL" | "SYNCING";
         };
         GmailInboxMessageDetailResponse: {
             message: components["schemas"]["GmailInboxMessageResponse"];
@@ -2109,6 +2180,11 @@ export interface components {
             renderedText: string;
             /** @description Transient sanitized Gmail HTML render. Not persisted by Zero Mail. */
             renderedHtml: string;
+        };
+        GmailThreadDetailResponse: {
+            gmailThreadId: string;
+            subject: string;
+            messages: components["schemas"]["GmailInboxMessageDetailResponse"][];
         };
         GmailConnectionStatusResponse: {
             connectionStatus: string;
@@ -3561,6 +3637,160 @@ export interface operations {
             };
         };
     };
+    find: {
+        parameters: {
+            query: {
+                gmailThreadId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComposerDraftResponseDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    upsert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComposerDraftUpsertRequestDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComposerDraftResponseDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     setModel: {
         parameters: {
             query?: never;
@@ -3717,156 +3947,7 @@ export interface operations {
             };
         };
     };
-    undo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    retrySender: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-                senderEmail: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Accepted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    preview: {
+    action: {
         parameters: {
             query?: never;
             header?: never;
@@ -3875,17 +3956,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CampaignPreviewRequest"];
+                "application/json": components["schemas"]["CleanupSenderActionRequest"];
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Accepted */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CampaignPreviewResponse"];
+                    "*/*": components["schemas"]["CleanupSenderActionResponse"];
                 };
             };
             /** @description Bad Request */
@@ -4098,7 +4179,7 @@ export interface operations {
             };
         };
     };
-    undo_1: {
+    undo: {
         parameters: {
             query?: never;
             header?: never;
@@ -7306,11 +7387,13 @@ export interface operations {
             };
         };
     };
-    listCandidates: {
+    timeline: {
         parameters: {
-            query?: {
-                window?: string;
-                limit?: number;
+            query: {
+                senderEmail: string;
+                windowDays?: number;
+                startDate?: string;
+                endDate?: string;
             };
             header?: never;
             path?: never;
@@ -7324,7 +7407,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UnsubscribeCandidateListResponse"];
+                    "*/*": components["schemas"]["SenderTimelineEntryResponse"][];
                 };
             };
             /** @description Bad Request */
@@ -7383,12 +7466,93 @@ export interface operations {
             };
         };
     };
-    getStatus: {
+    messages: {
+        parameters: {
+            query: {
+                senderEmail: string;
+                archivedOnly?: boolean;
+                limit?: number;
+                windowDays?: number;
+                startDate?: string;
+                endDate?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SenderMessageSummaryResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    messageBody: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                jobId: string;
+                gmailMessageId: string;
             };
             cookie?: never;
         };
@@ -7400,7 +7564,86 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CampaignStatusResponse"];
+                    "*/*": components["schemas"]["SenderMessageBodyResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    listCandidates: {
+        parameters: {
+            query?: {
+                window?: string;
+                startDate?: string;
+                endDate?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UnsubscribeCandidateListResponse"];
                 };
             };
             /** @description Bad Request */
@@ -8895,6 +9138,82 @@ export interface operations {
             };
         };
     };
+    threadDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gmailThreadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GmailThreadDetailResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     draftDetail: {
         parameters: {
             query?: never;
@@ -9584,6 +9903,80 @@ export interface operations {
         responses: {
             /** @description OK */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

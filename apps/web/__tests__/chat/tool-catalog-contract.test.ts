@@ -8,7 +8,7 @@ import {
 import {
   BODY_SLOT_MAP,
   previewCardBodySlotCount,
-} from '@/features/chat/components/preview-card/preview-card';
+} from '@/features/chat/components/preview-card/preview-card-body-slots';
 
 describe('chat tool catalog contract', () => {
   it('matches the authoritative active tool list and partition', () => {

@@ -139,26 +139,6 @@ export const needsReplyMessages = {
     vi: 'Hiện không có email nào cần trả lời.',
     en: 'Nothing needs a reply right now.',
   },
-  'needsReply.empty.toReply.syncHint': {
-    vi: 'Email mới đến sẽ tự được phân loại. Để phân loại các email đã có sẵn trong hộp thư, đồng bộ ngay.',
-    en: 'New mail is classified automatically. To classify mail already in your inbox, sync now.',
-  },
-  'needsReply.action.sync': {
-    vi: 'Đồng bộ hộp thư',
-    en: 'Sync inbox',
-  },
-  'needsReply.action.syncing': {
-    vi: 'Đang đồng bộ…',
-    en: 'Syncing…',
-  },
-  'needsReply.toast.backfillDone': {
-    vi: 'Đã đồng bộ hộp thư — danh sách cần trả lời đã được cập nhật.',
-    en: 'Inbox synced — your needs-reply list is up to date.',
-  },
-  'needsReply.toast.backfillFailed': {
-    vi: 'Không đồng bộ được hộp thư. Hãy thử lại.',
-    en: "Couldn't sync your inbox. Try again.",
-  },
   'needsReply.empty.awaiting.title': {
     vi: 'Không có gì đang chờ',
     en: 'Nothing awaiting',
@@ -206,14 +186,6 @@ export const needsReplyMessages = {
   'needsReply.action.viewContent': {
     vi: 'Xem nội dung',
     en: 'View content',
-  },
-  'needsReply.action.resync': {
-    vi: 'Đồng bộ lại hộp thư',
-    en: 'Re-sync inbox',
-  },
-  'needsReply.banner.syncing': {
-    vi: 'Đang đồng bộ hộp thư để phân loại email…',
-    en: 'Syncing your inbox to classify mail…',
   },
   'needsReply.reader.to': {
     vi: 'Đến',

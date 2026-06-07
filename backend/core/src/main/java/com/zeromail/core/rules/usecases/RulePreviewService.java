@@ -425,6 +425,7 @@ public class RulePreviewService {
                 false,
                 unsubscribeHinted,
                 unsubscribeHinted,
+                false,
                 Optional.of(!safeBody.isBlank()),
                 Set.of());
     }

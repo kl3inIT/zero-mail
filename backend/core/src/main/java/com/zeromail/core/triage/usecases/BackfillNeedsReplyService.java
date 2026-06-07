@@ -34,7 +34,7 @@ public class BackfillNeedsReplyService {
 
     private static final Logger log = LoggerFactory.getLogger(BackfillNeedsReplyService.class);
     private static final int DEFAULT_LIMIT = 20;
-    private static final int MAX_LIMIT = 30;
+    private static final int MAX_LIMIT = 20;
 
     private final RecentInboxReadService recentInboxReadService;
     private final TriageOrchestratorService triageOrchestratorService;

@@ -29,7 +29,11 @@ export function InlineEmailCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const locale = useLocale();
-  const detail = useQuery({
+  const {
+    data: detailData,
+    isPending: detailIsPending,
+    isError: detailIsError,
+  } = useQuery({
     queryKey: ['chat-inline-email', email.messageId],
     queryFn: () => getInboxMessageDetail(email.messageId),
     enabled: expanded,
@@ -39,9 +43,9 @@ export function InlineEmailCard({
   // Row metadata may be sparse (getThread only knows message ids); fill in the
   // subject/sender from the fetched detail once the row is expanded.
   const subject =
-    email.subject || detail.data?.message.subject || fallbackTitle || '(không có chủ đề)';
-  const from = email.from || detail.data?.message.from;
-  const openInGmailUrl = detail.data?.message.openInGmailUrl ?? gmailThreadUrl(email.threadId);
+    email.subject || detailData?.message.subject || fallbackTitle || '(không có chủ đề)';
+  const from = email.from || detailData?.message.from;
+  const openInGmailUrl = detailData?.message.openInGmailUrl ?? gmailThreadUrl(email.threadId);
 
   return (
     <div className="border-border rounded-md border">
@@ -98,20 +102,20 @@ export function InlineEmailCard({
       </div>
       {expanded && (
         <div className="border-border overflow-hidden border-t">
-          {detail.isPending ? (
+          {detailIsPending ? (
             <div className="text-muted-foreground flex items-center gap-2 p-3 text-xs">
               <Loader2 className="size-3.5 animate-spin" /> Đang tải nội dung…
             </div>
-          ) : detail.isError ? (
+          ) : detailIsError ? (
             <div className="text-destructive p-3 text-xs">Không tải được nội dung email.</div>
-          ) : detail.data?.renderedHtml ? (
+          ) : detailData?.renderedHtml ? (
             <EmailHtmlFrame
-              renderedHtml={detail.data.renderedHtml}
+              renderedHtml={detailData.renderedHtml}
               title={subject}
               locale={locale}
             />
-          ) : detail.data ? (
-            <PlainEmailContent text={detail.data.renderedText} />
+          ) : detailData ? (
+            <PlainEmailContent text={detailData.renderedText} />
           ) : null}
         </div>
       )}

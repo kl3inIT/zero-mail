@@ -21,6 +21,7 @@ public record RuleEvaluationInput(
         boolean hasAttachment,
         boolean listUnsubscribePresent,
         boolean newsletterIndicatorPresent,
+        boolean autoReplyIndicatorPresent,
         Optional<Boolean> sanitizedBodyEvidencePresent,
         Set<String> bodyDerivedFlags) {
 
