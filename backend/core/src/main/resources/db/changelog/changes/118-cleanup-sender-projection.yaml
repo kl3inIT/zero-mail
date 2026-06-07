@@ -1,0 +1,126 @@
+databaseChangeLog:
+  - changeSet:
+      id: 118-cleanup-sender-projection
+      author: zeromail
+      comment: >
+        Sender/day aggregate read model for the bulk-unsubscribe screen. This mirrors the Inbox
+        Zero-style sender statistics path: the UI reads one compact cleanup projection instead of
+        grouping encrypted per-message inbox projection rows on every request.
+      changes:
+        - createTable:
+            tableName: cleanup_sender_projection
+            remarks: >
+              Per-tenant sender/day aggregate used by the cleanup candidate list. Sender email and
+              display name are the same metadata class already stored by mail_message_observed and
+              cleanup sender status/attempt tables; raw message bodies are never stored here.
+            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cleanup_sender_projection_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: activity_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sender_email
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sender_domain
+                  type: text
+                  defaultValue: ""
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sender_name
+                  type: varchar(320)
+              - column:
+                  name: message_count
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: read_message_count
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_seen_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unsubscribe_method
+                  type: varchar(16)
+                  defaultValue: NONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source
+                  type: varchar(24)
+                  defaultValue: OBSERVED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: refreshed_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: cleanup_sender_projection
+            columnNames: tenant_id, sender_email, activity_date
+            constraintName: pk_cleanup_sender_projection
+        - sql:
+            comment: Candidate list range scan by tenant and last activity.
+            sql: >
+              CREATE INDEX idx_cleanup_sender_projection_tenant_last_seen
+                ON cleanup_sender_projection (tenant_id, last_seen_at DESC)
+        - sql:
+            comment: Lookup and refresh one sender across days.
+            sql: >
+              CREATE INDEX idx_cleanup_sender_projection_tenant_sender
+                ON cleanup_sender_projection (tenant_id, sender_email)
+        - sql:
+            comment: Seed from existing observed metadata so upgraded databases have immediate rows.
+            sql: >
+              INSERT INTO cleanup_sender_projection (
+                  tenant_id, activity_date, sender_email, sender_domain, sender_name,
+                  message_count, read_message_count, last_seen_at, unsubscribe_method, source,
+                  refreshed_at)
+              SELECT
+                  mmo.tenant_id,
+                  (mmo.observed_at AT TIME ZONE 'UTC')::date,
+                  lower(mmo.sender_email),
+                  split_part(lower(mmo.sender_email), '@', 2),
+                  MAX(mmo.sender_name) FILTER (WHERE mmo.sender_name IS NOT NULL),
+                  COUNT(*),
+                  COUNT(*) FILTER (WHERE NOT ('UNREAD' = ANY(mmo.label_ids))),
+                  MAX(mmo.observed_at),
+                  CASE
+                      WHEN BOOL_OR(mmo.list_unsubscribe_one_click) THEN 'ONE_CLICK'
+                      WHEN BOOL_OR(mmo.list_unsubscribe_mailto IS NOT NULL) THEN 'MAILTO'
+                      ELSE 'NONE'
+                  END,
+                  'OBSERVED',
+                  NOW()
+              FROM mail_message_observed mmo
+              WHERE mmo.sender_email IS NOT NULL
+              GROUP BY mmo.tenant_id, (mmo.observed_at AT TIME ZONE 'UTC')::date,
+                       lower(mmo.sender_email)
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_cleanup_sender_projection_tenant_sender
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_cleanup_sender_projection_tenant_last_seen
+        - dropTable:
+            tableName: cleanup_sender_projection

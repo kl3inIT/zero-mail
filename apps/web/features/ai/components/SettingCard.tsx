@@ -18,6 +18,7 @@ type SettingCardProps = {
   rightSlot?: ReactNode;
   children?: ReactNode;
   className?: string;
+  contentClassName?: string;
 };
 
 export function SettingCard({
@@ -27,6 +28,7 @@ export function SettingCard({
   rightSlot,
   children,
   className,
+  contentClassName,
 }: SettingCardProps) {
   const hasHeader = Boolean(title || description || rightSlot);
   return (
@@ -44,7 +46,9 @@ export function SettingCard({
         </CardHeader>
       ) : null}
       {children ? (
-        <CardContent className={hasHeader ? undefined : 'pt-6'}>{children}</CardContent>
+        <CardContent className={cn(hasHeader ? undefined : 'pt-6', contentClassName)}>
+          {children}
+        </CardContent>
       ) : null}
     </Card>
   );

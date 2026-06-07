@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // The literal confirmation phrase ("delete my data") is a typed-confirmation
 // token, NOT user-facing prose, per UI-SPEC §"Destructive Confirmations".
@@ -44,12 +45,16 @@ export function DeleteAccountDialog({
           <DialogTitle>{t('deleteAccount.title')}</DialogTitle>
         </DialogHeader>
         <p>{t('deleteAccount.body')}</p>
-        <Input
-          value={v}
-          onChange={(e) => setV(e.target.value)}
-          placeholder={t('deleteAccount.confirmInputPlaceholder')}
-          aria-label={t('deleteAccount.confirmInputLabel')}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="delete-account-confirm">{t('deleteAccount.confirmInputLabel')}</Label>
+          <Input
+            id="delete-account-confirm"
+            value={v}
+            onChange={(e) => setV(e.target.value)}
+            placeholder={t('deleteAccount.confirmInputPlaceholder')}
+            aria-label={t('deleteAccount.confirmInputLabel')}
+          />
+        </div>
         <Button
           variant="destructive"
           disabled={v !== CONFIRM_PHRASE || isPending}

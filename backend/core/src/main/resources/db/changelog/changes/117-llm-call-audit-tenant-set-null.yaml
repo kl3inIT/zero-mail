@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 117-llm-call-audit-tenant-set-null
+      author: zeromail
+      comment: >-
+        Match the llm_call_audit privacy contract documented in changeset 079:
+        LLM usage metadata is retained for aggregate spend reporting, but tenant_id
+        must be nulled when the originating tenant is deleted. The previous FK used
+        NO ACTION and could block account deletion for tenants with LLM audit rows.
+      changes:
+        - sql:
+            sql: ALTER TABLE llm_call_audit DROP CONSTRAINT IF EXISTS fk_llm_call_audit_tenant
+        - sql:
+            sql: >-
+              ALTER TABLE llm_call_audit
+              ADD CONSTRAINT fk_llm_call_audit_tenant
+              FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE SET NULL
+      rollback:
+        - sql:
+            sql: ALTER TABLE llm_call_audit DROP CONSTRAINT IF EXISTS fk_llm_call_audit_tenant
+        - sql:
+            sql: >-
+              ALTER TABLE llm_call_audit
+              ADD CONSTRAINT fk_llm_call_audit_tenant
+              FOREIGN KEY (tenant_id) REFERENCES tenants(id)

@@ -62,9 +62,4 @@ public class TenantStateRepository {
         return jdbcTemplate.update(
                 "UPDATE tenants SET triage_paused = true WHERE id = ?", tenantId);
     }
-
-    public int deleteAllForTenant(String tableName, String tenantIdColumn, UUID tenantId) {
-        return jdbcTemplate.update(
-                "DELETE FROM " + tableName + " WHERE " + tenantIdColumn + " = ?", tenantId);
-    }
 }
