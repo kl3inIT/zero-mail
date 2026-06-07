@@ -1,0 +1,62 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "lint": true,
+  "deadCode": true,
+  "ignore": {
+    "files": [
+      "**/dist/**",
+      "**/.next/**",
+      "**/coverage/**",
+      "**/build/**",
+      "**/out/**",
+      "**/components/ui/**"
+    ],
+    "rules": [
+      "deslop/circular-dependency",
+      "deslop/unused-dependency",
+      "deslop/unused-dev-dependency",
+      "deslop/unused-export",
+      "deslop/unused-file",
+      "react-doctor/async-await-in-loop",
+      "react-doctor/exhaustive-deps",
+      "react-doctor/js-combine-iterations",
+      "react-doctor/js-flatmap-filter",
+      "react-doctor/js-hoist-intl",
+      "react-doctor/js-tosorted-immutable",
+      "react-doctor/jsx-no-jsx-as-prop",
+      "react-doctor/nextjs-missing-metadata",
+      "react-doctor/nextjs-no-a-element",
+      "react-doctor/nextjs-no-img-element",
+      "react-doctor/no-array-index-as-key",
+      "react-doctor/no-barrel-import",
+      "react-doctor/no-cascading-set-state",
+      "react-doctor/no-danger",
+      "react-doctor/no-derived-state",
+      "react-doctor/no-derived-useState",
+      "react-doctor/no-giant-component",
+      "react-doctor/no-many-boolean-props",
+      "react-doctor/no-noninteractive-element-to-interactive-role",
+      "react-doctor/only-export-components",
+      "react-doctor/prefer-dynamic-import",
+      "react-doctor/prefer-explicit-variants",
+      "react-doctor/prefer-tag-over-role",
+      "react-doctor/prefer-useReducer",
+      "react-doctor/query-stable-query-client",
+      "react-doctor/rendering-hydration-mismatch-time",
+      "react-doctor/rerender-defer-reads-hook",
+      "react-doctor/rerender-lazy-state-init",
+      "react-doctor/rerender-state-only-in-handlers",
+      "react-doctor/role-supports-aria-props"
+    ],
+    "overrides": [
+      {
+        "files": ["**/src/routes/**"],
+        "rules": ["react-doctor/only-export-components", "react-doctor/no-multi-comp"]
+      },
+      {
+        "files": ["**/app/**"],
+        "rules": ["react-doctor/only-export-components", "react-doctor/no-multi-comp"]
+      }
+    ]
+  }
+}

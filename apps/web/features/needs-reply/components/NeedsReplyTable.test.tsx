@@ -1,8 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { NeedsReplyTable } from '@/features/needs-reply/components/NeedsReplyTable';
 import type { NeedsReplyRow as NeedsReplyRowModel } from '@/features/needs-reply/api/needs-reply-api';
@@ -70,26 +70,26 @@ describe('NeedsReplyTable', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Try again');
   });
 
-  it('exposes draft, Gmail, status, resolved, and public-bucket affordances on a row', () => {
+  it('renders dense mailbox rows with selection and draft status', () => {
+    const onOpenRow = vi.fn();
     renderWithProviders(
       <NeedsReplyTable
         activeBucket="to-reply"
         rows={[needsReplyRow('thread-1', { draftStatus: 'DRAFT_READY' })]}
+        selectedThreadId="thread-1"
         toReplyCount={1}
+        onOpenRow={onOpenRow}
       />,
     );
 
     const row = screen.getByTestId('needs-reply-row');
-    expect(within(row).getByRole('button', { name: 'Regenerate draft' })).toBeInTheDocument();
-    expect(within(row).getByRole('link', { name: /Open in Gmail/ })).toHaveAttribute(
-      'href',
-      'https://mail.google.com/mail/u/0/#all/thread-1',
-    );
+    expect(row).toHaveAttribute('aria-current', 'true');
     expect(within(row).getByText('AI drafted')).toBeInTheDocument();
-    expect(within(row).getByRole('button', { name: /Mark resolved/ })).toBeInTheDocument();
+    fireEvent.click(row);
+    expect(onOpenRow).toHaveBeenCalledWith(expect.objectContaining({ gmailThreadId: 'thread-1' }));
   });
 
-  it('keeps 320px layout actions stable with icon-only row controls', () => {
+  it('keeps 320px list layout stable with scrollable tabs', () => {
     renderWithProviders(
       <div style={{ width: 320 }}>
         <NeedsReplyTable
@@ -101,7 +101,7 @@ describe('NeedsReplyTable', () => {
     );
 
     expect(screen.getByTestId('needs-reply-tabs')).toHaveAttribute('data-overflow', 'scroll');
-    expect(screen.getAllByRole('button', { name: 'Draft reply' }).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('needs-reply-row')).toHaveClass('min-h-[82px]');
   });
 });
 

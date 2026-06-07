@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,7 +45,8 @@ class GmailDeliveryProcessingServiceTest {
     private static final String GMAIL_MESSAGE_ID = "gmail-message-sent-only";
 
     @Test
-    void process_delivery_publishes_outbound_event_for_sent_only_observation() throws Exception {
+    void process_delivery_publishes_only_outbound_event_for_sent_only_observation()
+            throws Exception {
         PubSubDeliveryRepository deliveryRepository = mock(PubSubDeliveryRepository.class);
         MailMessageObservedRepository observedRepository =
                 mock(MailMessageObservedRepository.class);
@@ -144,18 +144,12 @@ class GmailDeliveryProcessingServiceTest {
         verify(deliveryRepository).updateStatus(DELIVERY_ID, "PROCESSED");
 
         ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(applicationEventPublisher, times(2)).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getAllValues())
-                .anySatisfy(
-                        publishedEvent -> {
-                            assertThat(publishedEvent).isInstanceOf(MailOutboundObserved.class);
-                            MailOutboundObserved outboundObserved =
-                                    (MailOutboundObserved) publishedEvent;
-                            assertThat(outboundObserved.tenantId()).isEqualTo(TENANT_ID);
-                            assertThat(outboundObserved.gmailThreadId()).isEqualTo(GMAIL_THREAD_ID);
-                            assertThat(outboundObserved.gmailMessageId())
-                                    .isEqualTo(GMAIL_MESSAGE_ID);
-                        });
+        verify(applicationEventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue()).isInstanceOf(MailOutboundObserved.class);
+        MailOutboundObserved outboundObserved = (MailOutboundObserved) eventCaptor.getValue();
+        assertThat(outboundObserved.tenantId()).isEqualTo(TENANT_ID);
+        assertThat(outboundObserved.gmailThreadId()).isEqualTo(GMAIL_THREAD_ID);
+        assertThat(outboundObserved.gmailMessageId()).isEqualTo(GMAIL_MESSAGE_ID);
     }
 
     @Test

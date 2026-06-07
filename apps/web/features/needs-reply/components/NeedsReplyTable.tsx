@@ -1,6 +1,7 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import type { UIEvent } from 'react';
+import { Check, Loader2, Reply } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { EmptyState } from '@/components/states/EmptyState';
@@ -30,6 +31,7 @@ type NeedsReplyTableProps = {
   onRetry?: () => void;
   onBucketChange?: (bucket: NeedsReplyBucket) => void;
   onOpenRow?: (row: NeedsReplyRowModel) => void;
+  selectedThreadId?: string | null;
 };
 
 export function NeedsReplyTable({
@@ -47,68 +49,111 @@ export function NeedsReplyTable({
   onRetry,
   onBucketChange,
   onOpenRow,
+  selectedThreadId,
 }: NeedsReplyTableProps) {
   const t = useTranslations();
 
-  return (
-    <div className="space-y-3">
-      <NeedsReplyTabs
-        activeBucket={activeBucket}
-        toReplyCount={toReplyCount}
-        awaitingCount={awaitingCount}
-        draftedCount={draftedCount}
-        onBucketChange={onBucketChange}
-      />
+  function handleListScroll(event: UIEvent<HTMLDivElement>): void {
+    if (!hasNextPage || isFetchingNextPage) return;
+    const listElement = event.currentTarget;
+    const distanceFromBottom =
+      listElement.scrollHeight - listElement.scrollTop - listElement.clientHeight;
+    if (distanceFromBottom < 160) {
+      onLoadMore?.();
+    }
+  }
 
-      <p className="text-muted-foreground text-sm">{t(bucketHintKey(activeBucket))}</p>
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="border-border shrink-0 border-b px-4 py-2.5">
+        <div className="flex min-h-8 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center">
+              <Reply className="text-muted-foreground size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-foreground truncate text-sm font-medium">
+                {t('needsReply.page.title')}
+              </h1>
+              <p className="text-muted-foreground hidden truncate text-xs sm:block">
+                {t(bucketHintKey(activeBucket))}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2">
+          <NeedsReplyTabs
+            activeBucket={activeBucket}
+            toReplyCount={toReplyCount}
+            awaitingCount={awaitingCount}
+            draftedCount={draftedCount}
+            onBucketChange={onBucketChange}
+          />
+        </div>
+      </div>
 
       {isClassifying ? (
-        <Alert variant="warning" className="border-warning/40 bg-warning/5">
+        <Alert variant="warning" className="border-warning/40 bg-warning/5 m-3 shrink-0 py-2">
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
           <AlertDescription>{t('needsReply.banner.updating')}</AlertDescription>
         </Alert>
       ) : null}
 
-      {error ? (
-        <Alert variant="destructive" className="min-h-32">
-          <AlertTitle>{t('needsReply.error.title')}</AlertTitle>
-          <AlertDescription>{t('needsReply.error.body')}</AlertDescription>
-          <AlertAction>
-            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-              {t('needsReply.error.retry')}
-            </Button>
-          </AlertAction>
-        </Alert>
-      ) : isLoading ? (
-        <NeedsReplySkeletonRows />
-      ) : rows.length === 0 ? (
-        <NeedsReplyEmptyState activeBucket={activeBucket} />
-      ) : (
-        <>
-          <div className="grid gap-2">
-            {rows.map((row) => (
-              <NeedsReplyRow
-                key={row.gmailThreadId}
-                row={row}
-                activeBucket={activeBucket}
-                onOpen={() => onOpenRow?.(row)}
-              />
-            ))}
+      <div
+        className="min-h-0 flex-1 overflow-y-auto"
+        onScroll={handleListScroll}
+        data-testid="needs-reply-list"
+      >
+        {error ? (
+          <div className="p-3">
+            <Alert variant="destructive" className="min-h-32">
+              <AlertTitle>{t('needsReply.error.title')}</AlertTitle>
+              <AlertDescription>{t('needsReply.error.body')}</AlertDescription>
+              <AlertAction>
+                <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                  {t('needsReply.error.retry')}
+                </Button>
+              </AlertAction>
+            </Alert>
           </div>
-          {hasNextPage ? (
-            <div className="flex justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onLoadMore}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? t('triage.audit.loadingMore') : t('triage.audit.loadMore')}
-              </Button>
+        ) : isLoading ? (
+          <NeedsReplySkeletonRows />
+        ) : rows.length === 0 ? (
+          <div className="p-3">
+            <NeedsReplyEmptyState activeBucket={activeBucket} />
+          </div>
+        ) : (
+          <>
+            <div>
+              {rows.map((row) => (
+                <NeedsReplyRow
+                  key={row.gmailThreadId}
+                  row={row}
+                  selected={row.gmailThreadId === selectedThreadId}
+                  onOpen={() => onOpenRow?.(row)}
+                />
+              ))}
             </div>
-          ) : null}
-        </>
-      )}
+            {hasNextPage ? (
+              <div className="flex justify-center p-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onLoadMore}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : null}
+                  {isFetchingNextPage ? t('triage.audit.loadingMore') : t('triage.audit.loadMore')}
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -126,11 +171,11 @@ function bucketHintKey(
 
 function NeedsReplySkeletonRows() {
   return (
-    <div className="grid gap-2" aria-busy="true">
+    <div aria-busy="true">
       {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={index}
-          className="bg-card flex gap-2.5 rounded-lg border p-3"
+          className="border-border flex min-h-[82px] gap-2.5 border-b px-4 py-3"
           data-testid="needs-reply-skeleton-row"
         >
           <Skeleton className="h-auto w-[3px] shrink-0 rounded-full" />
@@ -168,7 +213,7 @@ function NeedsReplyEmptyState({ activeBucket }: { activeBucket: NeedsReplyBucket
           {heading}
           {activeBucket === 'to-reply' ? (
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700">
-              ✓
+              <Check className="size-3" aria-hidden="true" />
             </Badge>
           ) : null}
         </span>

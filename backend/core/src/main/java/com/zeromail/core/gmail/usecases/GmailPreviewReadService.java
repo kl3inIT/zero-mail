@@ -60,6 +60,9 @@ public class GmailPreviewReadService {
                     "List-Unsubscribe-Post",
                     "List-Id",
                     "Precedence",
+                    "Auto-Submitted",
+                    "X-Autoreply",
+                    "X-Autorespond",
                     "Content-Type");
     private static final int LIST_UNSUBSCRIBE_URL_MAX_LENGTH = 2048;
     private static final int LIST_UNSUBSCRIBE_MAILTO_MAX_LENGTH = 512;
@@ -629,6 +632,7 @@ public class GmailPreviewReadService {
                                                                 value.trim()
                                                                         .toLowerCase(Locale.ROOT)))
                                 .orElse(false);
+        boolean autoReplyIndicatorPresent = autoReplyIndicatorPresent(payload);
         Optional<Boolean> sanitizedBodyEvidencePresent =
                 includeBodyEvidence ? Optional.of(hasBodyEvidence(payload)) : Optional.empty();
         Set<String> bodyDerivedFlags =
@@ -664,8 +668,19 @@ public class GmailPreviewReadService {
                 listUnsubscribeMailto,
                 listUnsubscribeOneClick,
                 newsletterIndicatorPresent,
+                autoReplyIndicatorPresent,
                 sanitizedBodyEvidencePresent,
                 bodyDerivedFlags);
+    }
+
+    private static boolean autoReplyIndicatorPresent(MessagePart payload) {
+        boolean autoSubmitted =
+                GmailMessageHeaders.firstValue(payload, "Auto-Submitted")
+                        .map(value -> !value.trim().equalsIgnoreCase("no"))
+                        .orElse(false);
+        return autoSubmitted
+                || GmailMessageHeaders.firstValue(payload, "X-Autoreply").isPresent()
+                || GmailMessageHeaders.firstValue(payload, "X-Autorespond").isPresent();
     }
 
     /**
@@ -923,6 +938,7 @@ public class GmailPreviewReadService {
             String listUnsubscribeMailto,
             boolean listUnsubscribeOneClick,
             boolean newsletterIndicatorPresent,
+            boolean autoReplyIndicatorPresent,
             Optional<Boolean> sanitizedBodyEvidencePresent,
             Set<String> bodyDerivedFlags) {
 

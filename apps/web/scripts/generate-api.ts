@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const SPEC_URL = process.env.API_SPEC_URL;
 const SPEC_PATH = process.env.API_SPEC_PATH ?? 'openapi/openapi.json';
@@ -22,7 +22,10 @@ async function resolveSpecInput(): Promise<string> {
     );
   }
 
-  return SPEC_PATH;
+  const spec = readFileSync(SPEC_PATH, 'utf8');
+  mkdirSync('openapi', { recursive: true });
+  writeFileSync('openapi/spec.json', spec);
+  return 'openapi/spec.json';
 }
 
 async function main(): Promise<void> {

@@ -215,6 +215,7 @@ class RulePreviewDataServiceTest {
                 null,
                 false,
                 false,
+                false,
                 Optional.<Boolean>empty(),
                 Set.<String>of());
     }

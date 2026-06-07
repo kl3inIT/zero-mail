@@ -108,6 +108,73 @@ class NeedsReplyInboxQueryServiceTest extends PostgresContainerTest {
         assertThat(page.items().getFirst().resolved()).isTrue();
     }
 
+    @Test
+    void drafted_query_is_server_side_subset_of_to_reply_with_draft() {
+        UUID tenantId = seedTenant("needs-reply-drafted");
+        Instant classifiedAt = Instant.parse("2026-05-12T12:00:00.000001Z");
+        insertStatus(
+                tenantId,
+                "thread-drafted",
+                ThreadReplyBucket.TO_REPLY,
+                classifiedAt.plusSeconds(2),
+                true,
+                "draft-1",
+                false);
+        insertStatus(
+                tenantId,
+                "thread-no-draft",
+                ThreadReplyBucket.TO_REPLY,
+                classifiedAt.plusSeconds(1),
+                false,
+                null,
+                false);
+        insertStatus(
+                tenantId,
+                "thread-awaiting-with-draft",
+                ThreadReplyBucket.AWAITING_THEIR_REPLY,
+                classifiedAt,
+                true,
+                "draft-sent",
+                false);
+
+        NeedsReplyPage page =
+                needsReplyInboxQueryService.page(
+                        tenantId,
+                        new NeedsReplyPageQuery(ThreadReplyBucket.TO_REPLY, false, true, 10, null));
+
+        assertThat(page.items())
+                .extracting(row -> row.gmailThreadId())
+                .containsExactly("thread-drafted");
+        assertThat(page.items().getFirst().draftId()).isEqualTo("draft-1");
+        assertThat(needsReplyInboxQueryService.counts(tenantId).drafted()).isEqualTo(1);
+    }
+
+    @Test
+    void page_limit_is_capped_to_twenty_recent_threads() {
+        UUID tenantId = seedTenant("needs-reply-limit");
+        Instant base = Instant.parse("2026-05-12T12:00:00Z");
+        for (int index = 0; index < 25; index++) {
+            insertStatus(
+                    tenantId,
+                    "thread-" + index,
+                    ThreadReplyBucket.TO_REPLY,
+                    base.plusSeconds(index),
+                    false,
+                    null,
+                    false);
+        }
+
+        NeedsReplyPage page =
+                needsReplyInboxQueryService.page(
+                        tenantId,
+                        new NeedsReplyPageQuery(ThreadReplyBucket.TO_REPLY, false, 100, null));
+
+        assertThat(page.items()).hasSize(20);
+        assertThat(page.items().getFirst().gmailThreadId()).isEqualTo("thread-24");
+        assertThat(page.items().getLast().gmailThreadId()).isEqualTo("thread-5");
+        assertThat(page.nextCursor()).isNotNull();
+    }
+
     private UUID seedTenant(String displayNamePrefix) {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(

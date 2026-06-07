@@ -232,6 +232,16 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
+    if (url.pathname === '/api/threads/counts' && request.method() === 'GET') {
+      const toReplyCount = state.needsReplyDraftStatus === 'DRAFT_SENT' ? 0 : 1;
+      await fulfillJson(route, {
+        toReplyCount,
+        awaitingCount: 0,
+        draftedCount: state.needsReplyDraftStatus === 'NO_DRAFT' ? 0 : toReplyCount,
+      });
+      return;
+    }
+
     if (url.pathname === '/api/triage/audit' && request.method() === 'GET') {
       await fulfillJson(route, { items: [], nextCursor: null });
       return;

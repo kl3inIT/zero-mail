@@ -352,13 +352,18 @@ public class GmailDeliveryProcessingService {
 
     private void publishObservedEvents(UUID tenantId, Message gmailMessage, List<String> labelIds) {
         Instant observedAt = Instant.now();
-        applicationEventPublisher.publishEvent(
-                new MailMessageObserved(
-                        tenantId, gmailMessage.getId(), gmailMessage.getThreadId(), observedAt));
-        log.info(
-                "event=mail_message_observed_published tenantId={} gmailMessageId={}",
-                tenantId,
-                gmailMessage.getId());
+        if (labelIds.contains("INBOX") && !labelIds.contains("SENT")) {
+            applicationEventPublisher.publishEvent(
+                    new MailMessageObserved(
+                            tenantId,
+                            gmailMessage.getId(),
+                            gmailMessage.getThreadId(),
+                            observedAt));
+            log.info(
+                    "event=mail_message_observed_published tenantId={} gmailMessageId={}",
+                    tenantId,
+                    gmailMessage.getId());
+        }
         if (labelIds.contains("SENT")) {
             applicationEventPublisher.publishEvent(
                     new MailOutboundObserved(

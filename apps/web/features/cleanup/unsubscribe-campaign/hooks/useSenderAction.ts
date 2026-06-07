@@ -24,9 +24,9 @@ export type SenderActionMutationVariables = CleanupSenderActionRequest & {
 type OptimisticSnapshot = Array<[QueryKey, UnsubscribeCandidateResponse[] | undefined]>;
 type MutationContext = { previous: OptimisticSnapshot };
 
-type CandidateStatus = 'APPROVED' | 'UNSUBSCRIBED' | 'AUTO_ARCHIVED' | null;
+type CandidateStatus = 'APPROVED' | 'UNSUBSCRIBED' | 'AUTO_ARCHIVED';
 
-export function useSenderAction(spec: DateRangeSpec, limit: number) {
+export function useSenderAction(spec: DateRangeSpec) {
   const queryClient = useQueryClient();
   const t = useTranslations();
   const candidatesKey = unsubscribeCampaignKeys.candidatesPrefix(spec);
@@ -37,7 +37,12 @@ export function useSenderAction(spec: DateRangeSpec, limit: number) {
     SenderActionMutationVariables,
     MutationContext
   >({
-    mutationFn: ({ toastIntent: _toastIntent, ...request }) => runSenderAction(request),
+    mutationFn: (variables) =>
+      runSenderAction({
+        action: variables.action,
+        senderEmails: variables.senderEmails,
+        labelName: variables.labelName,
+      }),
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: candidatesKey });
       const previous = queryClient.getQueriesData<UnsubscribeCandidateResponse[]>({
@@ -52,7 +57,7 @@ export function useSenderAction(spec: DateRangeSpec, limit: number) {
             if (!current) return current;
             return current.map((candidate) =>
               candidate.senderEmail && targets.has(candidate.senderEmail)
-                ? { ...candidate, status: nextStatus as CandidateStatus }
+                ? optimisticCandidate(candidate, nextStatus)
                 : candidate,
             );
           },
@@ -82,12 +87,24 @@ export function useSenderAction(spec: DateRangeSpec, limit: number) {
   });
 }
 
-function optimisticNextStatus(action: CleanupSenderAction): CandidateStatus | 'noop' {
+function optimisticCandidate(
+  candidate: UnsubscribeCandidateResponse,
+  nextStatus: CandidateStatus | 'clear',
+): UnsubscribeCandidateResponse {
+  if (nextStatus === 'clear') {
+    const candidateWithoutStatus = { ...candidate };
+    delete candidateWithoutStatus.status;
+    return candidateWithoutStatus;
+  }
+  return { ...candidate, status: nextStatus };
+}
+
+function optimisticNextStatus(action: CleanupSenderAction): CandidateStatus | 'clear' | 'noop' {
   switch (action) {
     case 'APPROVE':
       return 'APPROVED';
     case 'UNAPPROVE':
-      return null;
+      return 'clear';
     case 'MARK_UNSUBSCRIBED':
       return 'UNSUBSCRIBED';
     case 'AUTO_ARCHIVE':
