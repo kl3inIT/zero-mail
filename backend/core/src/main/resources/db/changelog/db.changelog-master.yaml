@@ -329,3 +329,6 @@ databaseChangeLog:
   - include:
       file: changes/119-messaging-conversation-binding.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/120-telegram-mvp.yaml
+      relativeToChangelogFile: true

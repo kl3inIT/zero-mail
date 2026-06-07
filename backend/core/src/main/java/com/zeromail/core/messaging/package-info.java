@@ -1,6 +1,7 @@
 @ApplicationModule(
         displayName = "Messaging",
         allowedDependencies = {
+            "chat :: usecases",
             "gmail :: persistence",
             "tenant",
             "shared :: persistence",

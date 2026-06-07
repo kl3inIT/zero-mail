@@ -1,0 +1,144 @@
+databaseChangeLog:
+  - changeSet:
+      id: 120-telegram-account-mvp
+      author: zeromail
+      comment: >
+        Minimal Telegram account link table for the rebuilt Telegram MVP. Existing dev databases
+        may already have this table from the retired Phase 10 branch; in that case the changeset is
+        marked ran so startup does not attempt to recreate it.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: telegram_account
+      changes:
+        - createTable:
+            tableName: telegram_account
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_telegram_account_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: telegram_chat_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: telegram_user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: telegram_username
+                  type: varchar(64)
+              - column:
+                  name: language_code
+                  type: varchar(8)
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: CONNECTED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notifications_enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notification_filter
+                  type: jsonb
+                  defaultValueComputed: '''{}''::jsonb'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: linked_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_active_at
+                  type: timestamptz
+              - column:
+                  name: blocked_at
+                  type: timestamptz
+              - column:
+                  name: disconnected_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: telegram_account
+            columnNames: tenant_id
+            constraintName: ux_telegram_account_tenant
+        - addUniqueConstraint:
+            tableName: telegram_account
+            columnNames: telegram_chat_id
+            constraintName: ux_telegram_account_chat_id
+        - sql:
+            sql: >
+              ALTER TABLE telegram_account
+              ADD CONSTRAINT ck_telegram_account_status
+              CHECK (status IN ('CONNECTED', 'BLOCKED', 'DISCONNECTED'))
+      rollback:
+        - dropTable:
+            tableName: telegram_account
+
+  - changeSet:
+      id: 120-telegram-update-processed-mvp
+      author: zeromail
+      comment: Telegram webhook update idempotency table.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: telegram_update_processed
+      changes:
+        - createTable:
+            tableName: telegram_update_processed
+            columns:
+              - column:
+                  name: update_id
+                  type: bigint
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: telegram_update_processed
