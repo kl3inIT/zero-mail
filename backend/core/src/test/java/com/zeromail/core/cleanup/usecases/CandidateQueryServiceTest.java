@@ -15,19 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * UNS-01 — Candidate query (Wave 2 / Plan 04, flipped from Wave 0 RED stub to GREEN).
- *
- * <p>Three sender fixture (1 one-click + 1 mailto + 1 no-header) plus 1 sender in suppression list.
- * Expected behavior of {@link CandidateQueryService}:
- *
- * <ul>
- *   <li>returns the two senders that have {@code list_unsubscribe_url IS NOT NULL OR
- *       list_unsubscribe_mailto IS NOT NULL}
- *   <li>excludes the no-header sender
- *   <li>excludes the suppressed sender (both by sender_email and by sender_domain)
- *   <li>maps {@code list_unsubscribe_one_click=true} → {@code unsubscribeMethod = ONE_CLICK},
- *       mailto-only → {@code MAILTO}
- * </ul>
+ * UNS-01 candidate query backed by {@code cleanup_sender_projection}. The cleanup sender list uses
+ * sender/day aggregates refreshed from observed metadata and the bounded Gmail working set, not
+ * encrypted per-message inbox projection rows.
  */
 @SuppressWarnings("SqlResolve")
 class CandidateQueryServiceTest extends PostgresContainerTest {
@@ -50,7 +40,7 @@ class CandidateQueryServiceTest extends PostgresContainerTest {
     }
 
     @Test
-    void returnsCandidatesWithOneClickAndMailto() {
+    void returnsCandidatesWithOneClickMailtoAndNoHeaderSender() {
         UUID tenantId = seedTenant();
         seedOneClickSender(tenantId, "newsletter-a@provider.test", "provider.test");
         seedMailtoSender(tenantId, "newsletter-b@b.test", "b.test");
@@ -60,29 +50,36 @@ class CandidateQueryServiceTest extends PostgresContainerTest {
                 candidateQueryService.findCandidates(tenantId, WINDOW, LIMIT);
 
         assertThat(candidates)
-                .as("two senders with List-Unsubscribe headers should be returned")
-                .hasSize(2)
                 .extracting(UnsubscribeCandidateProjection::senderEmail)
-                .containsExactlyInAnyOrder("newsletter-a@provider.test", "newsletter-b@b.test");
+                .containsExactlyInAnyOrder(
+                        "newsletter-a@provider.test", "newsletter-b@b.test", "newsletter-c@c.test");
         assertThat(candidates)
-                .filteredOn(c -> c.senderEmail().equals("newsletter-a@provider.test"))
+                .filteredOn(
+                        candidate -> candidate.senderEmail().equals("newsletter-a@provider.test"))
                 .extracting(UnsubscribeCandidateProjection::unsubscribeMethod)
                 .containsExactly(UnsubscribeMethod.ONE_CLICK);
         assertThat(candidates)
-                .filteredOn(c -> c.senderEmail().equals("newsletter-b@b.test"))
+                .filteredOn(candidate -> candidate.senderEmail().equals("newsletter-b@b.test"))
                 .extracting(UnsubscribeCandidateProjection::unsubscribeMethod)
                 .containsExactly(UnsubscribeMethod.MAILTO);
+        assertThat(candidates)
+                .filteredOn(candidate -> candidate.senderEmail().equals("newsletter-c@c.test"))
+                .extracting(UnsubscribeCandidateProjection::unsubscribeMethod)
+                .containsExactly(UnsubscribeMethod.NONE);
     }
 
     @Test
-    void excludesSenderWithoutListUnsubscribeHeader() {
+    void corruptInboxProjectionCiphertextIsIgnoredByCleanupCandidates() {
         UUID tenantId = seedTenant();
-        seedNoHeaderSender(tenantId, "no-header@nh.test", "nh.test");
+        seedCorruptInboxProjectionRow(tenantId, "corrupt-projection-msg");
+        seedOneClickSender(tenantId, "observed@fallback.test", "fallback.test");
 
         List<UnsubscribeCandidateProjection> candidates =
                 candidateQueryService.findCandidates(tenantId, WINDOW, LIMIT);
 
-        assertThat(candidates).as("no-header sender must be excluded").isEmpty();
+        assertThat(candidates)
+                .extracting(UnsubscribeCandidateProjection::senderEmail)
+                .containsExactly("observed@fallback.test");
     }
 
     @Test
@@ -121,7 +118,7 @@ class CandidateQueryServiceTest extends PostgresContainerTest {
 
         assertThat(candidates).hasSize(1);
         assertThat(candidates.getFirst().senderName())
-                .as("display-name flows through MAX aggregate even when other rows have NULL")
+                .as("display-name flows through aggregate even when other rows have NULL")
                 .isEqualTo("John from Brand");
     }
 
@@ -210,6 +207,26 @@ class CandidateQueryServiceTest extends PostgresContainerTest {
                 listUnsubscribeMailto,
                 listUnsubscribeOneClick,
                 java.sql.Timestamp.from(Instant.now()));
+    }
+
+    private void seedCorruptInboxProjectionRow(UUID tenantId, String gmailMessageId) {
+        jdbcTemplate.update(
+                """
+                        insert into gmail_inbox_projection(
+                            tenant_id, gmail_message_id, gmail_thread_id, sender_email_hash,
+                            sender_email_ciphertext, sender_display_name_ciphertext,
+                            has_attachment, received_at, label_ids, inbox_state, unread,
+                            source_history_id, refreshed_at, expires_at, version)
+                        values (?, ?, ?, ?, ?, NULL, false, ?, ARRAY['INBOX']::text[], 'INBOX',
+                            false, ?, NOW(), NOW() + INTERVAL '1 day', 0)
+                        """,
+                tenantId,
+                gmailMessageId,
+                "thread-" + gmailMessageId,
+                new byte[] {1, 2, 3, 4},
+                new byte[] {9, 8, 7},
+                java.sql.Timestamp.from(Instant.now().minus(Duration.ofDays(1))),
+                System.currentTimeMillis());
     }
 
     private void seedSuppressedSenderEmail(UUID tenantId, String senderEmail) {

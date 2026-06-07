@@ -119,6 +119,12 @@ export function CandidateListPage() {
     () => (candidatesQuery.data ?? []) as CandidateRow[],
     [candidatesQuery.data],
   );
+  const isBackgroundCandidateFetch = candidatesQuery.isFetching && !candidatesQuery.isPending;
+  const isLoadingMoreCandidates =
+    isBackgroundCandidateFetch && limit > DEFAULT_LIMIT && rawCandidates.length < limit;
+  const candidateFetchLabel = isLoadingMoreCandidates
+    ? t('list.loadingMore')
+    : t('list.refreshing');
 
   // Reset the pagination limit whenever the user changes the window/range so a stale 200-row
   // limit from a previous search isn't carried into the new query (would just waste a fetch
@@ -354,6 +360,16 @@ export function CandidateListPage() {
               className="bg-background h-11 pl-9"
             />
           </div>
+          {isBackgroundCandidateFetch && rawCandidates.length > 0 && (
+            <div
+              className="border-border bg-muted/30 text-muted-foreground inline-flex h-9 w-fit shrink-0 items-center gap-2 rounded-md border px-3 text-xs"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />
+              <span>{candidateFetchLabel}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -456,7 +472,7 @@ export function CandidateListPage() {
           className="text-muted-foreground flex h-10 items-center justify-center text-xs"
           data-testid="cleanup-load-more-sentinel"
         >
-          {candidatesQuery.isFetching && limit > DEFAULT_LIMIT ? (
+          {isLoadingMoreCandidates ? (
             <span className="inline-flex items-center gap-2">
               <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />
               {t('list.loadingMore')}

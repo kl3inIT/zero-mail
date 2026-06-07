@@ -68,6 +68,14 @@ export const unsubscribeCampaignMessages = {
     vi: 'Tải thêm',
     en: 'Load more',
   },
+  'cleanup.unsubscribe.list.loadingMore': {
+    vi: 'Đang tải thêm người gửi…',
+    en: 'Loading more senders…',
+  },
+  'cleanup.unsubscribe.list.refreshing': {
+    vi: 'Đang cập nhật danh sách người gửi…',
+    en: 'Refreshing sender list…',
+  },
   'cleanup.unsubscribe.list.error': {
     vi: 'Không tải được danh sách người gửi. Hãy thử lại sau một chút.',
     en: 'Could not load the sender list. Please try again shortly.',
@@ -331,12 +339,12 @@ export const unsubscribeCampaignMessages = {
     en: 'Future-mail label rule created.',
   },
   'cleanup.unsubscribe.action.submitOk': {
-    vi: 'Đang hủy đăng ký',
-    en: 'Unsubscribe started',
+    vi: 'Đã tạo tác vụ hủy đăng ký',
+    en: 'Unsubscribe task created',
   },
   'cleanup.unsubscribe.action.submitDescription': {
-    vi: 'Zero Mail đang xử lý {count} người gửi trong nền.',
-    en: 'Zero Mail is processing {count} senders in the background.',
+    vi: 'Zero Mail sẽ xử lý {count} người gửi. Bạn có thể tiếp tục dùng ứng dụng.',
+    en: 'Zero Mail will process {count} senders. You can keep using the app.',
   },
   'cleanup.unsubscribe.action.errCapSender': {
     vi: 'Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.',
