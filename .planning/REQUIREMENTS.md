@@ -10,7 +10,7 @@
 - `SEED-019` - ai-communication-ops-zalo-crm-vietnam. Directional context only: Gmail remains the production channel for v1.3; Zalo OA, CRM, and omnichannel work stay deferred.
 - Lightweight market check: Crisp validates shared inbox + CRM positioning for SMB support teams; Shortwave validates team collaboration primitives such as shared threads, private comments, assignment, shared labels, and shared prompts/templates. v1.3 intentionally stops before those full collaboration features.
 - Codebase constraint: current Gmail integration is single-connection-per-tenant (`gmail_connections.tenant_id` unique, `findByTenantId(...)`, tenant-only idempotency and projection keys). v1.3 must treat this as a core migration, not a UI-only account picker.
-- Code research: Inbox Zero's transferable implementation pattern is a stable mailbox/account id (`emailAccountId`) that scopes OAuth tokens, watch state, rules, actions, executed rules, labels, messages, API request context, and UI switching. Zero Mail should copy that concept, not its Next/Prisma architecture or raw-email logging posture.
+- Code research: Inbox Zero's transferable implementation pattern is a stable mailbox/account id (`emailAccountId`) that scopes OAuth tokens, watch state, rules, actions, executed rules, labels, messages, API request context, and UI switching. Zero Mail should copy that mailbox isolation concept, not its user-owned account model, Next/Prisma architecture, all-account UX assumptions, or raw-email logging posture.
 
 ## v1.3 Requirements
 
@@ -22,11 +22,12 @@
 - [ ] **WSP-04**: Backend APIs, UI labels, and logs consistently distinguish workspace, user, and Gmail mailbox without exposing future team/member controls.
 - [ ] **WSP-05**: System fails closed when a mailbox id is missing, invalid, disconnected, or not owned by the current tenant/workspace.
 - [ ] **WSP-06**: Mailbox-scoped API requests go through a shared backend guard/context that validates `(tenantId, gmailMailboxId)` ownership before controller/service execution; tenant-only default mailbox fallback is allowed only for explicitly legacy/default surfaces, never for internal Gmail write paths.
+- [ ] **WSP-07**: Workspace-level state owns shared business configuration such as credits, billing, AI provider/model/BYOK, global pause/auto-send controls, safety policy, templates/catalog, and future business context; mailbox-level state owns Gmail OAuth, watch/history, connection health, inbox data, rules, Gmail actions, outbound execution, audit provenance, and display identity.
 
 ### Gmail Account Management
 
 - [ ] **GMA-01**: User can connect an additional Gmail or Google Workspace mailbox without replacing the existing connected mailbox.
-- [ ] **GMA-02**: User can view all connected Gmail mailboxes with email, status, primary/default marker, watch expiry, ingestion health, and last sync metadata.
+- [ ] **GMA-02**: User can view all connected Gmail mailboxes with email, display name/purpose label, status, primary/default marker, watch expiry, ingestion health, and last sync metadata.
 - [ ] **GMA-03**: User can choose one primary/default Gmail mailbox for surfaces that need a default account.
 - [ ] **GMA-04**: User can reconnect one mailbox and refresh its encrypted token/scopes without touching other mailboxes.
 - [ ] **GMA-05**: User can disconnect one mailbox; the app stops watch renewal, ingestion, and automation for that mailbox without disconnecting the workspace.
@@ -38,16 +39,16 @@
 - [ ] **ING-01**: Pub/Sub delivery resolves the correct Gmail mailbox before fetching Gmail history, and unknown mailbox delivery fails or drops safely without cross-account processing.
 - [ ] **ING-02**: History sync, backfill, watch renewal, and ingestion health run independently per Gmail mailbox.
 - [ ] **ING-03**: Idempotency keys for Pub/Sub deliveries, observed messages, processing jobs, and inbox projections include mailbox scope wherever Gmail ids are not sufficient across accounts.
-- [ ] **ING-04**: User can filter inbox, needs-reply, and analytics data by one mailbox or all mailboxes without duplicate or cross-account rows.
+- [ ] **ING-04**: Inbox, needs-reply, and analytics default to the active mailbox context; any future all-mailboxes roll-up is read-only, carries explicit mailbox provenance, and cannot become an implicit Gmail action context.
 - [ ] **ING-05**: Multi-Gmail ingestion preserves the existing no-long-term raw body, prompt/completion, and embedding storage posture.
 - [ ] **ING-06**: Gmail client lookup, access-token cache, watch renewal, backfill, history cursor updates, and projection encryption/decryption compatibility are mailbox-aware; any encryption AAD change has an explicit compatibility or app-level re-encryption plan.
 
 ### Account-Scoped Automation
 
-- [ ] **AUTO-01**: User can scope each rule to all connected Gmail mailboxes or to selected Gmail mailboxes.
-- [ ] **AUTO-02**: Rule compiler and manual editor persist structured mailbox scope; original natural-language input remains metadata only.
-- [ ] **AUTO-03**: Rule preview and test runs sample only messages from the selected mailbox scope and show mailbox context in results.
-- [ ] **AUTO-04**: Runtime triage evaluates only rules applicable to the source Gmail mailbox.
+- [ ] **AUTO-01**: Rules belong to one Gmail mailbox by default; applying the same rule to another mailbox requires explicit copy/template action and must not silently create an all-mailbox runtime rule in v1.3.
+- [ ] **AUTO-02**: Rule compiler and manual editor persist the owning Gmail mailbox id as structured data; original natural-language input remains metadata only.
+- [ ] **AUTO-03**: Rule preview and test runs sample only messages from the owning mailbox and show active mailbox context in results.
+- [ ] **AUTO-04**: Runtime triage evaluates only rules owned by the source Gmail mailbox.
 - [ ] **AUTO-05**: Gmail label, archive, draft, read/unread, star, spam, and digest actions resolve Gmail state against the executing mailbox, not a tenant-global Gmail client.
 - [ ] **AUTO-06**: Rule-triggered and chat-triggered send/reply/forward actions use the shared outbound gateway with the correct Gmail mailbox and record blocked/failed outcomes without executing under another mailbox.
 
@@ -63,18 +64,19 @@
 
 ### User Experience
 
-- [ ] **UX-01**: User can access a connected accounts/settings surface to add, reconnect, disconnect, and inspect Gmail mailboxes.
-- [ ] **UX-02**: User can switch or filter main inbox surfaces by mailbox or all mailboxes with a clear current mailbox indicator.
-- [ ] **UX-03**: Rules UI displays and edits mailbox scope for each rule without replacing the existing When/Then mental model.
-- [ ] **UX-04**: Audit and analytics UI include mailbox filters and mailbox badges where needed to explain action provenance.
+- [ ] **UX-01**: User can access a connected accounts/settings surface to add, reconnect, disconnect, label/purpose, and inspect Gmail mailboxes.
+- [ ] **UX-02**: User can switch the active mailbox quickly from persistent app chrome; inbox, needs-reply, rules, audit, and analytics render the active mailbox by default.
+- [ ] **UX-03**: Rules UI displays mailbox-owned rules for the active mailbox without replacing the existing When/Then mental model.
+- [ ] **UX-04**: Audit and analytics UI use active-mailbox context by default and show mailbox badges only where provenance would otherwise be unclear, such as optional read-only roll-ups.
 - [ ] **UX-05**: Onboarding keeps the one-Gmail setup simple for new users and offers add-more-Gmail after first connection.
+- [ ] **UX-06**: Any Gmail write, send/reply/forward preview, or action confirmation clearly shows the source and executing mailbox; actions started from any read-only roll-up must open or select a concrete mailbox/thread before execution.
 
 ### Verification and Migration
 
 - [ ] **VER-01**: Liquibase migration is roll-forward, preserves existing tenants, and has coverage for old single-account fixtures.
 - [ ] **VER-02**: OpenAPI is regenerated after DTO/API changes and frontend feature APIs use generated types.
-- [ ] **VER-03**: Backend tests cover migration, repository lookup, Pub/Sub routing, watch renewal, idempotency, rule scope, outbound gateway, and audit invariants.
-- [ ] **VER-04**: Frontend tests and Playwright cover connect, list, select, filter, rule-scope, and audit workflows in a real browser.
+- [ ] **VER-03**: Backend tests cover migration, repository lookup, Pub/Sub routing, watch renewal, idempotency, mailbox-owned rules, outbound gateway, and audit invariants.
+- [ ] **VER-04**: Frontend tests and Playwright cover connect, list, active-mailbox switching, mailbox-owned rules, send-from visibility, and audit workflows in a real browser.
 
 ## Future Requirements
 
@@ -123,6 +125,7 @@
 | WSP-04 | Phase 10 | Pending |
 | WSP-05 | Phase 10 | Pending |
 | WSP-06 | Phase 10 | Pending |
+| WSP-07 | Phase 10 | Pending |
 | GMA-01 | Phase 10 | Pending |
 | GMA-02 | Phase 10 | Pending |
 | GMA-03 | Phase 10 | Pending |
@@ -155,13 +158,14 @@
 | UX-03 | Phase 11 | Pending |
 | UX-04 | Phase 11 | Pending |
 | UX-05 | Phase 11 | Pending |
+| UX-06 | Phase 11 | Pending |
 | VER-02 | Phase 11 | Pending |
 | VER-03 | Phase 11 | Pending |
 | VER-04 | Phase 11 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 41 total
-- Mapped to phases: 41
+- v1.3 requirements: 43 total
+- Mapped to phases: 43
 - Unmapped: 0
 
 ---

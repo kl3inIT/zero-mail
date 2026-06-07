@@ -45,7 +45,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 - [ ] Phase 10: Gmail Mailbox Foundation and Account Management
 - [ ] Phase 11: Mailbox-Scoped Ingestion, Automation, UI, and Verification
 
-41/41 v1.3 requirements pending. Scope is Gmail-only multi-mailbox foundation; Microsoft, Zalo OA, CRM, and full team collaboration remain deferred.
+43/43 v1.3 requirements pending. Scope is Gmail-only workspace-shared, mailbox-isolated foundation; Microsoft, Zalo OA, CRM, and full team collaboration remain deferred.
 
 </details>
 
@@ -66,8 +66,8 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 
 ### Phase 10: Gmail Mailbox Foundation and Account Management
 
-**Goal:** Convert one-Gmail-per-tenant into a workspace-owned multi-Gmail mailbox model and let users connect/manage multiple Gmail mailboxes without changing login/session semantics.
-**Requirements:** WSP-01..06, GMA-01..07, AUD-04, VER-01
+**Goal:** Convert one-Gmail-per-tenant into a workspace-owned multi-Gmail mailbox model where business configuration is shared at workspace level and mail automation is isolated per active mailbox.
+**Requirements:** WSP-01..07, GMA-01..07, AUD-04, VER-01
 **Depends on:** Phase 9 (User Settings UI), current Gmail OAuth/connection schema, code research in `.planning/research/V1.3-CODE-RESEARCH.md`
 **Mode:** sequential foundation before Phase 11
 
@@ -75,7 +75,8 @@ Expected plan areas:
 
 - Liquibase migration from single `gmail_connections.tenant_id` invariant to tenant-owned mailbox rows.
 - Existing tenant backfill to one primary/default Gmail mailbox while preserving encrypted tokens, connection state, history state, and metadata/audit continuity where possible.
-- Stable mailbox id (`gmail_connections.id`) and primary/default marker for legacy/default surfaces.
+- Stable mailbox id (`gmail_connections.id`), display purpose/label, and primary/default marker for legacy/default surfaces.
+- Explicit workspace-shared vs mailbox-isolated ownership boundary: shared credits/billing/provider/global safety/templates; isolated Gmail OAuth/watch/history/inbox/rules/actions/audit.
 - Mailbox-scoped request guard/context for Spring MVC APIs validating `(tenantId, gmailMailboxId)` ownership.
 - Mailbox-aware Gmail client lookup and token cache; tenant-only default lookup kept only as a compatibility adapter.
 - Split first-login provisioning from add-mailbox and reconnect-mailbox OAuth flows.
@@ -87,8 +88,8 @@ Expected plan areas:
 
 ### Phase 11: Mailbox-Scoped Ingestion, Automation, UI, and Verification
 
-**Goal:** Route Gmail ingestion, projection, rules, outbound execution, audit, and the web app through mailbox scope so users can safely operate one mailbox or all connected mailboxes.
-**Requirements:** ING-01..06, AUTO-01..06, AUD-01..03, AUD-05..07, UX-01..05, VER-02..04
+**Goal:** Route Gmail ingestion, projection, rules, outbound execution, audit, and the web app through active mailbox scope so users can switch quickly while each mailbox remains operationally isolated.
+**Requirements:** ING-01..06, AUTO-01..06, AUD-01..03, AUD-05..07, UX-01..06, VER-02..04
 **Depends on:** Phase 10 mailbox foundation and account metadata
 **Mode:** final integration phase
 
@@ -98,15 +99,16 @@ Expected plan areas:
 - `pubsub_delivery`, `mail_message_observed`, `MailMessageObserved`, `MailOutboundObserved`, processing jobs, and sync state include mailbox scope.
 - Per-mailbox monotonic history cursor updates, history-lost handling, backfill, and ingestion health.
 - Inbox projection primary key/index/cursor/read/detail/thread paths include mailbox id.
-- Inbox, needs-reply, audit, and analytics read paths can filter one mailbox or all mailboxes and show mailbox badges where needed.
-- Structured rule mailbox scope (`all` vs selected Gmail mailboxes) in compiler, manual editor contracts, persistence, preview, test runs, UI, and runtime.
+- Inbox, needs-reply, audit, and analytics read paths render the active mailbox by default; any all-mailboxes roll-up is read-only, provenance-labeled, and never an implicit Gmail action context.
+- Mailbox-owned rules in compiler, manual editor contracts, persistence, preview, test runs, UI, and runtime; applying a rule to another mailbox requires explicit copy/template action.
 - Triage dispatch context carries source mailbox and executing mailbox.
 - `TriageGmailWriter`, `GmailOutboundSendGateway`, forward/reply assemblers, undo/revert, and audit saga use mailbox-aware Gmail clients.
 - `triage_audit` records source/executing mailbox and idempotency includes mailbox context.
 - Cross-account isolation tests and ArchUnit boundary tests cover read/write/send paths.
-- Connected Gmail accounts/settings surface for add, reconnect, disconnect, status, and primary selection.
+- Connected Gmail accounts/settings surface for add, reconnect, disconnect, display purpose/label, status, and primary selection.
+- Persistent active-mailbox switcher in app chrome; risky write/send previews always show source and executing mailbox.
 - Backend OpenAPI regen and frontend API code switched to generated types where endpoints are emitted.
-- Playwright browser verification for connect/list/select/filter/rule-scope/audit workflows.
+- Playwright browser verification for connect/list/switch/mailbox-owned-rules/send-from/audit workflows.
 - Privacy posture preserved: no long-term raw body, prompt/completion, embedding storage, or raw email logging.
 
 ---

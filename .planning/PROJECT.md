@@ -51,13 +51,14 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 ## Current Milestone: v1.3 Gmail Workspace Foundation
 
-**Goal:** Let one workspace safely connect, operate, and audit multiple Gmail / Google Workspace mailboxes while preserving Zero Mail's trust-first Gmail automation posture.
+**Goal:** Let one workspace safely connect multiple Gmail / Google Workspace mailboxes while sharing business configuration at workspace level and keeping mail automation isolated per active mailbox.
 
 **Target features:**
 
-1. **Multi-Gmail connection management** — users can connect, view, reconnect, and disconnect multiple Gmail accounts in the same workspace, with per-mailbox health and watch status.
-2. **Account-scoped automation** — rules, ingestion, triage audit, undo, analytics, outbound sends, safety-net checks, and settings record which Gmail account they apply to and which mailbox executed the action.
-3. **Workspace-ready foundation** — product language, data model, and authorization assumptions prepare for SEED-005 shared inbox/team collaboration, but v1.3 does not ship comments, assignments, due dates, seats, or complex role management.
+1. **Multi-Gmail connection management** — users can connect, view, label/purpose, reconnect, and disconnect multiple Gmail accounts in the same workspace, with per-mailbox health and watch status.
+2. **Mailbox-isolated automation** — inbox, rules, ingestion, triage audit, undo, analytics, outbound sends, and Gmail write actions operate inside the active mailbox context so one Gmail account cannot read, write, or send as another.
+3. **Workspace-shared business layer** — credits, billing, AI provider/model/BYOK, global pause/auto-send controls, safety policy, templates/catalog, and future business context stay shared at workspace/tenant level.
+4. **Workspace-ready foundation** — product language, data model, and authorization assumptions prepare for SEED-005 shared inbox/team collaboration, but v1.3 does not ship comments, assignments, due dates, seats, or complex role management.
 
 **Seeds activating in v1.3:**
 
@@ -161,7 +162,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 ### Active
 
-**v1.3 Gmail Workspace Foundation** (started 2026-06-07). Scope: multi-Gmail production support inside one workspace, account-scoped Gmail automation, and workspace-ready foundations from SEED-005 without full team collaboration. Requirements and 2-phase roadmap are defined in `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md`.
+**v1.3 Gmail Workspace Foundation** (started 2026-06-07). Scope: multi-Gmail production support inside one workspace, mailbox-isolated Gmail automation with fast active-mailbox switching, workspace-shared credits/provider/safety settings, and workspace-ready foundations from SEED-005 without full team collaboration. Requirements and 2-phase roadmap are defined in `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md`.
 
 Carry-forward candidates not automatically included unless roadmaped: SET-BEHV-05 (shadow-mode toggle), SET-SAFE-02 (paste-import), SET-SAFE-03 (protect/escalate mode), VISUAL-REFRESH-01..06 (purple palette alignment), EVAL-01..05 (hostile-corpus aiEval), OPS-DASH-01..04 (Grafana), CASA-01, and formal GA tag discipline. Live outbound-send UAT (08.1 test #6) still needs a controlled Gmail tenant.
 
