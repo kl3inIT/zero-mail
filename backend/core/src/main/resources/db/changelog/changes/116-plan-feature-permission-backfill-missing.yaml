@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: 116-plan-feature-permission-backfill-missing
+      author: zeromail
+      comment: >-
+        Backfill plan_feature_permission rows for feature_catalog entries added after changeset 101
+        (the Cartesian seed). Changelogs 110 (DIGEST) and 111 (NEEDS_REPLY) inserted rows into
+        feature_catalog but did not re-run the cross-join seed, leaving every plan without
+        permission rows for those features. FeaturePermissionResolver throws
+        FeaturePermissionDeniedException on a missing row, which causes the fail-open path in
+        resolveInboundReplyNeeded to land every unfiltered inbound email in TO_REPLY regardless of
+        its actual content.
+        Fix: insert (plan x feature) rows for any combination not yet present — safe to re-run.
+      changes:
+        - sql:
+            comment: >-
+              Insert missing cross-product rows for features added after the initial seed.
+              ON CONFLICT DO NOTHING makes the statement idempotent.
+            sql: >-
+              INSERT INTO plan_feature_permission (id, plan_id, feature_code, enabled, created_at, updated_at, version)
+              SELECT gen_random_uuid(), bp.id, fc.code, true, now(), now(), 0
+                FROM billing_plan bp
+                CROSS JOIN feature_catalog fc
+               WHERE NOT EXISTS (
+                 SELECT 1 FROM plan_feature_permission pfp
+                  WHERE pfp.plan_id = bp.id
+                    AND pfp.feature_code = fc.code
+               )
+              ON CONFLICT (plan_id, feature_code) DO NOTHING
+      rollback:
+        - sql:
+            sql: >-
+              DELETE FROM plan_feature_permission
+               WHERE feature_code IN ('NEEDS_REPLY', 'DIGEST')

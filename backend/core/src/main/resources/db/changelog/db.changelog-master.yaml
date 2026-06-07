@@ -317,3 +317,6 @@ databaseChangeLog:
   - include:
       file: changes/115-system-default-rule-template-status.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/116-plan-feature-permission-backfill-missing.yaml
+      relativeToChangelogFile: true
