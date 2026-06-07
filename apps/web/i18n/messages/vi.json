@@ -719,8 +719,8 @@
         "labelFutureOk": "Đã tạo quy tắc gắn nhãn cho email tương lai.",
         "mailAffected": "{count} email đã được xử lý.",
         "markUnsubscribedOk": "Đã đánh dấu đã hủy đăng ký.",
-        "submitDescription": "Zero Mail đang xử lý {count} người gửi trong nền.",
-        "submitOk": "Đang hủy đăng ký",
+        "submitDescription": "Zero Mail sẽ xử lý {count} người gửi. Bạn có thể tiếp tục dùng ứng dụng.",
+        "submitOk": "Đã tạo tác vụ hủy đăng ký",
         "submitting": "Đang hủy đăng ký…",
         "submittingDescription": "Đang gửi yêu cầu cho {count} người gửi…",
         "unapproveOk": "Đã bỏ phê duyệt."
@@ -775,8 +775,9 @@
           "title": "Chưa tìm thấy người gửi nào"
         },
         "error": "Không tải được danh sách người gửi. Hãy thử lại sau một chút.",
-        "loadingMore": "Đang tải thêm…",
+        "loadingMore": "Đang tải thêm người gửi…",
         "loadMore": "Tải thêm",
+        "refreshing": "Đang cập nhật danh sách người gửi…",
         "retry": "Thử lại",
         "searchPlaceholder": "Tìm người gửi hoặc tên miền",
         "selectAll": "Chọn tất cả người gửi đang hiển thị",

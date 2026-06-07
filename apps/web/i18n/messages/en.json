@@ -719,8 +719,8 @@
         "labelFutureOk": "Future-mail label rule created.",
         "mailAffected": "{count} mail processed.",
         "markUnsubscribedOk": "Marked as unsubscribed.",
-        "submitDescription": "Zero Mail is processing {count} senders in the background.",
-        "submitOk": "Unsubscribe started",
+        "submitDescription": "Zero Mail will process {count} senders. You can keep using the app.",
+        "submitOk": "Unsubscribe task created",
         "submitting": "Submitting unsubscribe…",
         "submittingDescription": "Sending the request for {count} senders…",
         "unapproveOk": "Approval removed."
@@ -775,8 +775,9 @@
           "title": "No senders yet"
         },
         "error": "Could not load the sender list. Please try again shortly.",
-        "loadingMore": "Loading more…",
+        "loadingMore": "Loading more senders…",
         "loadMore": "Load more",
+        "refreshing": "Refreshing sender list…",
         "retry": "Retry",
         "searchPlaceholder": "Search sender or domain",
         "selectAll": "Select all visible senders",

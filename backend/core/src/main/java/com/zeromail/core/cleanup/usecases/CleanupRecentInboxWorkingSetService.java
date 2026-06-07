@@ -84,6 +84,12 @@ public class CleanupRecentInboxWorkingSetService {
                     tenantId,
                     unavailableException.reason());
             return Optional.empty();
+        } catch (IllegalStateException illegalStateException) {
+            log.warn(
+                    "event=cleanup_recent_inbox_unavailable tenantId={} reason={}",
+                    tenantId,
+                    illegalStateException.getClass().getSimpleName());
+            return Optional.empty();
         }
 
         Map<String, SenderAccumulator> accumulatorsBySenderEmail = new LinkedHashMap<>();

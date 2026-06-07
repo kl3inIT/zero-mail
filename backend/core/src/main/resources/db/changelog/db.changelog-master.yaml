@@ -320,3 +320,9 @@ databaseChangeLog:
   - include:
       file: changes/116-plan-feature-permission-backfill-missing.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/117-llm-call-audit-tenant-set-null.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/118-cleanup-sender-projection.yaml
+      relativeToChangelogFile: true

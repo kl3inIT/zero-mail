@@ -16,11 +16,17 @@ const statusKey: Record<
   PENDING: { key: 'common.loading', variant: 'outline' },
 };
 
-export function ConnectionHealthBadge({ status }: { status: Status }) {
+export function ConnectionHealthBadge({
+  status,
+  className,
+}: {
+  status: Status;
+  className?: string;
+}) {
   const t = useTranslations();
   const { key, variant } = statusKey[status];
   return (
-    <Badge variant={variant} aria-live="polite">
+    <Badge variant={variant} aria-live="polite" className={className}>
       {t(key as never)}
     </Badge>
   );
