@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Gmail Workspace Foundation
 status: planning
-last_updated: "2026-06-07T13:11:41.078Z"
+last_updated: "2026-06-07T15:45:55.864Z"
 last_activity: 2026-06-07
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,22 +20,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** v1.3 Gmail Workspace Foundation — defining requirements for multi-Gmail workspace support and account-scoped automation.
+**Current focus:** v1.3 Gmail Workspace Foundation — roadmap is defined; ready to discuss/plan Phase 10 mailbox identity foundation.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 10 — Mailbox Identity, Schema, and Context Foundation
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-07 — Milestone v1.3 started
+Status: Roadmap ready; phase planning not started
+Last activity: 2026-06-07 — Milestone v1.3 requirements, code research, and roadmap completed
 
 ## Current Milestone Roadmap
 
-**v1.3 — Gmail Workspace Foundation** is being defined.
+**v1.3 — Gmail Workspace Foundation** is active and roadmapped.
 
-Expected scope: production multi-Gmail connection management, account-scoped rules/triage/audit/outbound execution, and workspace-ready foundations from SEED-005 without full team collaboration. Requirements and roadmap will be written before execution starts.
+Scope: production multi-Gmail connection management, account-scoped rules/triage/audit/outbound execution, and workspace-ready foundations from SEED-005 without full team collaboration. Requirements and roadmap are now written.
 
-See `.planning/PROJECT.md` for approved milestone framing. `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md` will be updated during milestone initialization.
+See `.planning/PROJECT.md` for approved milestone framing, `.planning/REQUIREMENTS.md` for 42 mapped requirements, `.planning/research/V1.3-CODE-RESEARCH.md` for code research, and `.planning/ROADMAP.md` for the 5-phase milestone plan.
+
+| Phase | Status | Goal |
+|-------|--------|------|
+| 10. Mailbox Identity, Schema, and Context Foundation | Pending | Convert one-Gmail-per-tenant into workspace-owned Gmail mailbox model with validated mailbox context. |
+| 11. Multi-Gmail Account Management and Watch Renewal | Pending | Connect/list/reconnect/disconnect multiple Gmail mailboxes and renew watch per mailbox. |
+| 12. Mailbox-Scoped Pub/Sub, History, Backfill, and Inbox Projection | Pending | Route ingestion/projection through mailbox scope so Gmail ids never collide across accounts. |
+| 13. Mailbox-Scoped Rules, Outbound, Audit, and Safety | Pending | Scope automation/outbound/audit by source and executing mailbox. |
+| 14. Web UI, OpenAPI, Tests, and Docs | Pending | Surface account management/filtering in the app and verify with generated API types + Playwright. |
 
 ## Performance Metrics
 
@@ -599,12 +607,12 @@ Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 
 
 ## Session Continuity
 
-Last session: 2026-06-01T08:55:00.000Z
-Stopped at: Phase A of Gmail inbox CQRS-lite projection complete (5 waves, all green) — Phase 10 plans still pending
-Resume file: .planning/phases/10-telegram-messaging-assistant/10-00-PLAN.md (first plan; Wave 0 foundation)
+Last session: 2026-06-07T15:45:55.864Z
+Stopped at: v1.3 Gmail Workspace Foundation initialized — PROJECT, research, REQUIREMENTS, ROADMAP, and STATE are aligned; Phase 10 plans not created yet.
+Resume file: .planning/ROADMAP.md (Phase 10: Mailbox Identity, Schema, and Context Foundation)
 
 ## Operator Next Steps
 
-- Execute Phase 10 with `/gsd:execute-phase 10` (starts at Wave 0 foundation — Liquibase 099-103 + ArchUnit skeletons + Bucket4j 8.19.0 pin)
-- Or continue v1.2 by completing Phase 9 first if dependency ordering matters
-- Start the next milestone with `/gsd-new-milestone` when v1.2 is fully shipped
+- Discuss Phase 10 with `$gsd-discuss-phase 10` if more assumptions should be clarified before planning.
+- Or plan directly with `$gsd-plan-phase 10` using `.planning/research/V1.3-CODE-RESEARCH.md`, `.planning/REQUIREMENTS.md`, and `.planning/ROADMAP.md` as context.
+- Do not execute Phase 10 until Phase 10 PLAN.md exists.
