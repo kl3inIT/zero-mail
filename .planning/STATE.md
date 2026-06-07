@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Gmail Workspace Foundation
 status: planning
-last_updated: "2026-06-07T15:45:55.864Z"
+last_updated: "2026-06-07T23:03:23.2846200+07:00"
 last_activity: 2026-06-07
 progress:
-  total_phases: 5
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** v1.3 Gmail Workspace Foundation — roadmap is defined; ready to discuss/plan Phase 10 mailbox identity foundation.
+**Current focus:** v1.3 Gmail Workspace Foundation — roadmap is simplified to 2 phases; ready to discuss/plan Phase 10 Gmail mailbox foundation and account management.
 
 ## Current Position
 
-Phase: 10 — Mailbox Identity, Schema, and Context Foundation
+Phase: 10 — Gmail Mailbox Foundation and Account Management
 Plan: —
-Status: Roadmap ready; phase planning not started
-Last activity: 2026-06-07 — Milestone v1.3 requirements, code research, and roadmap completed
+Status: Roadmap simplified to 2 phases; phase planning not started
+Last activity: 2026-06-07 — Milestone v1.3 requirements and roadmap reconciled to 2 phases after code research
 
 ## Current Milestone Roadmap
 
@@ -35,15 +35,12 @@ Last activity: 2026-06-07 — Milestone v1.3 requirements, code research, and ro
 
 Scope: production multi-Gmail connection management, account-scoped rules/triage/audit/outbound execution, and workspace-ready foundations from SEED-005 without full team collaboration. Requirements and roadmap are now written.
 
-See `.planning/PROJECT.md` for approved milestone framing, `.planning/REQUIREMENTS.md` for 42 mapped requirements, `.planning/research/V1.3-CODE-RESEARCH.md` for code research, and `.planning/ROADMAP.md` for the 5-phase milestone plan.
+See `.planning/PROJECT.md` for approved milestone framing, `.planning/REQUIREMENTS.md` for 41 mapped requirements, `.planning/research/V1.3-CODE-RESEARCH.md` for code research, and `.planning/ROADMAP.md` for the 2-phase milestone plan.
 
 | Phase | Status | Goal |
 |-------|--------|------|
-| 10. Mailbox Identity, Schema, and Context Foundation | Pending | Convert one-Gmail-per-tenant into workspace-owned Gmail mailbox model with validated mailbox context. |
-| 11. Multi-Gmail Account Management and Watch Renewal | Pending | Connect/list/reconnect/disconnect multiple Gmail mailboxes and renew watch per mailbox. |
-| 12. Mailbox-Scoped Pub/Sub, History, Backfill, and Inbox Projection | Pending | Route ingestion/projection through mailbox scope so Gmail ids never collide across accounts. |
-| 13. Mailbox-Scoped Rules, Outbound, Audit, and Safety | Pending | Scope automation/outbound/audit by source and executing mailbox. |
-| 14. Web UI, OpenAPI, Tests, and Docs | Pending | Surface account management/filtering in the app and verify with generated API types + Playwright. |
+| 10. Gmail Mailbox Foundation and Account Management | Pending | Convert one-Gmail-per-tenant into workspace-owned multi-Gmail mailbox model and account management APIs. |
+| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | Pending | Route ingestion/projection/rules/outbound/audit through mailbox scope and surface mailbox selection/filtering in the app. |
 
 ## Performance Metrics
 

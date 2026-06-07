@@ -75,7 +75,6 @@
 - [ ] **VER-02**: OpenAPI is regenerated after DTO/API changes and frontend feature APIs use generated types.
 - [ ] **VER-03**: Backend tests cover migration, repository lookup, Pub/Sub routing, watch renewal, idempotency, rule scope, outbound gateway, and audit invariants.
 - [ ] **VER-04**: Frontend tests and Playwright cover connect, list, select, filter, rule-scope, and audit workflows in a real browser.
-- [ ] **VER-05**: Documentation/runbooks explain multi-Gmail setup, known limits, and future team/shared-inbox boundaries.
 
 ## Future Requirements
 
@@ -124,46 +123,45 @@
 | WSP-04 | Phase 10 | Pending |
 | WSP-05 | Phase 10 | Pending |
 | WSP-06 | Phase 10 | Pending |
+| GMA-01 | Phase 10 | Pending |
+| GMA-02 | Phase 10 | Pending |
+| GMA-03 | Phase 10 | Pending |
+| GMA-04 | Phase 10 | Pending |
+| GMA-05 | Phase 10 | Pending |
+| GMA-06 | Phase 10 | Pending |
+| GMA-07 | Phase 10 | Pending |
+| AUD-04 | Phase 10 | Pending |
 | VER-01 | Phase 10 | Pending |
-| GMA-01 | Phase 11 | Pending |
-| GMA-02 | Phase 11 | Pending |
-| GMA-03 | Phase 11 | Pending |
-| GMA-04 | Phase 11 | Pending |
-| GMA-05 | Phase 11 | Pending |
-| GMA-06 | Phase 11 | Pending |
-| GMA-07 | Phase 11 | Pending |
-| AUD-04 | Phase 11 | Pending |
-| ING-01 | Phase 12 | Pending |
-| ING-02 | Phase 12 | Pending |
-| ING-03 | Phase 12 | Pending |
-| ING-04 | Phase 12 | Pending |
-| ING-05 | Phase 12 | Pending |
-| ING-06 | Phase 12 | Pending |
-| AUTO-01 | Phase 13 | Pending |
-| AUTO-02 | Phase 13 | Pending |
-| AUTO-03 | Phase 13 | Pending |
-| AUTO-04 | Phase 13 | Pending |
-| AUTO-05 | Phase 13 | Pending |
-| AUTO-06 | Phase 13 | Pending |
-| AUD-01 | Phase 13 | Pending |
-| AUD-02 | Phase 13 | Pending |
-| AUD-03 | Phase 13 | Pending |
-| AUD-05 | Phase 13 | Pending |
-| AUD-06 | Phase 13 | Pending |
-| AUD-07 | Phase 13 | Pending |
-| UX-01 | Phase 14 | Pending |
-| UX-02 | Phase 14 | Pending |
-| UX-03 | Phase 14 | Pending |
-| UX-04 | Phase 14 | Pending |
-| UX-05 | Phase 14 | Pending |
-| VER-02 | Phase 14 | Pending |
-| VER-03 | Phase 14 | Pending |
-| VER-04 | Phase 14 | Pending |
-| VER-05 | Phase 14 | Pending |
+| ING-01 | Phase 11 | Pending |
+| ING-02 | Phase 11 | Pending |
+| ING-03 | Phase 11 | Pending |
+| ING-04 | Phase 11 | Pending |
+| ING-05 | Phase 11 | Pending |
+| ING-06 | Phase 11 | Pending |
+| AUTO-01 | Phase 11 | Pending |
+| AUTO-02 | Phase 11 | Pending |
+| AUTO-03 | Phase 11 | Pending |
+| AUTO-04 | Phase 11 | Pending |
+| AUTO-05 | Phase 11 | Pending |
+| AUTO-06 | Phase 11 | Pending |
+| AUD-01 | Phase 11 | Pending |
+| AUD-02 | Phase 11 | Pending |
+| AUD-03 | Phase 11 | Pending |
+| AUD-05 | Phase 11 | Pending |
+| AUD-06 | Phase 11 | Pending |
+| AUD-07 | Phase 11 | Pending |
+| UX-01 | Phase 11 | Pending |
+| UX-02 | Phase 11 | Pending |
+| UX-03 | Phase 11 | Pending |
+| UX-04 | Phase 11 | Pending |
+| UX-05 | Phase 11 | Pending |
+| VER-02 | Phase 11 | Pending |
+| VER-03 | Phase 11 | Pending |
+| VER-04 | Phase 11 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 42 total
-- Mapped to phases: 42
+- v1.3 requirements: 41 total
+- Mapped to phases: 41
 - Unmapped: 0
 
 ---
