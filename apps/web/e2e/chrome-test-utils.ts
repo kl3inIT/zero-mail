@@ -204,23 +204,30 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
 
     if (url.pathname === '/api/threads' && request.method() === 'GET') {
       const bucket = url.searchParams.get('bucket');
+      const hasToReply = state.needsReplyDraftStatus !== 'DRAFT_SENT';
+      const hasDraftInToReply = state.needsReplyDraftStatus === 'DRAFT_READY';
+      const includeRow =
+        bucket === 'awaiting-their-reply'
+          ? false
+          : bucket === 'drafted'
+            ? hasDraftInToReply
+            : hasToReply;
       await fulfillJson(route, {
-        items:
-          bucket === 'awaiting-their-reply'
-            ? []
-            : [
-                {
-                  gmailThreadId: 'thread-1',
-                  subject: 'Re: Q3 partnership terms',
-                  otherParty: 'priya@acme.io',
-                  lastActivityAt: '2026-05-12T10:30:00.000Z',
-                  draftStatus: state.needsReplyDraftStatus,
-                  resolved: false,
-                  openInGmailUrl: 'https://mail.google.com/mail/u/0/#all/thread-1',
-                },
-              ],
+        items: includeRow
+          ? [
+              {
+                gmailThreadId: 'thread-1',
+                subject: 'Re: Q3 partnership terms',
+                otherParty: 'priya@acme.io',
+                lastActivityAt: '2026-05-12T10:30:00.000Z',
+                draftStatus: state.needsReplyDraftStatus,
+                resolved: false,
+                openInGmailUrl: 'https://mail.google.com/mail/u/0/#all/thread-1',
+              },
+            ]
+          : [],
         nextCursor: null,
-        toReplyCount: bucket === 'awaiting-their-reply' ? 0 : 1,
+        toReplyCount: hasToReply ? 1 : 0,
       });
       return;
     }
@@ -234,10 +241,11 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
 
     if (url.pathname === '/api/threads/counts' && request.method() === 'GET') {
       const toReplyCount = state.needsReplyDraftStatus === 'DRAFT_SENT' ? 0 : 1;
+      const draftedCount = state.needsReplyDraftStatus === 'DRAFT_READY' ? 1 : 0;
       await fulfillJson(route, {
         toReplyCount,
         awaitingCount: 0,
-        draftedCount: state.needsReplyDraftStatus === 'NO_DRAFT' ? 0 : toReplyCount,
+        draftedCount,
       });
       return;
     }

@@ -36,7 +36,6 @@
       "react-doctor/no-giant-component",
       "react-doctor/no-many-boolean-props",
       "react-doctor/no-noninteractive-element-to-interactive-role",
-      "react-doctor/only-export-components",
       "react-doctor/prefer-dynamic-import",
       "react-doctor/prefer-explicit-variants",
       "react-doctor/prefer-tag-over-role",
