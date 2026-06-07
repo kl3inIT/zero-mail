@@ -237,6 +237,7 @@ class ActionProposalMergerTest {
                 false,
                 false,
                 false,
+                false,
                 Optional.empty(),
                 Set.of());
     }

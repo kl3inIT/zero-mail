@@ -1784,13 +1784,9 @@
       "openInGmail": "Mở trong Gmail",
       "regenerateDraft": "Tạo lại bản nháp",
       "regenerating": "Đang tạo lại…",
-      "resync": "Đồng bộ lại hộp thư",
-      "sync": "Đồng bộ hộp thư",
-      "syncing": "Đang đồng bộ…",
       "viewContent": "Xem nội dung"
     },
     "banner": {
-      "syncing": "Đang đồng bộ hộp thư để phân loại email…",
       "updating": "Đang cập nhật danh sách cần trả lời…"
     },
     "columns": {
@@ -1820,7 +1816,6 @@
       },
       "toReply": {
         "body": "Hiện không có email nào cần trả lời.",
-        "syncHint": "Email mới đến sẽ tự được phân loại. Để phân loại các email đã có sẵn trong hộp thư, đồng bộ ngay.",
         "title": "Inbox zero 🎉"
       }
     },
@@ -1865,8 +1860,6 @@
       "toReplyHint": "Email người khác gửi đang chờ bạn phản hồi."
     },
     "toast": {
-      "backfillDone": "Đã đồng bộ hộp thư — danh sách cần trả lời đã được cập nhật.",
-      "backfillFailed": "Không đồng bộ được hộp thư. Hãy thử lại.",
       "draftSaved": "Đã lưu bản nháp trong Gmail — hãy xem lại và gửi ở đó."
     }
   },

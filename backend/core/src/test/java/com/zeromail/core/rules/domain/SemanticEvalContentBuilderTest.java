@@ -32,6 +32,7 @@ class SemanticEvalContentBuilderTest {
                 hasAttachment,
                 listUnsubscribePresent,
                 newsletterIndicatorPresent,
+                false,
                 Optional.empty(),
                 Set.of());
     }
@@ -60,6 +61,7 @@ class SemanticEvalContentBuilderTest {
                         hasAttachment=true
                         listUnsubscribePresent=true
                         newsletterIndicatorPresent=false
+                        autoReplyIndicatorPresent=false
                         internalDate=2026-05-09T10:00:00Z""");
     }
 
@@ -84,6 +86,7 @@ class SemanticEvalContentBuilderTest {
                 .contains("hasAttachment=false")
                 .contains("listUnsubscribePresent=false")
                 .contains("newsletterIndicatorPresent=false")
+                .contains("autoReplyIndicatorPresent=false")
                 .contains("labelCount=0")
                 .contains("categories=");
     }

@@ -2,12 +2,14 @@ package com.zeromail.core.triage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.llm.usecases.LlmGateway;
@@ -20,6 +22,7 @@ import com.zeromail.core.rules.usecases.RuleManagementService;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.usecases.TenantService;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
+import com.zeromail.core.thread.usecases.ThreadReplyClassificationInput;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
 import com.zeromail.core.triage.usecases.TriageAuditSaga;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.GmailWriteResult;
@@ -172,6 +175,54 @@ class TriageOutboundRuntimeGateTest {
     }
 
     @Test
+    void automated_gmail_category_classifies_as_fyi_without_llm() throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(
+                        true,
+                        false,
+                        subjectMatcher(),
+                        labelAction(),
+                        triageInput(
+                                "sender@example.com",
+                                List.of("INBOX", "CATEGORY_PROMOTIONS"),
+                                List.of("promotions"),
+                                false));
+        when(ruleManagementService.listEnabledForExecution(TENANT_ID)).thenReturn(List.of());
+
+        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        verify(llmGateway, never()).classifyReplyNeeded(eq(CallSite.NEEDS_REPLY), anyString());
+        ArgumentCaptor<ThreadReplyClassificationInput> classificationInputCaptor =
+                ArgumentCaptor.forClass(ThreadReplyClassificationInput.class);
+        verify(classifyThreadReplyStatusService).classify(classificationInputCaptor.capture());
+        assertThat(classificationInputCaptor.getValue().inboundReplyNeeded()).isFalse();
+        assertThat(classificationInputCaptor.getValue().lastMessageIsAutoReply()).isFalse();
+    }
+
+    @Test
+    void inbound_auto_reply_classifies_as_fyi_without_llm_and_sets_auto_reply_flag()
+            throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(
+                        true,
+                        false,
+                        subjectMatcher(),
+                        labelAction(),
+                        triageInput(
+                                "sender@example.com", List.of("INBOX"), List.of("personal"), true));
+        when(ruleManagementService.listEnabledForExecution(TENANT_ID)).thenReturn(List.of());
+
+        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        verify(llmGateway, never()).classifyReplyNeeded(eq(CallSite.NEEDS_REPLY), anyString());
+        ArgumentCaptor<ThreadReplyClassificationInput> classificationInputCaptor =
+                ArgumentCaptor.forClass(ThreadReplyClassificationInput.class);
+        verify(classifyThreadReplyStatusService).classify(classificationInputCaptor.capture());
+        assertThat(classificationInputCaptor.getValue().inboundReplyNeeded()).isFalse();
+        assertThat(classificationInputCaptor.getValue().lastMessageIsAutoReply()).isTrue();
+    }
+
+    @Test
     void outbound_send_throttle_exhausted_fails_audit_and_never_sends() throws Exception {
         // Defense-in-depth: when the per-tenant auto-send cap is exhausted, the outbound action is
         // dropped (failed audit, no draft), bounding the blast radius of any runaway.
@@ -314,11 +365,19 @@ class TriageOutboundRuntimeGateTest {
     }
 
     private static TriageRuleEvaluationInput triageInputWithLabels(List<String> gmailLabelIds) {
-        return triageInput("sender@example.com", gmailLabelIds);
+        return triageInput("sender@example.com", gmailLabelIds, List.of("personal"), false);
     }
 
     private static TriageRuleEvaluationInput triageInput(
             String sanitizedSenderEmail, List<String> gmailLabelIds) {
+        return triageInput(sanitizedSenderEmail, gmailLabelIds, List.of("personal"), false);
+    }
+
+    private static TriageRuleEvaluationInput triageInput(
+            String sanitizedSenderEmail,
+            List<String> gmailLabelIds,
+            List<String> gmailCategories,
+            boolean autoReplyIndicatorPresent) {
         Instant observedAt = Instant.parse("2026-05-23T00:00:00Z");
         RuleEvaluationInput ruleEvaluationInput =
                 new RuleEvaluationInput(
@@ -328,12 +387,13 @@ class TriageOutboundRuntimeGateTest {
                         List.of(),
                         "Planning update",
                         gmailLabelIds,
-                        List.of("personal"),
+                        gmailCategories,
                         observedAt,
                         observedAt,
                         false,
                         false,
                         false,
+                        autoReplyIndicatorPresent,
                         Optional.empty(),
                         Set.of());
         return new TriageRuleEvaluationInput(

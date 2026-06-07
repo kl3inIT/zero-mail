@@ -32,6 +32,7 @@ public final class SemanticEvalContentBuilder {
                 "hasAttachment=" + ruleEvaluationInput.hasAttachment(),
                 "listUnsubscribePresent=" + ruleEvaluationInput.listUnsubscribePresent(),
                 "newsletterIndicatorPresent=" + ruleEvaluationInput.newsletterIndicatorPresent(),
+                "autoReplyIndicatorPresent=" + ruleEvaluationInput.autoReplyIndicatorPresent(),
                 "internalDate=" + ruleEvaluationInput.internalDate());
     }
 }

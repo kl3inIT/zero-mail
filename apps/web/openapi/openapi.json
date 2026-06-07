@@ -6224,7 +6224,7 @@
             "schema": {
               "type": "integer",
               "format": "int32",
-              "default": 50
+              "default": 20
             }
           },
           {
@@ -9045,7 +9045,6 @@
       },
       "ComposerDraftUpsertRequestDto": {
         "type": "object",
-        "enum": ["reply", "reply_all", "forward"],
         "properties": {
           "gmailThreadId": {
             "type": "string",
@@ -9923,13 +9922,13 @@
           "charset": {
             "type": "string"
           },
-          "attachment": {
+          "inline": {
             "type": "boolean"
           },
           "formData": {
             "type": "boolean"
           },
-          "inline": {
+          "attachment": {
             "type": "boolean"
           }
         }
@@ -10029,6 +10028,31 @@
             "type": "integer",
             "format": "int64"
           },
+          "connection": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifModifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/MediaType"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpRange"
+            }
+          },
+          "cacheControl": {
+            "type": "string"
+          },
           "contentDisposition": {
             "$ref": "#/components/schemas/ContentDisposition"
           },
@@ -10038,10 +10062,21 @@
               "type": "string"
             }
           },
-          "range": {
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "etag": {
+            "type": "string"
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ifNoneMatch": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/HttpRange"
+              "type": "string"
             }
           },
           "allow": {
@@ -10051,39 +10086,10 @@
             },
             "uniqueItems": true
           },
-          "ifMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifNoneMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "origin": {
-            "type": "string"
-          },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
-          "cacheControl": {
-            "type": "string"
-          },
           "contentLanguage": {
             "type": "string"
           },
-          "etag": {
-            "type": "string"
-          },
-          "connection": {
+          "ifMatch": {
             "type": "array",
             "items": {
               "type": "string"
@@ -10095,11 +10101,37 @@
               "$ref": "#/components/schemas/MediaType"
             }
           },
+          "pragma": {
+            "type": "string"
+          },
+          "upgrade": {
+            "type": "string"
+          },
+          "vary": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
           "acceptPatch": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MediaType"
             }
+          },
+          "acceptLanguageAsLocales": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "basicAuth": {
+            "type": "string",
+            "writeOnly": true
           },
           "acceptLanguage": {
             "type": "array",
@@ -10116,43 +10148,12 @@
               }
             }
           },
-          "basicAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
-          "acceptLanguageAsLocales": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlAllowCredentials": {
-            "type": "boolean"
-          },
-          "accessControlAllowHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlAllowMethods": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpMethod"
-            }
-          },
-          "accessControlAllowOrigin": {
-            "type": "string"
-          },
-          "accessControlExposeHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "accessControlMaxAge": {
             "type": "integer",
             "format": "int64"
+          },
+          "accessControlAllowOrigin": {
+            "type": "string"
           },
           "accessControlRequestHeaders": {
             "type": "array",
@@ -10163,28 +10164,26 @@
           "accessControlRequestMethod": {
             "$ref": "#/components/schemas/HttpMethod"
           },
-          "expires": {
-            "type": "integer",
-            "format": "int64"
+          "accessControlAllowMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            }
           },
-          "pragma": {
-            "type": "string"
-          },
-          "upgrade": {
-            "type": "string"
-          },
-          "vary": {
+          "accessControlExposeHeaders": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
-          "ifModifiedSince": {
-            "type": "integer",
-            "format": "int64"
+          "accessControlAllowHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
-          "contentType": {
-            "$ref": "#/components/schemas/MediaType"
+          "accessControlAllowCredentials": {
+            "type": "boolean"
           }
         }
       },
@@ -10209,6 +10208,9 @@
             "type": "number",
             "format": "double"
           },
+          "charset": {
+            "type": "string"
+          },
           "concrete": {
             "type": "boolean"
           },
@@ -10219,9 +10221,6 @@
             "type": "boolean"
           },
           "subtypeSuffix": {
-            "type": "string"
-          },
-          "charset": {
             "type": "string"
           }
         }

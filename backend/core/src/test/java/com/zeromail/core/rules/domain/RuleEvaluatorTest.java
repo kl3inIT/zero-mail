@@ -204,6 +204,7 @@ class RuleEvaluatorTest {
                 true,
                 true,
                 true,
+                false,
                 Optional.empty(),
                 Set.of());
     }

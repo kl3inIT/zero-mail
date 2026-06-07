@@ -1,31 +1,31 @@
 'use client';
 
-import { Check, Clock, Eye, ExternalLink, FileText } from 'lucide-react';
+import { Clock, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
 import { SenderAvatar } from '@/features/needs-reply/components/SenderAvatar';
-import { useMarkResolved } from '@/features/needs-reply/hooks/useMarkResolved';
 import type {
   DraftStatus,
-  NeedsReplyBucket,
   NeedsReplyRow as NeedsReplyRowModel,
 } from '@/features/needs-reply/api/needs-reply-api';
 import { cn } from '@/lib/utils';
 
 type NeedsReplyRowProps = {
   row: NeedsReplyRowModel;
-  activeBucket: NeedsReplyBucket;
+  selected?: boolean;
   onOpen?: () => void;
   now?: Date;
 };
 
 type Urgency = 'high' | 'med' | 'low';
 
-export function NeedsReplyRow({ row, activeBucket, onOpen, now = new Date() }: NeedsReplyRowProps) {
+export function NeedsReplyRow({
+  row,
+  selected = false,
+  onOpen,
+  now = new Date(),
+}: NeedsReplyRowProps) {
   const t = useTranslations();
   const ageMs = ageInMilliseconds(row.lastActivityAt, now);
   const urgency = ageUrgency(ageMs);
@@ -33,65 +33,37 @@ export function NeedsReplyRow({ row, activeBucket, onOpen, now = new Date() }: N
   const subjectLabel = row.subject || t('triage.audit.message.untitled');
 
   return (
-    <div
-      className="bg-card hover:bg-muted/30 flex gap-2.5 rounded-lg border p-3 transition-colors"
+    <button
+      type="button"
+      aria-current={selected ? 'true' : undefined}
+      onClick={onOpen}
+      className={cn(
+        'group relative flex min-h-[82px] w-full items-start gap-2.5 border-b px-4 py-3 text-left transition-colors',
+        'hover:bg-muted/60',
+        selected &&
+          'bg-primary/10 hover:bg-primary/10 before:bg-primary before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:content-[""]',
+      )}
       data-testid="needs-reply-row"
     >
       <UrgencyBar urgency={urgency} />
       <SenderAvatar sender={row.otherParty} />
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-muted-foreground truncate text-xs">{senderLabel}</span>
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="text-foreground min-w-0 truncate text-sm font-semibold">
+            {senderLabel}
+          </span>
           <DraftBadge draftStatus={row.draftStatus} />
-          <AgeChip ageMs={ageMs} urgency={urgency} lastActivityAt={row.lastActivityAt} />
+          <span className="ml-auto shrink-0">
+            <AgeChip ageMs={ageMs} urgency={urgency} lastActivityAt={row.lastActivityAt} />
+          </span>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpen}
-          className="group block w-full min-w-0 cursor-pointer text-left"
-          data-testid="needs-reply-open"
-        >
-          <p className="text-foreground truncate text-sm font-medium group-hover:underline">
-            {subjectLabel}
-          </p>
-
-          {row.snippet ? (
-            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">{row.snippet}</p>
-          ) : null}
-        </button>
-
-        <div className="flex flex-wrap items-center gap-1">
-          {activeBucket !== 'awaiting-their-reply' ? (
-            <GenerateDraftButton gmailThreadId={row.gmailThreadId} draftStatus={row.draftStatus} />
-          ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="gap-1.5"
-            onClick={onOpen}
-            data-testid="needs-reply-view"
-          >
-            <Eye className="size-3.5" aria-hidden="true" />
-            {t('needsReply.action.viewContent')}
-          </Button>
-          <ResolveButton gmailThreadId={row.gmailThreadId} />
-          <a
-            href={row.openInGmailUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'text-muted-foreground gap-1.5',
-            )}
-          >
-            <ExternalLink className="size-3.5" aria-hidden="true" />
-            {t('needsReply.action.openInGmail')}
-          </a>
-        </div>
+        <p className="text-foreground/90 truncate text-sm leading-5 font-medium">{subjectLabel}</p>
+        {row.snippet ? (
+          <p className="text-muted-foreground line-clamp-1 text-xs leading-5">{row.snippet}</p>
+        ) : null}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -149,44 +121,20 @@ function AgeChip({
         ? t('needsReply.row.ageHours', { count: Math.round(hours) })
         : t('needsReply.row.ageDays', { count: days });
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger>
-          <span
-            className={cn(
-              'ml-auto inline-flex cursor-default items-center gap-1 font-mono text-[11px]',
-              {
-                'text-destructive font-medium': urgency === 'high',
-                'text-amber-600 dark:text-amber-400': urgency === 'med',
-                'text-muted-foreground': urgency === 'low',
-              },
-            )}
-          >
-            <Clock className="size-3" aria-hidden="true" />
-            {label}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{formatAbsoluteTime(lastActivityAt)}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-function ResolveButton({ gmailThreadId }: { gmailThreadId: string }) {
-  const t = useTranslations();
-  const markResolved = useMarkResolved();
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="gap-1.5"
-      disabled={markResolved.isPending}
-      onClick={() => markResolved.mutate(gmailThreadId)}
+    <span
+      className={cn(
+        'inline-flex cursor-default items-center gap-1 font-mono text-[11px] whitespace-nowrap tabular-nums',
+        {
+          'text-destructive font-medium': urgency === 'high',
+          'text-amber-600 dark:text-amber-400': urgency === 'med',
+          'text-muted-foreground': urgency === 'low',
+        },
+      )}
+      title={formatAbsoluteTime(lastActivityAt)}
     >
-      <Check className="size-3.5" aria-hidden="true" />
-      {t('needsReply.action.markResolved')}
-    </Button>
+      <Clock className="size-3" aria-hidden="true" />
+      {label}
+    </span>
   );
 }
 

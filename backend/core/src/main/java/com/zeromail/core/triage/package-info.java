@@ -10,6 +10,7 @@
             "rules :: projection",
             "rules :: usecases",
             "gmail",
+            "gmail :: domain",
             "gmail :: events",
             "gmail :: gateway",
             "gmail :: usecases",

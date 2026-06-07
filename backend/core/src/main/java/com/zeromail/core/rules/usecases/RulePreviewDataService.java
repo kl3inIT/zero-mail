@@ -128,6 +128,7 @@ public class RulePreviewDataService {
                         gmailPreviewMessage.hasAttachment(),
                         gmailPreviewMessage.listUnsubscribePresent(),
                         gmailPreviewMessage.newsletterIndicatorPresent(),
+                        gmailPreviewMessage.autoReplyIndicatorPresent(),
                         gmailPreviewMessage.sanitizedBodyEvidencePresent(),
                         gmailPreviewMessage.bodyDerivedFlags());
         return new PreviewInput(

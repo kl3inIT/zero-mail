@@ -133,6 +133,7 @@ class RulePreviewPrivacyTest extends PostgresContainerTest {
                         false,
                         false,
                         false,
+                        false,
                         Optional.empty(),
                         Set.of()));
     }

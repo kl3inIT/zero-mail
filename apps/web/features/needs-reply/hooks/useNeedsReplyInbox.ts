@@ -17,7 +17,7 @@ export function useNeedsReplyInbox(bucket: NeedsReplyBucket, resolved = false) {
       getNeedsReplyInbox({
         bucket,
         cursor: pageParam,
-        limit: 50,
+        limit: 20,
         resolved,
       }),
     initialPageParam: null as string | null,

@@ -55,7 +55,7 @@ const EMAIL_FRAME_CSS = `
   }
 `;
 
-export function emailFrameSrcDoc(renderedHtml: string, locale: string) {
+function emailFrameSrcDoc(renderedHtml: string, locale: string) {
   const documentLanguage = locale.replace(/[^A-Za-z-]/g, '') || 'en';
   return `<!doctype html><html lang="${documentLanguage}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"><base target="_blank"><style>${EMAIL_FRAME_CSS}</style></head><body><div class="zm-mail-wrapper">${renderedHtml}</div></body></html>`;
 }

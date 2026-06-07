@@ -8,16 +8,15 @@ export type NeedsReplyListResponse = components['schemas']['NeedsReplyListRespon
 export type ThreadDraftResponse = components['schemas']['ThreadDraftResponse'];
 export type ToReplyCountResponse = components['schemas']['ToReplyCountResponse'];
 
-export type ServerBucket = 'to-reply' | 'awaiting-their-reply';
-export type NeedsReplyBucket = ServerBucket | 'drafted';
+export type NeedsReplyBucket = 'to-reply' | 'awaiting-their-reply' | 'drafted';
 export type DraftStatus = 'NO_DRAFT' | 'DRAFT_READY' | 'DRAFT_SENT';
 
 /**
- * Map a UI bucket to the bucket the backend understands. The synthetic 'drafted' bucket is a
- * client-side filter over the to-reply server bucket — backend has no concept of it.
+ * Keep the UI bucket string as the wire value. The backend maps the public 'drafted' bucket to
+ * TO_REPLY + has_draft=true so pagination and tab counts stay consistent.
  */
-export function toServerBucket(bucket: NeedsReplyBucket): ServerBucket {
-  return bucket === 'drafted' ? 'to-reply' : bucket;
+function toServerBucket(bucket: NeedsReplyBucket): NeedsReplyBucket {
+  return bucket;
 }
 
 export type NeedsReplyRow = {
@@ -125,7 +124,7 @@ export function isDraftGenerationInFlight(error: unknown): boolean {
 export async function getNeedsReplyInbox({
   bucket,
   cursor,
-  limit = 50,
+  limit = 20,
   resolved = false,
 }: NeedsReplyInboxOptions): Promise<NeedsReplyPage> {
   const result = await api.GET('/api/threads', {
@@ -143,12 +142,7 @@ export async function getNeedsReplyInbox({
     throwApiError(result, `/api/threads failed: ${result.response.status}`);
   }
 
-  const page = normalizePage(result.data);
-  // Synthetic 'drafted' bucket: server returns to-reply rows; we keep only those with a draft.
-  if (bucket === 'drafted') {
-    return { ...page, items: page.items.filter((row) => row.draftStatus !== 'NO_DRAFT') };
-  }
-  return page;
+  return normalizePage(result.data);
 }
 
 export async function getToReplyCount(): Promise<number> {
@@ -174,28 +168,6 @@ export async function getNeedsReplyCounts(): Promise<NeedsReplyCounts> {
     toReply: result.data.toReplyCount ?? 0,
     awaiting: result.data.awaitingCount ?? 0,
     drafted: result.data.draftedCount ?? 0,
-  };
-}
-
-export type NeedsReplyBackfillResult = {
-  threadsScanned: number;
-  threadsClassified: number;
-  threadsFailed: number;
-};
-
-export async function runNeedsReplyBackfill(limit?: number): Promise<NeedsReplyBackfillResult> {
-  const result = await api.POST('/api/threads/backfill', {
-    params: { query: limit != null ? { limit } : {} },
-  });
-
-  if (result.error || !result.response.ok || result.data === undefined) {
-    throwApiError(result, `/api/threads/backfill failed: ${result.response.status}`);
-  }
-
-  return {
-    threadsScanned: result.data.threadsScanned ?? 0,
-    threadsClassified: result.data.threadsClassified ?? 0,
-    threadsFailed: result.data.threadsFailed ?? 0,
   };
 }
 
