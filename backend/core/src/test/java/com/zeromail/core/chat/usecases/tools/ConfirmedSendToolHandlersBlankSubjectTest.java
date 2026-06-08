@@ -2,6 +2,7 @@ package com.zeromail.core.chat.usecases.tools;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -11,6 +12,7 @@ import com.zeromail.core.chat.confirm.ConfirmationStateMachine.Reservation;
 import com.zeromail.core.chat.confirm.send.AssistantSendCommand;
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.domain.ToolCategory;
+import com.zeromail.core.chat.exception.RecipientInvalidException;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -63,6 +65,36 @@ class ConfirmedSendToolHandlersBlankSubjectTest {
                                             "confirm-test-cleared-subject");
                             assertThat(command.subject()).isEmpty();
                         })
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void display_name_recipient_throws_recipient_invalid() {
+        when(senderSafetyNetService.isProtected(any(UUID.class), anyString())).thenReturn(false);
+        Map<String, Object> input = new LinkedHashMap<>();
+        // The assistant put a person's name in `to` instead of an email address — the exact bug
+        // that surfaced as an opaque 400. toCommand must reject it as a recipient error.
+        input.put("to", "Nhat Nhu");
+        input.put("body", "Body the user reviewed.");
+
+        assertThatExceptionOfType(RecipientInvalidException.class)
+                .isThrownBy(
+                        () ->
+                                confirmedSendToolHandlers.toCommand(
+                                        reservation(input), false, null, "confirm-test-bad-to"));
+    }
+
+    @Test
+    void valid_email_recipient_does_not_throw() {
+        when(senderSafetyNetService.isProtected(any(UUID.class), anyString())).thenReturn(false);
+        Map<String, Object> input = new LinkedHashMap<>();
+        input.put("to", "recipient@acme.test");
+        input.put("body", "Body the user reviewed.");
+
+        assertThatCode(
+                        () ->
+                                confirmedSendToolHandlers.toCommand(
+                                        reservation(input), false, null, "confirm-test-good-to"))
                 .doesNotThrowAnyException();
     }
 

@@ -29,6 +29,13 @@ public class TelegramAccountJdbcRepository {
             Instant now) {
         jdbcTemplate.update(
                 """
+                DELETE FROM telegram_account
+                WHERE tenant_id = ? OR telegram_chat_id = ?
+                """,
+                tenantId,
+                telegramChatId);
+        jdbcTemplate.update(
+                """
                 INSERT INTO telegram_account (
                     id,
                     tenant_id,
@@ -46,18 +53,6 @@ public class TelegramAccountJdbcRepository {
                     version
                 )
                 VALUES (?, ?, ?, ?, ?, ?, 'CONNECTED', true, '{}'::jsonb, ?, ?, ?, ?, 0)
-                ON CONFLICT (tenant_id)
-                DO UPDATE SET
-                    telegram_chat_id = EXCLUDED.telegram_chat_id,
-                    telegram_user_id = EXCLUDED.telegram_user_id,
-                    telegram_username = EXCLUDED.telegram_username,
-                    language_code = EXCLUDED.language_code,
-                    status = 'CONNECTED',
-                    linked_at = EXCLUDED.linked_at,
-                    last_active_at = EXCLUDED.last_active_at,
-                    disconnected_at = NULL,
-                    blocked_at = NULL,
-                    updated_at = EXCLUDED.updated_at
                 """,
                 UUID.randomUUID(),
                 tenantId,

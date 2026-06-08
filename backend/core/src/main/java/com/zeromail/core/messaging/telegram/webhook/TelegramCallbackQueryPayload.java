@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record TelegramUpdateRequest(
-        @JsonProperty("update_id") long updateId,
+public record TelegramCallbackQueryPayload(
+        @JsonProperty("id") String id,
+        @JsonProperty("from") TelegramUserPayload from,
         @JsonProperty("message") TelegramMessagePayload message,
-        @JsonProperty("callback_query") TelegramCallbackQueryPayload callbackQuery) {}
+        @JsonProperty("data") String data) {}

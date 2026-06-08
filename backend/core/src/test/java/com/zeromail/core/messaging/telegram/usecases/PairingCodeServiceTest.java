@@ -51,7 +51,10 @@ class PairingCodeServiceTest {
                         "telegram-bot",
                         "webhook-secret",
                         Base64.getEncoder().encodeToString(SECRET),
-                        URI.create("https://api.telegram.org"));
+                        URI.create("https://api.telegram.org"),
+                        URI.create("https://app.zeromail.test"),
+                        false,
+                        null);
         return new PairingCodeService(
                 properties,
                 Clock.fixed(instant, ZoneOffset.UTC),

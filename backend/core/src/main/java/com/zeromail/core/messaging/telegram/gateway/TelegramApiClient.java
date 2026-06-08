@@ -1,9 +1,11 @@
 package com.zeromail.core.messaging.telegram.gateway;
 
 import com.zeromail.core.messaging.telegram.config.TelegramProperties;
+import com.zeromail.core.messaging.telegram.domain.TelegramAnswerCallbackQueryRequest;
 import com.zeromail.core.messaging.telegram.domain.TelegramApiResponse;
 import com.zeromail.core.messaging.telegram.domain.TelegramSendChatActionRequest;
 import com.zeromail.core.messaging.telegram.domain.TelegramSendMessageRequest;
+import com.zeromail.core.messaging.telegram.domain.TelegramSetWebhookRequest;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,16 @@ public class TelegramApiClient {
 
     public void sendTyping(long chatId) {
         post("sendChatAction", TelegramSendChatActionRequest.typing(chatId));
+    }
+
+    public void registerWebhook(String webhookUrl, String secretToken) {
+        post("setWebhook", TelegramSetWebhookRequest.of(webhookUrl, secretToken));
+    }
+
+    public void answerCallbackQuery(String callbackQueryId, String text) {
+        post(
+                "answerCallbackQuery",
+                TelegramAnswerCallbackQueryRequest.notification(callbackQueryId, text));
     }
 
     private void post(String method, Object request) {

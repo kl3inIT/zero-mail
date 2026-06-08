@@ -627,6 +627,7 @@
       "memoryDestination": "After saving, this item appears in AI settings -> Knowledge.",
       "outsideSourceThread": "Added by AI · verify",
       "overwriteNotice": "Will overwrite current instructions",
+      "recipientInvalid": "The recipient is not a valid email address yet. Click Edit and enter an address like name@example.com before sending.",
       "removeSender": "Remove from safety net",
       "ruleEditHint": "Editing the \"When\" text recompiles the condition and action when you confirm.",
       "ruleName": "Rule name",
@@ -939,6 +940,9 @@
       "body": "Please try again. If the problem persists, reload the page or sign in again.",
       "reset": "Try again",
       "title": "Something went wrong"
+    },
+    "chat": {
+      "recipientInvalid": "The recipient address is not valid. Fix it to an address like name@example.com and send again."
     },
     "cleanup": {
       "campaign": {
@@ -2434,6 +2438,32 @@
         "title": "Automated triage",
         "toggleLabel": "Pause automated triage"
       }
+    },
+    "telegramConnection": {
+      "heading": "Telegram connection",
+      "helper": "Use the Telegram bot as a mobile chat channel for Zero Mail.",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "unavailable": "Not configured",
+      "ready": "Ready to connect",
+      "notConfigured": "Telegram is not configured on the server.",
+      "connectedAccount": "Telegram account connected",
+      "linkedAt": "Connected at {date}",
+      "connectCta": "Connect Telegram",
+      "creatingPairing": "Creating code...",
+      "disconnectCta": "Disconnect Telegram",
+      "pairingTitle": "Finish in Telegram",
+      "pairingBody": "Open the bot with the button below, then send the /start command that includes this code. This page updates when the connection succeeds.",
+      "botLabel": "Bot",
+      "qrLabel": "Scan to open the Telegram bot",
+      "qrHelp": "Scan the QR code on mobile, or open the bot from this browser.",
+      "copyCode": "Copy code",
+      "codeCopied": "Telegram code copied.",
+      "openTelegram": "Open Telegram",
+      "refreshStatus": "Refresh status",
+      "connectedToast": "Telegram connected.",
+      "readyForChat": "You can chat with Zero Mail from Telegram.",
+      "error": "Telegram could not be processed right now. Try again later."
     }
   },
   "shell": {

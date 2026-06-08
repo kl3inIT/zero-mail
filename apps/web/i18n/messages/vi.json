@@ -627,6 +627,7 @@
       "memoryDestination": "Sau khi lưu, mục này sẽ xuất hiện trong Cài đặt AI -> Kho kiến thức.",
       "outsideSourceThread": "Thêm bởi AI · xác minh",
       "overwriteNotice": "Sẽ ghi đè hướng dẫn hiện tại",
+      "recipientInvalid": "Người nhận chưa phải là địa chỉ email hợp lệ. Hãy bấm Sửa và nhập email dạng name@example.com trước khi gửi.",
       "removeSender": "Bỏ khỏi danh sách an toàn",
       "ruleEditHint": "Sửa nội dung \"Khi\" sẽ tính lại điều kiện và hành động khi bạn xác nhận.",
       "ruleName": "Tên quy tắc",
@@ -939,6 +940,9 @@
       "body": "Vui lòng thử lại. Nếu lỗi tiếp tục xảy ra, hãy tải lại trang hoặc đăng nhập lại.",
       "reset": "Thử lại",
       "title": "Đã xảy ra lỗi"
+    },
+    "chat": {
+      "recipientInvalid": "Địa chỉ người nhận không hợp lệ. Hãy sửa lại thành email dạng name@example.com rồi gửi lại."
     },
     "cleanup": {
       "campaign": {
@@ -2434,6 +2438,32 @@
         "title": "Tự động xử lý email",
         "toggleLabel": "Tạm dừng tự động xử lý"
       }
+    },
+    "telegramConnection": {
+      "heading": "Kết nối Telegram",
+      "helper": "Dùng bot Telegram như một kênh chat di động cho Zero Mail.",
+      "connected": "Đã kết nối",
+      "notConnected": "Chưa kết nối",
+      "unavailable": "Chưa cấu hình",
+      "ready": "Sẵn sàng kết nối",
+      "notConfigured": "Telegram chưa được cấu hình trên máy chủ.",
+      "connectedAccount": "Tài khoản Telegram đã kết nối",
+      "linkedAt": "Đã kết nối lúc {date}",
+      "connectCta": "Kết nối Telegram",
+      "creatingPairing": "Đang tạo mã...",
+      "disconnectCta": "Ngắt kết nối Telegram",
+      "pairingTitle": "Hoàn tất trong Telegram",
+      "pairingBody": "Mở bot bằng nút bên dưới rồi gửi lệnh /start đã đi kèm mã. Trang này sẽ tự cập nhật khi kết nối thành công.",
+      "botLabel": "Bot",
+      "qrLabel": "Quét để mở bot Telegram",
+      "qrHelp": "Quét mã QR trên điện thoại, hoặc mở bot từ trình duyệt này.",
+      "copyCode": "Sao chép mã",
+      "codeCopied": "Đã sao chép mã Telegram.",
+      "openTelegram": "Mở Telegram",
+      "refreshStatus": "Cập nhật trạng thái",
+      "connectedToast": "Telegram đã kết nối.",
+      "readyForChat": "Bạn có thể chat với Zero Mail từ Telegram.",
+      "error": "Không xử lý được Telegram lúc này. Thử lại sau."
     }
   },
   "shell": {

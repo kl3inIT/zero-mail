@@ -62,6 +62,24 @@ class ToolCallbackTranslatorTest {
         assertThat(forwardEmailSchema.get("properties").has("cc")).isTrue();
     }
 
+    @Test
+    void send_reply_forward_schemas_describe_recipient_as_email_address() throws JacksonException {
+        ToolCallbackTranslator toolCallbackTranslator = new ToolCallbackTranslator();
+        List<ToolCallback> callbacks = toolCallbackTranslator.translate(new ChatToolCatalog());
+
+        for (ChatToolName sendTool :
+                List.of(
+                        ChatToolName.SEND_EMAIL,
+                        ChatToolName.REPLY_EMAIL,
+                        ChatToolName.FORWARD_EMAIL)) {
+            JsonNode toProperty = schemaFor(callbacks, sendTool).get("properties").get("to");
+            assertThat(toProperty).as("%s.to property", sendTool.id()).isNotNull();
+            assertThat(toProperty.get("description").asString())
+                    .as("%s.to description steers the model to a real email address", sendTool.id())
+                    .containsIgnoringCase("email address");
+        }
+    }
+
     private JsonNode schemaFor(List<ToolCallback> toolCallbacks, ChatToolName chatToolName)
             throws JacksonException {
         String schema =

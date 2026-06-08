@@ -74,7 +74,10 @@ class TelegramWebhookSecretFilterTest {
                 "telegram-bot",
                 "webhook-secret",
                 "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-                URI.create("https://api.telegram.org"));
+                URI.create("https://api.telegram.org"),
+                URI.create("https://app.zeromail.test"),
+                false,
+                null);
     }
 
     private static TelegramProperties unconfiguredProperties() {
@@ -85,6 +88,9 @@ class TelegramWebhookSecretFilterTest {
                 "telegram-bot",
                 "webhook-secret",
                 "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-                URI.create("https://api.telegram.org"));
+                URI.create("https://api.telegram.org"),
+                URI.create("https://app.zeromail.test"),
+                false,
+                null);
     }
 }

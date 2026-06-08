@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Languages, Mail, Moon, Palette, Sun, TriangleAlert, UserCircle } from 'lucide-react';
+import { Languages, Mail, MessageCircle, Moon, Palette, Sun, TriangleAlert, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,6 +16,7 @@ import { ConnectionHealthBadge } from '@/features/gmail/components/ConnectionHea
 import { ReconnectPromptGate } from '@/features/gmail/components/ReconnectPrompt';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
+import { TelegramIntegrationCard } from '@/features/telegram/components/TelegramIntegrationCard';
 import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 import type { AppLocale } from '@/i18n/routing';
 import { getApiUrl } from '@/lib/api/base-url';
@@ -212,6 +213,15 @@ export function SettingsClient({
           </section>
 
           {/* Vùng nguy hiểm */}
+          <section className="space-y-4" aria-labelledby="settings-section-telegram">
+            <SectionHeader
+              id="settings-section-telegram"
+              title={t('settings.telegramConnection.heading')}
+              helperText={t('settings.telegramConnection.helper')}
+              icon={MessageCircle}
+            />
+            <TelegramIntegrationCard />
+          </section>
           <section className="space-y-4" aria-labelledby="settings-section-danger">
             <SectionHeader
               id="settings-section-danger"

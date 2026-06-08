@@ -1,6 +1,7 @@
 import { useTranslations } from 'next-intl';
 
 import { Textarea } from '@/components/ui/textarea';
+import { RecipientField } from '@/features/chat/components/preview-card/body/recipient-field';
 import { CopyButton } from '@/features/chat/components/preview-card/copy-button';
 import {
   type PreviewCardAction,
@@ -32,7 +33,14 @@ export function SendEmailBody({
   return (
     <dl className="grid gap-3">
       <Field label={t('to')}>
-        <span className="text-[15px] font-semibold">{textValue(action.input.to)}</span>
+        {editing ? (
+          <RecipientField
+            defaultValue={textValue(action.input.to)}
+            onChange={(value) => onOverrideChange('to', value)}
+          />
+        ) : (
+          <span className="text-[15px] font-semibold">{textValue(action.input.to)}</span>
+        )}
       </Field>
       {textValue(action.input.cc) && <Field label={t('cc')}>{textValue(action.input.cc)}</Field>}
       {textValue(action.input.bcc) && <Field label={t('bcc')}>{textValue(action.input.bcc)}</Field>}

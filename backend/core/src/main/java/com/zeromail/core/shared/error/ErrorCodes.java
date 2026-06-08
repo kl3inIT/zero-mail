@@ -33,6 +33,7 @@ public final class ErrorCodes {
     public static final String BILLING_CHECKOUT_UNAVAILABLE = "error.billing.checkout.unavailable";
     public static final String BILLING_PLAN_DOWNGRADE_NOT_ALLOWED =
             "error.billing.plan.downgradeNotAllowed";
+    public static final String CHAT_RECIPIENT_INVALID = "error.chat.recipientInvalid";
     public static final String LLM_SAFETY_VIOLATION = "error.llm.safety_violation";
     public static final String LLM_SANITIZATION_FAILED = "error.llm.sanitization_failed";
     public static final String LLM_BYOK_INVALID = "error.llm.byok.invalid";

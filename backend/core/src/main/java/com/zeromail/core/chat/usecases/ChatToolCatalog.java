@@ -247,7 +247,15 @@ public class ChatToolCatalog {
 
     public record DisableRuleArgs(UUID ruleId) {}
 
-    public record SaveDraftArgs(String to, String subject, Sensitive<String> body) {}
+    public record SaveDraftArgs(
+            @org.springframework.ai.tool.annotation.ToolParam(
+                            description =
+                                    "Recipient email address in the form name@example.com. Must be"
+                                            + " a real email address, never a person's display name or"
+                                            + " nickname.")
+                    String to,
+            String subject,
+            Sensitive<String> body) {}
 
     public record CreateRuleArgs(String sourceText) {}
 

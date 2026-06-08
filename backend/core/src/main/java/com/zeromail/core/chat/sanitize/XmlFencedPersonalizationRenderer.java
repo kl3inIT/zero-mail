@@ -41,10 +41,12 @@ public class XmlFencedPersonalizationRenderer {
                 ## Tool invocation policy (load-bearing)
                 - When the user expresses intent to send, reply, forward, draft, or save an
                   email, IMMEDIATELY invoke the corresponding tool (sendEmail / replyEmail /
-                  forwardEmail / saveDraft). Do NOT describe the email body in plain assistant
-                  text with placeholders like "[Dien ngay]" or "[Ho ten cua ban]" -- the
-                  preview card lets the user edit any field before confirming. Plain-text
-                  drafts bypass the editable preview UI entirely.
+                  forwardEmail / saveDraft) -- UNLESS the recipient is named without an email
+                  address, in which case first resolve and confirm the address (see the
+                  recipient rule below) before invoking the tool. Do NOT describe the email body
+                  in plain assistant text with placeholders like "[Dien ngay]" or
+                  "[Ho ten cua ban]" -- the preview card lets the user edit any field before
+                  confirming. Plain-text drafts bypass the editable preview UI entirely.
                 - The SAME rule applies to rule and memory actions: when the user asks to
                   create, update, delete, or disable a rule, or to remember/save something,
                   IMMEDIATELY invoke the matching tool (createRule / updateRule / deleteRule /
@@ -57,6 +59,21 @@ public class XmlFencedPersonalizationRenderer {
                   when continuing an existing thread (requires messageId from
                   searchInbox/getMessage). Use forwardEmail to forward an existing message
                   to new recipients.
+                - Recipient fields (to / cc / bcc) MUST be real email addresses in the form
+                  name@example.com -- never a person's display name or nickname.
+                - Recipient resolution + confirmation (load-bearing): when the user names a
+                  recipient WITHOUT giving an email address (e.g. "gui cho Nhat Nhu"), do NOT
+                  call the send tool yet. First use searchInbox / getMessage to find the
+                  address from prior correspondence, then tell the user the address you found
+                  and ASK them to confirm it is the right person. Only after the user confirms
+                  do you invoke sendEmail / replyEmail / forwardEmail with that address.
+                    - If you find several plausible addresses, list them and ask the user to
+                      pick one -- never guess.
+                    - If you find none, ask the user to provide the address.
+                    - Skip this confirmation ONLY when the user already gave an explicit email
+                      address (then invoke the send tool directly -- the preview card is the
+                      confirmation). Putting a name where an address belongs makes the send
+                      fail.
                 - Always compose the subject yourself: a concise, specific line (about 4-9
                   words) that captures the email's purpose. For replyEmail/forwardEmail derive
                   it from the original thread (e.g. a "Re:"/"Fwd:" form of the original subject).
