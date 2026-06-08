@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Languages, Mail, Moon, Palette, Sun, TriangleAlert, UserCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -121,7 +122,7 @@ export function SettingsClient({
               title={t('settings.account.heading')}
               icon={UserCircle}
             />
-            <SettingCard>
+            <SettingCard className="py-3" contentClassName="py-0">
               <div className="flex items-center gap-3">
                 <Avatar className="size-10">
                   {accountAvatarUrl ? (
@@ -185,9 +186,19 @@ export function SettingsClient({
               helperText={t('settings.gmailConnection.singleAccountNote')}
               icon={Mail}
             />
-            <SettingCard>
+            <SettingCard className="py-3" contentClassName="py-0">
               <div className="space-y-3">
-                <ConnectionHealthBadge status={connStatus} />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-foreground truncate text-sm font-medium">
+                      {gmailConnection?.googleEmail || accountEmail || t('common.loading')}
+                    </p>
+                  </div>
+                  <ConnectionHealthBadge
+                    status={connStatus}
+                    className="w-fit shrink-0 self-start sm:self-auto"
+                  />
+                </div>
                 <ReconnectPromptGate
                   status={connStatus}
                   ingestionHealth={ingestionHealth}
@@ -220,8 +231,12 @@ export function SettingsClient({
                 <DeleteAccountDialog
                   isPending={del.isPending}
                   onConfirm={async () => {
-                    await del.mutateAsync();
-                    window.location.href = '/login';
+                    try {
+                      await del.mutateAsync();
+                      window.location.href = '/login';
+                    } catch {
+                      toast.error(t('common.retry'));
+                    }
                   }}
                 />
               </div>

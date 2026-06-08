@@ -8,6 +8,8 @@ import com.zeromail.core.gmail.usecases.GmailPreviewReadService.GmailPreviewRead
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -83,6 +85,12 @@ public class CleanupRecentInboxWorkingSetService {
                     "event=cleanup_recent_inbox_unavailable tenantId={} reason={}",
                     tenantId,
                     unavailableException.reason());
+            return Optional.empty();
+        } catch (IllegalStateException illegalStateException) {
+            log.warn(
+                    "event=cleanup_recent_inbox_unavailable tenantId={} reason={}",
+                    tenantId,
+                    illegalStateException.getClass().getSimpleName());
             return Optional.empty();
         }
 
@@ -216,7 +224,40 @@ public class CleanupRecentInboxWorkingSetService {
             String status,
             List<String> gmailMessageIds,
             String listUnsubscribeUrl,
-            String listUnsubscribeMailto) {
+            String listUnsubscribeMailto,
+            List<SenderWorkingSetDailyCount> dailyCounts) {
+
+        public SenderWorkingSet(
+                String senderEmail,
+                String senderDomain,
+                String senderName,
+                long messageCount,
+                long readMessageCount,
+                Instant lastSeenAt,
+                UnsubscribeMethod unsubscribeMethod,
+                String status,
+                List<String> gmailMessageIds,
+                String listUnsubscribeUrl,
+                String listUnsubscribeMailto) {
+            this(
+                    senderEmail,
+                    senderDomain,
+                    senderName,
+                    messageCount,
+                    readMessageCount,
+                    lastSeenAt,
+                    unsubscribeMethod,
+                    status,
+                    gmailMessageIds,
+                    listUnsubscribeUrl,
+                    listUnsubscribeMailto,
+                    List.of(
+                            new SenderWorkingSetDailyCount(
+                                    LocalDate.ofInstant(lastSeenAt, ZoneOffset.UTC),
+                                    messageCount,
+                                    readMessageCount,
+                                    lastSeenAt)));
+        }
 
         public SenderWorkingSet {
             Objects.requireNonNull(senderEmail, "senderEmail must not be null");
@@ -230,6 +271,9 @@ public class CleanupRecentInboxWorkingSetService {
                     List.copyOf(
                             Objects.requireNonNull(
                                     gmailMessageIds, "gmailMessageIds must not be null"));
+            dailyCounts =
+                    List.copyOf(
+                            Objects.requireNonNull(dailyCounts, "dailyCounts must not be null"));
             if (messageCount < 0L) {
                 throw new IllegalArgumentException(
                         "messageCount must be >= 0, was " + messageCount);
@@ -237,6 +281,26 @@ public class CleanupRecentInboxWorkingSetService {
             if (readMessageCount < 0L) {
                 throw new IllegalArgumentException(
                         "readMessageCount must be >= 0, was " + readMessageCount);
+            }
+            long dailyMessageCount =
+                    dailyCounts.stream().mapToLong(SenderWorkingSetDailyCount::messageCount).sum();
+            if (dailyMessageCount != messageCount) {
+                throw new IllegalArgumentException(
+                        "daily message count sum must match messageCount, was "
+                                + dailyMessageCount
+                                + " for "
+                                + messageCount);
+            }
+            long dailyReadMessageCount =
+                    dailyCounts.stream()
+                            .mapToLong(SenderWorkingSetDailyCount::readMessageCount)
+                            .sum();
+            if (dailyReadMessageCount != readMessageCount) {
+                throw new IllegalArgumentException(
+                        "daily read message count sum must match readMessageCount, was "
+                                + dailyReadMessageCount
+                                + " for "
+                                + readMessageCount);
             }
         }
 
@@ -254,11 +318,37 @@ public class CleanupRecentInboxWorkingSetService {
         }
     }
 
+    public record SenderWorkingSetDailyCount(
+            LocalDate activityDate, long messageCount, long readMessageCount, Instant lastSeenAt) {
+
+        public SenderWorkingSetDailyCount {
+            Objects.requireNonNull(activityDate, "activityDate must not be null");
+            Objects.requireNonNull(lastSeenAt, "lastSeenAt must not be null");
+            if (messageCount < 0L) {
+                throw new IllegalArgumentException(
+                        "messageCount must be >= 0, was " + messageCount);
+            }
+            if (readMessageCount < 0L) {
+                throw new IllegalArgumentException(
+                        "readMessageCount must be >= 0, was " + readMessageCount);
+            }
+            if (readMessageCount > messageCount) {
+                throw new IllegalArgumentException(
+                        "readMessageCount must be <= messageCount, was "
+                                + readMessageCount
+                                + " for "
+                                + messageCount);
+            }
+        }
+    }
+
     private static final class SenderAccumulator {
 
         private final String senderEmail;
         private final String senderDomain;
         private final ArrayList<String> gmailMessageIds = new ArrayList<>();
+        private final LinkedHashMap<LocalDate, SenderDailyAccumulator> dailyAccumulatorsByDate =
+                new LinkedHashMap<>();
         private String senderName;
         private long messageCount;
         private long readMessageCount;
@@ -285,6 +375,11 @@ public class CleanupRecentInboxWorkingSetService {
                 readMessageCount++;
             }
             gmailMessageIds.add(previewMessage.gmailMessageId());
+            LocalDate activityDate =
+                    LocalDate.ofInstant(previewMessage.internalDate(), ZoneOffset.UTC);
+            dailyAccumulatorsByDate
+                    .computeIfAbsent(activityDate, SenderDailyAccumulator::new)
+                    .include(previewMessage);
             if (previewMessage.internalDate().isAfter(lastSeenAt)) {
                 lastSeenAt = previewMessage.internalDate();
             }
@@ -310,7 +405,15 @@ public class CleanupRecentInboxWorkingSetService {
                     status,
                     gmailMessageIds,
                     listUnsubscribeUrl,
-                    listUnsubscribeMailto);
+                    listUnsubscribeMailto,
+                    dailyCounts());
+        }
+
+        private List<SenderWorkingSetDailyCount> dailyCounts() {
+            return dailyAccumulatorsByDate.values().stream()
+                    .map(SenderDailyAccumulator::toDailyCount)
+                    .sorted(Comparator.comparing(SenderWorkingSetDailyCount::activityDate))
+                    .toList();
         }
 
         private UnsubscribeMethod unsubscribeMethod() {
@@ -329,6 +432,34 @@ public class CleanupRecentInboxWorkingSetService {
 
         private String senderDomain() {
             return senderDomain;
+        }
+    }
+
+    private static final class SenderDailyAccumulator {
+
+        private final LocalDate activityDate;
+        private long messageCount;
+        private long readMessageCount;
+        private Instant lastSeenAt = Instant.EPOCH;
+
+        private SenderDailyAccumulator(LocalDate activityDate) {
+            this.activityDate =
+                    Objects.requireNonNull(activityDate, "activityDate must not be null");
+        }
+
+        private void include(GmailPreviewMessage previewMessage) {
+            messageCount++;
+            if (!previewMessage.gmailLabelIds().contains("UNREAD")) {
+                readMessageCount++;
+            }
+            if (previewMessage.internalDate().isAfter(lastSeenAt)) {
+                lastSeenAt = previewMessage.internalDate();
+            }
+        }
+
+        private SenderWorkingSetDailyCount toDailyCount() {
+            return new SenderWorkingSetDailyCount(
+                    activityDate, messageCount, readMessageCount, lastSeenAt);
         }
     }
 }

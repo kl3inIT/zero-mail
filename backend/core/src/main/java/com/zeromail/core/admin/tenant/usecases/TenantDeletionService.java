@@ -5,6 +5,7 @@ import com.zeromail.core.admin.audit.usecases.AdminAuditWriter;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.tenant.persistence.lowlevel.TenantStateRepository;
 import com.zeromail.core.admin.tenant.projection.TenantDeletionPreview;
+import com.zeromail.core.tenant.usecases.TenantDataDeletionService;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,7 @@ public class TenantDeletionService {
 
     private final TenantStateRepository tenantStateRepository;
     private final TenantInspectionService tenantInspectionService;
-    private final TenantDeletionRegistry tenantDeletionRegistry;
+    private final TenantDataDeletionService tenantDataDeletionService;
     private final TenantOAuthRevocationGateway tenantOAuthRevocationGateway;
     private final AdminAuditWriter adminAuditWriter;
     private final TransactionTemplate transactionTemplate;
@@ -24,7 +25,7 @@ public class TenantDeletionService {
     public TenantDeletionService(
             TenantStateRepository tenantStateRepository,
             TenantInspectionService tenantInspectionService,
-            TenantDeletionRegistry tenantDeletionRegistry,
+            TenantDataDeletionService tenantDataDeletionService,
             TenantOAuthRevocationGateway tenantOAuthRevocationGateway,
             AdminAuditWriter adminAuditWriter,
             PlatformTransactionManager transactionManager) {
@@ -34,9 +35,9 @@ public class TenantDeletionService {
         this.tenantInspectionService =
                 Objects.requireNonNull(
                         tenantInspectionService, "tenantInspectionService must not be null");
-        this.tenantDeletionRegistry =
+        this.tenantDataDeletionService =
                 Objects.requireNonNull(
-                        tenantDeletionRegistry, "tenantDeletionRegistry must not be null");
+                        tenantDataDeletionService, "tenantDataDeletionService must not be null");
         this.tenantOAuthRevocationGateway =
                 Objects.requireNonNull(
                         tenantOAuthRevocationGateway,
@@ -69,13 +70,7 @@ public class TenantDeletionService {
                             reason,
                             requestIp,
                             requestId);
-                    for (TenantDeletionRegistry.TenantOwnedTable tenantOwnedTable :
-                            tenantDeletionRegistry.orderedDeletionPath()) {
-                        tenantStateRepository.deleteAllForTenant(
-                                tenantOwnedTable.tableName(),
-                                tenantOwnedTable.tenantIdColumn(),
-                                targetTenantId);
-                    }
+                    tenantDataDeletionService.deleteTenantData(targetTenantId);
                 });
     }
 }
