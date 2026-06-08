@@ -55,6 +55,7 @@ services:
       - "--storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-8GB}"
       - "--web.console.libraries=/usr/share/prometheus/console_libraries"
       - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-remote-write-receiver"
     volumes:
       - prometheus_data:/prometheus
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
