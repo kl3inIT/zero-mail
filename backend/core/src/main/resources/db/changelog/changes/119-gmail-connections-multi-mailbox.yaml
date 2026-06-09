@@ -39,11 +39,16 @@ databaseChangeLog:
               ALTER TABLE gmail_connections
                 ADD COLUMN display_purpose varchar;
 
+              -- Backfill only picks a CONNECTED row as primary. A tenant whose rows are all
+              -- DISCONNECTED gets NO primary, so it does not occupy the uq_gmail_conn_primary
+              -- slot with a dead row; the first reconnect/add then promotes a live CONNECTED
+              -- mailbox (see GmailConnectionService.addConnection / promoteNextPrimaryMailbox).
               UPDATE gmail_connections gc SET is_primary = true
               WHERE gc.id IN (
                 SELECT DISTINCT ON (tenant_id) id
                 FROM gmail_connections
-                ORDER BY tenant_id, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+                WHERE status = 'CONNECTED'
+                ORDER BY tenant_id, connected_at NULLS LAST, id
               );
 
               CREATE UNIQUE INDEX uq_gmail_conn_primary
