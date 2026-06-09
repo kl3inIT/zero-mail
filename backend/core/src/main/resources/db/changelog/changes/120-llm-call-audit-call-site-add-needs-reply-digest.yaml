@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 120-llm-call-audit-call-site-add-needs-reply-digest
+      author: zeromail
+      comment: >-
+        The ck_llm_call_audit_call_site CHECK (changeset 085) predates the DIGEST
+        and NEEDS_REPLY CallSite ids. JdbcLlmUsageRecorder writes callSite.id()
+        verbatim, so every NEEDS_REPLY (per-inbound needs-reply classifier) and
+        DIGEST usage insert violated the CHECK with a DataIntegrityViolationException.
+        That exception aborts the surrounding triage transaction (SQLState 25P02),
+        so TriageOrchestratorService.onMailMessageObserved fails at commit, the
+        message is never acked, and it is reprocessed in a loop. Roll the CHECK
+        forward to include all current CallSite ids. 085 stays immutable.
+      changes:
+        - sql:
+            sql: ALTER TABLE llm_call_audit DROP CONSTRAINT ck_llm_call_audit_call_site
+        - sql:
+            comment: Full CallSite id set — keep in sync with com.zeromail.core.billing.domain.CallSite.
+            sql: >-
+              ALTER TABLE llm_call_audit
+              ADD CONSTRAINT ck_llm_call_audit_call_site
+              CHECK (call_site IN ('UNKNOWN','TRIAGE','DRAFT','PREVIEW','TRIAGE_PLATFORM_LLM','TRIAGE_DETERMINISTIC','DIGEST','NEEDS_REPLY'))
+      rollback:
+        - sql:
+            sql: ALTER TABLE llm_call_audit DROP CONSTRAINT ck_llm_call_audit_call_site
+        - sql:
+            sql: >-
+              ALTER TABLE llm_call_audit
+              ADD CONSTRAINT ck_llm_call_audit_call_site
+              CHECK (call_site IN ('UNKNOWN','TRIAGE','DRAFT','PREVIEW','TRIAGE_PLATFORM_LLM','TRIAGE_DETERMINISTIC'))
