@@ -67,6 +67,10 @@ public class LoginRedirectAuthenticationFailureHandler
             @NonNull HttpServletResponse response,
             @NonNull AuthenticationException authenticationException)
             throws IOException, ServletException {
+        var session = request.getSession(false);
+        if (session != null) {
+            session.removeAttribute(OAuthIntentSnapshot.CALLBACK_INTENT_SESSION_ATTRIBUTE);
+        }
         if (authenticationException instanceof OAuth2AuthenticationException oauthException) {
             switch (oauthException.getError().getErrorCode()) {
                 case "access_denied", "consent_denied" -> {
