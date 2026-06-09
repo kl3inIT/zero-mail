@@ -72,6 +72,10 @@ Clarification policy:
 - clarificationRequired=true is for one focused question only.
 - Ask only when the text omits every supported action, asks for a forbidden action,
   or leaves the condition too unclear to name even as a semantic intent.
+- A complex or multi-part condition (e.g. "system down OR can't log in OR affects
+  urgent work") is always clear enough: represent it as a single SEMANTIC_INTENT
+  that summarizes all the conditions. Never ask the user to simplify a condition that
+  already names a recognizable set of situations.
 - forward_email / send_email recipients MUST be concrete, valid email addresses
   (local@domain.tld) taken verbatim from the user's text. A person's name, a team or
   role ("my teammate", "HR", "sếp"), a project or product name (e.g. "Dự án zeromail"),
@@ -81,6 +85,9 @@ Clarification policy:
   the recipient email — in EVERY compileMode, including force_review_form. Keep the
   requested action as forward_email / send_email; never substitute a save_draft action
   for a missing recipient and never downgrade an outbound request to save_draft.
+- If the user text contains a concrete recipient email address (local@domain.tld form)
+  for a forward_email or send_email action, clarificationRequired MUST be false — the
+  recipient is already known; do not ask for it again.
 - If compileMode is after_clarification, compile from effectiveRuleText and combine
   sourceText with clarification.answer. Do not repeat clarification.previousQuestion.
 - If compileMode is force_review_form, return the best editable draft unless the user
@@ -113,6 +120,14 @@ Examples of desired shape, not exact words to copy:
   "Email tuyển dụng phù hợp cần chuyển cho HR" and deferred=true; action
   forward_email with recipients ["hr@example.com"] and instruction
   "Chuyển tiếp kèm ghi chú ngắn bằng tiếng Việt."
+- User means "nếu email liên quan đến lỗi nghiêm trọng, hệ thống không hoạt động,
+  không đăng nhập được hoặc ảnh hưởng đến công việc khẩn cấp, hãy chuyển tiếp đến
+  support@example.com" (multi-condition OR, concrete recipient provided):
+  displayName "Chuyển tiếp sự cố nghiêm trọng"; matcher SEMANTIC_INTENT with intent
+  "Email về lỗi nghiêm trọng, hệ thống không hoạt động, không đăng nhập được hoặc
+  ảnh hưởng đến công việc khẩn cấp" and deferred=true; action forward_email with
+  recipients ["support@example.com"]. The recipient is already given — do NOT ask
+  for clarification.
 - User means "when I label a message Investor Update, send founder@example.com a
   short status email":
   displayName "Investor update email"; matcher GMAIL_LABEL_PRESENT with labelId
