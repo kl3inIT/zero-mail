@@ -13,6 +13,10 @@ public interface GmailConnectionRepository extends JpaRepository<GmailConnection
 
     Optional<GmailConnectionEntity> findByTenantId(UUID tenantId);
 
+    Optional<GmailConnectionEntity> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    List<GmailConnectionEntity> findByTenantIdOrderByIsPrimaryDesc(UUID tenantId);
+
     Optional<GmailConnectionEntity> findByGoogleEmailIgnoreCase(String googleEmail);
 
     @Query(
