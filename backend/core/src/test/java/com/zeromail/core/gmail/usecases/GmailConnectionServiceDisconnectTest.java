@@ -3,6 +3,7 @@ package com.zeromail.core.gmail.usecases;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -10,12 +11,15 @@ import static org.mockito.Mockito.verify;
 
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.gateway.GoogleOAuthRevokeClient;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -141,10 +145,141 @@ class GmailConnectionServiceDisconnectTest extends PostgresContainerTest {
                         });
     }
 
+    @Test
+    void disconnect_mailboxScoped_isIdempotent_onSecondCall() {
+        UUID tenantId = UUID.randomUUID();
+        seedTenant(tenantId);
+        String plaintextRefreshToken = "1//mailbox-idempotent-fixture";
+        UUID gmailConnectionId =
+                seedConnectedMailbox(
+                        tenantId, "mailbox-idempotent@example.com", true, plaintextRefreshToken);
+        MailboxRef mailboxRef = new MailboxRef(tenantId, gmailConnectionId);
+
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            gmailConnectionService.disconnect(mailboxRef);
+
+                            assertThatCode(() -> gmailConnectionService.disconnect(mailboxRef))
+                                    .doesNotThrowAnyException();
+                        });
+
+        assertThat(connectionStatus(gmailConnectionId))
+                .isEqualTo(GmailConnectionStatus.DISCONNECTED.name());
+        assertThat(refreshTokenEnvelope(gmailConnectionId)).isNull();
+        verify(googleOAuthRevokeClient, atMostOnce()).revoke(plaintextRefreshToken);
+    }
+
+    @Test
+    void disconnect_primaryMailbox_autoPromotesNextConnected() {
+        UUID tenantId = UUID.randomUUID();
+        seedTenant(tenantId);
+        UUID primaryConnectionId =
+                seedConnectedMailbox(
+                        tenantId,
+                        "primary-disconnect@example.com",
+                        true,
+                        "1//primary-disconnect-fixture");
+        UUID nextConnectionId =
+                seedConnectedMailbox(
+                        tenantId, "next-primary@example.com", false, "1//next-primary-fixture");
+
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () ->
+                                gmailConnectionService.disconnect(
+                                        new MailboxRef(tenantId, primaryConnectionId)));
+
+        assertThat(connectionStatus(primaryConnectionId))
+                .isEqualTo(GmailConnectionStatus.DISCONNECTED.name());
+        assertThat(isPrimary(primaryConnectionId)).isFalse();
+        assertThat(connectionStatus(nextConnectionId))
+                .isEqualTo(GmailConnectionStatus.CONNECTED.name());
+        assertThat(isPrimary(nextConnectionId)).isTrue();
+    }
+
+    @Test
+    void disconnect_oneMailbox_leavesOtherMailboxUntouched() {
+        UUID tenantId = UUID.randomUUID();
+        seedTenant(tenantId);
+        UUID disconnectedConnectionId =
+                seedConnectedMailbox(
+                        tenantId,
+                        "disconnect-only-this@example.com",
+                        true,
+                        "1//disconnect-only-this-fixture");
+        String untouchedRefreshToken = "1//untouched-mailbox-fixture";
+        UUID untouchedConnectionId =
+                seedConnectedMailbox(
+                        tenantId, "leave-this-connected@example.com", false, untouchedRefreshToken);
+        byte[] originalUntouchedEnvelope = refreshTokenEnvelope(untouchedConnectionId);
+
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () ->
+                                gmailConnectionService.disconnect(
+                                        new MailboxRef(tenantId, disconnectedConnectionId)));
+
+        assertThat(connectionStatus(disconnectedConnectionId))
+                .isEqualTo(GmailConnectionStatus.DISCONNECTED.name());
+        assertThat(connectionStatus(untouchedConnectionId))
+                .isEqualTo(GmailConnectionStatus.CONNECTED.name());
+        assertThat(refreshTokenEnvelope(untouchedConnectionId))
+                .containsExactly(originalUntouchedEnvelope);
+    }
+
     private void seedTenant(UUID tenantId) {
         jdbcTemplate.update(
                 "INSERT INTO tenants(id, display_name) VALUES (?, ?)",
                 tenantId,
                 "test-" + tenantId);
+    }
+
+    private UUID seedConnectedMailbox(
+            UUID tenantId, String googleEmail, boolean primary, String plaintextRefreshToken) {
+        UUID gmailConnectionId = UUID.randomUUID();
+        byte[] envelope =
+                refreshTokenCipher.encrypt(
+                        plaintextRefreshToken.getBytes(StandardCharsets.UTF_8),
+                        tenantId.toString());
+        jdbcTemplate.update(
+                """
+                INSERT INTO gmail_connections(
+                    id, tenant_id, google_email, status, refresh_token_encrypted,
+                    scopes_granted, connected_at, is_primary
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                gmailConnectionId,
+                tenantId,
+                googleEmail,
+                GmailConnectionStatus.CONNECTED.name(),
+                envelope,
+                "https://www.googleapis.com/auth/gmail.modify",
+                Timestamp.from(Instant.now()),
+                primary);
+        return gmailConnectionId;
+    }
+
+    private String connectionStatus(UUID gmailConnectionId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT status FROM gmail_connections WHERE id = ?",
+                String.class,
+                gmailConnectionId);
+    }
+
+    private boolean isPrimary(UUID gmailConnectionId) {
+        Boolean primary =
+                jdbcTemplate.queryForObject(
+                        "SELECT is_primary FROM gmail_connections WHERE id = ?",
+                        Boolean.class,
+                        gmailConnectionId);
+        return Boolean.TRUE.equals(primary);
+    }
+
+    private byte[] refreshTokenEnvelope(UUID gmailConnectionId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT refresh_token_encrypted FROM gmail_connections WHERE id = ?",
+                byte[].class,
+                gmailConnectionId);
     }
 }

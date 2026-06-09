@@ -7,6 +7,7 @@ import com.zeromail.core.gmail.exception.MailboxDisconnectedException;
 import com.zeromail.core.gmail.exception.MailboxNotOwnedException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GoogleOAuthRevokeClient;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
@@ -15,6 +16,8 @@ import com.zeromail.core.gmail.projection.MailboxSummaryProjection;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -151,6 +154,23 @@ public class GmailConnectionService {
         markDisconnected(tenantId);
     }
 
+    public void disconnect(MailboxRef mailboxRef) {
+        GmailConnectionEntity gmailConnection =
+                connectionRepository
+                        .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                        .orElseThrow(
+                                () ->
+                                        new MailboxNotOwnedException(
+                                                mailboxRef.tenantId(),
+                                                mailboxRef.gmailConnectionId()));
+        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            return;
+        }
+        tryStopWatch(mailboxRef);
+        revokeStoredRefreshToken(mailboxRef);
+        markDisconnected(mailboxRef);
+    }
+
     /**
      * Best-effort teardown of the Google-side grant for a tenant: stop the Gmail watch ({@code
      * users.stop}) and revoke the stored refresh token. Ordering matches {@link #disconnect(UUID)}
@@ -173,18 +193,61 @@ public class GmailConnectionService {
                                 .findByTenantId(tenantId)
                                 .ifPresent(
                                         connection -> {
-                                            connection.setStatus(
-                                                    GmailConnectionStatus.DISCONNECTED);
-                                            connection.setDisconnectedAt(Instant.now());
-                                            connection.setRefreshTokenEncrypted(null);
-                                            connection.setWatchExpiresAt(null);
-                                            connection.setWatchHistoryId(null);
-                                            connection.setWatchRenewedAt(null);
-                                            connection.setWatchConsecutiveFailures(0);
-                                            connection.setIngestionHealth(
-                                                    GmailIngestionHealth.HEALTHY);
+                                            applyDisconnectedState(connection);
+                                            connection.setPrimary(false);
                                             connectionRepository.save(connection);
                                         }));
+    }
+
+    private void markDisconnected(MailboxRef mailboxRef) {
+        disconnectTransaction.executeWithoutResult(
+                _ ->
+                        connectionRepository
+                                .findByIdAndTenantId(
+                                        mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                                .ifPresent(
+                                        gmailConnection -> {
+                                            boolean wasPrimary = gmailConnection.isPrimary();
+                                            applyDisconnectedState(gmailConnection);
+                                            gmailConnection.setPrimary(false);
+                                            connectionRepository.save(gmailConnection);
+                                            if (wasPrimary) {
+                                                promoteNextPrimaryMailbox(mailboxRef);
+                                            }
+                                        }));
+    }
+
+    private void applyDisconnectedState(GmailConnectionEntity gmailConnection) {
+        gmailConnection.setStatus(GmailConnectionStatus.DISCONNECTED);
+        gmailConnection.setDisconnectedAt(Instant.now());
+        gmailConnection.setRefreshTokenEncrypted(null);
+        gmailConnection.setWatchExpiresAt(null);
+        gmailConnection.setWatchHistoryId(null);
+        gmailConnection.setWatchRenewedAt(null);
+        gmailConnection.setWatchConsecutiveFailures(0);
+        gmailConnection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+    }
+
+    private void promoteNextPrimaryMailbox(MailboxRef disconnectedMailboxRef) {
+        connectionRepository
+                .findByTenantIdOrderByIsPrimaryDesc(disconnectedMailboxRef.tenantId())
+                .stream()
+                .filter(
+                        gmailConnection ->
+                                gmailConnection.getStatus() == GmailConnectionStatus.CONNECTED
+                                        && !gmailConnection
+                                                .getId()
+                                                .equals(disconnectedMailboxRef.gmailConnectionId()))
+                .min(
+                        Comparator.comparing(
+                                        GmailConnectionEntity::getConnectedAt,
+                                        Comparator.nullsLast(Comparator.naturalOrder()))
+                                .thenComparing(GmailConnectionEntity::getId))
+                .ifPresent(
+                        nextPrimaryMailbox -> {
+                            nextPrimaryMailbox.setPrimary(true);
+                            connectionRepository.save(nextPrimaryMailbox);
+                        });
     }
 
     private void revokeStoredRefreshToken(UUID tenantId) {
@@ -205,6 +268,35 @@ public class GmailConnectionService {
             // ciphertext decrypt failure (key rotation, corrupted bytes) must NOT block the
             // DB-side disconnect.
             log.warn("event=gmail_revoke_call_failed tenantId={}", tenantId);
+        }
+    }
+
+    private void revokeStoredRefreshToken(MailboxRef mailboxRef) {
+        try {
+            GmailConnectionEntity gmailConnection =
+                    connectionRepository
+                            .findByIdAndTenantId(
+                                    mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                            .orElse(null);
+            if (gmailConnection == null || gmailConnection.getRefreshTokenEncrypted() == null) {
+                return;
+            }
+            byte[] decryptedRefreshTokenBytes =
+                    refreshTokenCipher.decrypt(
+                            gmailConnection.getRefreshTokenEncrypted(),
+                            mailboxRef.tenantId().toString());
+            try {
+                String decryptedRefreshToken =
+                        new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
+                googleOAuthRevokeClient.revoke(decryptedRefreshToken);
+            } finally {
+                Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
+            }
+        } catch (Exception revokeCallException) {
+            log.warn(
+                    "event=gmail_revoke_call_failed tenantId={} gmailConnectionId={}",
+                    mailboxRef.tenantId(),
+                    mailboxRef.gmailConnectionId());
         }
     }
 
@@ -229,6 +321,25 @@ public class GmailConnectionService {
                     .execute();
         } catch (Exception watchStopException) {
             log.warn("event=gmail_watch_stop_failed tenantId={}", tenantId);
+        }
+    }
+
+    private void tryStopWatch(MailboxRef mailboxRef) {
+        try {
+            GmailConnectionEntity gmailConnection =
+                    connectionRepository
+                            .findByIdAndTenantId(
+                                    mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                            .orElse(null);
+            if (gmailConnection == null || gmailConnection.getRefreshTokenEncrypted() == null) {
+                return;
+            }
+            gmailApiClientFactory.buildClientForMailbox(mailboxRef).users().stop("me").execute();
+        } catch (Exception watchStopException) {
+            log.warn(
+                    "event=gmail_watch_stop_failed tenantId={} gmailConnectionId={}",
+                    mailboxRef.tenantId(),
+                    mailboxRef.gmailConnectionId());
         }
     }
 
