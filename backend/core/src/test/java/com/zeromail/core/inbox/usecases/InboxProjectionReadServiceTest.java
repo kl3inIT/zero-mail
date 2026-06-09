@@ -24,6 +24,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-00000000aa11");
+
     @Autowired InboxProjectionReadService inboxProjectionReadService;
     @Autowired InboxProjectionWriteService inboxProjectionWriteService;
     @Autowired JdbcTemplate jdbcTemplate;
@@ -52,6 +55,7 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
                                 inboxProjectionWriteService.upsert(
                                         new InboxProjectionUpsertCommand(
                                                 tenantId,
+                                                GMAIL_CONNECTION_ID,
                                                 gmailMessageId,
                                                 "thread-xyz",
                                                 "alice@example.com",
@@ -93,6 +97,7 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
                                 inboxProjectionWriteService.upsert(
                                         new InboxProjectionUpsertCommand(
                                                 tenantId,
+                                                GMAIL_CONNECTION_ID,
                                                 "190000000000bb02",
                                                 "thread-xyz",
                                                 "bob@example.com",
@@ -121,6 +126,7 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
                                 inboxProjectionWriteService.upsert(
                                         new InboxProjectionUpsertCommand(
                                                 tenantId,
+                                                GMAIL_CONNECTION_ID,
                                                 "190000000000bb03",
                                                 "thread-xyz",
                                                 "team@example.com",
@@ -219,6 +225,7 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
                             inboxProjectionWriteService.upsert(
                                     new InboxProjectionUpsertCommand(
                                             tenantId,
+                                            GMAIL_CONNECTION_ID,
                                             "190000000000aa10",
                                             "thread-archived",
                                             "carol@example.com",
@@ -232,6 +239,7 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
                             inboxProjectionWriteService.upsert(
                                     new InboxProjectionUpsertCommand(
                                             tenantId,
+                                            GMAIL_CONNECTION_ID,
                                             "190000000000aa11",
                                             "thread-still-inbox",
                                             "dave@example.com",
@@ -301,6 +309,7 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
         inboxProjectionWriteService.upsert(
                 new InboxProjectionUpsertCommand(
                         tenantId,
+                        GMAIL_CONNECTION_ID,
                         gmailMessageId,
                         "thread-" + gmailMessageId,
                         gmailMessageId + "@example.com",

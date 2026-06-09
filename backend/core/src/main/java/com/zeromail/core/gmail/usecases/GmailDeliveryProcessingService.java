@@ -11,6 +11,7 @@ import com.zeromail.core.gmail.event.MailOutboundObserved;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
@@ -81,16 +82,21 @@ public class GmailDeliveryProcessingService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void processDelivery(PubSubDeliveryEntity delivery) {
         UUID tenantId = delivery.getTenantId();
+        UUID gmailConnectionId = delivery.getGmailConnectionId();
+        MailboxRef mailboxRef = new MailboxRef(tenantId, gmailConnectionId);
         long webhookHistoryId = delivery.getHistoryId();
 
         try {
             GmailConnectionEntity connection =
                     connectionRepository
-                            .findByTenantId(tenantId)
+                            .findByIdAndTenantId(gmailConnectionId, tenantId)
                             .orElseThrow(
                                     () ->
                                             new IllegalStateException(
-                                                    "No connection for tenantId: " + tenantId));
+                                                    "No connection for tenantId: "
+                                                            + tenantId
+                                                            + ", gmailConnectionId: "
+                                                            + gmailConnectionId));
 
             byte[] encryptedRefreshToken = connection.getRefreshTokenEncrypted();
             if (encryptedRefreshToken == null || encryptedRefreshToken.length == 0) {
@@ -98,7 +104,7 @@ public class GmailDeliveryProcessingService {
             }
             Gmail gmail;
             try {
-                gmail = gmailApiClientFactory.buildClientForConnection(connection, tenantId);
+                gmail = gmailApiClientFactory.buildClientForMailbox(mailboxRef);
             } catch (IllegalArgumentException
                     | IllegalStateException
                     | NullPointerException tokenDecryptionFailure) {
@@ -110,8 +116,10 @@ public class GmailDeliveryProcessingService {
                 connectionService.markHistoryLost(tenantId, webhookHistoryId);
                 deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
                 log.warn(
-                        "event=gmail_history_missing_pointer tenantId={} new_pointer={}",
+                        "event=gmail_history_missing_pointer tenantId={} gmailConnectionId={}"
+                                + " new_pointer={}",
                         tenantId,
+                        gmailConnectionId,
                         webhookHistoryId);
                 return;
             }
@@ -130,41 +138,52 @@ public class GmailDeliveryProcessingService {
                     historyListRequest.setPageToken(pageToken);
                 }
                 ListHistoryResponse historyResponse = historyListRequest.execute();
-                newObservations += observeInboxMessages(gmail, tenantId, historyResponse);
+                newObservations +=
+                        observeInboxMessages(gmail, tenantId, gmailConnectionId, historyResponse);
                 pageToken = historyResponse.getNextPageToken();
             } while (pageToken != null);
 
-            connectionRepository.updateLastSyncedHistoryIdMonotonic(tenantId, webhookHistoryId);
+            connectionRepository.updateLastSyncedHistoryIdMonotonicByConnectionId(
+                    gmailConnectionId, webhookHistoryId);
             deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
             log.info(
-                    "event=gmail_history_processed tenantId={} batch_size=1 new_observations={}",
+                    "event=gmail_history_processed tenantId={} gmailConnectionId={} batch_size=1"
+                            + " new_observations={}",
                     tenantId,
+                    gmailConnectionId,
                     newObservations);
         } catch (GoogleJsonResponseException googleResponseException) {
             if (googleResponseException.getStatusCode() == 404) {
                 connectionService.markHistoryLost(tenantId, webhookHistoryId);
                 deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
                 log.warn(
-                        "event=gmail_history_lost tenantId={} expired_history_id={} new_pointer={}",
+                        "event=gmail_history_lost tenantId={} gmailConnectionId={}"
+                                + " expired_history_id={} new_pointer={}",
                         tenantId,
+                        gmailConnectionId,
                         delivery.getHistoryId(),
                         webhookHistoryId);
             } else {
-                handleRetryableFailure(delivery, tenantId, googleResponseException);
+                handleRetryableFailure(
+                        delivery, tenantId, gmailConnectionId, googleResponseException);
             }
         } catch (InvalidGrantException invalidGrantException) {
             connectionService.markDisconnected(tenantId);
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
-            log.warn("event=gmail_oauth_revoked tenantId={}", tenantId);
+            log.warn(
+                    "event=gmail_oauth_revoked tenantId={} gmailConnectionId={}",
+                    tenantId,
+                    gmailConnectionId);
         } catch (NonRetryableGmailDeliveryException nonRetryableDeliveryException) {
-            handleNonRetryableFailure(delivery, tenantId, nonRetryableDeliveryException);
+            handleNonRetryableFailure(
+                    delivery, tenantId, gmailConnectionId, nonRetryableDeliveryException);
         } catch (Exception processingException) {
-            handleRetryableFailure(delivery, tenantId, processingException);
+            handleRetryableFailure(delivery, tenantId, gmailConnectionId, processingException);
         }
     }
 
     private int observeInboxMessages(
-            Gmail gmail, UUID tenantId, ListHistoryResponse historyResponse)
+            Gmail gmail, UUID tenantId, UUID gmailConnectionId, ListHistoryResponse historyResponse)
             throws java.io.IOException, InterruptedException {
         List<History> historyList = historyResponse.getHistory();
         if (historyList == null) {
@@ -189,6 +208,7 @@ public class GmailDeliveryProcessingService {
                                         return fetchAndObserve(
                                                 gmail,
                                                 tenantId,
+                                                gmailConnectionId,
                                                 pendingFetch.history(),
                                                 pendingFetch.gmailMessageId());
                                     } finally {
@@ -238,7 +258,12 @@ public class GmailDeliveryProcessingService {
         return pendingFetches;
     }
 
-    private int fetchAndObserve(Gmail gmail, UUID tenantId, History history, String gmailMessageId)
+    private int fetchAndObserve(
+            Gmail gmail,
+            UUID tenantId,
+            UUID gmailConnectionId,
+            History history,
+            String gmailMessageId)
             throws java.io.IOException {
         Message gmailMessage;
         try {
@@ -260,9 +285,10 @@ public class GmailDeliveryProcessingService {
                 // redelivery-death loop where every Pub/Sub push re-hits the same gone message, so
                 // no inbound mail is ever observed and triage never runs.
                 log.warn(
-                        "event=gmail_message_fetch_skipped tenantId={} httpStatus=404"
-                                + " googleReason=notFound",
-                        tenantId);
+                        "event=gmail_message_fetch_skipped tenantId={} gmailConnectionId={}"
+                                + " httpStatus=404 googleReason=notFound",
+                        tenantId,
+                        gmailConnectionId);
                 return 0;
             }
             throw messageFetchFailure;
@@ -277,6 +303,7 @@ public class GmailDeliveryProcessingService {
                 extractListUnsubscribeFromMessage(gmailMessage);
         return insertObservationAndPublishEvents(
                 tenantId,
+                gmailConnectionId,
                 history,
                 gmailMessage,
                 labelIds,
@@ -297,6 +324,7 @@ public class GmailDeliveryProcessingService {
 
     private int insertObservationAndPublishEvents(
             UUID tenantId,
+            UUID gmailConnectionId,
             History history,
             Message gmailMessage,
             List<String> labelIds,
@@ -310,6 +338,7 @@ public class GmailDeliveryProcessingService {
                             int newRowCount =
                                     observedRepository.insertObservedIfAbsent(
                                             tenantId,
+                                            gmailConnectionId,
                                             gmailMessage.getId(),
                                             gmailMessage.getThreadId(),
                                             historyId,
@@ -321,7 +350,8 @@ public class GmailDeliveryProcessingService {
                                             listUnsubscribeExtraction.mailto(),
                                             listUnsubscribeExtraction.oneClick());
                             if (newRowCount == 1) {
-                                publishObservedEvents(tenantId, gmailMessage, labelIds);
+                                publishObservedEvents(
+                                        tenantId, gmailConnectionId, gmailMessage, labelIds);
                             }
                             return newRowCount;
                         });
@@ -336,6 +366,7 @@ public class GmailDeliveryProcessingService {
             inboxProjectionWriteService.upsert(
                     new InboxProjectionUpsertCommand(
                             tenantId,
+                            gmailConnectionId,
                             gmailMessage.getId(),
                             gmailMessage.getThreadId(),
                             senderEmail,
@@ -350,30 +381,37 @@ public class GmailDeliveryProcessingService {
         return insertedCount == null ? 0 : insertedCount;
     }
 
-    private void publishObservedEvents(UUID tenantId, Message gmailMessage, List<String> labelIds) {
+    private void publishObservedEvents(
+            UUID tenantId, UUID gmailConnectionId, Message gmailMessage, List<String> labelIds) {
         Instant observedAt = Instant.now();
         if (labelIds.contains("INBOX") && !labelIds.contains("SENT")) {
             applicationEventPublisher.publishEvent(
                     new MailMessageObserved(
                             tenantId,
+                            gmailConnectionId,
                             gmailMessage.getId(),
                             gmailMessage.getThreadId(),
                             observedAt));
             log.info(
-                    "event=mail_message_observed_published tenantId={} gmailMessageId={}",
+                    "event=mail_message_observed_published tenantId={} gmailConnectionId={}"
+                            + " gmailMessageId={}",
                     tenantId,
+                    gmailConnectionId,
                     gmailMessage.getId());
         }
         if (labelIds.contains("SENT")) {
             applicationEventPublisher.publishEvent(
                     new MailOutboundObserved(
                             tenantId,
+                            gmailConnectionId,
                             gmailMessage.getThreadId(),
                             gmailMessage.getId(),
                             observedAt));
             log.info(
-                    "event=mail_outbound_observed_published tenantId={} gmailMessageId={}",
+                    "event=mail_outbound_observed_published tenantId={} gmailConnectionId={}"
+                            + " gmailMessageId={}",
                     tenantId,
+                    gmailConnectionId,
                     gmailMessage.getId());
         }
     }
@@ -399,16 +437,20 @@ public class GmailDeliveryProcessingService {
     }
 
     private void handleRetryableFailure(
-            PubSubDeliveryEntity delivery, UUID tenantId, Exception processingException) {
+            PubSubDeliveryEntity delivery,
+            UUID tenantId,
+            UUID gmailConnectionId,
+            Exception processingException) {
         int attempts = delivery.getAttempts();
         String failureType = failureClassName(processingException);
         GoogleFailureDetail googleDetail = extractGoogleFailureDetail(processingException);
         if (attempts >= 3) {
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
             log.warn(
-                    "event=gmail_delivery_dead tenantId={} attempts={} failureType={} httpStatus={}"
-                            + " googleReason={}",
+                    "event=gmail_delivery_dead tenantId={} gmailConnectionId={} attempts={}"
+                            + " failureType={} httpStatus={} googleReason={}",
                     tenantId,
+                    gmailConnectionId,
                     attempts,
                     failureType,
                     googleDetail.statusCode(),
@@ -416,9 +458,10 @@ public class GmailDeliveryProcessingService {
         } else {
             deliveryRepository.releaseForRetry(delivery.getId(), Instant.now().plusSeconds(30));
             log.warn(
-                    "event=gmail_delivery_retry tenantId={} attempt={} failureType={} httpStatus={}"
-                            + " googleReason={}",
+                    "event=gmail_delivery_retry tenantId={} gmailConnectionId={} attempt={}"
+                            + " failureType={} httpStatus={} googleReason={}",
                     tenantId,
+                    gmailConnectionId,
                     attempts,
                     failureType,
                     googleDetail.statusCode(),
@@ -429,12 +472,15 @@ public class GmailDeliveryProcessingService {
     private void handleNonRetryableFailure(
             PubSubDeliveryEntity delivery,
             UUID tenantId,
+            UUID gmailConnectionId,
             NonRetryableGmailDeliveryException nonRetryableDeliveryException) {
         int attempts = delivery.getAttempts();
         deliveryRepository.updateStatus(delivery.getId(), "DEAD");
         log.warn(
-                "event=gmail_delivery_dead tenantId={} attempts={} failureType={} retryable=false",
+                "event=gmail_delivery_dead tenantId={} gmailConnectionId={} attempts={}"
+                        + " failureType={} retryable=false",
                 tenantId,
+                gmailConnectionId,
                 attempts,
                 failureClassName(nonRetryableDeliveryException));
     }

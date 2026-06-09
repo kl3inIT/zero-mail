@@ -32,6 +32,10 @@ public class GmailInboxProjectionEntity {
     private UUID tenantId;
 
     @Id
+    @Column(name = "gmail_connection_id", nullable = false)
+    private UUID gmailConnectionId;
+
+    @Id
     @Column(name = "gmail_message_id", nullable = false)
     private String gmailMessageId;
 
@@ -88,6 +92,7 @@ public class GmailInboxProjectionEntity {
 
     public GmailInboxProjectionEntity(
             UUID tenantId,
+            UUID gmailConnectionId,
             String gmailMessageId,
             String gmailThreadId,
             byte[] senderEmailHash,
@@ -104,6 +109,7 @@ public class GmailInboxProjectionEntity {
             Instant refreshedAt,
             Instant expiresAt) {
         this.tenantId = tenantId;
+        this.gmailConnectionId = gmailConnectionId;
         this.gmailMessageId = gmailMessageId;
         this.gmailThreadId = gmailThreadId;
         this.senderEmailHash = senderEmailHash;
@@ -122,11 +128,15 @@ public class GmailInboxProjectionEntity {
     }
 
     public GmailInboxProjectionId getId() {
-        return new GmailInboxProjectionId(tenantId, gmailMessageId);
+        return new GmailInboxProjectionId(tenantId, gmailConnectionId, gmailMessageId);
     }
 
     public UUID getTenantId() {
         return tenantId;
+    }
+
+    public UUID getGmailConnectionId() {
+        return gmailConnectionId;
     }
 
     public String getGmailMessageId() {

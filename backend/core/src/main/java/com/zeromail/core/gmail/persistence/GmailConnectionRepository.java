@@ -13,16 +13,17 @@ import org.springframework.transaction.annotation.Transactional;
 public interface GmailConnectionRepository extends JpaRepository<GmailConnectionEntity, UUID> {
 
     /**
-     * Single-row compatibility accessor for legacy "operate on the tenant's active mailbox" callers.
+     * Single-row compatibility accessor for legacy "operate on the tenant's active mailbox"
+     * callers.
      *
      * <p>Migration 119 dropped the per-tenant unique constraint, so a tenant may now own several
      * {@code gmail_connections} rows. A plain derived {@code findByTenantId} would execute as a
      * single-result query and throw {@code NonUniqueResultException} the moment a second mailbox
      * exists. This shim instead resolves the tenant's <em>primary</em> mailbox deterministically:
      * primary first, then any CONNECTED row, then most-recently connected, then by id. New callers
-     * that need to act on a specific mailbox must use {@link #findByIdAndTenantId} /
-     * {@link #findByTenantIdOrderByIsPrimaryDesc}; this method only keeps the historic single-row
-     * code paths working against the now multi-row table.
+     * that need to act on a specific mailbox must use {@link #findByIdAndTenantId} / {@link
+     * #findByTenantIdOrderByIsPrimaryDesc}; this method only keeps the historic single-row code
+     * paths working against the now multi-row table.
      */
     default Optional<GmailConnectionEntity> findByTenantId(UUID tenantId) {
         return findPrimaryMailboxCandidatesByTenantId(tenantId, Limit.of(1)).stream().findFirst();
@@ -68,6 +69,15 @@ public interface GmailConnectionRepository extends JpaRepository<GmailConnection
     @Transactional
     int updateLastSyncedHistoryIdMonotonic(
             @Param("tenantId") UUID tenantId, @Param("newId") Long newId);
+
+    @Modifying
+    @Query(
+            "UPDATE GmailConnectionEntity c SET c.lastSyncedHistoryId = :newId "
+                    + "WHERE c.id = :gmailConnectionId AND "
+                    + "(c.lastSyncedHistoryId IS NULL OR c.lastSyncedHistoryId < :newId)")
+    @Transactional
+    int updateLastSyncedHistoryIdMonotonicByConnectionId(
+            @Param("gmailConnectionId") UUID gmailConnectionId, @Param("newId") Long newId);
 
     /**
      * Atomically clears the primary flag on every row of a tenant except the one being promoted.

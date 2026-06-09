@@ -18,6 +18,7 @@ import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
@@ -74,6 +75,7 @@ class GmailDeliveryProcessingSenderEmailTest {
         verify(scenario.observedRepository())
                 .insertObservedIfAbsent(
                         eq(TENANT_ID),
+                        eq(CONNECTION_ID),
                         eq(GMAIL_MESSAGE_ID),
                         eq(GMAIL_THREAD_ID),
                         eq(301L),
@@ -105,6 +107,7 @@ class GmailDeliveryProcessingSenderEmailTest {
         verify(scenario.observedRepository())
                 .insertObservedIfAbsent(
                         eq(TENANT_ID),
+                        eq(CONNECTION_ID),
                         eq(GMAIL_MESSAGE_ID),
                         eq(GMAIL_THREAD_ID),
                         eq(301L),
@@ -153,6 +156,7 @@ class GmailDeliveryProcessingSenderEmailTest {
                     new PubSubDeliveryEntity(
                             DELIVERY_ID,
                             TENANT_ID,
+                            CONNECTION_ID,
                             "pubsub-message",
                             400L,
                             "{\"historyId\":\"400\"}");
@@ -163,9 +167,10 @@ class GmailDeliveryProcessingSenderEmailTest {
                             .setMessagesAdded(
                                     List.of(new HistoryMessageAdded().setMessage(historyMessage)));
 
-            when(connectionRepository.findByTenantId(TENANT_ID))
+            when(connectionRepository.findByIdAndTenantId(CONNECTION_ID, TENANT_ID))
                     .thenReturn(Optional.of(connection));
-            when(gmailApiClientFactory.buildClientForConnection(connection, TENANT_ID))
+            when(gmailApiClientFactory.buildClientForMailbox(
+                            new MailboxRef(TENANT_ID, CONNECTION_ID)))
                     .thenReturn(gmail);
             when(gmail.users()).thenReturn(gmailUsers);
             when(gmailUsers.history()).thenReturn(gmailHistory);
@@ -209,6 +214,7 @@ class GmailDeliveryProcessingSenderEmailTest {
         void observedInsertReturns(int insertedCount) {
             when(observedRepository.insertObservedIfAbsent(
                             eq(TENANT_ID),
+                            eq(CONNECTION_ID),
                             eq(GMAIL_MESSAGE_ID),
                             eq(GMAIL_THREAD_ID),
                             eq(301L),

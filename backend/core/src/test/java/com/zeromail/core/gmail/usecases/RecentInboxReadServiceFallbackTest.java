@@ -36,6 +36,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
 
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-00000000dd11");
+
     @Autowired RecentInboxReadService recentInboxReadService;
     @Autowired InboxProjectionWriteService inboxProjectionWriteService;
     @Autowired GmailInboxSyncStateRepository inboxSyncStateRepository;
@@ -143,6 +146,7 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
                                 inboxProjectionWriteService.upsert(
                                         new InboxProjectionUpsertCommand(
                                                 tenantId,
+                                                GMAIL_CONNECTION_ID,
                                                 String.format("190000000000ff%02x", rowIndex),
                                                 "thread-" + rowIndex,
                                                 "sender-" + rowIndex + "@example.com",

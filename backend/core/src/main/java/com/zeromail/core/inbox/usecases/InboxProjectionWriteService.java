@@ -66,6 +66,7 @@ public class InboxProjectionWriteService {
     public void upsert(InboxProjectionUpsertCommand command) {
         Objects.requireNonNull(command, "command must not be null");
         UUID tenantId = command.tenantId();
+        UUID gmailConnectionId = command.gmailConnectionId();
         String gmailMessageId = command.gmailMessageId();
         Instant refreshedAt = Instant.now(clock);
         Instant expiresAt = refreshedAt.plus(PROJECTION_TTL);
@@ -95,6 +96,7 @@ public class InboxProjectionWriteService {
 
         projectionRepository.upsertProjection(
                 tenantId,
+                gmailConnectionId,
                 gmailMessageId,
                 command.gmailThreadId(),
                 senderEmailHash,

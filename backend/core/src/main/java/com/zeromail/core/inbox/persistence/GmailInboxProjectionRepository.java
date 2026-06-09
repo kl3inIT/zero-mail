@@ -32,20 +32,20 @@ public interface GmailInboxProjectionRepository
             value =
                     """
                     INSERT INTO gmail_inbox_projection (
-                        tenant_id, gmail_message_id, gmail_thread_id,
+                        tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id,
                         sender_email_hash, sender_email_ciphertext,
                         sender_display_name_ciphertext, subject_ciphertext, snippet_ciphertext,
                         has_attachment, received_at, label_ids,
                         inbox_state, unread, source_history_id,
                         refreshed_at, expires_at, version)
                     VALUES (
-                        :tenantId, :gmailMessageId, :gmailThreadId,
+                        :tenantId, :gmailConnectionId, :gmailMessageId, :gmailThreadId,
                         :senderEmailHash, :senderEmailCiphertext,
                         :senderDisplayNameCiphertext, :subjectCiphertext, :snippetCiphertext,
                         :hasAttachment, :receivedAt, CAST(:labelIds AS text[]),
                         :inboxState, :unread, :sourceHistoryId,
                         :refreshedAt, :expiresAt, 0)
-                    ON CONFLICT (tenant_id, gmail_message_id) DO UPDATE SET
+                    ON CONFLICT (tenant_id, gmail_connection_id, gmail_message_id) DO UPDATE SET
                         gmail_thread_id = EXCLUDED.gmail_thread_id,
                         sender_email_hash = EXCLUDED.sender_email_hash,
                         sender_email_ciphertext = EXCLUDED.sender_email_ciphertext,
@@ -66,6 +66,7 @@ public interface GmailInboxProjectionRepository
     @Transactional
     int upsertProjection(
             @Param("tenantId") UUID tenantId,
+            @Param("gmailConnectionId") UUID gmailConnectionId,
             @Param("gmailMessageId") String gmailMessageId,
             @Param("gmailThreadId") String gmailThreadId,
             @Param("senderEmailHash") byte[] senderEmailHash,
