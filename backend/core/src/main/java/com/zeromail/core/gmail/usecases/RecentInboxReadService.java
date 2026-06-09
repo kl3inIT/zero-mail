@@ -213,7 +213,12 @@ public class RecentInboxReadService {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.INVALID_CURSOR, invalidProjectionCursorException);
         }
-        List<RecentInboxMessage> messages = toRecentInboxMessages(projectionPage.items());
+        Map<String, String> labelNamesById =
+                requiresCustomLabelNameLookup(projectionPage.items())
+                        ? fetchLabelNamesByIdBestEffort(tenantId)
+                        : Map.of();
+        List<RecentInboxMessage> messages =
+                toRecentInboxMessages(projectionPage.items(), labelNamesById);
         String nextCursor =
                 projectionPage.nextCursor() == null
                         ? null
@@ -275,8 +280,52 @@ public class RecentInboxReadService {
         }
     }
 
-    private static List<RecentInboxMessage> toRecentInboxMessages(
+    private Map<String, String> fetchLabelNamesByIdBestEffort(UUID tenantId) {
+        try {
+            return fetchLabelNamesById(gmailForTenant(tenantId));
+        } catch (RuntimeException | IOException labelLookupFailure) {
+            log.info(
+                    "event=inbox_projection_label_lookup_skipped tenantId={} failure={}",
+                    tenantId,
+                    labelLookupFailure.getClass().getSimpleName());
+            return Map.of();
+        }
+    }
+
+    private static boolean requiresCustomLabelNameLookup(
             List<InboxProjectionMessage> projectionItems) {
+        for (InboxProjectionMessage projectionItem : projectionItems) {
+            for (String labelId : projectionItem.labelIds()) {
+                if (labelId != null && !labelId.isBlank() && !isSystemLabelId(labelId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isSystemLabelId(String labelId) {
+        return switch (labelId) {
+            case "INBOX",
+                    "UNREAD",
+                    "SENT",
+                    "DRAFT",
+                    "SPAM",
+                    "TRASH",
+                    "IMPORTANT",
+                    "STARRED",
+                    "CATEGORY_PERSONAL",
+                    "CATEGORY_SOCIAL",
+                    "CATEGORY_PROMOTIONS",
+                    "CATEGORY_UPDATES",
+                    "CATEGORY_FORUMS" ->
+                    true;
+            default -> false;
+        };
+    }
+
+    private static List<RecentInboxMessage> toRecentInboxMessages(
+            List<InboxProjectionMessage> projectionItems, Map<String, String> labelNamesById) {
         ArrayList<RecentInboxMessage> recentInboxMessages = new ArrayList<>(projectionItems.size());
         for (InboxProjectionMessage projectionItem : projectionItems) {
             recentInboxMessages.add(
@@ -290,22 +339,11 @@ public class RecentInboxReadService {
                             projectionItem.cc(),
                             projectionItem.receivedAt(),
                             projectionItem.labelIds(),
-                            toRecentInboxLabels(projectionItem.labels()),
+                            labelsFor(projectionItem.labelIds(), labelNamesById),
                             projectionItem.unread(),
                             projectionItem.hasAttachment()));
         }
         return List.copyOf(recentInboxMessages);
-    }
-
-    private static List<RecentInboxLabel> toRecentInboxLabels(
-            List<com.zeromail.core.inbox.usecases.InboxProjectionLabel> projectionLabels) {
-        ArrayList<RecentInboxLabel> recentInboxLabels = new ArrayList<>(projectionLabels.size());
-        for (com.zeromail.core.inbox.usecases.InboxProjectionLabel projectionLabel :
-                projectionLabels) {
-            recentInboxLabels.add(
-                    new RecentInboxLabel(projectionLabel.id(), projectionLabel.name()));
-        }
-        return List.copyOf(recentInboxLabels);
     }
 
     /**

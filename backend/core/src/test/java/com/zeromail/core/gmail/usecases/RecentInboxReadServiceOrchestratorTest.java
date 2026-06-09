@@ -138,6 +138,43 @@ class RecentInboxReadServiceOrchestratorTest {
     }
 
     @Test
+    void firstPage_projectionCustomLabelKeepsLabelWhenNameLookupFails() {
+        GmailInboxSyncStateEntity syncState =
+                syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
+        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
+        InboxProjectionMessage projectionMessage =
+                new InboxProjectionMessage(
+                        "msg-custom-label",
+                        "thread-custom-label",
+                        "Subject custom label",
+                        "Snippet custom label",
+                        "from@example.com",
+                        List.of(),
+                        List.of(),
+                        Instant.parse("2026-05-01T12:00:00Z"),
+                        List.of("INBOX", "Label_42"),
+                        List.of(),
+                        false,
+                        false);
+        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(1)))
+                .thenReturn(
+                        new InboxProjectionPage(
+                                List.of(projectionMessage),
+                                null,
+                                InboxProjectionDataSource.PROJECTION));
+
+        RecentInboxPage page = recentInboxReadService.fetchPage(TENANT_ID, null, 1);
+
+        assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.PROJECTION);
+        assertThat(page.messages()).hasSize(1);
+        assertThat(page.messages().getFirst().labelIds()).containsExactly("INBOX", "Label_42");
+        assertThat(page.messages().getFirst().labels())
+                .extracting(RecentInboxReadService.RecentInboxLabel::name)
+                .containsExactly("INBOX", "Label_42");
+    }
+
+    @Test
     void firstPage_syncReady_projectionShort_fallsBackToLiveGmail() {
         GmailInboxSyncStateEntity syncState =
                 syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
