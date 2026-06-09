@@ -8,6 +8,7 @@ import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.zeromail.core.gmail.config.GmailProperties;
+import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
@@ -24,6 +25,7 @@ import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,8 +44,8 @@ public class GmailApiClientFactory {
     private final URI tokenEndpoint;
     private final GmailConnectionRepository gmailConnectionRepository;
     private final RefreshTokenCipher refreshTokenCipher;
-    // Caches the access token result for back-to-back deliveries so we skip the AES-GCM
-    // refresh-token decrypt + Google HTTPS refresh round trip when a still-valid token exists.
+    // Caches the access token result by gmailConnectionId so two mailboxes in one tenant never
+    // share access tokens while still skipping repeated AES-GCM decrypt + Google refresh calls.
     private final ConcurrentMap<UUID, TokenRefreshResult> accessTokenCache =
             new ConcurrentHashMap<>();
 
@@ -85,18 +87,53 @@ public class GmailApiClientFactory {
         }
     }
 
+    public Gmail buildClientForMailbox(MailboxRef mailboxRef) throws IOException {
+        return buildClientForMailbox(mailboxRef, null);
+    }
+
+    public Gmail buildClientForMailbox(MailboxRef mailboxRef, Duration requestTimeout)
+            throws IOException {
+        MailboxRef resolvedMailboxRef =
+                Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
+        GmailConnectionEntity gmailConnection =
+                gmailConnectionRepository
+                        .findByIdAndTenantId(
+                                resolvedMailboxRef.gmailConnectionId(),
+                                resolvedMailboxRef.tenantId())
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "No Gmail mailbox for tenantId: "
+                                                        + resolvedMailboxRef.tenantId()
+                                                        + ", gmailConnectionId: "
+                                                        + resolvedMailboxRef.gmailConnectionId()));
+        requireConnectedGrant(gmailConnection, resolvedMailboxRef.tenantId());
+        return buildClientForConnection(
+                gmailConnection, resolvedMailboxRef.tenantId(), requestTimeout);
+    }
+
+    @Deprecated(forRemoval = true)
     public Gmail buildClientForTenant(UUID tenantId) throws IOException {
         return buildClientForTenant(tenantId, null);
     }
 
+    @Deprecated(forRemoval = true)
     public Gmail buildClientForTenant(UUID tenantId, Duration requestTimeout) throws IOException {
-        GmailConnectionEntity gmailConnection =
-                gmailConnectionRepository
-                        .findByTenantId(tenantId)
-                        .orElseThrow(
-                                () ->
-                                        new IllegalStateException(
-                                                "No connection for tenantId: " + tenantId));
+        List<GmailConnectionEntity> connectedMailboxes =
+                gmailConnectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                        .filter(
+                                gmailConnection ->
+                                        gmailConnection.getStatus()
+                                                == GmailConnectionStatus.CONNECTED)
+                        .toList();
+        if (connectedMailboxes.isEmpty()) {
+            throw new IllegalStateException("No connected Gmail mailbox for tenantId: " + tenantId);
+        }
+        if (connectedMailboxes.size() > 1) {
+            throw new IllegalStateException(
+                    "Tenant has more than one connected Gmail mailbox; use buildClientForMailbox");
+        }
+        GmailConnectionEntity gmailConnection = connectedMailboxes.getFirst();
         return buildClientForConnection(gmailConnection, tenantId, requestTimeout);
     }
 
@@ -108,7 +145,8 @@ public class GmailApiClientFactory {
     public Gmail buildClientForConnection(
             GmailConnectionEntity gmailConnection, UUID tenantId, Duration requestTimeout)
             throws IOException {
-        TokenRefreshResult cachedToken = accessTokenCache.get(tenantId);
+        UUID gmailConnectionId = gmailConnection.getId();
+        TokenRefreshResult cachedToken = accessTokenCache.get(gmailConnectionId);
         if (cachedToken != null && cachedToken.expiresAt().isAfter(Instant.now())) {
             return buildGmailClient(cachedToken.accessToken().value(), requestTimeout);
         }
@@ -122,13 +160,32 @@ public class GmailApiClientFactory {
             try {
                 tokenResult = refreshAccessToken(decryptedRefreshToken);
             } catch (InvalidGrantException invalidGrant) {
-                accessTokenCache.remove(tenantId);
+                accessTokenCache.remove(gmailConnectionId);
                 throw invalidGrant;
             }
-            accessTokenCache.put(tenantId, tokenResult);
+            accessTokenCache.put(gmailConnectionId, tokenResult);
             return buildGmailClient(tokenResult.accessToken().value(), requestTimeout);
         } finally {
             Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
+        }
+    }
+
+    private static void requireConnectedGrant(
+            GmailConnectionEntity gmailConnection, UUID tenantId) {
+        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            throw new IllegalStateException(
+                    "Gmail mailbox is not connected for tenantId: "
+                            + tenantId
+                            + ", gmailConnectionId: "
+                            + gmailConnection.getId());
+        }
+        byte[] refreshTokenEncrypted = gmailConnection.getRefreshTokenEncrypted();
+        if (refreshTokenEncrypted == null || refreshTokenEncrypted.length == 0) {
+            throw new IllegalStateException(
+                    "Gmail mailbox has no usable grant for tenantId: "
+                            + tenantId
+                            + ", gmailConnectionId: "
+                            + gmailConnection.getId());
         }
     }
 
