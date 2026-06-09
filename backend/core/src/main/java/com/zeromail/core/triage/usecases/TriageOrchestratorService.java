@@ -803,8 +803,21 @@ public class TriageOrchestratorService {
         } catch (TokenBudgetExceededException tokenBudgetExceededException) {
             return resolveSemanticMatchesPerRule(semanticRequestsByRule, semanticEvalContent);
         } catch (LlmEvaluationFailedException | SafetyViolationException semanticFailure) {
-            return failedSemanticMatches(
-                    allSemanticRequests, semanticFailure.getClass().getSimpleName());
+            // A single batched failure must not nuke every rule's semantic match. A common
+            // cause in a multi-rule batch is the model omitting or renaming one nodeId
+            // (surfaced as SafetyViolationException by the strict nodeId validation in
+            // SemanticIntentEvaluator), which would otherwise defer ALL semantic rules for
+            // this message. When more than one rule is in the batch, retry per-rule so one
+            // flaky node only defers its own rule. A genuine single-rule failure still
+            // defers directly (no wasted second call).
+            if (semanticRequestsByRule.size() <= 1) {
+                return failedSemanticMatches(
+                        allSemanticRequests, semanticFailure.getClass().getSimpleName());
+            }
+            log.warn(
+                    "event=triage_semantic_batch_failed failureClass={} fallback=per_rule",
+                    semanticFailure.getClass().getSimpleName());
+            return resolveSemanticMatchesPerRule(semanticRequestsByRule, semanticEvalContent);
         }
     }
 
