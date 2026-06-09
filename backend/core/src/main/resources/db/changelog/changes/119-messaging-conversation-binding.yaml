@@ -1,0 +1,346 @@
+databaseChangeLog:
+  - changeSet:
+      id: 119-messaging-channel-account
+      author: zeromail
+      comment: >
+        Channel-agnostic messaging account rows. Telegram, Zalo, Slack, and future mobile chat
+        surfaces bind through this table instead of storing session state on transport-specific
+        account tables.
+      changes:
+        - createTable:
+            tableName: messaging_channel_account
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_messaging_channel_account_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: channel
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: external_account_id
+                  type: varchar(160)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_name
+                  type: varchar(160)
+              - column:
+                  name: status
+                  type: varchar(24)
+                  defaultValue: CONNECTED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: settings_json
+                  type: jsonb
+                  defaultValueComputed: "'{}'::jsonb"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: linked_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_active_at
+                  type: timestamptz
+              - column:
+                  name: disconnected_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: messaging_channel_account
+            columnNames: tenant_id, channel, external_account_id
+            constraintName: ux_messaging_channel_account_scope
+        - sql:
+            comment: Allowed messaging channels for v1 mobile/chat integrations.
+            sql: >
+              ALTER TABLE messaging_channel_account
+              ADD CONSTRAINT ck_messaging_channel_account_channel
+              CHECK (channel IN ('TELEGRAM', 'ZALO', 'WHATSAPP', 'SLACK'))
+        - sql:
+            comment: Channel account lifecycle state.
+            sql: >
+              ALTER TABLE messaging_channel_account
+              ADD CONSTRAINT ck_messaging_channel_account_status
+              CHECK (status IN ('CONNECTED', 'BLOCKED', 'DISCONNECTED'))
+        - createIndex:
+            tableName: messaging_channel_account
+            indexName: idx_messaging_channel_account_tenant_status
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: channel
+              - column:
+                  name: status
+      rollback:
+        - dropTable:
+            tableName: messaging_channel_account
+
+  - changeSet:
+      id: 119-messaging-conversation
+      author: zeromail
+      comment: >
+        Durable external conversation binding. This maps a Telegram/Zalo/etc conversation and an
+        optional mail-account scope to the currently active Zero Mail chat session, preventing the
+        mobile bot from losing context after each message while still allowing /new session flows.
+      changes:
+        - createTable:
+            tableName: messaging_conversation
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_messaging_conversation_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: channel_account_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_messaging_conversation_channel_account
+                    references: messaging_channel_account(id)
+                    deleteCascade: true
+              - column:
+                  name: mail_account_id
+                  type: uuid
+              - column:
+                  name: external_conversation_id
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: external_user_id
+                  type: varchar(200)
+              - column:
+                  name: active_chat_id
+                  type: uuid
+              - column:
+                  name: status
+                  type: varchar(24)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: metadata_json
+                  type: jsonb
+                  defaultValueComputed: "'{}'::jsonb"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_active_at
+                  type: timestamptz
+              - column:
+                  name: disconnected_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: messaging_conversation
+            baseColumnNames: mail_account_id
+            constraintName: fk_messaging_conversation_mail_account
+            referencedTableName: gmail_connections
+            referencedColumnNames: id
+            onDelete: SET NULL
+        - addForeignKeyConstraint:
+            baseTableName: messaging_conversation
+            baseColumnNames: active_chat_id, tenant_id
+            constraintName: fk_messaging_conversation_active_chat_tenant
+            referencedTableName: chat
+            referencedColumnNames: id, tenant_id
+            onDelete: SET NULL
+        - sql:
+            comment: Conversation lifecycle state.
+            sql: >
+              ALTER TABLE messaging_conversation
+              ADD CONSTRAINT ck_messaging_conversation_status
+              CHECK (status IN ('ACTIVE', 'BLOCKED', 'DISCONNECTED'))
+        - sql:
+            comment: >
+              One active external conversation per tenant/channel account/conversation/mail-account
+              scope. COALESCE makes NULL mail_account_id behave as the default mailbox scope.
+            sql: >
+              CREATE UNIQUE INDEX ux_messaging_conversation_scope
+              ON messaging_conversation (
+                tenant_id,
+                channel_account_id,
+                external_conversation_id,
+                COALESCE(mail_account_id, '00000000-0000-0000-0000-000000000000'::uuid)
+              )
+        - createIndex:
+            tableName: messaging_conversation
+            indexName: idx_messaging_conversation_channel_active
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: channel_account_id
+              - column:
+                  name: last_active_at
+                  descending: true
+      rollback:
+        - dropTable:
+            tableName: messaging_conversation
+
+  - changeSet:
+      id: 119-messaging-conversation-session
+      author: zeromail
+      comment: >
+        Session history under a durable external conversation. The active session is stored on
+        messaging_conversation.active_chat_id, while this table keeps the list needed for /new and
+        future /sessions or web-side channel filters.
+      changes:
+        - createTable:
+            tableName: messaging_conversation_session
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_messaging_conversation_session_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: conversation_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_messaging_conversation_session_conversation
+                    references: messaging_conversation(id)
+                    deleteCascade: true
+              - column:
+                  name: chat_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: varchar(200)
+              - column:
+                  name: status
+                  type: varchar(24)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_used_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: messaging_conversation_session
+            baseColumnNames: chat_id, tenant_id
+            constraintName: fk_messaging_conversation_session_chat_tenant
+            referencedTableName: chat
+            referencedColumnNames: id, tenant_id
+            onDelete: CASCADE
+        - addUniqueConstraint:
+            tableName: messaging_conversation_session
+            columnNames: tenant_id, conversation_id, chat_id
+            constraintName: ux_messaging_conversation_session_chat
+        - sql:
+            comment: Conversation session lifecycle state.
+            sql: >
+              ALTER TABLE messaging_conversation_session
+              ADD CONSTRAINT ck_messaging_conversation_session_status
+              CHECK (status IN ('ACTIVE', 'ARCHIVED'))
+        - createIndex:
+            tableName: messaging_conversation_session
+            indexName: idx_messaging_conversation_session_recent
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: conversation_id
+              - column:
+                  name: last_used_at
+                  descending: true
+      rollback:
+        - dropTable:
+            tableName: messaging_conversation_session

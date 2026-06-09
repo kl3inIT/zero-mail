@@ -4,6 +4,9 @@
 @import '@fontsource-variable/geist' layer(base);
 @import '@fontsource-variable/geist-mono' layer(base);
 
+/* Tailwind Typography — styles the `prose` class used by blog posts and docs MDX. */
+@plugin '@tailwindcss/typography';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -93,7 +96,7 @@
     --card-foreground: #1C1D21;
     --popover: #FFFFFF;
     --popover-foreground: #1C1D21;
-    --primary: #867AEB;
+    --primary: #6C5CE7;
     --primary-foreground: #FFFFFF;
     --secondary: #F4F2F9;
     --secondary-foreground: #1C1D21;
@@ -118,7 +121,7 @@
     /* Sidebar tokens — app interior chrome (tím rất nhạt để recede) */
     --sidebar: #F8F7FB;
     --sidebar-foreground: #1C1D21;
-    --sidebar-primary: #867AEB;
+    --sidebar-primary: #6C5CE7;
     --sidebar-primary-foreground: #FFFFFF;
     --sidebar-accent: #EAE8F7;
     --sidebar-accent-foreground: #5849C9;

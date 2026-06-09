@@ -327,6 +327,12 @@ databaseChangeLog:
       file: changes/118-cleanup-sender-projection.yaml
       relativeToChangelogFile: true
   - include:
+      file: changes/119-messaging-conversation-binding.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/120-telegram-mvp.yaml
+      relativeToChangelogFile: true
+  - include:
       file: changes/119-feedback-submission.yaml
       relativeToChangelogFile: true
   - include:

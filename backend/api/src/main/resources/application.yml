@@ -110,6 +110,20 @@ zero-mail:
         push-audience-url: ${PUBSUB_PUSH_AUDIENCE_URL:?PUBSUB_PUSH_AUDIENCE_URL env var is required}
         sa-principal-email: ${PUBSUB_SA_PRINCIPAL_EMAIL:?PUBSUB_SA_PRINCIPAL_EMAIL env var is required}
         oidc-certificates-url: ${PUBSUB_OIDC_CERTIFICATES_URL:https://www.googleapis.com/oauth2/v3/certs}
+  messaging:
+    telegram:
+      enabled: ${ZERO_MAIL_MESSAGING_TELEGRAM_ENABLED:false}
+      bot-token: ${ZERO_MAIL_MESSAGING_TELEGRAM_BOT_TOKEN:${TELEGRAM_BOT_TOKEN:}}
+      bot-username: ${ZERO_MAIL_MESSAGING_TELEGRAM_BOT_USERNAME:}
+      bot-account-id: ${ZERO_MAIL_MESSAGING_TELEGRAM_BOT_ACCOUNT_ID:}
+      webhook-secret-token: ${ZERO_MAIL_MESSAGING_TELEGRAM_WEBHOOK_SECRET_TOKEN:${TELEGRAM_WEBHOOK_SECRET:}}
+      messaging-link-secret: ${ZERO_MAIL_MESSAGING_TELEGRAM_MESSAGING_LINK_SECRET:${TELEGRAM_MESSAGING_LINK_SECRET:}}
+      api-base-url: ${ZERO_MAIL_MESSAGING_TELEGRAM_API_BASE_URL:https://api.telegram.org}
+      web-base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
+      # When true (and the channel is configured), the API self-registers its Telegram webhook on
+      # startup using webhook-public-base-url, so a fresh deploy needs no manual setWebhook call.
+      webhook-auto-register: ${ZERO_MAIL_MESSAGING_TELEGRAM_WEBHOOK_AUTO_REGISTER:false}
+      webhook-public-base-url: ${ZERO_MAIL_MESSAGING_TELEGRAM_WEBHOOK_PUBLIC_BASE_URL:}
   crypto:
     # Required deployment secret. For local dev, set REFRESH_TOKEN_KEY_BASE64 in .env or
     # docker-compose.yml environment block. For openapi-emit, build.gradle.kts supplies a dummy.

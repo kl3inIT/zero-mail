@@ -2,6 +2,7 @@ import matter from 'gray-matter';
 import { promises as fs } from 'node:fs';
 import type { MetadataRoute } from 'next';
 
+import { listPublishedPosts } from '@/lib/blog/loader';
 import { buildDocPath, FILENAME_RE, listDocFilenames } from '@/lib/docs/loader';
 import { siteUrl } from '@/lib/site';
 
@@ -19,6 +20,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const staticEntries: MetadataRoute.Sitemap = [
     { url: siteUrl('/'), lastModified, changeFrequency: 'weekly', priority: 1 },
+    { url: siteUrl('/features'), lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: siteUrl('/about'), lastModified, changeFrequency: 'monthly', priority: 0.6 },
+    { url: siteUrl('/blog'), lastModified, changeFrequency: 'weekly', priority: 0.7 },
     { url: siteUrl('/docs'), lastModified, changeFrequency: 'monthly', priority: 0.6 },
     { url: siteUrl('/privacy'), lastModified, changeFrequency: 'yearly', priority: 0.4 },
     { url: siteUrl('/terms'), lastModified, changeFrequency: 'yearly', priority: 0.4 },
@@ -33,7 +37,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   );
 
-  return [...staticEntries, ...docEntries];
+  // Blog posts: one canonical URL per slug. The post's own datePublished /
+  // dateModified drives lastmod so re-crawls reflect real edits, not deploy time.
+  const blogEntries = await listPublishedPosts('vi').then((posts) =>
+    posts.map<MetadataRoute.Sitemap[number]>((post) => ({
+      url: siteUrl(`/blog/${post.slug}`),
+      lastModified: new Date(`${post.dateModified ?? post.datePublished}T00:00:00Z`),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    })),
+  );
+
+  return [...staticEntries, ...docEntries, ...blogEntries];
 }
 
 /**

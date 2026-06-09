@@ -1,6 +1,6 @@
 // Locks the landing page section contract:
-//  - (public)/page.tsx renders Hero, Features, Testimonials, FAQ
-//  - Pricing is intentionally not rendered while the product is free (no billing yet).
+//  - (public)/page.tsx renders Hero, Features, Testimonials, FAQ, Contact
+//  - Homepage leads with Features (synced with main); Pricing intentionally not rendered.
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
@@ -32,13 +32,15 @@ vi.mock('next/headers', () => ({
 import LandingPage from '@/app/(public)/page';
 
 describe('(public)/page.tsx', () => {
-  it('renders Hero, Features, Testimonials, and FAQ', async () => {
+  it('renders Hero, Features, Testimonials, FAQ, and Contact', async () => {
     const Page = await LandingPage();
     render(Page as React.ReactElement);
     expect(screen.getByTestId('hero')).toBeInTheDocument();
     expect(screen.getByTestId('features')).toBeInTheDocument();
     expect(screen.getByTestId('testimonials')).toBeInTheDocument();
     expect(screen.getByTestId('faq')).toBeInTheDocument();
+    expect(screen.getByTestId('contact')).toBeInTheDocument();
+    expect(screen.queryByTestId('how')).not.toBeInTheDocument();
     expect(screen.queryByTestId('pricing')).not.toBeInTheDocument();
   });
 });

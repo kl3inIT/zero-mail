@@ -88,6 +88,29 @@ public class ConfirmationStateMachine {
                 toolSnapshot.confirmationJson());
     }
 
+    @Transactional(readOnly = true)
+    public PendingAction loadPendingActionByChatMessageId(UUID tenantId, UUID chatMessageId) {
+        ConfirmationStateRepository.PendingActionRow pendingActionRow =
+                confirmationStateRepository
+                        .findPendingActionRowByChatMessageId(tenantId, chatMessageId)
+                        .orElseThrow(
+                                () -> new PendingActionNotFoundException(chatMessageId.toString()));
+        ToolSnapshot toolSnapshot =
+                toolSnapshot(pendingActionRow.partsJson(), pendingActionRow.toolCallId());
+        return new PendingAction(
+                pendingActionRow.pendingActionId(),
+                pendingActionRow.tenantId(),
+                pendingActionRow.chatId(),
+                pendingActionRow.chatMessageId(),
+                pendingActionRow.toolCallId(),
+                pendingActionRow.state(),
+                pendingActionRow.partsUpdatedAt(),
+                pendingActionRow.draftBody(),
+                toolSnapshot.toolName(),
+                toolSnapshot.inputJson(),
+                toolSnapshot.confirmationJson());
+    }
+
     @Transactional
     public Reservation reserve(
             UUID chatId,

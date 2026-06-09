@@ -27,7 +27,7 @@ export default async function FAQ() {
                 key={faq.q}
                 className="rounded-[24px] border border-(--line-strong) bg-(--bg-elevated) p-8 shadow-sm"
               >
-                <h4 className="mb-4 text-[17px] font-bold text-(--ink)">{faq.q}</h4>
+                <h3 className="mb-4 text-[17px] font-bold text-(--ink)">{faq.q}</h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">{faq.a}</p>
               </div>
             ))}

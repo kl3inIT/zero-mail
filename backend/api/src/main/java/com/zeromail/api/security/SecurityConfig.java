@@ -178,6 +178,7 @@ public class SecurityConfig {
                 request -> {
                     String path = request.getServletPath();
                     return !path.startsWith("/internal/pubsub/")
+                            && !path.equals("/api/integrations/telegram/webhook")
                             && !path.startsWith("/api/admin/")
                             && !path.startsWith("/webauthn/")
                             && !path.startsWith("/login/webauthn/");
@@ -234,8 +235,8 @@ public class SecurityConfig {
                         logout ->
                                 // Logout MUST live under /api so the production reverse proxy
                                 // (routes only /api, /oauth2, /login/oauth2 to Spring) forwards it
-                                // to the backend. A top-level /logout fell through to Next.js → 404
-                                // → "Không thể đăng xuất". Mirrors the admin chain's
+                                // to the backend. A top-level /logout fell through to Next.js
+                                // 404 logout failure. Mirrors the admin chain's
                                 // /api/admin/logout.
                                 logout.logoutRequestMatcher(
                                                 PathPatternRequestMatcher.withDefaults()

@@ -36,13 +36,13 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       locale: 'vi_VN',
       alternateLocale: ['en_US'],
-      images: [{ url: BRAND_LOGO_URL, width: 512, height: 512, alt: SITE_NAME }],
+      // og:image comes from the app/opengraph-image.tsx file convention
+      // (1200×630). The square BRAND_LOGO_URL stays the Organization schema logo.
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title,
       description,
-      images: [BRAND_LOGO_URL],
     },
   };
 }
@@ -132,6 +132,22 @@ export default async function RootLayout({
         '@id': `${site}/#website`,
         name: SITE_NAME,
         url: site,
+        publisher: { '@id': `${site}/#organization` },
+        inLanguage: ['vi', 'en'],
+      },
+      {
+        // Declares Zero Mail as a software product so Google / AI search can
+        // classify the entity as an app (not just an Organization homepage).
+        // Truthful-only: no price (prepaid credits, unit economics TBD) and no
+        // aggregateRating (no verified reviews) — fabricating either is a Trust
+        // (E-E-A-T) violation. Add `offers` / `aggregateRating` once real.
+        '@type': 'SoftwareApplication',
+        '@id': `${site}/#software`,
+        name: SITE_NAME,
+        url: site,
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        description: appTranslations('description'),
         publisher: { '@id': `${site}/#organization` },
         inLanguage: ['vi', 'en'],
       },
