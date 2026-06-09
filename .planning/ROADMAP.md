@@ -71,13 +71,26 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 **Depends on:** Phase 9 (User Settings UI), current Gmail OAuth/connection schema, code research in `.planning/research/V1.3-CODE-RESEARCH.md`
 **Mode:** sequential foundation before Phase 11
 **Plans:** 6 plans (4 waves)
+Plans:
+**Wave 1**
 
-Plans:
 - [ ] 10-01-PLAN.md — Wave 0 validation spine: 8 RED test scaffolds + old-single-account fixture (Nyquist)
 - [ ] 10-02-PLAN.md — Liquibase changeset 119 (drop tenant-unique, add duplicate-active + primary partial indexes, backfill) + entity is_primary/display_purpose + findByIdAndTenantId
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 10-03-PLAN.md — Mailbox-aware GmailApiClientFactory: MailboxRef, buildClientForMailbox, cache re-key to gmailConnectionId, @Deprecated tenant adapter, ArchUnit allow-list
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 10-04-PLAN.md — Ownership seam (resolveOwnedConnectionOrThrow 404/409) + mailbox-scoped disconnect/set-primary + duplicate-active mapping + metadata-only list projection
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 10-05-PLAN.md — OAuth intent split: resolver attributes + IntentCarrying session shim + success-handler first-login/add/reconnect branching + SecurityConfig wiring (WR-06)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 10-06-PLAN.md — Connected-accounts REST: list / set-primary / disconnect + add/reconnect OAuth triggers + MailboxSummaryResponse DTO
 
 Expected plan areas:
