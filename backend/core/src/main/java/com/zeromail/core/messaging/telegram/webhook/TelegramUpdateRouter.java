@@ -46,11 +46,11 @@ public class TelegramUpdateRouter {
     private static final String PAIRING_INVALID_REPLY = "Mã kết nối không hợp lệ.";
 
     private static final String HELP_REPLY =
-            "Các lệnh khả dụng:\n" +
-                    "/start <code> - kết nối\n" +
-                    "/new - tạo đoạn chat mới\n" +
-                    "/current - xem trạng thái\n" +
-                    "/help - trợ giúp";
+            "Các lệnh khả dụng:\n"
+                    + "/start <code> - kết nối\n"
+                    + "/new - tạo đoạn chat mới\n"
+                    + "/current - xem trạng thái\n"
+                    + "/help - trợ giúp";
 
     private static final String NOT_CONNECTED_REPLY =
             "Telegram chưa được kết nối với Zero Mail. Hãy kết nối trong Cài đặt trên web.";
@@ -82,8 +82,7 @@ public class TelegramUpdateRouter {
     private static final String CALLBACK_VIP_REPLY =
             "Người nhận nằm trong safety-net. Hãy mở web để xác nhận rõ ràng trước khi gửi.";
 
-    private static final String CALLBACK_FAILED_REPLY =
-            "Gửi thất bại. Hãy mở web để kiểm tra lại.";
+    private static final String CALLBACK_FAILED_REPLY = "Gửi thất bại. Hãy mở web để kiểm tra lại.";
 
     private final TelegramUpdateProcessedJdbcRepository telegramUpdateProcessedJdbcRepository;
     private final TelegramAccountJdbcRepository telegramAccountJdbcRepository;
