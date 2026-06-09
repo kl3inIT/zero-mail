@@ -67,11 +67,9 @@ public class TelegramUpdateRouter {
 
     private static final String CALLBACK_PROCESSING_REPLY = "Đang xử lý...";
 
-    private static final String CALLBACK_SENT_REPLY =
-            "Đã gửi/xác nhận xong. Chat trên web đã được cập nhật.";
+    private static final String CALLBACK_SENT_REPLY = "Đã gửi/xác nhận xong.";
 
-    private static final String CALLBACK_CANCELED_REPLY =
-            "Đã hủy hành động này. Chat trên web đã được cập nhật.";
+    private static final String CALLBACK_CANCELED_REPLY = "Đã hủy hành động này.";
 
     private static final String CALLBACK_NOT_FOUND_REPLY =
             "Hành động này không còn khả dụng. Hãy mở web để kiểm tra lại.";

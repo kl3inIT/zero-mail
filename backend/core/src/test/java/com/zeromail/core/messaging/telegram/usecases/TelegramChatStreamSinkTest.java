@@ -63,6 +63,46 @@ class TelegramChatStreamSinkTest {
                 .isEqualTo(CONFIRMATION_URL.toString());
     }
 
+    @Test
+    void emitFinish_awaitingConfirmationIncludesEmailPreview() {
+        UUID chatMessageId = UUID.randomUUID();
+        TelegramChatStreamSink streamSink = streamSink();
+        streamSink.emitToolInputAvailable(
+                "call-1",
+                "sendEmail",
+                "{\"to\":\"founder@example.com\",\"subject\":\"Quick update\",\"body\":\"Hi,\\n\\nThe draft is ready.\"}");
+        streamSink.emitDataPersistence(chatMessageId, "tool-call-saved");
+
+        streamSink.emitFinish("awaiting-confirmation");
+
+        ArgumentCaptor<TelegramSendMessageRequest> messageCaptor =
+                ArgumentCaptor.forClass(TelegramSendMessageRequest.class);
+        verify(telegramApiClient).sendMessage(messageCaptor.capture());
+        TelegramSendMessageRequest messageRequest = messageCaptor.getValue();
+        assertThat(messageRequest.text())
+                .contains("Email m\u1edbi")
+                .contains("founder@example.com")
+                .contains("Quick update")
+                .contains("The draft is ready.");
+        assertThat(messageRequest.replyMarkup().inlineKeyboard().get(0).get(0).callbackData())
+                .isEqualTo("confirm:" + chatMessageId);
+    }
+
+    @Test
+    void emitError_tooManyToolCallsUsesTelegramSpecificMessage() {
+        TelegramChatStreamSink streamSink = streamSink();
+
+        streamSink.emitError(
+                "chat_too_many_tool_calls",
+                "The assistant requested too many tool calls. Please try again.");
+
+        ArgumentCaptor<TelegramSendMessageRequest> messageCaptor =
+                ArgumentCaptor.forClass(TelegramSendMessageRequest.class);
+        verify(telegramApiClient).sendMessage(messageCaptor.capture());
+        assertThat(messageCaptor.getValue().text())
+                .contains("Bot c\u1ea7n \u0111\u1ecdc qu\u00e1 nhi\u1ec1u d\u1eef li\u1ec7u");
+    }
+
     private TelegramChatStreamSink streamSink() {
         when(typingScheduler.scheduleAtFixedRate(
                         ArgumentMatchers.<Runnable>any(), eq(4L), eq(4L), eq(TimeUnit.SECONDS)))

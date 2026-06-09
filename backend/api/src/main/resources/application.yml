@@ -176,6 +176,7 @@ zero-mail:
     # MEDIUM-7: token budget enforcement per AI-SPEC section 4b.
     max-history-tokens: 24576
     max-tool-output-tokens: 4000
+    max-read-tool-iterations: 6
     history:
       page-size: 50
     # MEDIUM-8: reverse-proxy timeout doc note.
