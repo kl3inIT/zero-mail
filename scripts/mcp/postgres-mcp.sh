@@ -31,13 +31,14 @@ DB_PASSWORD="${DB_PASSWORD:?DB_PASSWORD is required}"
 
 # Convert jdbc: URL → plain postgresql: URL
 PG_URL="${DB_URL#jdbc:}"
-# Replace localhost/127.0.0.1 → host.docker.internal for Docker container
-PG_URL="$(echo "$PG_URL" | sed 's|//localhost:|//host.docker.internal:|g; s|//127\.0\.0\.1:|//host.docker.internal:|g')"
+# localhost/127.0.0.1 on the host → zeromail-postgres is reachable directly on the
+# zeromail-internal network; only remap host-only loopback addresses.
+PG_URL="$(echo "$PG_URL" | sed 's|//localhost:5555/|//zeromail-postgres:5432/|g; s|//127\.0\.0\.1:5555/|//zeromail-postgres:5432/|g')"
 # Inject credentials
 PG_URL="$(echo "$PG_URL" | sed "s|postgresql://|postgresql://${DB_USER}:${DB_PASSWORD}@|")"
 
 exec docker run -i --rm \
-  --add-host=host.docker.internal:host-gateway \
+  --network=zeromail-internal \
   -e DATABASE_URI="$PG_URL" \
   crystaldba/postgres-mcp \
   --access-mode=unrestricted
