@@ -1,4 +1,4 @@
-name: Debug – query prod DB + Loki
+name: Debug query prod DB and Loki
 
 on:
   workflow_dispatch:
