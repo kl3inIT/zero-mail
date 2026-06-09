@@ -127,6 +127,38 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
                                 + " has to fall back, which then signals NOT_CONNECTED here");
     }
 
+    @Test
+    void firstPage_syncReady_projectionDecryptFailure_fallsBackWithoutRollbackOnlyTransaction() {
+        UUID tenantId = seedTenant();
+        markSyncReady(tenantId);
+        seedProjectionRows(tenantId, 20);
+        jdbcTemplate.update(
+                """
+                UPDATE gmail_inbox_projection
+                SET sender_email_ciphertext = decode(
+                    '0000000200000000000000000000000000000000000000000000000000000000',
+                    'hex'
+                )
+                WHERE tenant_id = ?
+                """,
+                tenantId);
+
+        assertThatThrownBy(
+                        () ->
+                                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                                        .call(
+                                                () ->
+                                                        recentInboxReadService.fetchPage(
+                                                                tenantId, null, 20)))
+                .isInstanceOf(RecentInboxUnavailableException.class)
+                .matches(
+                        exception ->
+                                ((RecentInboxUnavailableException) exception).reason()
+                                        == RecentInboxUnavailableReason.NOT_CONNECTED,
+                        "corrupt projection should fall back to live Gmail without an outer"
+                                + " rollback-only transaction");
+    }
+
     private void markSyncReady(UUID tenantId) {
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(

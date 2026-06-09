@@ -286,6 +286,7 @@
     },
     "groupBy": {
       "day": "Ngày",
+      "helper": "Cách gộp dữ liệu trên biểu đồ (theo ngày, tuần, tháng…)",
       "label": "Nhóm dữ liệu",
       "month": "Tháng",
       "week": "Tuần",
@@ -365,6 +366,7 @@
       "title": "Phân tích"
     },
     "range": {
+      "helper": "Phạm vi thời gian được tính trong số liệu",
       "label": "Khoảng thời gian",
       "lastMonth": "Tháng trước",
       "lastThreeMonths": "3 tháng qua",
@@ -1203,6 +1205,7 @@
     "product": "Sản phẩm",
     "resources": "Tài nguyên",
     "security": "Bảo mật",
+    "support": "Hỗ trợ khách hàng",
     "tagline": "AI phân loại Gmail tự động bạn có thể tin tưởng — gắn nhãn, soạn nháp trả lời và dọn hộp thư theo quy tắc bạn đặt.",
     "terms": "Điều khoản"
   },
@@ -1375,6 +1378,10 @@
       "unselected": "Chọn một email để xem nội dung."
     }
   },
+  "integrations": {
+    "heading": "Tích hợp",
+    "description": "Kết nối Zero Mail với các kênh và công cụ bạn đang dùng."
+  },
   "landing": {
     "continueSetupCta": "Tiếp tục thiết lập",
     "eyebrow": "Gmail · Private beta · v1",
@@ -1397,7 +1404,24 @@
       "title": "Zero Mail — AI tự động dọn Gmail, đạt inbox zero"
     },
     "tagline": "Zero Mail tự động đọc, phân loại và soạn sẵn câu trả lời cho Gmail của bạn — theo quy tắc bạn viết bằng tiếng Việt. Không còn cảnh mỗi sáng mở hộp thư và ngồi lọc 30 phút.",
-    "videoPlaceholder": "Video demo sẽ sớm có mặt"
+    "playDemo": "Phát video demo Zero Mail",
+    "videoThumbnailAlt": "Video demo sản phẩm Zero Mail",
+    "videoTitle": "Video demo sản phẩm Zero Mail"
+  },
+  "landingContact": {
+    "emailLabel": "Email của bạn",
+    "emailPlaceholder": "you@example.com",
+    "errorMessage": "Đã có lỗi xảy ra. Vui lòng thử lại hoặc email cho chúng tôi tại zeromail.platform@gmail.com.",
+    "heading": "Liên hệ",
+    "messageLabel": "Nội dung",
+    "messagePlaceholder": "Bạn muốn cho chúng tôi biết điều gì?",
+    "subheading": "Báo lỗi, đề xuất tính năng, hay chỉ là câu hỏi? Gửi tin nhắn cho chúng tôi.",
+    "submit": "Gửi",
+    "submitting": "Đang gửi…",
+    "successBody": "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi trong vòng một ngày làm việc.",
+    "successHeading": "Đã nhận tin nhắn",
+    "successReset": "Gửi thêm tin nhắn",
+    "trust": "Chúng tôi thường trả lời trong vòng 24 giờ vào ngày làm việc."
   },
   "landingFaq": {
     "header": {
@@ -1567,50 +1591,6 @@
     "r7": {
       "role": "Nhà sáng lập",
       "text": "Cuối cùng cũng có một ứng dụng 'hủy đăng ký' giúp bạn *thực sự* hủy đăng ký và lọc thông qua bộ lọc Gmail (thay vì luôn phụ thuộc vào ứng dụng bên thứ 3)."
-    }
-  },
-  "landingContact": {
-    "heading": "Liên hệ",
-    "subheading": "Báo lỗi, đề xuất tính năng, hay chỉ là câu hỏi? Gửi tin nhắn cho chúng tôi.",
-    "emailLabel": "Email của bạn",
-    "emailPlaceholder": "you@example.com",
-    "messageLabel": "Nội dung",
-    "messagePlaceholder": "Bạn muốn cho chúng tôi biết điều gì?",
-    "submit": "Gửi",
-    "submitting": "Đang gửi…",
-    "trust": "Chúng tôi thường trả lời trong vòng 24 giờ vào ngày làm việc.",
-    "successHeading": "Đã nhận tin nhắn",
-    "successBody": "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi trong vòng một ngày làm việc.",
-    "successReset": "Gửi thêm tin nhắn",
-    "errorMessage": "Đã có lỗi xảy ra. Vui lòng thử lại hoặc email cho chúng tôi tại zeromail.platform@gmail.com."
-  },
-  "support": {
-    "pageTitle": "Hỗ trợ & Phản hồi",
-    "pageDescription": "Báo lỗi, đề xuất tính năng, hoặc đặt câu hỏi. Chúng tôi đọc mọi tin nhắn.",
-    "typeLabel": "Loại",
-    "typeBug": "Lỗi",
-    "typeFeature": "Tính năng",
-    "typeGeneral": "Câu hỏi",
-    "subjectLabel": "Tiêu đề",
-    "subjectOptional": "(tùy chọn)",
-    "messageLabel": "Nội dung",
-    "emailLabel": "Email của bạn",
-    "emailHint": "Chúng tôi sẽ trả lời tại đây nếu cần.",
-    "submit": "Gửi",
-    "submitting": "Đang gửi…",
-    "trust": "Chúng tôi thường trả lời trong vòng 24 giờ vào ngày làm việc.",
-    "successTitle": "Đã gửi!",
-    "successBody": "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm.",
-    "successReset": "Gửi thêm",
-    "sidebarResponseTitle": "Điều bạn có thể mong đợi",
-    "sidebarResponseBody": "Chúng tôi đọc mọi tin nhắn và phản hồi trong vòng một ngày làm việc.",
-    "sidebarBugHint": "Mô tả các bước tái hiện, điều bạn thấy và điều bạn mong đợi.",
-    "sidebarFeatureHint": "Mô tả vấn đề tính năng sẽ giải quyết và cách bạn muốn dùng nó.",
-    "sidebarGeneralHint": "Bất kỳ câu hỏi nào về rules, billing, kết nối Gmail, hoặc sản phẩm.",
-    "placeholders": {
-      "bug": "Điều gì xảy ra, bạn mong đợi điều gì, và các bước để tái hiện…",
-      "feature": "Mô tả tính năng và cách nó giúp ích cho bạn…",
-      "general": "Bạn muốn cho chúng tôi biết điều gì?"
     }
   },
   "legal": {
@@ -1851,6 +1831,7 @@
     "getStarted": "Bắt đầu miễn phí",
     "how": "Cách hoạt động",
     "inbox": "Hộp thư",
+    "integrations": "Tích hợp",
     "languageSelector": "Ngôn ngữ",
     "logoLabel": "Trang chủ Zero Mail",
     "needsReply": "Cần trả lời",
@@ -1865,10 +1846,10 @@
     "settings": "Cài đặt",
     "signIn": "Đăng nhập",
     "subscription": "Gói đăng ký",
+    "support": "Trợ giúp & Phản hồi",
     "testimonials": "Đánh giá",
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
-    "support": "Trợ giúp & Phản hồi",
     "trust": "Tin cậy & an toàn",
     "upgradePlan": "Nâng cấp gói"
   },
@@ -2706,6 +2687,35 @@
     "title": "Nâng cấp gói đăng ký của bạn",
     "toStart": "Bắt đầu",
     "upgrade": "Nâng cấp"
+  },
+  "support": {
+    "emailHint": "Chúng tôi sẽ trả lời tại đây nếu cần.",
+    "emailLabel": "Email của bạn",
+    "messageLabel": "Nội dung",
+    "pageDescription": "Báo lỗi, đề xuất tính năng, hoặc đặt câu hỏi. Chúng tôi đọc mọi tin nhắn.",
+    "pageTitle": "Hỗ trợ & Phản hồi",
+    "placeholders": {
+      "bug": "Điều gì xảy ra, bạn mong đợi điều gì, và các bước để tái hiện…",
+      "feature": "Mô tả tính năng và cách nó giúp ích cho bạn…",
+      "general": "Bạn muốn cho chúng tôi biết điều gì?"
+    },
+    "sidebarBugHint": "Mô tả các bước tái hiện, điều bạn thấy và điều bạn mong đợi.",
+    "sidebarFeatureHint": "Mô tả vấn đề tính năng sẽ giải quyết và cách bạn muốn dùng nó.",
+    "sidebarGeneralHint": "Bất kỳ câu hỏi nào về rules, billing, kết nối Gmail, hoặc sản phẩm.",
+    "sidebarResponseBody": "Chúng tôi đọc mọi tin nhắn và phản hồi trong vòng một ngày làm việc.",
+    "sidebarResponseTitle": "Điều bạn có thể mong đợi",
+    "subjectLabel": "Tiêu đề",
+    "subjectOptional": "(tùy chọn)",
+    "submit": "Gửi",
+    "submitting": "Đang gửi…",
+    "successBody": "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm.",
+    "successReset": "Gửi thêm",
+    "successTitle": "Đã gửi!",
+    "trust": "Chúng tôi thường trả lời trong vòng 24 giờ vào ngày làm việc.",
+    "typeBug": "Lỗi",
+    "typeFeature": "Tính năng",
+    "typeGeneral": "Câu hỏi",
+    "typeLabel": "Loại"
   },
   "templates": {
     "calendarInvites": {

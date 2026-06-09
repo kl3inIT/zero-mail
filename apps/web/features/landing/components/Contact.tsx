@@ -6,7 +6,7 @@ export default async function Contact() {
   const t = await getTranslations('landingContact');
 
   return (
-    <section className="zm-section bg-(--bg) py-24" id="contact">
+    <section className="zm-section bg-(--bg) py-12" id="contact">
       <div className="zm-container max-w-xl">
         <div className="mb-10 text-center">
           <h2 className="mb-3 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">

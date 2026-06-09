@@ -5,7 +5,7 @@ export async function FeatureBulkUnsubscribe() {
   const t = await getTranslations('landingFeatures');
 
   return (
-    <section className="zm-container mb-24 text-center">
+    <section className="zm-container text-center">
       <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
         {t('sec5.title')}
       </h2>

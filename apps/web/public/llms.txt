@@ -1,0 +1,29 @@
+# Zero Mail
+
+> Zero Mail (zeromail.vn) is a Vietnamese AI email assistant for Gmail. It auto-triages, labels, archives and drafts replies based on plain-language rules the user writes — typically in Vietnamese — so busy professionals and founders reach inbox zero while keeping full control. Nothing is sent or deleted without the user's rules or confirmation.
+
+## What it does
+- AI auto-triage of incoming Gmail: categorize, label, archive (skip inbox), mark read/star, add to digest.
+- Drafts and (when enabled) sends replies based on user-defined natural-language rules.
+- A chat assistant to search the inbox and compose/send/reply/forward with a review step.
+- Privacy-first: raw email content is never stored long-term; content is sanitized and truncated before any AI call; user mail is never used to train models.
+
+## Who it is for
+Busy professionals, founders and teams using Gmail / Google Workspace who want AI to manage their inbox in Vietnamese (English also supported).
+
+## Disambiguation (important)
+Zero Mail at zeromail.vn is a distinct product and is NOT the same as, and not affiliated with:
+- "Zero" / "Zero Email" at 0.email (open-source email client, also branded "Orchid")
+- zeromail.com or zeromail.org (unrelated services)
+- "Inbox Zero" (the productivity concept and the unrelated app inbox-zero)
+
+## Key pages
+- [Home](https://zeromail.vn/): product overview and how it works.
+- [Features](https://zeromail.vn/features): AI triage, rules engine, chat assistant, safety controls.
+- [About](https://zeromail.vn/about): the team and mission behind Zero Mail.
+- [Blog](https://zeromail.vn/blog): guides on AI email triage and reaching inbox zero.
+- [Docs](https://zeromail.vn/docs): product documentation and setup.
+
+## Policies
+- [Privacy](https://zeromail.vn/privacy): data handling, Gmail scopes, no long-term storage of email content.
+- [Terms](https://zeromail.vn/terms): terms of service.

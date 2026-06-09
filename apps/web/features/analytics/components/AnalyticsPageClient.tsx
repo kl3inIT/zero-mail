@@ -52,6 +52,7 @@ import {
   topDomainLoad,
 } from '@/features/analytics/components/analytics-visualization';
 import { useAnalyticsSummary } from '@/features/analytics/hooks/useAnalyticsSummary';
+import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
 
 type SourceMode = 'email' | 'domain';
@@ -61,6 +62,11 @@ type SourceRow = {
   key: string;
   label: string;
   count: number;
+  href?: string;
+};
+
+type AnalyticsSummaryWithRecipients = ReturnType<typeof useAnalyticsSummary>['data'] & {
+  topRecipients?: Array<{ emailAddress?: string | null; count?: number | null }>;
 };
 
 type ActivityChartRow = {
@@ -79,6 +85,8 @@ export function AnalyticsPageClient() {
   const rawWindow = searchParams.get('window');
   const selectedWindow = normalizeAnalyticsWindow(rawWindow);
   const summaryQuery = useAnalyticsSummary(selectedWindow);
+  const currentUserQuery = useCurrentUser();
+  const userEmail = currentUserQuery.data?.email ?? null;
   const previousSelectedWindowRef = useRef(selectedWindow);
   const [groupBy, setGroupBy] = useState<GroupByMode>('week');
   const [sourceMode, setSourceMode] = useState<SourceMode>('email');
@@ -138,6 +146,7 @@ export function AnalyticsPageClient() {
           key: domain.domain,
           label: domain.domain,
           count: safeCount(domain.count),
+          href: gmailSearchUrl(`from:${domain.domain}`, userEmail),
         }),
       );
     }
@@ -148,12 +157,29 @@ export function AnalyticsPageClient() {
         key: senderEmail,
         label: senderEmail,
         count: safeCount(sender.count),
+        href: gmailSearchUrl(`from:${senderEmail}`, userEmail),
       };
     });
-  }, [sourceMode, summaryQuery.data.domainLoad, summaryQuery.data.topSenders]);
+  }, [sourceMode, summaryQuery.data.domainLoad, summaryQuery.data.topSenders, userEmail]);
+
+  const recipientRows = useMemo<SourceRow[]>(() => {
+    return ((summaryQuery.data as AnalyticsSummaryWithRecipients).topRecipients ?? []).map(
+      (recipient) => {
+        const recipientEmail = recipient.emailAddress ?? '';
+        return {
+          key: recipientEmail,
+          label: recipientEmail,
+          count: safeCount(recipient.count ?? undefined),
+          href: gmailSearchUrl(`to:${recipientEmail}`, userEmail),
+        };
+      },
+    );
+  }, [summaryQuery.data, userEmail]);
 
   const visibleSourceRows = sourcesExpanded ? sourceRows : sourceRows.slice(0, 6);
+  const visibleRecipientRows = sourcesExpanded ? recipientRows : recipientRows.slice(0, 6);
   const maxSourceCount = Math.max(1, ...sourceRows.map((row) => row.count));
+  const maxRecipientCount = Math.max(1, ...recipientRows.map((row) => row.count));
 
   const ruleChartData = useMemo(() => {
     const ruleHits = summaryQuery.data.ruleHits ?? [];
@@ -404,8 +430,11 @@ export function AnalyticsPageClient() {
         <SourceLoadPanel
           mode={sourceMode}
           rows={visibleSourceRows}
+          recipientRows={visibleRecipientRows}
           totalRows={sourceRows.length}
+          totalRecipientRows={recipientRows.length}
           maxCount={maxSourceCount}
+          maxRecipientCount={maxRecipientCount}
           expanded={sourcesExpanded}
           onModeChange={(nextMode) => {
             setSourceMode(nextMode);
@@ -470,43 +499,57 @@ function AnalyticsToolbar({
   const groupByLabel = t(`analytics.groupBy.${groupBy}`);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <Select
-        value={selectedWindow}
-        onValueChange={(nextValue) => onWindowChange(nextValue as AnalyticsWindow)}
-      >
-        <SelectTrigger
-          className="bg-background h-11 w-full justify-between gap-3 px-4 text-base sm:w-[260px]"
-          aria-label={t('analytics.range.label')}
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="analytics-range" className="text-foreground text-sm font-medium">
+          {t('analytics.range.label')}
+        </label>
+        <Select
+          value={selectedWindow}
+          onValueChange={(nextValue) => onWindowChange(nextValue as AnalyticsWindow)}
         >
-          <Calendar className="text-muted-foreground size-4" aria-hidden="true" />
-          <SelectValue>{rangeLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent align="start" className="min-w-[240px]">
-          <SelectItem value="7d">{t('analytics.range.lastWeek')}</SelectItem>
-          <SelectItem value="30d">{t('analytics.range.lastMonth')}</SelectItem>
-          <SelectItem value="90d">{t('analytics.range.lastThreeMonths')}</SelectItem>
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            id="analytics-range"
+            className="bg-background h-11 w-full justify-between gap-3 px-4 text-base sm:w-[260px]"
+            aria-label={t('analytics.range.label')}
+          >
+            <Calendar className="text-muted-foreground size-4" aria-hidden="true" />
+            <SelectValue>{rangeLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start" className="min-w-[240px]">
+            <SelectItem value="7d">{t('analytics.range.lastWeek')}</SelectItem>
+            <SelectItem value="30d">{t('analytics.range.lastMonth')}</SelectItem>
+            <SelectItem value="90d">{t('analytics.range.lastThreeMonths')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground text-xs">{t('analytics.range.helper')}</span>
+      </div>
 
-      <Select
-        value={groupBy}
-        onValueChange={(nextValue) => onGroupByChange(nextValue as GroupByMode)}
-      >
-        <SelectTrigger
-          className="bg-background h-11 w-full justify-between gap-3 px-4 text-base sm:w-[220px]"
-          aria-label={t('analytics.groupBy.label')}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="analytics-groupby" className="text-foreground text-sm font-medium">
+          {t('analytics.groupBy.label')}
+        </label>
+        <Select
+          value={groupBy}
+          onValueChange={(nextValue) => onGroupByChange(nextValue as GroupByMode)}
         >
-          <Grid2X2 className="text-muted-foreground size-4" aria-hidden="true" />
-          <SelectValue>{groupByLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent align="start" className="min-w-[188px]">
-          <SelectItem value="day">{t('analytics.groupBy.day')}</SelectItem>
-          <SelectItem value="week">{t('analytics.groupBy.week')}</SelectItem>
-          <SelectItem value="month">{t('analytics.groupBy.month')}</SelectItem>
-          <SelectItem value="year">{t('analytics.groupBy.year')}</SelectItem>
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            id="analytics-groupby"
+            className="bg-background h-11 w-full justify-between gap-3 px-4 text-base sm:w-[220px]"
+            aria-label={t('analytics.groupBy.label')}
+          >
+            <Grid2X2 className="text-muted-foreground size-4" aria-hidden="true" />
+            <SelectValue>{groupByLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start" className="min-w-[188px]">
+            <SelectItem value="day">{t('analytics.groupBy.day')}</SelectItem>
+            <SelectItem value="week">{t('analytics.groupBy.week')}</SelectItem>
+            <SelectItem value="month">{t('analytics.groupBy.month')}</SelectItem>
+            <SelectItem value="year">{t('analytics.groupBy.year')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground text-xs">{t('analytics.groupBy.helper')}</span>
+      </div>
     </div>
   );
 }
@@ -538,23 +581,30 @@ function MetricCard({
 function SourceLoadPanel({
   mode,
   rows,
+  recipientRows,
   totalRows,
+  totalRecipientRows,
   maxCount,
+  maxRecipientCount,
   expanded,
   onModeChange,
   onToggleExpanded,
 }: {
   mode: SourceMode;
   rows: SourceRow[];
+  recipientRows: SourceRow[];
   totalRows: number;
+  totalRecipientRows: number;
   maxCount: number;
+  maxRecipientCount: number;
   expanded: boolean;
   onModeChange: (mode: SourceMode) => void;
   onToggleExpanded: () => void;
 }) {
   const t = useTranslations();
   const hasRows = rows.length > 0;
-  const canToggle = totalRows > 6;
+  const hasRecipientRows = recipientRows.length > 0;
+  const canToggle = totalRows > 6 || totalRecipientRows > 6;
 
   return (
     <div data-testid="analytics-top-senders-panel" className="grid gap-4 lg:grid-cols-2">
@@ -608,13 +658,27 @@ function SourceLoadPanel({
             {t('analytics.sources.sent')}
           </div>
         </div>
-        <div className="flex min-h-[300px] items-center justify-center px-6 text-center">
-          <div>
-            <p className="text-muted-foreground text-base">{t('analytics.sources.emptyTitle')}</p>
-            <p className="text-muted-foreground/80 mt-2 text-sm">
-              {t('analytics.sources.emptyBody')}
-            </p>
-          </div>
+        <div className="min-h-[300px] p-4">
+          {hasRecipientRows ? (
+            <div className="space-y-3">
+              <ol className="space-y-2.5">
+                {recipientRows.map((row) => (
+                  <SourceRowItem key={`sent-${row.key}`} row={row} maxCount={maxRecipientCount} />
+                ))}
+              </ol>
+              {canToggle ? (
+                <button
+                  type="button"
+                  className="border-border bg-background hover:bg-muted mx-auto block rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
+                  onClick={onToggleExpanded}
+                >
+                  {expanded ? t('analytics.sources.viewLess') : t('analytics.sources.viewMore')}
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <EmptySourcePanel />
+          )}
         </div>
       </div>
     </div>
@@ -655,9 +719,8 @@ function SourceModeTab({
 
 function SourceRowItem({ row, maxCount }: { row: SourceRow; maxCount: number }) {
   const width = `${Math.max(10, Math.round(percentOf(row.count, maxCount) * 100))}%`;
-
-  return (
-    <li className="bg-muted/35 relative overflow-hidden rounded-md">
+  const content = (
+    <>
       <div className="bg-primary/10 absolute inset-y-0 left-0 rounded-md" style={{ width }} />
       <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -670,6 +733,23 @@ function SourceRowItem({ row, maxCount }: { row: SourceRow; maxCount: number }) 
           {formatCompactCount(row.count)}
         </span>
       </div>
+    </>
+  );
+
+  return (
+    <li className="bg-muted/35 relative overflow-hidden rounded-md">
+      {row.href ? (
+        <a
+          href={row.href}
+          target="_blank"
+          rel="noreferrer"
+          className="hover:bg-muted/60 focus-visible:ring-ring block outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2"
+        >
+          {content}
+        </a>
+      ) : (
+        content
+      )}
     </li>
   );
 }
@@ -685,6 +765,14 @@ function EmptySourcePanel() {
       </div>
     </div>
   );
+}
+
+function gmailSearchUrl(query: string, userEmail: string | null): string {
+  const encodedQuery = encodeURIComponent(query);
+  if (!userEmail) {
+    return `https://mail.google.com/mail/u/0/#search/${encodedQuery}`;
+  }
+  return `https://mail.google.com/mail/u/?authuser=${encodeURIComponent(userEmail)}#search/${encodedQuery}`;
 }
 
 function PanelCard({

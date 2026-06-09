@@ -4,7 +4,7 @@ export async function FeatureDesignedAroundYou() {
   const t = await getTranslations('landingFeatures');
 
   return (
-    <section className="zm-container mb-24">
+    <section className="zm-container">
       <div className="mb-16 text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
           {t('sec6.title')}

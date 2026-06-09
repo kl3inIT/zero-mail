@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -133,8 +134,46 @@ class RecentInboxReadServiceOrchestratorTest {
 
         assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.PROJECTION);
         assertThat(page.messages()).hasSize(20);
-        assertThat(page.nextCursor()).isEqualTo("Pinner-projection-cursor");
+        assertThat(page.nextCursor()).startsWith("P");
+        assertThat(page.nextCursor()).doesNotContain("inner-projection-cursor");
         verifyNoInteractions(gmailConnectionRepository, gmailApiClientFactory);
+    }
+
+    @Test
+    void firstPage_projectionCustomLabelKeepsLabelWhenNameLookupFails() {
+        GmailInboxSyncStateEntity syncState =
+                syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
+        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
+        InboxProjectionMessage projectionMessage =
+                new InboxProjectionMessage(
+                        "msg-custom-label",
+                        "thread-custom-label",
+                        "Subject custom label",
+                        "Snippet custom label",
+                        "from@example.com",
+                        List.of(),
+                        List.of(),
+                        Instant.parse("2026-05-01T12:00:00Z"),
+                        List.of("INBOX", "Label_42"),
+                        List.of(),
+                        false,
+                        false);
+        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(1)))
+                .thenReturn(
+                        new InboxProjectionPage(
+                                List.of(projectionMessage),
+                                null,
+                                InboxProjectionDataSource.PROJECTION));
+
+        RecentInboxPage page = recentInboxReadService.fetchPage(TENANT_ID, null, 1);
+
+        assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.PROJECTION);
+        assertThat(page.messages()).hasSize(1);
+        assertThat(page.messages().getFirst().labelIds()).containsExactly("INBOX", "Label_42");
+        assertThat(page.messages().getFirst().labels())
+                .extracting(RecentInboxReadService.RecentInboxLabel::name)
+                .containsExactly("INBOX", "Label_42");
     }
 
     @Test
@@ -159,26 +198,87 @@ class RecentInboxReadServiceOrchestratorTest {
     }
 
     @Test
-    void cursorWithPPrefix_routesToProjectionWithStrippedInnerCursor() {
+    void firstPage_projectionIllegalState_fallsBackToLiveGmail() {
+        GmailInboxSyncStateEntity syncState =
+                syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
+        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
+                .thenThrow(new IllegalStateException("projection decrypt failed"));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, null, 20))
+                .isInstanceOf(RecentInboxUnavailableException.class)
+                .matches(
+                        exception ->
+                                ((RecentInboxUnavailableException) exception).reason()
+                                        == RecentInboxUnavailableReason.NOT_CONNECTED,
+                        "projection failure should fall back to live Gmail");
+        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
+    }
+
+    @Test
+    void cursorWithPPrefix_routesToProjectionWithStrippedInnerCursorAndKeepsLoadedCount() {
+        GmailInboxSyncStateEntity syncState =
+                syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
+        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
+                .thenReturn(
+                        new InboxProjectionPage(
+                                projectionRows(20),
+                                "inner-keyset-cursor",
+                                InboxProjectionDataSource.PROJECTION));
         when(inboxProjectionReadService.fetchInboxPage(
                         eq(TENANT_ID), eq("inner-keyset-cursor"), anyInt()))
                 .thenReturn(
                         new InboxProjectionPage(
                                 projectionRows(3), null, InboxProjectionDataSource.PROJECTION));
 
+        RecentInboxPage firstPage = recentInboxReadService.fetchPage(TENANT_ID, null, 20);
         RecentInboxPage page =
-                recentInboxReadService.fetchPage(TENANT_ID, "Pinner-keyset-cursor", 20);
+                recentInboxReadService.fetchPage(TENANT_ID, firstPage.nextCursor(), 20);
 
         assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.PROJECTION);
         assertThat(page.messages()).hasSize(3);
-        assertThat(page.nextCursor()).isNull();
+        assertThat(page.loadedCount()).isEqualTo(23);
+        assertThat(page.nextCursor()).startsWith("G");
         ArgumentCaptor<String> innerCursorCaptor = ArgumentCaptor.forClass(String.class);
-        verify(inboxProjectionReadService)
+        verify(inboxProjectionReadService, times(2))
                 .fetchInboxPage(eq(TENANT_ID), innerCursorCaptor.capture(), anyInt());
-        assertThat(innerCursorCaptor.getValue()).isEqualTo("inner-keyset-cursor");
+        assertThat(innerCursorCaptor.getAllValues()).containsExactly(null, "inner-keyset-cursor");
         // findById is called by the lazy backfill enqueue (Phase A invariant), but the orchestrator
         // routing on the cursor branch must not consult it again — projection routing is sticky.
         verifyNoInteractions(gmailConnectionRepository, gmailApiClientFactory);
+    }
+
+    @Test
+    void cursorWithPPrefix_projectionIllegalState_fallsBackToLiveGmailWithLoadedCount() {
+        GmailInboxSyncStateEntity syncState =
+                syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
+        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
+                .thenReturn(
+                        new InboxProjectionPage(
+                                projectionRows(20),
+                                "inner-keyset-cursor",
+                                InboxProjectionDataSource.PROJECTION));
+        when(inboxProjectionReadService.fetchInboxPage(
+                        eq(TENANT_ID), eq("inner-keyset-cursor"), anyInt()))
+                .thenThrow(new IllegalStateException("projection decrypt failed"));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
+
+        RecentInboxPage firstPage = recentInboxReadService.fetchPage(TENANT_ID, null, 20);
+
+        assertThatThrownBy(
+                        () ->
+                                recentInboxReadService.fetchPage(
+                                        TENANT_ID, firstPage.nextCursor(), 20))
+                .isInstanceOf(RecentInboxUnavailableException.class)
+                .matches(
+                        exception ->
+                                ((RecentInboxUnavailableException) exception).reason()
+                                        == RecentInboxUnavailableReason.NOT_CONNECTED,
+                        "projection cursor failure should fall back to live Gmail");
+        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
     }
 
     @Test

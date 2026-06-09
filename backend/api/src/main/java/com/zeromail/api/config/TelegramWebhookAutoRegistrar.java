@@ -44,6 +44,7 @@ public class TelegramWebhookAutoRegistrar implements CommandLineRunner {
             return;
         }
         URI webhookUrl = telegramProperties.webhookUrl();
+        telegramApiClient.registerDefaultCommands();
         telegramApiClient.registerWebhook(
                 webhookUrl.toString(), telegramProperties.webhookSecretToken());
         logger.info("event=telegram_webhook_auto_register_attempted host={}", webhookUrl.getHost());

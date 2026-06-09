@@ -8,6 +8,7 @@ import com.zeromail.core.messaging.telegram.config.TelegramProperties;
 import com.zeromail.core.messaging.telegram.gateway.TelegramApiClient;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 class TelegramWebhookAutoRegistrarTest {
@@ -21,7 +22,10 @@ class TelegramWebhookAutoRegistrarTest {
         new TelegramWebhookAutoRegistrar(properties, telegramApiClient).run();
 
         // Trailing-slash-free base + the fixed webhook path; secret token forwarded verbatim.
-        verify(telegramApiClient)
+        InOrder registrationOrder = Mockito.inOrder(telegramApiClient);
+        registrationOrder.verify(telegramApiClient).registerDefaultCommands();
+        registrationOrder
+                .verify(telegramApiClient)
                 .registerWebhook(
                         "https://zeromail.vn/api/integrations/telegram/webhook", "webhook-secret");
     }
@@ -32,6 +36,7 @@ class TelegramWebhookAutoRegistrarTest {
 
         new TelegramWebhookAutoRegistrar(properties, telegramApiClient).run();
 
+        verify(telegramApiClient).registerDefaultCommands();
         verify(telegramApiClient)
                 .registerWebhook(
                         "https://zeromail.vn/api/integrations/telegram/webhook", "webhook-secret");
@@ -52,6 +57,7 @@ class TelegramWebhookAutoRegistrarTest {
 
         new TelegramWebhookAutoRegistrar(properties, telegramApiClient).run();
 
+        verify(telegramApiClient, never()).registerDefaultCommands();
         verify(telegramApiClient, never())
                 .registerWebhook(Mockito.anyString(), Mockito.anyString());
     }

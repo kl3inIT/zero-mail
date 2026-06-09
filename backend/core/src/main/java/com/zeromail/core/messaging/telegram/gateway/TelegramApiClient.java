@@ -5,6 +5,7 @@ import com.zeromail.core.messaging.telegram.domain.TelegramAnswerCallbackQueryRe
 import com.zeromail.core.messaging.telegram.domain.TelegramApiResponse;
 import com.zeromail.core.messaging.telegram.domain.TelegramSendChatActionRequest;
 import com.zeromail.core.messaging.telegram.domain.TelegramSendMessageRequest;
+import com.zeromail.core.messaging.telegram.domain.TelegramSetMyCommandsRequest;
 import com.zeromail.core.messaging.telegram.domain.TelegramSetWebhookRequest;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -38,6 +39,10 @@ public class TelegramApiClient {
 
     public void registerWebhook(String webhookUrl, String secretToken) {
         post("setWebhook", TelegramSetWebhookRequest.of(webhookUrl, secretToken));
+    }
+
+    public void registerDefaultCommands() {
+        post("setMyCommands", TelegramSetMyCommandsRequest.zeroMailDefaults());
     }
 
     public void answerCallbackQuery(String callbackQueryId, String text) {
