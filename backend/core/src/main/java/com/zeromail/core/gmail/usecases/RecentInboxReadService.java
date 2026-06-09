@@ -157,7 +157,6 @@ public class RecentInboxReadService {
      * expires_at correctness issues and duplicate / skipped rows when stitching keysets against
      * pageTokens.
      */
-    @Transactional(readOnly = true)
     public RecentInboxPage fetchPage(UUID tenantId, String cursor, int requestedLimit) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         // Lazy backfill trigger (Phase A wave 3): the first time a tenant fetches the inbox after

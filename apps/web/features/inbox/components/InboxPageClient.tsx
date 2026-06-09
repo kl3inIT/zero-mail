@@ -2497,7 +2497,7 @@ function InboxReadStateFilter({
 
   return (
     <div
-      className="bg-muted/40 mt-2 inline-flex h-8 w-full rounded-md p-0.5 sm:w-auto"
+      className="border-border bg-background mt-2 inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
       role="group"
       aria-label={isVietnamese ? 'Lọc trạng thái đọc' : 'Filter read state'}
       data-testid="inbox-read-state-filter"
@@ -2509,10 +2509,10 @@ function InboxReadStateFilter({
             key={option.value}
             type="button"
             className={cn(
-              'flex-1 rounded-sm px-2.5 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none',
+              'flex-1 rounded-sm px-3 text-xs font-semibold whitespace-nowrap transition-colors sm:flex-none',
               selected
-                ? 'bg-background text-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground',
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-foreground hover:bg-muted',
             )}
             aria-pressed={selected}
             onClick={() => onChange(option.value)}

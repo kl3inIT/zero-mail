@@ -328,27 +328,7 @@ export function CandidateListPage() {
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-          <OptionMenu
-            label={filterOption?.label ?? t('filter.all')}
-            icon={filterOption?.icon}
-            options={filterOptions(t)}
-            value={filter}
-            onSelect={(value) => setFilter(value as FilterType)}
-          />
-          <DateRangePicker
-            value={windowId}
-            customRange={customRange}
-            label={windowDisplayLabel}
-            onSelectPreset={(preset) => {
-              setWindowId(preset);
-              setCustomRange(null);
-            }}
-            onApplyRange={(range) => {
-              setCustomRange(range);
-              setWindowId('custom');
-            }}
-          />
-          <div className="relative w-full sm:max-w-[320px]">
+          <div className="relative w-full sm:max-w-[400px] lg:max-w-[460px]">
             <SearchIcon
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
@@ -360,16 +340,38 @@ export function CandidateListPage() {
               className="bg-background h-11 pl-9"
             />
           </div>
-          {isBackgroundCandidateFetch && rawCandidates.length > 0 && (
-            <div
-              className="border-border bg-muted/30 text-muted-foreground inline-flex h-9 w-fit shrink-0 items-center gap-2 rounded-md border px-3 text-xs"
-              role="status"
-              aria-live="polite"
-            >
-              <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />
-              <span>{candidateFetchLabel}</span>
-            </div>
-          )}
+          <div className="flex flex-col gap-3 sm:ml-auto sm:flex-row sm:items-center">
+            <OptionMenu
+              label={filterOption?.label ?? t('filter.all')}
+              icon={filterOption?.icon}
+              options={filterOptions(t)}
+              value={filter}
+              onSelect={(value) => setFilter(value as FilterType)}
+            />
+            <DateRangePicker
+              value={windowId}
+              customRange={customRange}
+              label={windowDisplayLabel}
+              onSelectPreset={(preset) => {
+                setWindowId(preset);
+                setCustomRange(null);
+              }}
+              onApplyRange={(range) => {
+                setCustomRange(range);
+                setWindowId('custom');
+              }}
+            />
+            {isBackgroundCandidateFetch && rawCandidates.length > 0 && (
+              <div
+                className="border-border bg-muted/30 text-muted-foreground inline-flex h-9 w-fit shrink-0 items-center gap-2 rounded-md border px-3 text-xs"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />
+                <span>{candidateFetchLabel}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -712,7 +714,7 @@ function DateRangePicker({
               defaultMonth={defaultMonth}
               selected={draftRange}
               onSelect={(range) => {
-                setDraftRange(range);
+                setDraftRange(defaultRangeEndToToday(range, today));
                 setValidationError(null);
               }}
               disabled={{ after: today }}
@@ -783,6 +785,12 @@ function isoRangeToDateRange(
   const to = new Date(`${range.endDate}T00:00:00`);
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return undefined;
   return { from, to };
+}
+
+function defaultRangeEndToToday(range: DateRange | undefined, today: Date): DateRange | undefined {
+  if (!range?.from) return range;
+  if (range.to) return range;
+  return { from: range.from, to: today };
 }
 
 function dateToIsoDate(date: Date): string {
