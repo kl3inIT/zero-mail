@@ -12,7 +12,12 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.util.List;
 
-/** Boundary: tenant-only Gmail client lookup is legacy-only during mailbox migration. */
+/**
+ * Boundary: tenant-only Gmail client lookup is legacy-only during mailbox migration.
+ *
+ * <p>Phase 11 Pitfall 2 guard: {@code GmailConnectionRepository.findByTenantId} is a primary
+ * mailbox compatibility shim, so mailbox-scoped flows must not use it to choose a connection.
+ */
 @AnalyzeClasses(packages = "com.zeromail", importOptions = ImportOption.DoNotIncludeTests.class)
 class GmailClientLookupBoundaryTest {
 
@@ -31,8 +36,21 @@ class GmailClientLookupBoundaryTest {
                     "com.zeromail.core.outbound.usecases.GmailOutboundSendGateway",
                     "com.zeromail.core.triage.usecases.TriageGmailWriter");
 
+    static final List<String> ALLOWED_PRIMARY_SHIM_CALLERS =
+            List.of(
+                    "com.zeromail.api.security.GmailAccessGuard",
+                    "com.zeromail.core.cleanup.usecases.SenderMessageReadService",
+                    "com.zeromail.core.gmail.usecases.GmailConnectionService",
+                    "com.zeromail.core.gmail.usecases.GmailDeliveryProcessingService",
+                    "com.zeromail.core.gmail.usecases.GmailPreviewReadService",
+                    "com.zeromail.core.gmail.usecases.InboxBackfillService",
+                    "com.zeromail.core.gmail.usecases.RecentInboxReadService");
+
     private static final String GMAIL_CLIENT_FACTORY_OWNER =
             "com.zeromail.core.gmail.gateway.GmailApiClientFactory";
+
+    private static final String GMAIL_CONNECTION_REPOSITORY_OWNER =
+            "com.zeromail.core.gmail.persistence.GmailConnectionRepository";
 
     @ArchTest
     static final ArchRule only_allowed_legacy_callers_use_tenant_gmail_client_lookup =
@@ -77,9 +95,58 @@ class GmailClientLookupBoundaryTest {
                                     + " flows; only the explicit legacy migration allow-list may use it")
                     .allowEmptyShould(false);
 
+    @ArchTest
+    static final ArchRule findByTenantId_isForbiddenInMailboxScopedFlows =
+            classes()
+                    .that()
+                    .resideInAPackage("com.zeromail..")
+                    .should(
+                            new ArchCondition<JavaClass>(
+                                    "call GmailConnectionRepository.findByTenantId only from "
+                                            + ALLOWED_PRIMARY_SHIM_CALLERS) {
+                                @Override
+                                public void check(
+                                        JavaClass javaClass, ConditionEvents conditionEvents) {
+                                    if (ALLOWED_PRIMARY_SHIM_CALLERS.contains(
+                                            javaClass.getName())) {
+                                        return;
+                                    }
+                                    javaClass
+                                            .getMethodCallsFromSelf()
+                                            .forEach(
+                                                    methodCall -> {
+                                                        if (!isPrimaryShimLookupCall(
+                                                                methodCall
+                                                                        .getTargetOwner()
+                                                                        .getName(),
+                                                                methodCall.getName())) {
+                                                            return;
+                                                        }
+                                                        conditionEvents.add(
+                                                                SimpleConditionEvent.violated(
+                                                                        methodCall,
+                                                                        "Only "
+                                                                                + ALLOWED_PRIMARY_SHIM_CALLERS
+                                                                                + " may call GmailConnectionRepository.findByTenantId; found "
+                                                                                + methodCall
+                                                                                        .getSourceCodeLocation()));
+                                                    });
+                                }
+                            })
+                    .because(
+                            "AUD-05: GmailConnectionRepository.findByTenantId is a primary-mailbox"
+                                    + " compatibility shim and must not be used by new mailbox-scoped flows")
+                    .allowEmptyShould(false);
+
     private static boolean isTenantLookupCall(String targetOwnerName, String methodName) {
         String normalizedOwnerName = targetOwnerName.replace('$', '.');
         return normalizedOwnerName.endsWith(GMAIL_CLIENT_FACTORY_OWNER)
                 && methodName.equals("buildClientForTenant");
+    }
+
+    private static boolean isPrimaryShimLookupCall(String targetOwnerName, String methodName) {
+        String normalizedOwnerName = targetOwnerName.replace('$', '.');
+        return normalizedOwnerName.endsWith(GMAIL_CONNECTION_REPOSITORY_OWNER)
+                && methodName.equals("findByTenantId");
     }
 }
