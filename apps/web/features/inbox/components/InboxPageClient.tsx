@@ -91,6 +91,7 @@ const INBOX_LIST_PANE_MIN_WIDTH = 360;
 const INBOX_LIST_PANE_DEFAULT_WIDTH = 500;
 const INBOX_DETAIL_PANE_MIN_WIDTH = 420;
 const INBOX_ROW_VISIBLE_LABEL_LIMIT = 4;
+const INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT = 200;
 
 type InboxReadFilter = 'all' | 'unread' | 'read';
 
@@ -123,9 +124,19 @@ export function InboxPageClient() {
   }, []);
   const clearLabelFilter = useCallback(() => setSelectedLabelIds(new Set()), []);
   const inboxDataSource = latestInboxDataSource(inboxQuery.data);
+  const canWarmUpInboxInBackground =
+    searchQuery.trim() === '' && selectedLabelIds.size === 0 && readFilter === 'all';
+  const isInboxBackgroundWarmupActive =
+    canWarmUpInboxInBackground &&
+    inboxQuery.isFetchingNextPage &&
+    messages.length < INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT;
   const inboxCountCaption = locale.startsWith('vi')
-    ? `\u0110\u00e3 t\u1ea3i ${messages.length} email`
-    : `${messages.length} loaded`;
+    ? isInboxBackgroundWarmupActive
+      ? `\u0110ang t\u1ea3i n\u1ec1n... \u0110\u00e3 t\u1ea3i ${messages.length} email`
+      : `\u0110\u00e3 t\u1ea3i ${messages.length} email`
+    : isInboxBackgroundWarmupActive
+      ? `Background loading... ${messages.length} loaded`
+      : `${messages.length} loaded`;
   const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
   // Wave 1 fallback observability — quietly log when the projection couldn't satisfy the page so
   // ops can correlate FE behaviour with the backend `event=inbox_read_fallback` log line.
@@ -163,6 +174,24 @@ export function InboxPageClient() {
       void inboxQuery.fetchNextPage();
     }
   }, [inboxQuery]);
+
+  useEffect(() => {
+    if (!canWarmUpInboxInBackground) return;
+    if (messages.length === 0 || messages.length >= INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT) return;
+    if (
+      !inboxQuery.hasNextPage ||
+      inboxQuery.isFetching ||
+      inboxQuery.isFetchingNextPage ||
+      inboxQuery.isPending
+    ) {
+      return;
+    }
+
+    const warmupTimer = window.setTimeout(() => {
+      void inboxQuery.fetchNextPage();
+    }, 250);
+    return () => window.clearTimeout(warmupTimer);
+  }, [canWarmUpInboxInBackground, inboxQuery, messages.length]);
 
   const handleListScroll = useCallback(
     (event: UIEvent<HTMLDivElement>) => {
@@ -2450,11 +2479,17 @@ function inboxLabelColorClass(label: InboxLabel): string {
 }
 
 function inboxLabelName(label: InboxLabel): string {
-  return label.name
+  const normalizedName = label.name
     .replace(/^CATEGORY_/, '')
     .replace(/_/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  return titleCaseSystemLabel(normalizedName);
+}
+
+function titleCaseSystemLabel(labelName: string): string {
+  if (!labelName || /[a-z]/.test(labelName)) return labelName;
+  return labelName.toLowerCase().replace(/(^|\s)(\S)/g, (match) => match.toUpperCase());
 }
 
 function InboxLabelChip({ label }: { label: InboxLabel }) {
