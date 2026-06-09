@@ -1,0 +1,88 @@
+name: Debug – query prod DB + Loki
+
+on:
+  workflow_dispatch:
+    inputs:
+      email_a:
+        description: 'First gmail account to inspect'
+        required: true
+        default: 'testzeromail030@gmail.com'
+      email_b:
+        description: 'Second gmail account to compare against'
+        required: true
+        default: 'dathp04@gmail.com'
+
+jobs:
+  query:
+    runs-on: self-hosted
+    steps:
+      - name: Tenant + rules
+        run: |
+          docker exec zeromail-postgres psql -U zeromail -d zeromail -t -A -F'|' -c "
+            SELECT gc.google_email,
+                   t.id                                     AS tenant_id,
+                   t.created_at::date                       AS joined,
+                   COUNT(r.id)                              AS rule_count,
+                   SUM(CASE WHEN r.actions::text ILIKE '%forward_email%' THEN 1 ELSE 0 END) AS forward_rules
+            FROM tenants t
+            JOIN gmail_connections gc ON gc.tenant_id = t.id
+            LEFT JOIN rules r          ON r.tenant_id  = t.id
+            WHERE gc.google_email IN ('${{ github.event.inputs.email_a }}','${{ github.event.inputs.email_b }}')
+            GROUP BY gc.google_email, t.id, t.created_at
+            ORDER BY gc.google_email;
+          "
+
+      - name: Rules detail (forward rules only)
+        run: |
+          docker exec zeromail-postgres psql -U zeromail -d zeromail -c "
+            SELECT r.id, gc.google_email, r.display_name, r.enabled,
+                   r.created_at,
+                   r.actions::text
+            FROM rules r
+            JOIN gmail_connections gc ON gc.tenant_id = r.tenant_id
+            WHERE gc.google_email IN ('${{ github.event.inputs.email_a }}','${{ github.event.inputs.email_b }}')
+              AND r.actions::text ILIKE '%forward_email%'
+            ORDER BY gc.google_email, r.created_at DESC;
+          "
+
+      - name: Feature bindings for these tenants
+        run: |
+          docker exec zeromail-postgres psql -U zeromail -d zeromail -c "
+            SELECT gc.google_email, fb.feature_key, fb.enabled
+            FROM feature_binding fb
+            JOIN gmail_connections gc ON gc.tenant_id = fb.tenant_id
+            WHERE gc.google_email IN ('${{ github.event.inputs.email_a }}','${{ github.event.inputs.email_b }}')
+            ORDER BY gc.google_email, fb.feature_key;
+          "
+
+      - name: Loki – recent rule-compiler errors for these accounts
+        run: |
+          NOW=$(date +%s%N)
+          START=$(( NOW - 86400000000000 ))   # last 24h in nanoseconds
+          docker exec zeromail-loki sh -c "
+            wget -qO- \"http://localhost:3100/loki/api/v1/query_range?query=%7Bcontainer%3D%22zeromail-api%22%7D+%7C%3D+%22forward%22+%7C%3D+%22rule%22&start=${START}&end=${NOW}&limit=100&direction=backward\" \
+              | python3 -c \"
+import json,sys
+d=json.load(sys.stdin)
+for stream in d.get('data',{}).get('result',[]):
+  for ts,line in stream['values']:
+    if any(e in line for e in ['testzeromail030','dathp04','forward_email','ForwardEmail','FORWARD']):
+      print(line)
+\" 2>/dev/null || echo '(no matching log lines or Loki not reachable)'
+          " || echo "(docker exec loki failed – container may not be named zeromail-loki)"
+
+      - name: Loki – rule creation errors (last 24h)
+        run: |
+          NOW=$(date +%s%N)
+          START=$(( NOW - 86400000000000 ))
+          docker exec zeromail-loki sh -c "
+            wget -qO- \"http://localhost:3100/loki/api/v1/query_range?query=%7Bcontainer%3D%22zeromail-api%22%7D+%7C%3D+%22compile%22&start=${START}&end=${NOW}&limit=200&direction=backward\" \
+              | python3 -c \"
+import json,sys
+d=json.load(sys.stdin)
+for stream in d.get('data',{}).get('result',[]):
+  for ts,line in stream['values']:
+    if 'error' in line.lower() or 'exception' in line.lower() or 'fail' in line.lower():
+      print(line[:400])
+\" 2>/dev/null || echo '(no matching entries)'
+          " || echo "(skipped)"
