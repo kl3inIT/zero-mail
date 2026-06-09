@@ -17,22 +17,22 @@
 ### Workspace and Mailbox Model
 
 - [ ] **WSP-01**: User's existing tenant is represented as one workspace without changing login/session semantics.
-- [ ] **WSP-02**: Existing one-Gmail data migrates to one primary Gmail mailbox while preserving encrypted tokens, connection state, history state, and metadata/audit continuity where possible.
+- [x] **WSP-02**: Existing one-Gmail data migrates to one primary Gmail mailbox while preserving encrypted tokens, connection state, history state, and metadata/audit continuity where possible.
 - [ ] **WSP-03**: System stores a stable Gmail mailbox identifier on every new mailbox-scoped record that can contain per-account state or provenance.
 - [ ] **WSP-04**: Backend APIs, UI labels, and logs consistently distinguish workspace, user, and Gmail mailbox without exposing future team/member controls.
-- [ ] **WSP-05**: System fails closed when a mailbox id is missing, invalid, disconnected, or not owned by the current tenant/workspace.
-- [ ] **WSP-06**: Mailbox-scoped API requests go through a shared backend guard/context that validates `(tenantId, gmailMailboxId)` ownership before controller/service execution; tenant-only default mailbox fallback is allowed only for explicitly legacy/default surfaces, never for internal Gmail write paths.
+- [x] **WSP-05**: System fails closed when a mailbox id is missing, invalid, disconnected, or not owned by the current tenant/workspace.
+- [x] **WSP-06**: Mailbox-scoped API requests go through a shared backend guard/context that validates `(tenantId, gmailMailboxId)` ownership before controller/service execution; tenant-only default mailbox fallback is allowed only for explicitly legacy/default surfaces, never for internal Gmail write paths.
 - [ ] **WSP-07**: Workspace-level state owns shared business configuration such as credits, billing, AI provider/model/BYOK, global pause/auto-send controls, safety policy, templates/catalog, and future business context; mailbox-level state owns Gmail OAuth, watch/history, connection health, inbox data, rules, Gmail actions, outbound execution, audit provenance, and display identity.
 
 ### Gmail Account Management
 
 - [ ] **GMA-01**: User can connect an additional Gmail or Google Workspace mailbox without replacing the existing connected mailbox.
 - [ ] **GMA-02**: User can view all connected Gmail mailboxes with email, display name/purpose label, status, primary/default marker, watch expiry, ingestion health, and last sync metadata.
-- [ ] **GMA-03**: User can choose one primary/default Gmail mailbox for surfaces that need a default account.
+- [x] **GMA-03**: User can choose one primary/default Gmail mailbox for surfaces that need a default account.
 - [ ] **GMA-04**: User can reconnect one mailbox and refresh its encrypted token/scopes without touching other mailboxes.
-- [ ] **GMA-05**: User can disconnect one mailbox; the app stops watch renewal, ingestion, and automation for that mailbox without disconnecting the workspace.
-- [ ] **GMA-06**: System prevents duplicate active Gmail addresses in the same workspace and returns a clear error when a Gmail address is already connected elsewhere.
-- [ ] **GMA-07**: OAuth flow separates first-login Gmail provisioning from add-mailbox and reconnect-mailbox flows, so connecting another Gmail never replaces the current mailbox row by accident.
+- [x] **GMA-05**: User can disconnect one mailbox; the app stops watch renewal, ingestion, and automation for that mailbox without disconnecting the workspace.
+- [x] **GMA-06**: System prevents duplicate active Gmail addresses in the same workspace and returns a clear error when a Gmail address is already connected elsewhere.
+- [x] **GMA-07**: OAuth flow separates first-login Gmail provisioning from add-mailbox and reconnect-mailbox flows, so connecting another Gmail never replaces the current mailbox row by accident.
 
 ### Ingestion and Inbox Data
 
@@ -57,7 +57,7 @@
 - [ ] **AUD-01**: Triage audit rows expose the source Gmail mailbox and executing Gmail mailbox for every Gmail write/read-derived action.
 - [ ] **AUD-02**: Undo/revert targets the same Gmail mailbox that originally executed the action.
 - [ ] **AUD-03**: Sender safety-net/protected-sender decisions remain tenant-owned and record triggering mailbox metadata without leaking content.
-- [ ] **AUD-04**: Admin/operator tenant inspection shows metadata-only multi-mailbox health without exposing tokens, raw bodies, prompts, or completions.
+- [x] **AUD-04**: Admin/operator tenant inspection shows metadata-only multi-mailbox health without exposing tokens, raw bodies, prompts, or completions.
 - [ ] **AUD-05**: Architectural tests forbid tenant-only Gmail client lookup in new mailbox-scoped flows where mailbox context is required.
 - [ ] **AUD-06**: Cross-account isolation tests prove one mailbox cannot read, write, archive, draft, or send as another mailbox through crafted ids.
 - [ ] **AUD-07**: Application logs and external error telemetry do not emit raw connected mailbox emails, sender/recipient emails, subjects, snippets, bodies, raw headers, tokens, prompts, or completions; use tenant id, mailbox id, technical status, and optional masked/hash values instead. Storing connected mailbox email in DB/UI remains allowed product state.
@@ -73,7 +73,7 @@
 
 ### Verification and Migration
 
-- [ ] **VER-01**: Liquibase migration is roll-forward, preserves existing tenants, and has coverage for old single-account fixtures.
+- [x] **VER-01**: Liquibase migration is roll-forward, preserves existing tenants, and has coverage for old single-account fixtures.
 - [ ] **VER-02**: OpenAPI is regenerated after DTO/API changes and frontend feature APIs use generated types.
 - [ ] **VER-03**: Backend tests cover migration, repository lookup, Pub/Sub routing, watch renewal, idempotency, mailbox-owned rules, outbound gateway, and audit invariants.
 - [ ] **VER-04**: Frontend tests and Playwright cover connect, list, active-mailbox switching, mailbox-owned rules, send-from visibility, and audit workflows in a real browser.
@@ -120,21 +120,21 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | WSP-01 | Phase 10 | Pending |
-| WSP-02 | Phase 10 | Pending |
+| WSP-02 | Phase 10 | Complete |
 | WSP-03 | Phase 10 | Pending |
 | WSP-04 | Phase 10 | Pending |
-| WSP-05 | Phase 10 | Pending |
-| WSP-06 | Phase 10 | Pending |
+| WSP-05 | Phase 10 | Complete |
+| WSP-06 | Phase 10 | Complete |
 | WSP-07 | Phase 10 | Pending |
 | GMA-01 | Phase 10 | Pending |
 | GMA-02 | Phase 10 | Pending |
-| GMA-03 | Phase 10 | Pending |
+| GMA-03 | Phase 10 | Complete |
 | GMA-04 | Phase 10 | Pending |
-| GMA-05 | Phase 10 | Pending |
-| GMA-06 | Phase 10 | Pending |
-| GMA-07 | Phase 10 | Pending |
-| AUD-04 | Phase 10 | Pending |
-| VER-01 | Phase 10 | Pending |
+| GMA-05 | Phase 10 | Complete |
+| GMA-06 | Phase 10 | Complete |
+| GMA-07 | Phase 10 | Complete |
+| AUD-04 | Phase 10 | Complete |
+| VER-01 | Phase 10 | Complete |
 | ING-01 | Phase 11 | Pending |
 | ING-02 | Phase 11 | Pending |
 | ING-03 | Phase 11 | Pending |
@@ -164,6 +164,7 @@
 | VER-04 | Phase 11 | Pending |
 
 **Coverage:**
+
 - v1.3 requirements: 43 total
 - Mapped to phases: 43
 - Unmapped: 0
