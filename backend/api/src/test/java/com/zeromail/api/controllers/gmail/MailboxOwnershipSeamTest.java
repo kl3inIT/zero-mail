@@ -10,6 +10,7 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
@@ -57,9 +59,9 @@ class MailboxOwnershipSeamTest extends ApiPostgresTestBase {
         assertThat(missingProblem.path("status").asInt()).isEqualTo(404);
         assertThat(notOwnedProblem.path("status").asInt()).isEqualTo(404);
         assertThat(missingProblem.path("code").asString())
-                .isEqualTo("error.gmail.mailbox.not_owned");
+                .isEqualTo("error.gmail.mailbox.not_found");
         assertThat(notOwnedProblem.path("code").asString())
-                .isEqualTo("error.gmail.mailbox.not_owned");
+                .isEqualTo("error.gmail.mailbox.not_found");
     }
 
     @Test
@@ -145,12 +147,15 @@ class MailboxOwnershipSeamTest extends ApiPostgresTestBase {
         assertThat(problemJson.path("code").asString())
                 .as(
                         "resolveOwnedConnectionOrThrow must fail closed on DISCONNECTED/PENDING/NOT_CONNECTED")
-                .isEqualTo("error.gmail.mailbox.disconnected");
+                .isEqualTo("error.gmail.disconnected");
     }
 
     private RestClient authenticatedClient(SeedData seedData) {
+        HttpClient noRedirectHttpClient =
+                HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
         return RestClient.builder()
                 .baseUrl("http://localhost:" + serverPort)
+                .requestFactory(new JdkClientHttpRequestFactory(noRedirectHttpClient))
                 .defaultHeader(TestSessionSupport.HEADER_SUBJECT, seedData.googleSubject())
                 .defaultHeader(TestSessionSupport.HEADER_EMAIL, seedData.email())
                 .build();
