@@ -1,7 +1,7 @@
 # Requirements: Zero Mail v1.3 Gmail Workspace Foundation
 
 **Defined:** 2026-06-07
-**Status:** Reconciled after code research (`.planning/research/V1.3-CODE-RESEARCH.md`). The initial requirements were draft v0; this version reflects the single-Gmail assumptions found in Zero Mail and the mailbox-scoping pattern found in Inbox Zero. Phase 11 Plan 04 completed mailbox-owned automation, outbound, and audit provenance requirements.
+**Status:** Reconciled after code research (`.planning/research/V1.3-CODE-RESEARCH.md`). The initial requirements were draft v0; this version reflects the single-Gmail assumptions found in Zero Mail and the mailbox-scoping pattern found in Inbox Zero. Phase 11 Plan 05 completed active-mailbox backend scope, architectural Gmail lookup guards, and cross-account isolation tests.
 **Core Value:** AI auto-triage that users trust with their real Gmail inbox.
 
 ## Scope Inputs
@@ -58,8 +58,8 @@
 - [x] **AUD-02**: Undo/revert targets the same Gmail mailbox that originally executed the action.
 - [x] **AUD-03**: Sender safety-net/protected-sender decisions remain tenant-owned and record triggering mailbox metadata without leaking content.
 - [x] **AUD-04**: Admin/operator tenant inspection shows metadata-only multi-mailbox health without exposing tokens, raw bodies, prompts, or completions.
-- [ ] **AUD-05**: Architectural tests forbid tenant-only Gmail client lookup in new mailbox-scoped flows where mailbox context is required.
-- [ ] **AUD-06**: Cross-account isolation tests prove one mailbox cannot read, write, archive, draft, or send as another mailbox through crafted ids.
+- [x] **AUD-05**: Architectural tests forbid tenant-only Gmail client lookup in new mailbox-scoped flows where mailbox context is required.
+- [x] **AUD-06**: Cross-account isolation tests prove one mailbox cannot read, write, archive, draft, or send as another mailbox through crafted ids.
 - [x] **AUD-07**: Application logs and external error telemetry do not emit raw connected mailbox emails, sender/recipient emails, subjects, snippets, bodies, raw headers, tokens, prompts, or completions; use tenant id, mailbox id, technical status, and optional masked/hash values instead. Storing connected mailbox email in DB/UI remains allowed product state.
 
 ### User Experience
@@ -150,8 +150,8 @@
 | AUD-01 | Phase 11 | Complete |
 | AUD-02 | Phase 11 | Complete |
 | AUD-03 | Phase 11 | Complete |
-| AUD-05 | Phase 11 | Pending |
-| AUD-06 | Phase 11 | Pending |
+| AUD-05 | Phase 11 | Complete |
+| AUD-06 | Phase 11 | Complete |
 | AUD-07 | Phase 11 | Complete |
 | UX-01 | Phase 11 | Pending |
 | UX-02 | Phase 11 | Pending |
@@ -171,4 +171,4 @@
 
 ---
 *Requirements defined: 2026-06-07*
-*Last updated: 2026-06-09 after Phase 11 Plan 04 mailbox-owned automation*
+*Last updated: 2026-06-09 after Phase 11 Plan 05 active mailbox scope*

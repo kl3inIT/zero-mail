@@ -45,7 +45,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 - [x] Phase 10: Gmail Mailbox Foundation and Account Management (completed 2026-06-09)
 - [ ] Phase 11: Mailbox-Scoped Ingestion, Automation, UI, and Verification
 
-32/43 v1.3 requirements complete; 11/43 pending. Scope is Gmail-only workspace-shared, mailbox-isolated foundation; Microsoft, Zalo OA, CRM, and full team collaboration remain deferred.
+34/43 v1.3 requirements complete; 9/43 pending. Scope is Gmail-only workspace-shared, mailbox-isolated foundation; Microsoft, Zalo OA, CRM, and full team collaboration remain deferred.
 
 </details>
 
@@ -62,7 +62,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 08-bulk-unsubscribe. Bulk Unsubscribe Campaign | v1.2 | — | Complete | 2026-05 |
 | 9. User Settings UI on Curated Catalog | v1.2 | 7/7 | Complete | 2026-05-29 |
 | 10. Gmail Mailbox Foundation and Account Management | v1.3 | 6/6 | Complete    | 2026-06-09 |
-| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 4/6 | In Progress | — |
+| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 5/6 | In Progress | — |
 
 ### Phase 10: Gmail Mailbox Foundation and Account Management
 
@@ -115,7 +115,7 @@ Expected plan areas:
 **Requirements:** ING-01..06, AUTO-01..06, AUD-01..03, AUD-05..07, UX-01..06, VER-02..04
 **Depends on:** Phase 10 mailbox foundation and account metadata
 **Mode:** final integration phase
-**Plans:** 4/6 plans executed
+**Plans:** 5/6 plans executed
 
 Plans:
 
@@ -134,7 +134,7 @@ Plans:
 
 **Wave 4** *(blocked on Waves 3)*
 
-- [ ] 11-05-PLAN.md — MailboxContext ScopedValue + MailboxBindingFilter + ActiveMailboxResolver + active-mailbox endpoint + read-consumer migration + allow-list drain + cross-account isolation green
+- [x] 11-05-PLAN.md — MailboxContext ScopedValue + MailboxBindingFilter + ActiveMailboxResolver + active-mailbox endpoint + read-consumer migration + allow-list drain + cross-account isolation green
 
 **Wave 5** *(blocked on Wave 4)*
 
