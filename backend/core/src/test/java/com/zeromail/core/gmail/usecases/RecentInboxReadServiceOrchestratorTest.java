@@ -9,13 +9,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxPage;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxUnavailableException;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxUnavailableReason;
 import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateEntity;
+import com.zeromail.core.inbox.persistence.GmailInboxSyncStateId;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
 import com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer;
 import com.zeromail.core.inbox.usecases.InboxProjectionMessage;
@@ -33,26 +37,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-/**
- * Wave 1 orchestrator branch tests for {@link RecentInboxReadService#fetchPage}.
- *
- * <p>The cross-source integration test ({@code RecentInboxReadServiceFallbackTest} per Phase B
- * PLAN.md) lands in Wave 4 with real Postgres + Gmail mocks. These unit tests exercise the routing
- * logic in isolation by mocking the four collaborators directly:
- *
- * <ul>
- *   <li>{@link GmailInboxSyncStateRepository} — used for the freshness gate
- *   <li>{@link InboxProjectionReadService} — used for the projection path
- *   <li>{@link GmailConnectionRepository} — when the gmail fallback runs we let it throw {@code
- *       NOT_CONNECTED} as a sentinel, proving the fallback path was taken without needing a Gmail
- *       SDK mock
- *   <li>{@link InboxBackfillEnqueuer} — verified for the lazy-enqueue invariant on the SYNCING
- *       branch
- * </ul>
- */
+/** Wave 1 orchestrator branch tests for {@link RecentInboxReadService#fetchPage}. */
 class RecentInboxReadServiceOrchestratorTest {
 
     private static final UUID TENANT_ID = UUID.fromString("11111111-2222-3333-4444-555555555555");
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("11111111-2222-3333-4444-666666666666");
+    private static final MailboxRef MAILBOX_REF = new MailboxRef(TENANT_ID, GMAIL_CONNECTION_ID);
 
     private GmailConnectionRepository gmailConnectionRepository;
     private GmailApiClientFactory gmailApiClientFactory;
@@ -81,38 +72,33 @@ class RecentInboxReadServiceOrchestratorTest {
 
     @Test
     void firstPage_noSyncStateRow_servesLiveGmailAndEnqueuesBackfill() {
-        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.empty());
-        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID))
+                .thenReturn(Optional.of(connectedMailbox()));
+        when(inboxSyncStateRepository.findById(syncStateId())).thenReturn(Optional.empty());
 
-        // First connect no longer parks the user on an empty SYNCING banner; it serves the live
-        // Gmail first page while the background backfill runs. With no GmailConnection row, the
-        // live
-        // path surfaces NOT_CONNECTED — reaching it proves the orchestrator took the live branch
-        // instead of short-circuiting to SYNCING. The lazy backfill enqueue still fires.
         assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, null, 20))
                 .isInstanceOf(RecentInboxUnavailableException.class)
                 .matches(
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
-                                        == RecentInboxUnavailableReason.NOT_CONNECTED);
-        verify(inboxBackfillEnqueuer).enqueueIfNotPending(TENANT_ID);
-        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
+                                        == RecentInboxUnavailableReason.NO_READ_GRANT);
+        verify(inboxBackfillEnqueuer).enqueueIfNotPending(MAILBOX_REF);
         verifyNoInteractions(inboxProjectionReadService);
     }
 
     @Test
     void firstPage_lastFullSyncAtNull_servesLiveGmail() {
         GmailInboxSyncStateEntity syncState = syncStateWithLastFullSyncAt(null);
-        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
-        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID))
+                .thenReturn(Optional.of(connectedMailbox()));
+        when(inboxSyncStateRepository.findById(syncStateId())).thenReturn(Optional.of(syncState));
 
         assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, null, 20))
                 .isInstanceOf(RecentInboxUnavailableException.class)
                 .matches(
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
-                                        == RecentInboxUnavailableReason.NOT_CONNECTED);
-        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
+                                        == RecentInboxUnavailableReason.NO_READ_GRANT);
         verifyNoInteractions(inboxProjectionReadService);
     }
 
@@ -120,7 +106,9 @@ class RecentInboxReadServiceOrchestratorTest {
     void firstPage_syncReady_projectionFullPage_returnsProjectionWithPPrefix() {
         GmailInboxSyncStateEntity syncState =
                 syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
-        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID))
+                .thenReturn(Optional.of(connectedMailbox()));
+        when(inboxSyncStateRepository.findById(syncStateId())).thenReturn(Optional.of(syncState));
         List<InboxProjectionMessage> rows = projectionRows(20);
         when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
                 .thenReturn(
@@ -134,28 +122,28 @@ class RecentInboxReadServiceOrchestratorTest {
         assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.PROJECTION);
         assertThat(page.messages()).hasSize(20);
         assertThat(page.nextCursor()).isEqualTo("Pinner-projection-cursor");
-        verifyNoInteractions(gmailConnectionRepository, gmailApiClientFactory);
+        verifyNoInteractions(gmailApiClientFactory);
     }
 
     @Test
     void firstPage_syncReady_projectionShort_fallsBackToLiveGmail() {
         GmailInboxSyncStateEntity syncState =
                 syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
-        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID))
+                .thenReturn(Optional.of(connectedMailbox()));
+        when(inboxSyncStateRepository.findById(syncStateId())).thenReturn(Optional.of(syncState));
         when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
                 .thenReturn(
                         new InboxProjectionPage(
                                 projectionRows(5), null, InboxProjectionDataSource.PROJECTION));
-        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, null, 20))
                 .isInstanceOf(RecentInboxUnavailableException.class)
                 .matches(
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
-                                        == RecentInboxUnavailableReason.NOT_CONNECTED,
-                        "fallback should have invoked gmailForTenant which then signals NOT_CONNECTED");
-        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
+                                        == RecentInboxUnavailableReason.NO_READ_GRANT,
+                        "fallback should have invoked gmailForTenant which then signals NO_READ_GRANT");
     }
 
     @Test
@@ -176,16 +164,11 @@ class RecentInboxReadServiceOrchestratorTest {
         verify(inboxProjectionReadService)
                 .fetchInboxPage(eq(TENANT_ID), innerCursorCaptor.capture(), anyInt());
         assertThat(innerCursorCaptor.getValue()).isEqualTo("inner-keyset-cursor");
-        // findById is called by the lazy backfill enqueue (Phase A invariant), but the orchestrator
-        // routing on the cursor branch must not consult it again — projection routing is sticky.
         verifyNoInteractions(gmailConnectionRepository, gmailApiClientFactory);
     }
 
     @Test
     void cursorWithGPrefix_routesToLiveGmailPath() {
-        // Empty inner cursor decodes to the legacy "first page" InboxCursor; the gmail connection
-        // lookup then signals NOT_CONNECTED — proof that the G prefix routed past the projection
-        // service and into the Gmail-bound code path.
         when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, "G", 20))
@@ -225,6 +208,18 @@ class RecentInboxReadServiceOrchestratorTest {
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
                                         == RecentInboxUnavailableReason.INVALID_CURSOR);
+    }
+
+    private static GmailConnectionEntity connectedMailbox() {
+        return new GmailConnectionEntity(
+                GMAIL_CONNECTION_ID,
+                TENANT_ID,
+                "orchestrator@example.test",
+                GmailConnectionStatus.CONNECTED);
+    }
+
+    private static GmailInboxSyncStateId syncStateId() {
+        return new GmailInboxSyncStateId(TENANT_ID, GMAIL_CONNECTION_ID);
     }
 
     private static GmailInboxSyncStateEntity syncStateWithLastFullSyncAt(Instant lastFullSyncAt) {

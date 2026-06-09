@@ -51,6 +51,8 @@ class TriageOutboundRuntimeGateTest {
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000008101");
     private static final UUID RULE_ID = UUID.fromString("00000000-0000-0000-0000-000000008102");
     private static final UUID AUDIT_ID = UUID.fromString("00000000-0000-0000-0000-000000008103");
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-000000008104");
     private static final String GMAIL_MESSAGE_ID = "gmail-message-outbound-gate";
     private static final String GMAIL_THREAD_ID = "gmail-thread-outbound-gate";
 
@@ -408,6 +410,7 @@ class TriageOutboundRuntimeGateTest {
     private static MailMessageObserved observedEvent() {
         return new MailMessageObserved(
                 TENANT_ID,
+                GMAIL_CONNECTION_ID,
                 GMAIL_MESSAGE_ID,
                 GMAIL_THREAD_ID,
                 Instant.parse("2026-05-23T00:00:00Z"));

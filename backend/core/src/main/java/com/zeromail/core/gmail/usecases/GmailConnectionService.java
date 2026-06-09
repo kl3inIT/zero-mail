@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,6 +143,13 @@ public class GmailConnectionService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public Optional<MailboxRef> primaryMailboxRef(UUID tenantId) {
+        return connectionRepository
+                .findByTenantId(tenantId)
+                .map(gmailConnection -> new MailboxRef(tenantId, gmailConnection.getId()));
+    }
+
     /**
      * Marks the tenant's Gmail connection as disconnected.
      *
@@ -202,7 +210,7 @@ public class GmailConnectionService {
                                         }));
     }
 
-    private void markDisconnected(MailboxRef mailboxRef) {
+    public void markDisconnected(MailboxRef mailboxRef) {
         disconnectTransaction.executeWithoutResult(
                 _ ->
                         connectionRepository
@@ -381,7 +389,7 @@ public class GmailConnectionService {
      * cập nhật {@code version} + {@code updated_at} qua save.
      */
     @Transactional
-    public void upsert(
+    public UUID upsert(
             UUID tenantId, String googleEmail, String scopesGranted, byte[] refreshTokenEncrypted) {
         GmailConnectionEntity connection =
                 connectionRepository
@@ -398,7 +406,8 @@ public class GmailConnectionService {
         connection.setScopesGranted(scopesGranted);
         connection.setConnectedAt(Instant.now());
         connection.setDisconnectedAt(null);
-        connectionRepository.save(connection);
+        GmailConnectionEntity savedConnection = connectionRepository.save(connection);
+        return savedConnection.getId();
     }
 
     @Transactional
@@ -484,73 +493,78 @@ public class GmailConnectionService {
     }
 
     @Transactional
-    public void markHistoryLost(UUID tenantId, Long newPointer) {
+    public void markHistoryLost(MailboxRef mailboxRef, Long newPointer) {
         connectionRepository
-                .findByTenantId(tenantId)
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
                 .ifPresent(
-                        connection -> {
-                            connection.setLastSyncedHistoryId(newPointer);
-                            connection.setIngestionHealth(GmailIngestionHealth.HISTORY_LOST);
-                            connectionRepository.save(connection);
+                        gmailConnection -> {
+                            gmailConnection.setLastSyncedHistoryId(newPointer);
+                            gmailConnection.setIngestionHealth(GmailIngestionHealth.HISTORY_LOST);
+                            connectionRepository.save(gmailConnection);
                         });
     }
 
     @Transactional
-    public void markWatchUnhealthy(UUID tenantId) {
+    public void markWatchUnhealthy(MailboxRef mailboxRef) {
         connectionRepository
-                .findByTenantId(tenantId)
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
                 .ifPresent(
-                        connection -> {
-                            connection.setIngestionHealth(GmailIngestionHealth.WATCH_UNHEALTHY);
-                            connectionRepository.save(connection);
+                        gmailConnection -> {
+                            gmailConnection.setIngestionHealth(
+                                    GmailIngestionHealth.WATCH_UNHEALTHY);
+                            connectionRepository.save(gmailConnection);
                         });
     }
 
     @Transactional
-    public void recordWatchSuccess(UUID tenantId, Long watchHistoryId, Instant watchExpiresAt) {
+    public void recordWatchSuccess(
+            MailboxRef mailboxRef, Long watchHistoryId, Instant watchExpiresAt) {
         connectionRepository
-                .findByTenantId(tenantId)
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
                 .ifPresent(
-                        connection -> {
-                            connection.setWatchHistoryId(watchHistoryId);
-                            if (connection.getLastSyncedHistoryId() == null) {
-                                connection.setLastSyncedHistoryId(watchHistoryId);
+                        gmailConnection -> {
+                            gmailConnection.setWatchHistoryId(watchHistoryId);
+                            if (gmailConnection.getLastSyncedHistoryId() == null) {
+                                gmailConnection.setLastSyncedHistoryId(watchHistoryId);
                             }
-                            connection.setWatchExpiresAt(watchExpiresAt);
-                            connection.setWatchRenewedAt(Instant.now());
-                            connection.setWatchConsecutiveFailures(0);
-                            if (connection.getIngestionHealth()
+                            gmailConnection.setWatchExpiresAt(watchExpiresAt);
+                            gmailConnection.setWatchRenewedAt(Instant.now());
+                            gmailConnection.setWatchConsecutiveFailures(0);
+                            if (gmailConnection.getIngestionHealth()
                                     == GmailIngestionHealth.WATCH_UNHEALTHY) {
-                                connection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+                                gmailConnection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
                             }
-                            connectionRepository.save(connection);
+                            connectionRepository.save(gmailConnection);
                         });
     }
 
     @Transactional
-    public void incrementWatchFailure(UUID tenantId) {
-        connectionRepository
-                .findByTenantId(tenantId)
-                .ifPresent(
-                        connection -> {
-                            connection.setWatchConsecutiveFailures(
-                                    connection.getWatchConsecutiveFailures() + 1);
-                            connectionRepository.save(connection);
-                        });
+    public int incrementWatchFailure(MailboxRef mailboxRef) {
+        return connectionRepository
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                .map(
+                        gmailConnection -> {
+                            int consecutiveFailures =
+                                    gmailConnection.getWatchConsecutiveFailures() + 1;
+                            gmailConnection.setWatchConsecutiveFailures(consecutiveFailures);
+                            connectionRepository.save(gmailConnection);
+                            return consecutiveFailures;
+                        })
+                .orElse(0);
     }
 
     @Transactional
-    public void clearForReconnect(UUID tenantId) {
+    public void clearForReconnect(MailboxRef mailboxRef) {
         connectionRepository
-                .findByTenantId(tenantId)
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
                 .ifPresent(
-                        connection -> {
-                            connection.setWatchExpiresAt(null);
-                            connection.setWatchHistoryId(null);
-                            connection.setLastSyncedHistoryId(null);
-                            connection.setWatchConsecutiveFailures(0);
-                            connection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
-                            connectionRepository.save(connection);
+                        gmailConnection -> {
+                            gmailConnection.setWatchExpiresAt(null);
+                            gmailConnection.setWatchHistoryId(null);
+                            gmailConnection.setLastSyncedHistoryId(null);
+                            gmailConnection.setWatchConsecutiveFailures(0);
+                            gmailConnection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+                            connectionRepository.save(gmailConnection);
                         });
     }
 
@@ -595,11 +609,11 @@ public class GmailConnectionService {
     /**
      * Maps a {@link DataIntegrityViolationException} to the duplicate-active-mailbox case without
      * depending solely on driver-specific reflective accessors. Two independent signals are checked
-     * across the cause chain: (1) the reflective {@code getConstraintName()/getServerErrorMessage()}
-     * getters (when the PG driver exposes them), and (2) a SQLState {@code 23505}
-     * (unique_violation) whose message text mentions the partial-unique index name. Either match is
-     * sufficient, so the 409 translation does not break if Boot 4's exception nesting hides the
-     * reflective getters.
+     * across the cause chain: (1) the reflective {@code
+     * getConstraintName()/getServerErrorMessage()} getters (when the PG driver exposes them), and
+     * (2) a SQLState {@code 23505} (unique_violation) whose message text mentions the
+     * partial-unique index name. Either match is sufficient, so the 409 translation does not break
+     * if Boot 4's exception nesting hides the reflective getters.
      */
     private static boolean matchesDuplicateActiveEmailConstraint(Throwable throwable) {
         Throwable currentThrowable = throwable;

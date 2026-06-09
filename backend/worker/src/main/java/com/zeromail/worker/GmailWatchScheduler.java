@@ -5,6 +5,7 @@ import com.google.api.services.gmail.model.WatchRequest;
 import com.google.api.services.gmail.model.WatchResponse;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
@@ -58,6 +59,8 @@ public class GmailWatchScheduler {
 
     private void processWatchRenewal(GmailConnectionEntity connection) {
         UUID tenantId = connection.getTenantId();
+        UUID gmailConnectionId = connection.getId();
+        MailboxRef mailboxRef = new MailboxRef(tenantId, gmailConnectionId);
         try {
             String decryptedRefreshToken =
                     new String(
@@ -78,21 +81,30 @@ public class GmailWatchScheduler {
             long watchHistoryId = response.getHistoryId().longValueExact();
             Instant watchExpiresAt = Instant.ofEpochMilli(response.getExpiration());
 
-            connectionService.recordWatchSuccess(tenantId, watchHistoryId, watchExpiresAt);
-            log.info("event=gmail_watch_renewed tenantId={}", tenantId);
+            connectionService.recordWatchSuccess(mailboxRef, watchHistoryId, watchExpiresAt);
+            log.info(
+                    "event=gmail_watch_renewed tenantId={} gmailConnectionId={}",
+                    tenantId,
+                    gmailConnectionId);
         } catch (InvalidGrantException invalidGrantException) {
-            connectionService.markDisconnected(tenantId);
-            log.warn("event=gmail_watch_invalid_grant tenantId={}", tenantId);
+            connectionService.markDisconnected(mailboxRef);
+            log.warn(
+                    "event=gmail_watch_invalid_grant tenantId={} gmailConnectionId={}",
+                    tenantId,
+                    gmailConnectionId);
         } catch (Exception watchRenewalException) {
-            connectionService.incrementWatchFailure(tenantId);
-            int failures = connection.getWatchConsecutiveFailures() + 1;
+            int failures = connectionService.incrementWatchFailure(mailboxRef);
             if (failures >= FAILURE_THRESHOLD) {
-                connectionService.markWatchUnhealthy(tenantId);
-                log.warn("event=gmail_watch_unhealthy_threshold tenantId={}", tenantId);
+                connectionService.markWatchUnhealthy(mailboxRef);
+                log.warn(
+                        "event=gmail_watch_unhealthy_threshold tenantId={} gmailConnectionId={}",
+                        tenantId,
+                        gmailConnectionId);
             } else {
                 log.warn(
-                        "event=gmail_watch_renewal_failed tenantId={} attempt={}",
+                        "event=gmail_watch_renewal_failed tenantId={} gmailConnectionId={} attempt={}",
                         tenantId,
+                        gmailConnectionId,
                         failures);
             }
         }

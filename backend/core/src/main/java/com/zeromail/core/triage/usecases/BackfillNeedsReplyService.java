@@ -1,6 +1,8 @@
 package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.gmail.event.MailMessageObserved;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxMessage;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxPage;
@@ -9,6 +11,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,16 +41,21 @@ public class BackfillNeedsReplyService {
 
     private final RecentInboxReadService recentInboxReadService;
     private final TriageOrchestratorService triageOrchestratorService;
+    private final GmailConnectionService gmailConnectionService;
 
     public BackfillNeedsReplyService(
             RecentInboxReadService recentInboxReadService,
-            TriageOrchestratorService triageOrchestratorService) {
+            TriageOrchestratorService triageOrchestratorService,
+            GmailConnectionService gmailConnectionService) {
         this.recentInboxReadService =
                 Objects.requireNonNull(
                         recentInboxReadService, "recentInboxReadService must not be null");
         this.triageOrchestratorService =
                 Objects.requireNonNull(
                         triageOrchestratorService, "triageOrchestratorService must not be null");
+        this.gmailConnectionService =
+                Objects.requireNonNull(
+                        gmailConnectionService, "gmailConnectionService must not be null");
     }
 
     public BackfillResult backfill(UUID tenantId, int requestedLimit) {
@@ -58,8 +66,16 @@ public class BackfillNeedsReplyService {
     }
 
     private BackfillResult backfillTenantBound(UUID tenantId, int limit) {
+        Optional<MailboxRef> mailboxRef = primaryMailboxRef(tenantId);
+        if (mailboxRef.isEmpty()) {
+            log.info(
+                    "event=needs_reply_backfill_skipped tenantId={} reason=not_connected",
+                    tenantId);
+            return new BackfillResult(0, 0, 0);
+        }
+        UUID gmailConnectionId = mailboxRef.orElseThrow().gmailConnectionId();
         Map<String, MailMessageObserved> newestMessageByThread =
-                newestInboxMessagePerThread(tenantId, limit);
+                newestInboxMessagePerThread(mailboxRef.orElseThrow(), limit);
         int classified = 0;
         int failed = 0;
         for (MailMessageObserved observedEvent : newestMessageByThread.values()) {
@@ -69,21 +85,26 @@ public class BackfillNeedsReplyService {
             } catch (RuntimeException backfillThreadFailure) {
                 failed++;
                 log.warn(
-                        "event=needs_reply_backfill_thread_failed tenantId={} reason={}",
+                        "event=needs_reply_backfill_thread_failed tenantId={} gmailConnectionId={} reason={}",
                         tenantId,
+                        gmailConnectionId,
                         backfillThreadFailure.getClass().getSimpleName());
             }
         }
         log.info(
-                "event=needs_reply_backfill_completed tenantId={} threadsScanned={} threadsClassified={} threadsFailed={}",
+                "event=needs_reply_backfill_completed tenantId={} gmailConnectionId={} threadsScanned={} threadsClassified={} threadsFailed={}",
                 tenantId,
+                gmailConnectionId,
                 newestMessageByThread.size(),
                 classified,
                 failed);
         return new BackfillResult(newestMessageByThread.size(), classified, failed);
     }
 
-    private Map<String, MailMessageObserved> newestInboxMessagePerThread(UUID tenantId, int limit) {
+    private Map<String, MailMessageObserved> newestInboxMessagePerThread(
+            MailboxRef mailboxRef, int limit) {
+        UUID tenantId = mailboxRef.tenantId();
+        UUID gmailConnectionId = mailboxRef.gmailConnectionId();
         // Gmail returns INBOX messages newest-first; keep the first (newest) message seen per
         // thread.
         LinkedHashMap<String, MailMessageObserved> newestByThread = new LinkedHashMap<>();
@@ -106,7 +127,11 @@ public class BackfillNeedsReplyService {
                 newestByThread.putIfAbsent(
                         gmailThreadId,
                         new MailMessageObserved(
-                                tenantId, gmailMessageId, gmailThreadId, observedAt));
+                                tenantId,
+                                gmailConnectionId,
+                                gmailMessageId,
+                                gmailThreadId,
+                                observedAt));
                 if (newestByThread.size() >= limit) {
                     return newestByThread;
                 }
@@ -114,6 +139,10 @@ public class BackfillNeedsReplyService {
             cursor = page.nextCursor();
         } while (cursor != null && newestByThread.size() < limit);
         return newestByThread;
+    }
+
+    private Optional<MailboxRef> primaryMailboxRef(UUID tenantId) {
+        return gmailConnectionService.primaryMailboxRef(tenantId);
     }
 
     public record BackfillResult(int threadsScanned, int threadsClassified, int threadsFailed) {}

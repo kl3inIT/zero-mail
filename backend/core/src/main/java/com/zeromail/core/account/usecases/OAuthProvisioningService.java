@@ -3,6 +3,7 @@ package com.zeromail.core.account.usecases;
 import com.zeromail.core.account.domain.OnboardingStep;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer;
@@ -67,7 +68,8 @@ public class OAuthProvisioningService {
     }
 
     /** Result record for {@link #provisionBundledOAuth}. */
-    public record BundledProvisioningResult(UUID tenantId, UUID userId, boolean firstLogin) {}
+    public record BundledProvisioningResult(
+            UUID tenantId, UUID userId, UUID gmailConnectionId, boolean firstLogin) {}
 
     /**
      * Atomic bundled provisioning: creates user + tenant + GmailConnectionEntity + advances
@@ -113,33 +115,50 @@ public class OAuthProvisioningService {
             if (refreshTokenPlaintext == null) {
                 // Reconnect with null refresh token — preserve existing envelope.
                 log.warn("event=oauth_no_refresh_token tenantId={}", tenantId);
-                return new BundledProvisioningResult(tenantId, userId, false);
+                UUID gmailConnectionId =
+                        gmailConnectionService
+                                .primaryMailboxRef(tenantId)
+                                .map(MailboxRef::gmailConnectionId)
+                                .orElse(null);
+                return new BundledProvisioningResult(tenantId, userId, gmailConnectionId, false);
             }
             // Reconnect with new refresh token — re-encrypt + upsert in single transaction.
-            ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                    .run(
-                            () ->
-                                    bundledTransaction.executeWithoutResult(
-                                            _ -> {
-                                                byte[] envelope =
-                                                        refreshTokenCipher.encrypt(
-                                                                refreshTokenPlaintext.getBytes(
-                                                                        StandardCharsets.UTF_8),
-                                                                tenantId.toString());
-                                                gmailConnectionService.upsert(
-                                                        tenantId,
-                                                        email,
-                                                        grantedGmailScopes,
-                                                        envelope);
-                                                gmailConnectionService.clearForReconnect(tenantId);
-                                                // Reconnect MUST NOT regress onboarding_step (D-B4
-                                                // invariant).
-                                            }));
+            UUID gmailConnectionId =
+                    ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                            .call(
+                                    () ->
+                                            bundledTransaction.execute(
+                                                    _ -> {
+                                                        byte[] envelope =
+                                                                refreshTokenCipher.encrypt(
+                                                                        refreshTokenPlaintext
+                                                                                .getBytes(
+                                                                                        StandardCharsets
+                                                                                                .UTF_8),
+                                                                        tenantId.toString());
+                                                        UUID upsertedGmailConnectionId =
+                                                                gmailConnectionService.upsert(
+                                                                        tenantId,
+                                                                        email,
+                                                                        grantedGmailScopes,
+                                                                        envelope);
+                                                        gmailConnectionService.clearForReconnect(
+                                                                new MailboxRef(
+                                                                        tenantId,
+                                                                        upsertedGmailConnectionId));
+                                                        // Reconnect MUST NOT regress
+                                                        // onboarding_step
+                                                        // (D-B4 invariant).
+                                                        return upsertedGmailConnectionId;
+                                                    }));
+            if (gmailConnectionId == null) {
+                throw new IllegalStateException("Gmail reconnect did not return a mailbox id");
+            }
             // Enqueue an inbox-projection backfill so reconnect refreshes any stale projection
             // rows that accumulated during the offline period. Idempotent via processing_job
             // dedup so concurrent reconnects do not stack jobs.
-            inboxBackfillEnqueuer.enqueueIfNotPending(tenantId);
-            return new BundledProvisioningResult(tenantId, userId, false);
+            inboxBackfillEnqueuer.enqueueIfNotPending(new MailboxRef(tenantId, gmailConnectionId));
+            return new BundledProvisioningResult(tenantId, userId, gmailConnectionId, false);
         }
 
         // FIRST-LOGIN PATH: requires non-null refresh token (caller validates; defensive check).
@@ -154,41 +173,58 @@ public class OAuthProvisioningService {
         UUID tenantId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         try {
-            ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                    .run(
-                            () ->
-                                    bundledTransaction.executeWithoutResult(
-                                            _ -> {
-                                                tenantService.createTenant(tenantId, email);
-                                                tenantService.setTimeZoneIfAbsent(
-                                                        tenantId, TenantEntity.DEFAULT_TIME_ZONE);
-                                                UserEntity savedUser =
-                                                        userRepository.save(
-                                                                new UserEntity(
-                                                                        userId,
+            UUID gmailConnectionId =
+                    ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                            .call(
+                                    () ->
+                                            bundledTransaction.execute(
+                                                    _ -> {
+                                                        tenantService.createTenant(tenantId, email);
+                                                        tenantService.setTimeZoneIfAbsent(
+                                                                tenantId,
+                                                                TenantEntity.DEFAULT_TIME_ZONE);
+                                                        UserEntity savedUser =
+                                                                userRepository.save(
+                                                                        new UserEntity(
+                                                                                userId,
+                                                                                tenantId,
+                                                                                googleSubject,
+                                                                                email));
+                                                        byte[] envelope =
+                                                                refreshTokenCipher.encrypt(
+                                                                        refreshTokenPlaintext
+                                                                                .getBytes(
+                                                                                        StandardCharsets
+                                                                                                .UTF_8),
+                                                                        tenantId.toString());
+                                                        notificationPreferenceService
+                                                                .insertDefaults(
                                                                         tenantId,
-                                                                        googleSubject,
-                                                                        email));
-                                                byte[] envelope =
-                                                        refreshTokenCipher.encrypt(
-                                                                refreshTokenPlaintext.getBytes(
-                                                                        StandardCharsets.UTF_8),
-                                                                tenantId.toString());
-                                                notificationPreferenceService.insertDefaults(
-                                                        tenantId, ChannelType.EMAIL, true, 20);
-                                                gmailConnectionService.upsert(
-                                                        tenantId,
-                                                        email,
-                                                        grantedGmailScopes,
-                                                        envelope);
-                                                savedUser.advanceTo(OnboardingStep.GMAIL_CONNECTED);
-                                                userRepository.save(savedUser);
-                                            }));
-            log.info("event=oauth_provisioning_complete tenantId={}", tenantId);
+                                                                        ChannelType.EMAIL,
+                                                                        true,
+                                                                        20);
+                                                        UUID upsertedGmailConnectionId =
+                                                                gmailConnectionService.upsert(
+                                                                        tenantId,
+                                                                        email,
+                                                                        grantedGmailScopes,
+                                                                        envelope);
+                                                        savedUser.advanceTo(
+                                                                OnboardingStep.GMAIL_CONNECTED);
+                                                        userRepository.save(savedUser);
+                                                        return upsertedGmailConnectionId;
+                                                    }));
+            if (gmailConnectionId == null) {
+                throw new IllegalStateException("Gmail provisioning did not return a mailbox id");
+            }
+            log.info(
+                    "event=oauth_provisioning_complete tenantId={} gmailConnectionId={}",
+                    tenantId,
+                    gmailConnectionId);
             // First-login eager backfill: prepare the projection so the deferred Phase B read swap
             // does not block on a cold first-fetch from Gmail.
-            inboxBackfillEnqueuer.enqueueIfNotPending(tenantId);
-            return new BundledProvisioningResult(tenantId, userId, true);
+            inboxBackfillEnqueuer.enqueueIfNotPending(new MailboxRef(tenantId, gmailConnectionId));
+            return new BundledProvisioningResult(tenantId, userId, gmailConnectionId, true);
         } catch (DataIntegrityViolationException dataIntegrityViolation) {
             // Concurrent first-login from same Google subject: first transaction rolled back (no
             // orphans).
@@ -207,8 +243,13 @@ public class OAuthProvisioningService {
                     raceWinner.getTenantId(),
                     Integer.toHexString(googleSubject.hashCode()),
                     dataIntegrityViolation.getClass().getSimpleName());
+            UUID gmailConnectionId =
+                    gmailConnectionService
+                            .primaryMailboxRef(raceWinner.getTenantId())
+                            .map(MailboxRef::gmailConnectionId)
+                            .orElse(null);
             return new BundledProvisioningResult(
-                    raceWinner.getTenantId(), raceWinner.getId(), false);
+                    raceWinner.getTenantId(), raceWinner.getId(), gmailConnectionId, false);
         }
     }
 }

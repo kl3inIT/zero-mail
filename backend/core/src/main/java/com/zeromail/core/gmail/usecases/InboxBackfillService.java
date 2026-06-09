@@ -106,20 +106,24 @@ public class InboxBackfillService {
     }
 
     /**
-     * Run a backfill for one tenant. Returns the number of projection rows written so the worker
+     * Run a backfill for one mailbox. Returns the number of projection rows written so the worker
      * can log it. Marks {@code sync_state} status appropriately on success / failure.
      */
-    public int backfillTenant(UUID tenantId) {
-        Objects.requireNonNull(tenantId, "tenantId must not be null");
+    public int backfillMailbox(MailboxRef mailboxRef) {
+        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
+        UUID tenantId = mailboxRef.tenantId();
+        UUID gmailConnectionId = mailboxRef.gmailConnectionId();
 
         Optional<GmailConnectionEntity> connectionLookup =
-                gmailConnectionRepository.findByTenantId(tenantId);
+                gmailConnectionRepository.findByIdAndTenantId(gmailConnectionId, tenantId);
         if (connectionLookup.isEmpty()) {
-            log.info("event=inbox_backfill_skipped tenantId={} reason=not_connected", tenantId);
+            log.info(
+                    "event=inbox_backfill_skipped tenantId={} gmailConnectionId={} reason=not_connected",
+                    tenantId,
+                    gmailConnectionId);
             return 0;
         }
         GmailConnectionEntity connection = connectionLookup.orElseThrow();
-        UUID gmailConnectionId = connection.getId();
         if (connection.getStatus() != GmailConnectionStatus.CONNECTED
                 || connection.getRefreshTokenEncrypted() == null) {
             log.info(
@@ -132,8 +136,7 @@ public class InboxBackfillService {
 
         try {
             Gmail gmail =
-                    gmailApiClientFactory.buildClientForMailbox(
-                            new MailboxRef(tenantId, gmailConnectionId), GMAIL_REQUEST_TIMEOUT);
+                    gmailApiClientFactory.buildClientForMailbox(mailboxRef, GMAIL_REQUEST_TIMEOUT);
             List<Message> messageReferences = listInboxMessageReferences(gmail);
 
             // Fetch all per-message metadata in batched HTTP round-trips. The previous code did one
@@ -193,7 +196,10 @@ public class InboxBackfillService {
             }
 
             syncStateRepository.recordBackfillSuccess(
-                    tenantId, highestHistoryId == 0L ? null : highestHistoryId, clock.instant());
+                    tenantId,
+                    gmailConnectionId,
+                    highestHistoryId == 0L ? null : highestHistoryId,
+                    clock.instant());
             log.info(
                     "event=inbox_backfill_completed tenantId={} gmailConnectionId={} rowsWritten={}",
                     tenantId,
@@ -201,7 +207,8 @@ public class InboxBackfillService {
                     rowsWritten);
             return rowsWritten;
         } catch (InvalidGrantException invalidGrant) {
-            syncStateRepository.recordBackfillFailure(tenantId, clock.instant(), "INVALID_GRANT");
+            syncStateRepository.recordBackfillFailure(
+                    tenantId, gmailConnectionId, clock.instant(), "INVALID_GRANT");
             log.warn(
                     "event=inbox_backfill_failed tenantId={} gmailConnectionId={}"
                             + " reason=invalid_grant",
@@ -209,7 +216,8 @@ public class InboxBackfillService {
                     gmailConnectionId);
             return 0;
         } catch (IOException gmailFailure) {
-            syncStateRepository.recordBackfillFailure(tenantId, clock.instant(), "GMAIL_IO");
+            syncStateRepository.recordBackfillFailure(
+                    tenantId, gmailConnectionId, clock.instant(), "GMAIL_IO");
             log.warn(
                     "event=inbox_backfill_failed tenantId={} gmailConnectionId={} reason=gmail_io"
                             + " exception={}",
@@ -256,7 +264,7 @@ public class InboxBackfillService {
      * Fetch metadata for every referenced message via Gmail batch requests (chunks of {@value
      * #BATCH_CHUNK_SIZE}). Returns a map keyed by Gmail message id; messages that fail their
      * individual sub-request are simply omitted (the row is skipped this run). An {@link
-     * IOException} from a batch execute propagates so {@link #backfillTenant} records the failure.
+     * IOException} from a batch execute propagates so {@link #backfillMailbox} records the failure.
      */
     private Map<String, Message> fetchMessagesWithBatch(
             Gmail gmail, List<Message> messageReferences) throws IOException {

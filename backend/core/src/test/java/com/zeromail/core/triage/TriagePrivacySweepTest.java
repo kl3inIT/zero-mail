@@ -50,6 +50,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SuppressWarnings("SqlResolve")
 class TriagePrivacySweepTest extends PostgresContainerTest {
 
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-0000000004a8");
     private static final String GMAIL_MESSAGE_ID = "gmail-message-privacy-sweep";
     private static final String GMAIL_THREAD_ID = "gmail-thread-privacy-sweep";
     private static final String RAW_SENDER_EMAIL = "sweep.sender@example.test";
@@ -118,6 +120,7 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
                         triageOrchestratorService.processObservedEvent(
                                 new MailMessageObserved(
                                         tenantId,
+                                        GMAIL_CONNECTION_ID,
                                         GMAIL_MESSAGE_ID,
                                         GMAIL_THREAD_ID,
                                         Instant.parse("2026-05-11T00:00:00Z"))));

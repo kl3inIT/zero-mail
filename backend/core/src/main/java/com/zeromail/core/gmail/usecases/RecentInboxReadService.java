@@ -18,9 +18,13 @@ import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
+import com.zeromail.core.inbox.persistence.GmailInboxSyncStateId;
+import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
+import com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer;
 import com.zeromail.core.inbox.usecases.InboxProjectionMessage;
 import com.zeromail.core.inbox.usecases.InboxProjectionPage;
 import com.zeromail.core.inbox.usecases.InboxProjectionReadService;
@@ -98,9 +102,8 @@ public class RecentInboxReadService {
     private final GmailApiClientFactory gmailApiClientFactory;
     private final SafeHtmlSanitizer safeHtmlSanitizer;
     private final InboxCursorCodec inboxCursorCodec;
-    private final com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer inboxBackfillEnqueuer;
-    private final com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository
-            inboxSyncStateRepository;
+    private final InboxBackfillEnqueuer inboxBackfillEnqueuer;
+    private final GmailInboxSyncStateRepository inboxSyncStateRepository;
     private final InboxProjectionReadService inboxProjectionReadService;
 
     public RecentInboxReadService(
@@ -108,9 +111,8 @@ public class RecentInboxReadService {
             GmailApiClientFactory gmailApiClientFactory,
             CryptoProperties cryptoProperties,
             SafeHtmlSanitizer safeHtmlSanitizer,
-            com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer inboxBackfillEnqueuer,
-            com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository
-                    inboxSyncStateRepository,
+            InboxBackfillEnqueuer inboxBackfillEnqueuer,
+            GmailInboxSyncStateRepository inboxSyncStateRepository,
             InboxProjectionReadService inboxProjectionReadService) {
         this.gmailConnectionRepository =
                 Objects.requireNonNull(
@@ -157,12 +159,6 @@ public class RecentInboxReadService {
     @Transactional(readOnly = true)
     public RecentInboxPage fetchPage(UUID tenantId, String cursor, int requestedLimit) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
-        // Lazy backfill trigger (Phase A wave 3): the first time a tenant fetches the inbox after
-        // connecting, kick off an asynchronous backfill so the projection is ready by the time
-        // Phase B swaps the read path to the DB. Live Gmail still serves the fallback response;
-        // enqueue is idempotent via processing_job dedup so concurrent fetches do not stack jobs.
-        enqueueBackfillIfFirstFetch(tenantId);
-
         if (cursor != null && !cursor.isBlank()) {
             String trimmedCursor = cursor.trim();
             String prefix = trimmedCursor.substring(0, 1);
@@ -178,14 +174,25 @@ public class RecentInboxReadService {
             };
         }
 
-        if (needsFullSyncFirst(tenantId)) {
+        // TODO(Plan 05): use MailboxContext.currentOrThrow().
+        Optional<MailboxRef> currentMailboxRef = primaryMailboxRef(tenantId);
+        // Lazy backfill trigger (Phase A wave 3): the first time a tenant fetches the inbox after
+        // connecting, kick off an asynchronous backfill so the projection is ready by the time
+        // Phase B swaps the read path to the DB. Live Gmail still serves the fallback response;
+        // enqueue is idempotent via processing_job dedup so concurrent fetches do not stack jobs.
+        enqueueBackfillIfFirstFetch(currentMailboxRef);
+
+        if (needsFullSyncFirst(currentMailboxRef)) {
             // First connect: the background backfill (enqueued above) is still populating the
             // projection. Don't park the user behind an empty SYNCING banner waiting for the whole
             // backfill to finish — serve the live Gmail first page immediately (batched, ~1-2s) so
             // they see real mail right away. Subsequent visits read the fast DB projection once the
             // backfill has completed. Mirrors Inbox Zero, which always serves the list live and
             // treats the DB as a cache.
-            log.info("event=inbox_read_first_connect_live tenantId={}", tenantId);
+            log.info(
+                    "event=inbox_read_first_connect_live tenantId={} gmailConnectionId={}",
+                    tenantId,
+                    currentMailboxRef.map(MailboxRef::gmailConnectionId).orElse(null));
             return fetchPageFromLiveGmail(tenantId, null, requestedLimit);
         }
 
@@ -313,9 +320,15 @@ public class RecentInboxReadService {
      * yet completed a full sync — equivalent to "no row in sync_state OR last_full_sync_at IS
      * NULL".
      */
-    private boolean needsFullSyncFirst(UUID tenantId) {
+    private boolean needsFullSyncFirst(Optional<MailboxRef> mailboxRef) {
+        return mailboxRef.map(this::needsFullSyncFirst).orElse(true);
+    }
+
+    private boolean needsFullSyncFirst(MailboxRef mailboxRef) {
         return inboxSyncStateRepository
-                .findById(tenantId)
+                .findById(
+                        new GmailInboxSyncStateId(
+                                mailboxRef.tenantId(), mailboxRef.gmailConnectionId()))
                 .map(syncState -> syncState.getLastFullSyncAt() == null)
                 .orElse(true);
     }
@@ -391,10 +404,7 @@ public class RecentInboxReadService {
      * shows so a user can see at a glance that they already replied. Bodies are rendered live and
      * never persisted, mirroring {@link #fetchMessageDetail} (privacy: transient render only).
      *
-     * @param gmailMessageId any message id belonging to the target thread (the reader passes the
-     *     selected message; Gmail's threads.get is keyed by threadId, which equals the messageId
-     *     for the first message and is otherwise resolvable, so we accept the threadId the FE
-     *     already holds).
+     * @param gmailThreadId Gmail thread id selected by the reader.
      */
     @Transactional(readOnly = true)
     public RecentInboxThreadDetail fetchThreadDetail(UUID tenantId, String gmailThreadId) {
@@ -522,6 +532,12 @@ public class RecentInboxReadService {
         } catch (RuntimeException | IOException digestBodyFetchFailure) {
             return Optional.empty();
         }
+    }
+
+    private Optional<MailboxRef> primaryMailboxRef(UUID tenantId) {
+        return gmailConnectionRepository
+                .findByTenantId(tenantId)
+                .map(gmailConnection -> new MailboxRef(tenantId, gmailConnection.getId()));
     }
 
     private Gmail gmailForTenant(UUID tenantId) throws IOException {
@@ -1128,9 +1144,9 @@ public class RecentInboxReadService {
      * sync (no row in {@code gmail_inbox_sync_state}, or {@code last_full_sync_at IS NULL}). The
      * enqueuer itself dedups via {@code processing_job} so a redundant call here is harmless.
      */
-    private void enqueueBackfillIfFirstFetch(UUID tenantId) {
-        if (needsFullSyncFirst(tenantId)) {
-            inboxBackfillEnqueuer.enqueueIfNotPending(tenantId);
+    private void enqueueBackfillIfFirstFetch(Optional<MailboxRef> mailboxRef) {
+        if (mailboxRef.isPresent() && needsFullSyncFirst(mailboxRef.get())) {
+            inboxBackfillEnqueuer.enqueueIfNotPending(mailboxRef.get());
         }
     }
 }

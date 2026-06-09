@@ -21,23 +21,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Postgres-backed integration test for the three branches of the Phase B Wave 1 read orchestrator
- * in {@link RecentInboxReadService#fetchPage}: PROJECTION (full page from DB), SYNCING (first fetch
- * before backfill completes), LIVE_GMAIL (projection short → fall back to Gmail).
- *
- * <p>The LIVE_GMAIL branch is asserted via the {@code NOT_CONNECTED} signal — when no Gmail
- * connection row exists for the tenant, the fallback {@code gmailForTenant} call throws and the
- * orchestrator wraps it. Reaching that exception proves the orchestrator transitioned past the
- * projection short-page check and into the live Gmail code path. The full Gmail SDK exchange itself
- * is covered by {@code RecentInboxReadServiceTest} and {@code RecentInboxReadServiceOrches-
- * tratorTest} — duplicating that mock setup here would not increase coverage of the wiring.
- *
- * <p>Lazy backfill enqueue (Phase A wave 3) is still triggered on every fetchPage; the test only
- * cares that the routing decision is correct, not how the enqueue propagates.
+ * in {@link RecentInboxReadService#fetchPage}: PROJECTION, first-connect LIVE_GMAIL, and projection
+ * short-page LIVE_GMAIL.
  */
 class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
-
-    private static final UUID GMAIL_CONNECTION_ID =
-            UUID.fromString("00000000-0000-0000-0000-00000000dd11");
 
     @Autowired RecentInboxReadService recentInboxReadService;
     @Autowired InboxProjectionWriteService inboxProjectionWriteService;
@@ -47,8 +34,9 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
     @Test
     void firstPage_syncReady_projectionFullPage_returnsProjection() {
         UUID tenantId = seedTenant();
-        markSyncReady(tenantId);
-        seedProjectionRows(tenantId, 20);
+        UUID gmailConnectionId = seedConnectedMailbox(tenantId);
+        markSyncReady(tenantId, gmailConnectionId);
+        seedProjectionRows(tenantId, gmailConnectionId, 20);
 
         RecentInboxPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
@@ -67,9 +55,7 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
         UUID tenantId = seedTenant();
         // Just-connected tenant: no sync_state row. First connect now serves the live Gmail first
         // page (the background backfill runs separately) instead of an empty SYNCING banner. With
-        // no
-        // GmailConnection row, the live path surfaces NOT_CONNECTED — reaching it proves the live
-        // branch was taken rather than a SYNCING short-circuit.
+        // no GmailConnection row, the live path surfaces NOT_CONNECTED.
         assertThatThrownBy(
                         () ->
                                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
@@ -87,11 +73,12 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
     @Test
     void firstPage_syncReady_lastFullSyncAtPresentButProjectionEmpty_fallsBackToLiveGmail() {
         UUID tenantId = seedTenant();
-        markSyncReady(tenantId);
-        // Projection has zero rows; sync_state says ready → orchestrator must fall back to live
-        // Gmail. Since no GmailConnection row exists for this tenant, gmailForTenant throws
-        // NOT_CONNECTED — reaching that exception proves the fallback path was taken.
-
+        UUID gmailConnectionId = seedConnectedMailbox(tenantId);
+        markSyncReady(tenantId, gmailConnectionId);
+        // Projection has zero rows; sync_state says ready, so the orchestrator must fall back to
+        // live Gmail. The seeded connection intentionally has no refresh token, so live Gmail
+        // signals
+        // NO_READ_GRANT after reaching that path.
         assertThatThrownBy(
                         () ->
                                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
@@ -103,16 +90,16 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
                 .matches(
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
-                                        == RecentInboxUnavailableReason.NOT_CONNECTED,
-                        "projection-empty + sync_state ready must trigger the live Gmail fallback;"
-                                + " absent connection then signals NOT_CONNECTED");
+                                        == RecentInboxUnavailableReason.NO_READ_GRANT,
+                        "projection-empty + sync_state ready must trigger the live Gmail fallback");
     }
 
     @Test
     void firstPage_syncReady_projectionShortPage_fallsBackToLiveGmail() {
         UUID tenantId = seedTenant();
-        markSyncReady(tenantId);
-        seedProjectionRows(tenantId, 5); // < pageLimit of 20
+        UUID gmailConnectionId = seedConnectedMailbox(tenantId);
+        markSyncReady(tenantId, gmailConnectionId);
+        seedProjectionRows(tenantId, gmailConnectionId, 5); // < pageLimit of 20
 
         assertThatThrownBy(
                         () ->
@@ -125,20 +112,22 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
                 .matches(
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
-                                        == RecentInboxUnavailableReason.NOT_CONNECTED,
-                        "short projection page must NOT be returned as PROJECTION — orchestrator"
-                                + " has to fall back, which then signals NOT_CONNECTED here");
+                                        == RecentInboxUnavailableReason.NO_READ_GRANT,
+                        "short projection page must NOT be returned as PROJECTION; the live fallback then signals NO_READ_GRANT here");
     }
 
-    private void markSyncReady(UUID tenantId) {
+    private void markSyncReady(UUID tenantId, UUID gmailConnectionId) {
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(
                         () ->
                                 inboxSyncStateRepository.recordBackfillSuccess(
-                                        tenantId, 999_999L, Instant.parse("2026-05-01T00:00:00Z")));
+                                        tenantId,
+                                        gmailConnectionId,
+                                        999_999L,
+                                        Instant.parse("2026-05-01T00:00:00Z")));
     }
 
-    private void seedProjectionRows(UUID tenantId, int count) {
+    private void seedProjectionRows(UUID tenantId, UUID gmailConnectionId, int count) {
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(
                         () -> {
@@ -146,7 +135,7 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
                                 inboxProjectionWriteService.upsert(
                                         new InboxProjectionUpsertCommand(
                                                 tenantId,
-                                                GMAIL_CONNECTION_ID,
+                                                gmailConnectionId,
                                                 String.format("190000000000ff%02x", rowIndex),
                                                 "thread-" + rowIndex,
                                                 "sender-" + rowIndex + "@example.com",
@@ -169,5 +158,18 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
                 tenantId,
                 "tenant-" + tenantId);
         return tenantId;
+    }
+
+    private UUID seedConnectedMailbox(UUID tenantId) {
+        UUID gmailConnectionId = UUID.randomUUID();
+        jdbcTemplate.update(
+                """
+                INSERT INTO gmail_connections(id, tenant_id, google_email, status, is_primary)
+                VALUES (?, ?, ?, 'CONNECTED', true)
+                """,
+                gmailConnectionId,
+                tenantId,
+                "fallback-" + gmailConnectionId + "@example.test");
+        return gmailConnectionId;
     }
 }

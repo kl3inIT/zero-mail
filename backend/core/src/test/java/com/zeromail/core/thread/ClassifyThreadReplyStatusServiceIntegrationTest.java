@@ -24,6 +24,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 class ClassifyThreadReplyStatusServiceIntegrationTest extends PostgresContainerTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-0000000005c2");
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-0000000005c4");
 
     @Autowired ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
 
@@ -93,6 +95,7 @@ class ClassifyThreadReplyStatusServiceIntegrationTest extends PostgresContainerT
                     classifierTarget.on(
                             new MailOutboundObserved(
                                     listenerTenantId,
+                                    GMAIL_CONNECTION_ID,
                                     gmailThreadId,
                                     "gmail-message-listener-transaction",
                                     Instant.parse("2026-05-30T00:00:00Z")));

@@ -113,7 +113,7 @@ public class GmailDeliveryProcessingService {
 
             Long savedHistoryPointer = connection.getLastSyncedHistoryId();
             if (savedHistoryPointer == null) {
-                connectionService.markHistoryLost(tenantId, webhookHistoryId);
+                connectionService.markHistoryLost(mailboxRef, webhookHistoryId);
                 deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
                 log.warn(
                         "event=gmail_history_missing_pointer tenantId={} gmailConnectionId={}"
@@ -154,7 +154,7 @@ public class GmailDeliveryProcessingService {
                     newObservations);
         } catch (GoogleJsonResponseException googleResponseException) {
             if (googleResponseException.getStatusCode() == 404) {
-                connectionService.markHistoryLost(tenantId, webhookHistoryId);
+                connectionService.markHistoryLost(mailboxRef, webhookHistoryId);
                 deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
                 log.warn(
                         "event=gmail_history_lost tenantId={} gmailConnectionId={}"
@@ -168,7 +168,7 @@ public class GmailDeliveryProcessingService {
                         delivery, tenantId, gmailConnectionId, googleResponseException);
             }
         } catch (InvalidGrantException invalidGrantException) {
-            connectionService.markDisconnected(tenantId);
+            connectionService.markDisconnected(mailboxRef);
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
             log.warn(
                     "event=gmail_oauth_revoked tenantId={} gmailConnectionId={}",

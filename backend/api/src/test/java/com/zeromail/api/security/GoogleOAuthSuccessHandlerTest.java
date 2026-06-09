@@ -100,7 +100,7 @@ class GoogleOAuthSuccessHandlerTest {
         when(provisioning.provisionBundledOAuth(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(
                         new OAuthProvisioningService.BundledProvisioningResult(
-                                provisionedTenantId, UUID.randomUUID(), true));
+                                provisionedTenantId, UUID.randomUUID(), UUID.randomUUID(), true));
 
         var request = new MockHttpServletRequest();
         var response = new MockHttpServletResponse();
