@@ -59,11 +59,12 @@ public class RecentInboxReadService {
     public static final int MAX_PAGE_SIZE = 20;
 
     /**
-     * Total number of recent messages a tenant can page through (across projection + live-Gmail
-     * fallback). Matches {@code InboxBackfillService.BACKFILL_MAX_MESSAGES} so deep scroll stays on
-     * the fast DB-backed projection instead of spilling to live Gmail; raise both together.
+     * The inbox list is lazy-unbounded: recent rows come from the projection, and deeper scrolls
+     * continue through Gmail page tokens until Gmail has no next page. The wire contract still has
+     * an integer {@code maxMessages}; use the largest int as an explicit "unknown upper bound"
+     * sentinel for current clients.
      */
-    public static final int MAX_MESSAGES = 500;
+    public static final int UNKNOWN_MAX_MESSAGES = Integer.MAX_VALUE;
 
     /**
      * Source tag prefix for Wave 1 orchestrator cursors. Pagination must stay on the source that
@@ -73,6 +74,8 @@ public class RecentInboxReadService {
     private static final String PROJECTION_CURSOR_PREFIX = "P";
 
     private static final String LIVE_GMAIL_CURSOR_PREFIX = "G";
+
+    private static final int LIVE_GMAIL_SKIP_PAGE_SIZE = 100;
 
     private static final Logger log = LoggerFactory.getLogger(RecentInboxReadService.class);
 
@@ -168,8 +171,15 @@ public class RecentInboxReadService {
             String prefix = trimmedCursor.substring(0, 1);
             String innerCursor = trimmedCursor.substring(1);
             return switch (prefix) {
-                case PROJECTION_CURSOR_PREFIX ->
-                        fetchPageFromProjection(tenantId, innerCursor, requestedLimit);
+                case PROJECTION_CURSOR_PREFIX -> {
+                    ProjectionCursorEnvelope projectionCursorEnvelope =
+                            decodeProjectionCursorEnvelope(innerCursor);
+                    yield fetchPageFromProjection(
+                            tenantId,
+                            projectionCursorEnvelope.innerCursor(),
+                            requestedLimit,
+                            projectionCursorEnvelope.loadedBefore());
+                }
                 case LIVE_GMAIL_CURSOR_PREFIX ->
                         fetchPageFromLiveGmail(tenantId, innerCursor, requestedLimit);
                 default ->
@@ -189,8 +199,8 @@ public class RecentInboxReadService {
             return fetchPageFromLiveGmail(tenantId, null, requestedLimit);
         }
 
-        int firstPageLimit = effectiveLimit(requestedLimit, 0);
-        RecentInboxPage projectionPage = fetchPageFromProjection(tenantId, null, requestedLimit);
+        int firstPageLimit = effectiveLimit(requestedLimit);
+        RecentInboxPage projectionPage = fetchPageFromProjection(tenantId, null, requestedLimit, 0);
         if (projectionPage.messages().size() == firstPageLimit && firstPageLimit > 0) {
             return projectionPage;
         }
@@ -203,7 +213,7 @@ public class RecentInboxReadService {
     }
 
     private RecentInboxPage fetchPageFromProjection(
-            UUID tenantId, String innerCursor, int requestedLimit) {
+            UUID tenantId, String innerCursor, int requestedLimit, int loadedBefore) {
         InboxProjectionPage projectionPage;
         try {
             projectionPage =
@@ -219,54 +229,47 @@ public class RecentInboxReadService {
                         : Map.of();
         List<RecentInboxMessage> messages =
                 toRecentInboxMessages(projectionPage.items(), labelNamesById);
+        int loadedAfter = addLoadedCount(loadedBefore, messages.size());
         String nextCursor =
                 projectionPage.nextCursor() == null
-                        ? null
-                        : PROJECTION_CURSOR_PREFIX + projectionPage.nextCursor();
+                        ? LIVE_GMAIL_CURSOR_PREFIX + inboxCursorCodec.encode(null, loadedAfter)
+                        : PROJECTION_CURSOR_PREFIX
+                                + encodeProjectionCursorEnvelope(
+                                        projectionPage.nextCursor(), loadedAfter);
+        if (messages.isEmpty() && projectionPage.nextCursor() == null && loadedBefore > 0) {
+            return fetchPageFromLiveGmail(
+                    tenantId, inboxCursorCodec.encode(null, loadedBefore), requestedLimit);
+        }
         return new RecentInboxPage(
-                messages, nextCursor, messages.size(), MAX_MESSAGES, projectionPage.dataSource());
+                messages,
+                nextCursor,
+                loadedAfter,
+                UNKNOWN_MAX_MESSAGES,
+                projectionPage.dataSource());
     }
 
     private RecentInboxPage fetchPageFromLiveGmail(
             UUID tenantId, String innerCursor, int requestedLimit) {
         InboxCursor inboxCursor = inboxCursorCodec.decode(innerCursor);
-        if (inboxCursor.loadedCount() >= MAX_MESSAGES) {
-            return new RecentInboxPage(
-                    List.of(),
-                    null,
-                    inboxCursor.loadedCount(),
-                    MAX_MESSAGES,
-                    InboxProjectionDataSource.LIVE_GMAIL);
-        }
-        int gmailPageLimit = effectiveLimit(requestedLimit, inboxCursor.loadedCount());
+        int gmailPageLimit = effectiveLimit(requestedLimit);
         try {
             Gmail gmail = gmailForTenant(tenantId);
-            ListMessagesResponse listResponse =
-                    gmail.users()
-                            .messages()
-                            .list("me")
-                            .setLabelIds(List.of("INBOX"))
-                            .setMaxResults((long) gmailPageLimit)
-                            .setPageToken(inboxCursor.pageToken())
-                            .setFields(MESSAGE_LIST_FIELDS)
-                            .execute();
-            List<Message> messageReferences =
-                    listResponse.getMessages() == null ? List.of() : listResponse.getMessages();
+            LiveGmailListPage listPage = listLiveGmailPage(gmail, inboxCursor, gmailPageLimit);
             Map<String, String> labelNamesById = fetchLabelNamesById(gmail);
             List<RecentInboxMessage> messages =
-                    fetchMessageMetadata(gmail, messageReferences, labelNamesById);
-            int loadedCount = inboxCursor.loadedCount() + messages.size();
+                    fetchMessageMetadata(gmail, listPage.messageReferences(), labelNamesById);
+            int loadedCount = addLoadedCount(inboxCursor.loadedCount(), messages.size());
             String nextCursor =
-                    loadedCount >= MAX_MESSAGES || listResponse.getNextPageToken() == null
+                    listPage.nextPageToken() == null
                             ? null
                             : LIVE_GMAIL_CURSOR_PREFIX
                                     + inboxCursorCodec.encode(
-                                            listResponse.getNextPageToken(), loadedCount);
+                                            listPage.nextPageToken(), loadedCount);
             return new RecentInboxPage(
                     messages,
                     nextCursor,
                     loadedCount,
-                    MAX_MESSAGES,
+                    UNKNOWN_MAX_MESSAGES,
                     InboxProjectionDataSource.LIVE_GMAIL);
         } catch (InvalidGrantException invalidGrantException) {
             throw new RecentInboxUnavailableException(
@@ -278,6 +281,42 @@ public class RecentInboxReadService {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.GMAIL_UNAVAILABLE, ioException);
         }
+    }
+
+    private LiveGmailListPage listLiveGmailPage(Gmail gmail, InboxCursor inboxCursor, int pageLimit)
+            throws IOException {
+        String pageToken = inboxCursor.pageToken();
+        int remainingToSkip = pageToken == null ? inboxCursor.loadedCount() : 0;
+        while (remainingToSkip > 0) {
+            int skipPageSize = Math.min(remainingToSkip, LIVE_GMAIL_SKIP_PAGE_SIZE);
+            ListMessagesResponse skipResponse =
+                    listLiveGmailReferences(gmail, pageToken, skipPageSize);
+            List<Message> skippedMessages =
+                    skipResponse.getMessages() == null ? List.of() : skipResponse.getMessages();
+            remainingToSkip -= skippedMessages.size();
+            pageToken = skipResponse.getNextPageToken();
+            if (pageToken == null || skippedMessages.isEmpty()) {
+                return new LiveGmailListPage(List.of(), null);
+            }
+        }
+
+        ListMessagesResponse listResponse = listLiveGmailReferences(gmail, pageToken, pageLimit);
+        List<Message> messageReferences =
+                listResponse.getMessages() == null ? List.of() : listResponse.getMessages();
+        return new LiveGmailListPage(
+                List.copyOf(messageReferences), listResponse.getNextPageToken());
+    }
+
+    private static ListMessagesResponse listLiveGmailReferences(
+            Gmail gmail, String pageToken, int pageLimit) throws IOException {
+        return gmail.users()
+                .messages()
+                .list("me")
+                .setLabelIds(List.of("INBOX"))
+                .setMaxResults((long) pageLimit)
+                .setPageToken(pageToken)
+                .setFields(MESSAGE_LIST_FIELDS)
+                .execute();
     }
 
     private Map<String, String> fetchLabelNamesByIdBestEffort(UUID tenantId) {
@@ -580,11 +619,49 @@ public class RecentInboxReadService {
                 gmailConnection, tenantId, GMAIL_REQUEST_TIMEOUT);
     }
 
-    private static int effectiveLimit(int requestedLimit, int loadedCount) {
+    private static int effectiveLimit(int requestedLimit) {
         int positiveLimit = requestedLimit < 1 ? DEFAULT_PAGE_SIZE : requestedLimit;
-        int pageLimit = Math.min(positiveLimit, MAX_PAGE_SIZE);
-        int remaining = Math.max(0, MAX_MESSAGES - loadedCount);
-        return Math.min(pageLimit, remaining);
+        return Math.min(positiveLimit, MAX_PAGE_SIZE);
+    }
+
+    private ProjectionCursorEnvelope decodeProjectionCursorEnvelope(String innerCursor) {
+        if (innerCursor == null || innerCursor.isBlank()) {
+            return new ProjectionCursorEnvelope(null, 0);
+        }
+        try {
+            InboxCursor projectionCursorEnvelope = inboxCursorCodec.decode(innerCursor);
+            if (projectionCursorEnvelope.pageToken() == null
+                    || projectionCursorEnvelope.pageToken().isBlank()) {
+                throw new RecentInboxUnavailableException(
+                        RecentInboxUnavailableReason.INVALID_CURSOR);
+            }
+            return new ProjectionCursorEnvelope(
+                    projectionCursorEnvelope.pageToken(), projectionCursorEnvelope.loadedCount());
+        } catch (RecentInboxUnavailableException invalidSignedEnvelope) {
+            // Legacy P cursor from an older frontend session. Keep it usable, but it cannot carry
+            // a cumulative loaded count, so a projection-to-Gmail transition may restart from the
+            // top. New cursors always use the signed envelope above.
+            return new ProjectionCursorEnvelope(innerCursor, 0);
+        }
+    }
+
+    private String encodeProjectionCursorEnvelope(String innerCursor, int loadedCount) {
+        if (innerCursor == null || innerCursor.isBlank()) {
+            throw new IllegalArgumentException("innerCursor must not be blank");
+        }
+        if (loadedCount < 0) {
+            throw new IllegalArgumentException("loadedCount must not be negative");
+        }
+        return inboxCursorCodec.encode(innerCursor, loadedCount);
+    }
+
+    private static int addLoadedCount(int loadedBefore, int pageSize) {
+        try {
+            return Math.addExact(loadedBefore, pageSize);
+        } catch (ArithmeticException arithmeticException) {
+            throw new RecentInboxUnavailableException(
+                    RecentInboxUnavailableReason.INVALID_CURSOR, arithmeticException);
+        }
     }
 
     private static String requireMessageId(String gmailMessageId) {
@@ -1077,6 +1154,15 @@ public class RecentInboxReadService {
         }
     }
 
+    private record LiveGmailListPage(List<Message> messageReferences, String nextPageToken) {
+
+        private LiveGmailListPage {
+            messageReferences = List.copyOf(messageReferences);
+        }
+    }
+
+    private record ProjectionCursorEnvelope(String innerCursor, int loadedBefore) {}
+
     private record InboxCursor(String pageToken, int loadedCount) {}
 
     private static final class InboxCursorCodec {
@@ -1125,7 +1211,7 @@ public class RecentInboxReadService {
             }
             try {
                 int loadedCount = Integer.parseInt(parts[1]);
-                if (loadedCount < 0 || loadedCount > MAX_MESSAGES) {
+                if (loadedCount < 0) {
                     throw new RecentInboxUnavailableException(
                             RecentInboxUnavailableReason.INVALID_CURSOR);
                 }
@@ -1137,7 +1223,8 @@ public class RecentInboxReadService {
         }
 
         private String encode(String pageToken, int loadedCount) {
-            String unsignedPayload = VERSION + "\n" + loadedCount + "\n" + pageToken;
+            String safePageToken = pageToken == null ? "" : pageToken;
+            String unsignedPayload = VERSION + "\n" + loadedCount + "\n" + safePageToken;
             String payload = unsignedPayload + "\n" + signatureFor(unsignedPayload);
             return ENCODER.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
         }

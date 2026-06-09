@@ -72,7 +72,6 @@ import type { InboxLabel, InboxMessage, InboxMessageDetail } from '@/features/in
 import {
   flattenInboxMessages,
   latestInboxDataSource,
-  latestInboxMaxMessages,
   useInboxMessageDetail,
   useInboxMessages,
   useInboxThreadDetail,
@@ -93,12 +92,15 @@ const INBOX_LIST_PANE_DEFAULT_WIDTH = 500;
 const INBOX_DETAIL_PANE_MIN_WIDTH = 420;
 const INBOX_ROW_VISIBLE_LABEL_LIMIT = 4;
 
+type InboxReadFilter = 'all' | 'unread' | 'read';
+
 export function InboxPageClient() {
   const t = useTranslations();
   const locale = useLocale();
   const [requestedSelectedMessageId, setRequestedSelectedMessageId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<string>>(() => new Set());
+  const [readFilter, setReadFilter] = useState<InboxReadFilter>('all');
   const [listPaneWidth, setListPaneWidth] = useState(INBOX_LIST_PANE_DEFAULT_WIDTH);
   const [splitPaneMaxWidth, setSplitPaneMaxWidth] = useState(INBOX_LIST_PANE_DEFAULT_WIDTH);
   const [isResizingSplit, setIsResizingSplit] = useState(false);
@@ -108,8 +110,8 @@ export function InboxPageClient() {
   const messages = useMemo(() => flattenInboxMessages(inboxQuery.data), [inboxQuery.data]);
   const availableLabels = useMemo(() => collectAvailableLabels(messages), [messages]);
   const filteredMessages = useMemo(
-    () => filterInboxMessages(messages, searchQuery, selectedLabelIds),
-    [messages, searchQuery, selectedLabelIds],
+    () => filterInboxMessages(messages, searchQuery, selectedLabelIds, readFilter),
+    [messages, searchQuery, selectedLabelIds, readFilter],
   );
   const toggleLabelFilter = useCallback((labelId: string) => {
     setSelectedLabelIds((current) => {
@@ -120,8 +122,10 @@ export function InboxPageClient() {
     });
   }, []);
   const clearLabelFilter = useCallback(() => setSelectedLabelIds(new Set()), []);
-  const maxMessages = latestInboxMaxMessages(inboxQuery.data);
   const inboxDataSource = latestInboxDataSource(inboxQuery.data);
+  const inboxCountCaption = locale.startsWith('vi')
+    ? `\u0110\u00e3 t\u1ea3i ${messages.length} email`
+    : `${messages.length} loaded`;
   const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
   // Wave 1 fallback observability — quietly log when the projection couldn't satisfy the page so
   // ops can correlate FE behaviour with the backend `event=inbox_read_fallback` log line.
@@ -251,7 +255,7 @@ export function InboxPageClient() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  {t('inbox.limit.caption', { max: maxMessages })}
+                  {inboxCountCaption}
                 </span>
                 <Button
                   type="button"
@@ -301,6 +305,7 @@ export function InboxPageClient() {
                 onClear={clearLabelFilter}
               />
             </div>
+            <InboxReadStateFilter locale={locale} value={readFilter} onChange={setReadFilter} />
           </div>
           <InboxMessageList
             isPending={inboxQuery.isPending}
@@ -2183,15 +2188,19 @@ function filterInboxMessages(
   messages: InboxMessage[],
   query: string,
   selectedLabelIds: Set<string>,
+  readFilter: InboxReadFilter,
 ): InboxMessage[] {
   const normalizedTokens = normalizeSearchText(query).split(/\s+/).filter(Boolean);
   const hasSearch = normalizedTokens.length > 0;
   const hasLabelFilter = selectedLabelIds.size > 0;
-  if (!hasSearch && !hasLabelFilter) {
+  const hasReadFilter = readFilter !== 'all';
+  if (!hasSearch && !hasLabelFilter && !hasReadFilter) {
     return messages;
   }
 
   return messages.filter((message) => {
+    if (readFilter === 'unread' && !message.unread) return false;
+    if (readFilter === 'read' && message.unread) return false;
     if (hasLabelFilter) {
       // OR semantics: keep the message if it carries ANY of the selected
       // labels. Most users think of "show me Promotions or Updates" as an
@@ -2467,6 +2476,53 @@ function InboxLabelOverflowChip({ count }: { count: number }) {
     <span className="bg-muted text-muted-foreground inline-flex h-4 shrink-0 items-center rounded-sm px-1.5 text-[10px] leading-none font-medium">
       +{count}
     </span>
+  );
+}
+
+function InboxReadStateFilter({
+  locale,
+  value,
+  onChange,
+}: {
+  locale: string;
+  value: InboxReadFilter;
+  onChange: (value: InboxReadFilter) => void;
+}) {
+  const options: Array<{ value: InboxReadFilter; vi: string; en: string }> = [
+    { value: 'all', vi: 'Tất cả', en: 'All' },
+    { value: 'unread', vi: 'Chưa đọc', en: 'Unread' },
+    { value: 'read', vi: 'Đã đọc', en: 'Read' },
+  ];
+  const isVietnamese = locale.startsWith('vi');
+
+  return (
+    <div
+      className="bg-muted/40 mt-2 inline-flex h-8 w-full rounded-md p-0.5 sm:w-auto"
+      role="group"
+      aria-label={isVietnamese ? 'Lọc trạng thái đọc' : 'Filter read state'}
+      data-testid="inbox-read-state-filter"
+    >
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            className={cn(
+              'flex-1 rounded-sm px-2.5 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none',
+              selected
+                ? 'bg-background text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+            aria-pressed={selected}
+            onClick={() => onChange(option.value)}
+            data-testid={`inbox-read-state-filter-${option.value}`}
+          >
+            {isVietnamese ? option.vi : option.en}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
