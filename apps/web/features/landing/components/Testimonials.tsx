@@ -23,7 +23,7 @@ export default async function Testimonials() {
   }));
 
   return (
-    <section className="zm-section bg-(--bg) py-24" id="testimonials">
+    <section className="zm-section bg-(--bg) py-12" id="testimonials">
       <div className="zm-container">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">

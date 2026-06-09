@@ -13,7 +13,7 @@ export default async function FAQ() {
 
   return (
     <>
-      <section className="zm-section bg-(--bg) py-24" id="faq">
+      <section className="zm-section bg-(--bg) py-12" id="faq">
         <div className="zm-container max-w-5xl">
           <div className="mb-16 text-center">
             <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
