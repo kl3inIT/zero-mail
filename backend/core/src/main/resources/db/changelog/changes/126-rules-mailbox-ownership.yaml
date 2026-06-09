@@ -1,0 +1,70 @@
+databaseChangeLog:
+  - changeSet:
+      id: 126-rules-mailbox-ownership
+      author: zeromail
+      comment: >
+        Add mailbox ownership to rules. Default-template materialization remains idempotent per
+        tenant, mailbox, and template key so a second mailbox can own the same system template.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 11 migration halted: rules has tenant rows whose tenant has no gmail_connections
+            row. Create or restore the tenant mailbox before rerunning.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT DISTINCT rules.tenant_id
+                FROM rules
+                WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM gmail_connections
+                  WHERE gmail_connections.tenant_id = rules.tenant_id
+                )
+              ) missing_mailbox;
+      changes:
+        - addColumn:
+            tableName: rules
+            columns:
+              - column:
+                  name: gmail_connection_id
+                  type: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              WITH primary_mailboxes AS (
+                SELECT DISTINCT ON (tenant_id)
+                  tenant_id,
+                  id AS gmail_connection_id
+                FROM gmail_connections
+                ORDER BY tenant_id, is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+              )
+              UPDATE rules
+              SET gmail_connection_id = primary_mailboxes.gmail_connection_id
+              FROM primary_mailboxes
+              WHERE rules.tenant_id = primary_mailboxes.tenant_id
+                AND rules.gmail_connection_id IS NULL;
+        - addNotNullConstraint:
+            tableName: rules
+            columnName: gmail_connection_id
+            columnDataType: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS uq_rules_tenant_template_key_present;
+
+              CREATE UNIQUE INDEX uq_rules_tenant_template_key_present
+                ON rules (tenant_id, gmail_connection_id, template_key)
+                WHERE template_key IS NOT NULL;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS uq_rules_tenant_template_key_present;
+
+              CREATE UNIQUE INDEX uq_rules_tenant_template_key_present
+                ON rules (tenant_id, template_key)
+                WHERE template_key IS NOT NULL;
+        - dropColumn:
+            tableName: rules
+            columnName: gmail_connection_id

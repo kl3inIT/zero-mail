@@ -344,3 +344,9 @@ databaseChangeLog:
   - include:
       file: changes/124-processing-job-mailbox.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/125-triage-audit-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/126-rules-mailbox-ownership.yaml
+      relativeToChangelogFile: true

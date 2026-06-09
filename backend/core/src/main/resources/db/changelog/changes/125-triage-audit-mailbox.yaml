@@ -1,0 +1,89 @@
+# DEPLOY: This changeset rebuilds the triage_audit idempotency index and takes an ACCESS EXCLUSIVE lock.
+# DEPLOY: PREFLIGHT check for open processing_job rows and in-flight Pub/Sub deliveries before deploy.
+# DEPLOY: DRAIN by stopping the single-node worker/SKIP-LOCKED poller; Pub/Sub buffers and retries delivery.
+# DEPLOY: APPLY during low traffic. Existing audit rows backfill both mailbox axes to the primary mailbox.
+# DEPLOY: RESUME the worker after Liquibase completes.
+databaseChangeLog:
+  - changeSet:
+      id: 125-triage-audit-mailbox
+      author: zeromail
+      comment: >
+        Add source and executing mailbox provenance to triage audit rows. HIGH-3 locked choice:
+        triage_audit has no gmail_connection_id column, so the idempotency index uses
+        executing_mailbox_id as the mailbox deduplication axis for the mailbox that actually
+        executed the action.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 11 migration halted: triage_audit has tenant rows whose tenant has no
+            gmail_connections row. Create or restore the tenant mailbox before rerunning.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT DISTINCT triage_audit.tenant_id
+                FROM triage_audit
+                WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM gmail_connections
+                  WHERE gmail_connections.tenant_id = triage_audit.tenant_id
+                )
+              ) missing_mailbox;
+      changes:
+        - addColumn:
+            tableName: triage_audit
+            columns:
+              - column:
+                  name: source_mailbox_id
+                  type: uuid
+              - column:
+                  name: executing_mailbox_id
+                  type: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              WITH primary_mailboxes AS (
+                SELECT DISTINCT ON (tenant_id)
+                  tenant_id,
+                  id AS gmail_connection_id
+                FROM gmail_connections
+                ORDER BY tenant_id, is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+              )
+              UPDATE triage_audit
+              SET source_mailbox_id = primary_mailboxes.gmail_connection_id,
+                  executing_mailbox_id = primary_mailboxes.gmail_connection_id
+              FROM primary_mailboxes
+              WHERE triage_audit.tenant_id = primary_mailboxes.tenant_id
+                AND (triage_audit.source_mailbox_id IS NULL
+                  OR triage_audit.executing_mailbox_id IS NULL);
+        - addNotNullConstraint:
+            tableName: triage_audit
+            columnName: source_mailbox_id
+            columnDataType: uuid
+        - addNotNullConstraint:
+            tableName: triage_audit
+            columnName: executing_mailbox_id
+            columnDataType: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS ux_triage_audit_idem;
+
+              CREATE UNIQUE INDEX ux_triage_audit_idem
+                ON triage_audit (tenant_id, executing_mailbox_id, gmail_message_id, rule_id, action_type, args_hash)
+                NULLS NOT DISTINCT;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS ux_triage_audit_idem;
+
+              CREATE UNIQUE INDEX ux_triage_audit_idem
+                ON triage_audit (tenant_id, gmail_message_id, rule_id, action_type, args_hash)
+                NULLS NOT DISTINCT;
+        - dropColumn:
+            tableName: triage_audit
+            columnName: executing_mailbox_id
+        - dropColumn:
+            tableName: triage_audit
+            columnName: source_mailbox_id

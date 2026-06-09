@@ -24,6 +24,9 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
     private static final ActionIntentJsonValidator ACTION_INTENT_JSON_VALIDATOR =
             new ActionIntentJsonValidator();
 
+    @Column(name = "gmail_connection_id", nullable = false)
+    private UUID gmailConnectionId;
+
     @Column(name = "display_name", nullable = false, length = 160)
     private String displayName;
 
@@ -75,6 +78,7 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
     public RuleEntity(
             UUID ruleId,
             UUID tenantId,
+            UUID gmailConnectionId,
             String displayName,
             String sourceText,
             RuleLanguage sourceLanguage,
@@ -85,11 +89,48 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
             String templateKey,
             Integer templateVersion) {
         super(ruleId, tenantId);
+        this.gmailConnectionId = gmailConnectionId;
         replaceDefinition(
                 displayName, sourceText, sourceLanguage, schemaVersion, matcherAst, actionIntents);
         this.orderIndex = orderIndex;
         this.templateKey = templateKey;
         this.templateVersion = templateVersion;
+    }
+
+    /**
+     * @deprecated transitional null-mailbox seam; Plan 04 migrates RuleManagementService and the
+     *     default-rule seeding path to the mailbox-carrying constructor and removes this overload.
+     */
+    @Deprecated(forRemoval = true)
+    public RuleEntity(
+            UUID ruleId,
+            UUID tenantId,
+            String displayName,
+            String sourceText,
+            RuleLanguage sourceLanguage,
+            RuleSchemaVersion schemaVersion,
+            String matcherAst,
+            String actionIntents,
+            int orderIndex,
+            String templateKey,
+            Integer templateVersion) {
+        this(
+                ruleId,
+                tenantId,
+                null,
+                displayName,
+                sourceText,
+                sourceLanguage,
+                schemaVersion,
+                matcherAst,
+                actionIntents,
+                orderIndex,
+                templateKey,
+                templateVersion);
+    }
+
+    public UUID getGmailConnectionId() {
+        return gmailConnectionId;
     }
 
     public String getDisplayName() {
@@ -153,6 +194,7 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
     public RuleStatusProjection toStatusProjection() {
         return new RuleStatusProjection(
                 new com.zeromail.core.rules.domain.RuleId(getId()),
+                gmailConnectionId,
                 displayName,
                 sourceText,
                 enabled,
