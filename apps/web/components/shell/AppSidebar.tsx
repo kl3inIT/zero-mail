@@ -299,7 +299,7 @@ export function AppSidebar() {
           )}
         >
           {!isCollapsed && (
-            <span className="text-sidebar-foreground text-lg font-bold tracking-normal">
+            <span className="text-sidebar-foreground pl-2 text-lg font-bold tracking-normal">
               ZERO MAIL
             </span>
           )}
