@@ -54,7 +54,7 @@ export default async function Testimonials() {
                   />
                 </div>
                 <div>
-                  <h4 className="text-[15px] font-bold text-(--ink)">{review.author}</h4>
+                  <p className="text-[15px] font-bold text-(--ink)">{review.author}</p>
                   <p className="text-[13px] text-(--text-faint)">{review.role}</p>
                 </div>
               </div>
