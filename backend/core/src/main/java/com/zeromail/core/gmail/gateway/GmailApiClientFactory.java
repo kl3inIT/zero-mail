@@ -114,11 +114,16 @@ public class GmailApiClientFactory {
 
     @Deprecated(forRemoval = true)
     public Gmail buildClientForTenant(UUID tenantId) throws IOException {
-        return buildClientForTenant(tenantId, null);
+        return buildClientForSingleConnectedTenant(tenantId, null);
     }
 
     @Deprecated(forRemoval = true)
     public Gmail buildClientForTenant(UUID tenantId, Duration requestTimeout) throws IOException {
+        return buildClientForSingleConnectedTenant(tenantId, requestTimeout);
+    }
+
+    private Gmail buildClientForSingleConnectedTenant(UUID tenantId, Duration requestTimeout)
+            throws IOException {
         List<GmailConnectionEntity> connectedMailboxes =
                 gmailConnectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
                         .filter(
