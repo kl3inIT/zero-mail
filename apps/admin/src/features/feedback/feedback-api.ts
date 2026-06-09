@@ -35,7 +35,7 @@ export async function fetchFeedbackList(
 export async function resolveFeedback(id: string, adminNotes?: string): Promise<void> {
   const result = await api.PATCH('/api/admin/feedback/{id}/resolve', {
     params: { path: { id } },
-    body: { adminNotes: adminNotes ?? null },
+    body: { adminNotes: adminNotes ?? undefined },
   });
   if (!result.response.ok) {
     throw result.error ?? new Error(`Không thể resolve feedback: ${result.response.status}`);

@@ -15,7 +15,21 @@ export default async function Contact() {
           <p className="text-[17px] leading-relaxed text-(--text-muted)">{t('subheading')}</p>
         </div>
 
-        <ContactForm />
+        <ContactForm
+          labels={{
+            emailLabel: t('emailLabel'),
+            emailPlaceholder: t('emailPlaceholder'),
+            messageLabel: t('messageLabel'),
+            messagePlaceholder: t('messagePlaceholder'),
+            submit: t('submit'),
+            submitting: t('submitting'),
+            trust: t('trust'),
+            successHeading: t('successHeading'),
+            successBody: t('successBody'),
+            successReset: t('successReset'),
+            errorMessage: t('errorMessage'),
+          }}
+        />
       </div>
     </section>
   );

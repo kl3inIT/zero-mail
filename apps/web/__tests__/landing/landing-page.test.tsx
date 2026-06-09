@@ -19,6 +19,9 @@ vi.mock('@/features/landing/components/Testimonials', () => ({
 vi.mock('@/features/landing/components/FAQ', () => ({
   default: () => <div data-testid="faq" />,
 }));
+vi.mock('@/features/landing/components/Contact', () => ({
+  default: () => <div data-testid="contact" />,
+}));
 
 vi.mock('next-intl/server', () => ({ getTranslations: vi.fn(async () => (k: string) => k) }));
 vi.mock('next/headers', () => ({
