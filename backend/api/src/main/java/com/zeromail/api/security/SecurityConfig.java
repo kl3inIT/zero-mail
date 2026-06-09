@@ -169,7 +169,8 @@ public class SecurityConfig {
             TenantBindingFilter tenantFilter,
             GoogleOAuthSuccessHandler successHandler,
             LoginRedirectAuthenticationFailureHandler failureHandler,
-            GoogleAuthorizationRequestResolver authRequestResolver) {
+            GoogleAuthorizationRequestResolver authRequestResolver,
+            IntentCarryingAuthorizationRequestRepository intentCarryingRepository) {
         // Default catch-all for user-session traffic. Explicit securityMatcher excluding
         // chains owned by earlier @Order beans (PubSub @Order(1), AdminChain @Order(1),
         // plan-upgrade webhook @Order(2/3)) so Spring Security 7's WebSecurityFilterChainValidator
@@ -216,7 +217,9 @@ public class SecurityConfig {
                                                 authorizationEndpoint ->
                                                         authorizationEndpoint
                                                                 .authorizationRequestResolver(
-                                                                        authRequestResolver)))
+                                                                        authRequestResolver)
+                                                                .authorizationRequestRepository(
+                                                                        intentCarryingRepository)))
                 .csrf(
                         csrf ->
                                 csrf.spa()
