@@ -22,6 +22,8 @@ import com.zeromail.core.draft.usecases.DraftReplySourceLoader.DraftReplySource;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftCommand;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftResult;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftService;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.shared.lock.LockBackendUnavailableException;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
@@ -52,6 +54,8 @@ import org.springframework.transaction.support.TransactionOperations;
 class GenerateThreadDraftServiceTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-0000000005b3");
+    private static final UUID MAILBOX_ID = UUID.fromString("00000000-0000-0000-0000-0000000005b4");
+    private static final MailboxRef MAILBOX_REF = new MailboxRef(TENANT_ID, MAILBOX_ID);
     private static final UUID AUDIT_ID = UUID.fromString("00000000-0000-0000-0000-0000000005a1");
     private static final String THREAD_ID = "thread-1";
     private static final String MESSAGE_ID = "message-1";
@@ -62,6 +66,7 @@ class GenerateThreadDraftServiceTest {
     private DraftReplySourceLoader draftReplySourceLoader;
     private DraftBodyGenerator draftBodyGenerator;
     private TriageGmailWriter triageGmailWriter;
+    private GmailConnectionService gmailConnectionService;
     private ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
     private TriageAuditWriter triageAuditWriter;
     private TriageAuditRepository triageAuditRepository;
@@ -76,6 +81,7 @@ class GenerateThreadDraftServiceTest {
         draftReplySourceLoader = mock(DraftReplySourceLoader.class);
         draftBodyGenerator = mock(DraftBodyGenerator.class);
         triageGmailWriter = mock(TriageGmailWriter.class);
+        gmailConnectionService = mock(GmailConnectionService.class);
         classifyThreadReplyStatusService = mock(ClassifyThreadReplyStatusService.class);
         triageAuditWriter = mock(TriageAuditWriter.class);
         triageAuditRepository = mock(TriageAuditRepository.class);
@@ -88,12 +94,15 @@ class GenerateThreadDraftServiceTest {
         lockHandle = mock(LockHandle.class);
         when(triageAuditRepository.reclaimStalePending(eq(AUDIT_ID), eq(TENANT_ID), anyString()))
                 .thenReturn(1);
+        when(gmailConnectionService.primaryMailboxRef(TENANT_ID))
+                .thenReturn(Optional.of(MAILBOX_REF));
         service =
                 new GenerateThreadDraftService(
                         redisDistributedLock,
                         draftReplySourceLoader,
                         draftBodyGenerator,
                         triageGmailWriter,
+                        gmailConnectionService,
                         classifyThreadReplyStatusService,
                         triageDraftAuditService,
                         eventPublisher,
@@ -106,17 +115,20 @@ class GenerateThreadDraftServiceTest {
         arrangeLock();
         when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.empty());
-        when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
-        when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
+        when(draftReplySourceLoader.load(MAILBOX_REF, THREAD_ID)).thenReturn(source());
+        when(draftBodyGenerator.generate(
+                        TENANT_ID, MAILBOX_REF, THREAD_ID, "inbound body", "Inbound subject"))
                 .thenReturn("generated draft body");
         when(triageGmailWriter.saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         any(ReplyHeaders.class),
                         eq("generated draft body"),
                         eq(THREAD_ID)))
                 .thenReturn(NEW_DRAFT_ID);
         when(triageAuditWriter.insertPending(
                         eq(TENANT_ID),
+                        eq(MAILBOX_ID),
+                        eq(MAILBOX_ID),
                         eq(MESSAGE_ID),
                         eq(THREAD_ID),
                         any(),
@@ -142,6 +154,8 @@ class GenerateThreadDraftServiceTest {
                 .verify(triageAuditWriter)
                 .insertPending(
                         eq(TENANT_ID),
+                        eq(MAILBOX_ID),
+                        eq(MAILBOX_ID),
                         eq(MESSAGE_ID),
                         eq(THREAD_ID),
                         any(),
@@ -154,7 +168,7 @@ class GenerateThreadDraftServiceTest {
         auditBeforeGmailOrder
                 .verify(triageGmailWriter)
                 .saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         any(ReplyHeaders.class),
                         eq("generated draft body"),
                         eq(THREAD_ID));
@@ -182,11 +196,14 @@ class GenerateThreadDraftServiceTest {
         arrangeLock();
         when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.empty());
-        when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
-        when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
+        when(draftReplySourceLoader.load(MAILBOX_REF, THREAD_ID)).thenReturn(source());
+        when(draftBodyGenerator.generate(
+                        TENANT_ID, MAILBOX_REF, THREAD_ID, "inbound body", "Inbound subject"))
                 .thenReturn("generated draft body");
         when(triageAuditWriter.insertPending(
                         eq(TENANT_ID),
+                        eq(MAILBOX_ID),
+                        eq(MAILBOX_ID),
                         eq(MESSAGE_ID),
                         eq(THREAD_ID),
                         any(),
@@ -198,7 +215,12 @@ class GenerateThreadDraftServiceTest {
                         eq("on_demand_draft")))
                 .thenReturn(Optional.empty());
         when(triageAuditWriter.findPendingAuditId(
-                        eq(TENANT_ID), eq(MESSAGE_ID), any(UUID.class), any(), any()))
+                        eq(TENANT_ID),
+                        eq(MAILBOX_ID),
+                        eq(MESSAGE_ID),
+                        any(UUID.class),
+                        any(),
+                        any()))
                 .thenReturn(Optional.of(AUDIT_ID));
         when(triageAuditRepository.reclaimStalePending(eq(AUDIT_ID), eq(TENANT_ID), anyString()))
                 .thenReturn(0);
@@ -209,7 +231,9 @@ class GenerateThreadDraftServiceTest {
                                         new GenerateThreadDraftCommand(TENANT_ID, THREAD_ID)))
                 .isInstanceOf(DraftGenerationInFlightException.class);
 
-        verify(triageGmailWriter, never()).saveDraft(any(), any(), anyString(), anyString());
+        verify(triageGmailWriter, never())
+                .saveDraft(
+                        any(MailboxRef.class), any(ReplyHeaders.class), anyString(), anyString());
         verify(triageAuditRepository, never()).markApplied(any(), any(), anyString(), any(), any());
         verify(lockHandle).release();
     }
@@ -226,11 +250,11 @@ class GenerateThreadDraftServiceTest {
         gmailWriteOrder
                 .verify(triageGmailWriter)
                 .saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         any(ReplyHeaders.class),
                         eq("generated draft body"),
                         eq(THREAD_ID));
-        gmailWriteOrder.verify(triageGmailWriter).deleteDraft(TENANT_ID, OLD_DRAFT_ID);
+        gmailWriteOrder.verify(triageGmailWriter).deleteDraft(MAILBOX_REF, OLD_DRAFT_ID);
     }
 
     @Test
@@ -238,7 +262,7 @@ class GenerateThreadDraftServiceTest {
         arrangeSuccessfulRegeneration();
         doThrow(new IOException("delete failed"))
                 .when(triageGmailWriter)
-                .deleteDraft(TENANT_ID, OLD_DRAFT_ID);
+                .deleteDraft(MAILBOX_REF, OLD_DRAFT_ID);
 
         GenerateThreadDraftResult result =
                 service.generateOrRegenerate(new GenerateThreadDraftCommand(TENANT_ID, THREAD_ID));
@@ -251,23 +275,26 @@ class GenerateThreadDraftServiceTest {
         arrangeLock();
         when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.of(OLD_DRAFT_ID));
-        when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
-        when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
+        when(draftReplySourceLoader.load(MAILBOX_REF, THREAD_ID)).thenReturn(source());
+        when(draftBodyGenerator.generate(
+                        TENANT_ID, MAILBOX_REF, THREAD_ID, "inbound body", "Inbound subject"))
                 .thenReturn("generated draft body");
         when(triageAuditWriter.insertPending(
-                        any(),
+                        any(UUID.class),
+                        any(UUID.class),
+                        any(UUID.class),
                         anyString(),
                         anyString(),
-                        any(),
-                        any(),
-                        any(),
+                        anyString(),
+                        anyString(),
+                        any(UUID.class),
                         anyString(),
                         any(),
                         any(),
                         anyString()))
                 .thenReturn(Optional.of(AUDIT_ID));
         when(triageGmailWriter.saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         any(ReplyHeaders.class),
                         eq("generated draft body"),
                         eq(THREAD_ID)))
@@ -279,7 +306,7 @@ class GenerateThreadDraftServiceTest {
                                         new GenerateThreadDraftCommand(TENANT_ID, THREAD_ID)))
                 .isInstanceOf(DraftGenerationFailedException.class);
 
-        verify(triageGmailWriter, never()).deleteDraft(any(), anyString());
+        verify(triageGmailWriter, never()).deleteDraft(any(MailboxRef.class), anyString());
         verify(classifyThreadReplyStatusService, never()).classify(any());
         verify(eventPublisher, never()).publishEvent(any());
         verify(lockHandle).release();
@@ -290,8 +317,9 @@ class GenerateThreadDraftServiceTest {
         arrangeLock();
         when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.empty());
-        when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
-        when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
+        when(draftReplySourceLoader.load(MAILBOX_REF, THREAD_ID)).thenReturn(source());
+        when(draftBodyGenerator.generate(
+                        TENANT_ID, MAILBOX_REF, THREAD_ID, "inbound body", "Inbound subject"))
                 .thenThrow(new SafetyViolationException());
 
         assertThatThrownBy(
@@ -300,7 +328,9 @@ class GenerateThreadDraftServiceTest {
                                         new GenerateThreadDraftCommand(TENANT_ID, THREAD_ID)))
                 .isInstanceOf(SafetyViolationException.class);
 
-        verify(triageGmailWriter, never()).saveDraft(any(), any(), anyString(), anyString());
+        verify(triageGmailWriter, never())
+                .saveDraft(
+                        any(MailboxRef.class), any(ReplyHeaders.class), anyString(), anyString());
         verify(triageAuditRepository, never()).markApplied(any(), any(), anyString(), any(), any());
         verify(lockHandle).release();
     }
@@ -332,22 +362,25 @@ class GenerateThreadDraftServiceTest {
         arrangeLock();
         when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.of(OLD_DRAFT_ID));
-        when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
-        when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
+        when(draftReplySourceLoader.load(MAILBOX_REF, THREAD_ID)).thenReturn(source());
+        when(draftBodyGenerator.generate(
+                        TENANT_ID, MAILBOX_REF, THREAD_ID, "inbound body", "Inbound subject"))
                 .thenReturn("generated draft body");
         when(triageGmailWriter.saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         any(ReplyHeaders.class),
                         eq("generated draft body"),
                         eq(THREAD_ID)))
                 .thenReturn(NEW_DRAFT_ID);
         when(triageAuditWriter.insertPending(
-                        any(),
+                        any(UUID.class),
+                        any(UUID.class),
+                        any(UUID.class),
                         anyString(),
                         anyString(),
-                        any(),
-                        any(),
-                        any(),
+                        anyString(),
+                        anyString(),
+                        any(UUID.class),
                         anyString(),
                         any(),
                         any(),

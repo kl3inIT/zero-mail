@@ -7,6 +7,8 @@ import com.zeromail.core.chat.confirm.ConfirmationStateMachine.SendInFlightComma
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.exception.GmailSendFailedException;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.outbound.usecases.OutboundSendCommand;
 import com.zeromail.core.outbound.usecases.OutboundSendException;
@@ -37,6 +39,7 @@ public class AssistantSendExecutor {
     private final OutboundSendGateway outboundSendGateway;
     private final GmailMessageBuilder gmailMessageBuilder;
     private final ForwardMessageAssembler forwardMessageAssembler;
+    private final GmailConnectionService gmailConnectionService;
     private final ConfirmationStateMachine confirmationStateMachine;
     private final ConfirmationLeaseService confirmationLeaseService;
     private final SenderSafetyNetService senderSafetyNetService;
@@ -48,6 +51,7 @@ public class AssistantSendExecutor {
             OutboundSendGateway outboundSendGateway,
             GmailMessageBuilder gmailMessageBuilder,
             ForwardMessageAssembler forwardMessageAssembler,
+            GmailConnectionService gmailConnectionService,
             ConfirmationStateMachine confirmationStateMachine,
             ConfirmationLeaseService confirmationLeaseService,
             SenderSafetyNetService senderSafetyNetService,
@@ -57,6 +61,7 @@ public class AssistantSendExecutor {
         this.outboundSendGateway = outboundSendGateway;
         this.gmailMessageBuilder = gmailMessageBuilder;
         this.forwardMessageAssembler = forwardMessageAssembler;
+        this.gmailConnectionService = gmailConnectionService;
         this.confirmationStateMachine = confirmationStateMachine;
         this.confirmationLeaseService = confirmationLeaseService;
         this.senderSafetyNetService = senderSafetyNetService;
@@ -77,8 +82,9 @@ public class AssistantSendExecutor {
             String preGeneratedMessageId =
                     gmailMessageBuilder.generateMessageId(
                             command.tenantId().toString(), command.chatId(), command.toolCallId());
+            MailboxRef mailboxRef = primaryMailboxRef(command.tenantId());
             com.google.api.services.gmail.model.Message gmailMessage =
-                    buildOutboundMessage(command, preGeneratedMessageId);
+                    buildOutboundMessage(command, mailboxRef, preGeneratedMessageId);
             UUID auditId =
                     transactionTemplate.execute(
                             _ ->
@@ -102,7 +108,8 @@ public class AssistantSendExecutor {
             try {
                 sendResult =
                         outboundSendGateway.send(
-                                new OutboundSendCommand(command.tenantId(), gmailMessage));
+                                new OutboundSendCommand(
+                                        command.tenantId(), mailboxRef, gmailMessage));
             } catch (IOException | OutboundSendException gmailSendFailure) {
                 transactionTemplate.executeWithoutResult(
                         _ ->
@@ -141,7 +148,7 @@ public class AssistantSendExecutor {
     }
 
     private com.google.api.services.gmail.model.Message buildOutboundMessage(
-            AssistantSendCommand command, String preGeneratedMessageId) {
+            AssistantSendCommand command, MailboxRef mailboxRef, String preGeneratedMessageId) {
         if (command.toolName() == ChatToolName.FORWARD_EMAIL) {
             // A real forward must carry the original message, not just the user's note. The chat
             // forward path previously built a plain new email whose body was the note only,
@@ -149,7 +156,7 @@ public class AssistantSendExecutor {
             // the forwarded content entirely. Re-attach the source message as message/rfc822.
             try {
                 return forwardMessageAssembler.buildForward(
-                        command.tenantId(),
+                        mailboxRef,
                         command.sourceMessageId(),
                         java.util.List.of(command.to()),
                         hasText(command.cc())
@@ -163,6 +170,17 @@ public class AssistantSendExecutor {
             }
         }
         return gmailMessageBuilder.build(command, preGeneratedMessageId);
+    }
+
+    private MailboxRef primaryMailboxRef(UUID tenantId) {
+        // TODO(Plan 05): replace primary-shim MailboxRef with MailboxContext.currentOrThrow()
+        // once the active-mailbox filter binds chat actions to the selected mailbox.
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "Primary Gmail mailbox is required for assistant send"));
     }
 
     private void rejectUnacknowledgedVipRecipient(AssistantSendCommand command) {

@@ -5,6 +5,7 @@ import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.domain.GmailCategory;
 import com.zeromail.core.gmail.event.MailMessageObserved;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
@@ -303,7 +304,10 @@ public class TriageOrchestratorService {
                     observedEvent.gmailMessageId());
             return DispatchOutcome.none();
         }
-        List<RuleExecutionCandidate> ruleExecutionCandidates = loadEnabledCandidates(tenantId);
+        UUID sourceMailboxId = Objects.requireNonNull(observedEvent.gmailConnectionId());
+        UUID executingMailboxId = sourceMailboxId;
+        List<RuleExecutionCandidate> ruleExecutionCandidates =
+                loadEnabledCandidates(tenantId, sourceMailboxId);
         if (ruleExecutionCandidates.isEmpty()) {
             return DispatchOutcome.none();
         }
@@ -332,6 +336,8 @@ public class TriageOrchestratorService {
         TriageDispatchContext dispatchContext =
                 new TriageDispatchContext(
                         tenantId,
+                        sourceMailboxId,
+                        executingMailboxId,
                         observedEvent.gmailMessageId(),
                         triageRuleEvaluationInput,
                         safetyNetEvaluation.blocksOutboundSend(),
@@ -348,6 +354,8 @@ public class TriageOrchestratorService {
      */
     private record TriageDispatchContext(
             UUID tenantId,
+            UUID sourceMailboxId,
+            UUID executingMailboxId,
             String gmailMessageId,
             TriageRuleEvaluationInput triageRuleEvaluationInput,
             boolean blockedBySafetyNet,
@@ -357,10 +365,15 @@ public class TriageOrchestratorService {
         String gmailThreadId() {
             return triageRuleEvaluationInput.gmailThreadId();
         }
+
+        MailboxRef executingMailboxRef() {
+            return new MailboxRef(tenantId, executingMailboxId);
+        }
     }
 
-    private List<RuleExecutionCandidate> loadEnabledCandidates(UUID tenantId) {
-        return ruleManagementService.listEnabledForExecution(tenantId).stream()
+    private List<RuleExecutionCandidate> loadEnabledCandidates(
+            UUID tenantId, UUID sourceMailboxId) {
+        return ruleManagementService.listEnabledForExecution(tenantId, sourceMailboxId).stream()
                 .map(
                         snapshot ->
                                 new RuleExecutionCandidate(
@@ -530,6 +543,8 @@ public class TriageOrchestratorService {
         TriageRuleEvaluationInput evaluationContext = dispatchContext.triageRuleEvaluationInput();
         return new TriageAuditCommand(
                 dispatchContext.tenantId(),
+                dispatchContext.sourceMailboxId(),
+                dispatchContext.executingMailboxId(),
                 dispatchContext.gmailMessageId(),
                 dispatchContext.gmailThreadId(),
                 evaluationContext.evaluationInput().sanitizedSubjectExcerpt(),
@@ -560,6 +575,7 @@ public class TriageOrchestratorService {
                         generateDraftBody
                                 ? draftBodyGenerator.generate(
                                         dispatchContext.tenantId(),
+                                        dispatchContext.executingMailboxRef(),
                                         dispatchContext.gmailThreadId(),
                                         draftGenerationSource(triageRuleEvaluationInput),
                                         triageRuleEvaluationInput
@@ -580,6 +596,7 @@ public class TriageOrchestratorService {
                         generateDraftBody
                                 ? draftBodyGenerator.generate(
                                         dispatchContext.tenantId(),
+                                        dispatchContext.executingMailboxRef(),
                                         dispatchContext.gmailThreadId(),
                                         draftGenerationSource(triageRuleEvaluationInput)
                                                 + "\nactionInstruction="

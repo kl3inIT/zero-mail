@@ -172,11 +172,23 @@ class ReadToolsIT extends PostgresContainerTest {
 
     private UUID seedTenant(String displayNamePrefix) {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
+        String displayName = displayNamePrefix + "-" + tenantId;
         jdbcTemplate.update(
-                "insert into tenants(id, display_name) values (?, ?)",
+                "insert into tenants(id, display_name) values (?, ?)", tenantId, displayName);
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                gmailConnectionId,
                 tenantId,
-                displayNamePrefix + "-" + tenantId);
+                displayName + "@example.test");
         return tenantId;
+    }
+
+    private UUID primaryGmailConnectionId(UUID tenantId) {
+        return jdbcTemplate.queryForObject(
+                "select id from gmail_connections where tenant_id = ? and is_primary = true",
+                UUID.class,
+                tenantId);
     }
 
     private void seedRule(UUID tenantId, UUID ruleId) {
@@ -187,6 +199,7 @@ class ReadToolsIT extends PostgresContainerTest {
                             new RuleEntity(
                                     ruleId,
                                     tenantId,
+                                    primaryGmailConnectionId(tenantId),
                                     "Archive VIP updates",
                                     "Archive updates from VIP senders",
                                     RuleLanguage.EN,

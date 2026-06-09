@@ -133,10 +133,14 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
 
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
+        String displayName = "triage-privacy-sweep-" + tenantId;
         jdbcTemplate.update(
-                "insert into tenants(id, display_name) values (?, ?)",
+                "insert into tenants(id, display_name) values (?, ?)", tenantId, displayName);
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                GMAIL_CONNECTION_ID,
                 tenantId,
-                "triage-privacy-sweep-" + tenantId);
+                displayName + "@example.test");
         return tenantId;
     }
 
@@ -159,6 +163,7 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
                             new RuleEntity(
                                     deterministicRuleId,
                                     tenantId,
+                                    GMAIL_CONNECTION_ID,
                                     "Archive opted-in sender",
                                     "Archive opted-in sender",
                                     RuleLanguage.EN,
@@ -178,6 +183,7 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
                             new RuleEntity(
                                     semanticRuleId,
                                     tenantId,
+                                    GMAIL_CONNECTION_ID,
                                     "Semantic draft probe",
                                     "Semantic draft probe",
                                     RuleLanguage.EN,

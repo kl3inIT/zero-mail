@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.outbound.usecases.OutboundSendGateway;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.domain.ReplyHeaders;
@@ -26,6 +27,8 @@ import org.junit.jupiter.api.Test;
 class TriageAuditSagaDraftThreadingTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000501");
+    private static final UUID MAILBOX_ID = UUID.fromString("00000000-0000-0000-0000-000000000502");
+    private static final MailboxRef MAILBOX_REF = new MailboxRef(TENANT_ID, MAILBOX_ID);
     private static final UUID RULE_ID = UUID.fromString("00000000-0000-0000-0000-000000000601");
     private static final String GMAIL_MESSAGE_ID = "gmail-message-draft-threading";
     private static final String GMAIL_THREAD_ID = "gmail-thread-draft-threading";
@@ -37,7 +40,7 @@ class TriageAuditSagaDraftThreadingTest {
         TriageAuditSaga triageAuditSaga = sagaWith(triageGmailWriter);
         ReplyHeaders replyHeaders = completeReplyHeaders();
         when(triageGmailWriter.saveDraft(
-                        eq(TENANT_ID), same(replyHeaders), eq(DRAFT_BODY), eq(GMAIL_THREAD_ID)))
+                        eq(MAILBOX_REF), same(replyHeaders), eq(DRAFT_BODY), eq(GMAIL_THREAD_ID)))
                 .thenReturn("draft-123");
 
         GmailWriteResult result = triageAuditSaga.gmailWritePhase(saveDraftCommand(replyHeaders));
@@ -46,7 +49,8 @@ class TriageAuditSagaDraftThreadingTest {
         assertThat(result.externalRef()).isEqualTo("draft-123");
         assertThat(result.resolvedActionArgsJson()).contains("\"draftId\":\"draft-123\"");
         verify(triageGmailWriter)
-                .saveDraft(eq(TENANT_ID), same(replyHeaders), eq(DRAFT_BODY), eq(GMAIL_THREAD_ID));
+                .saveDraft(
+                        eq(MAILBOX_REF), same(replyHeaders), eq(DRAFT_BODY), eq(GMAIL_THREAD_ID));
     }
 
     @Test
@@ -56,7 +60,7 @@ class TriageAuditSagaDraftThreadingTest {
         ReplyHeaders replyHeadersWithoutMessageId =
                 ReplyHeaders.of(null, null, "Planning", "founder@example.com", GMAIL_THREAD_ID);
         when(triageGmailWriter.saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         same(replyHeadersWithoutMessageId),
                         eq(DRAFT_BODY),
                         eq(GMAIL_THREAD_ID)))
@@ -69,7 +73,7 @@ class TriageAuditSagaDraftThreadingTest {
         assertThat(result.failureReason()).isEqualTo("draft_threading_invalid");
         verify(triageGmailWriter)
                 .saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         same(replyHeadersWithoutMessageId),
                         eq(DRAFT_BODY),
                         eq(GMAIL_THREAD_ID));
@@ -92,6 +96,8 @@ class TriageAuditSagaDraftThreadingTest {
     private static TriageAuditCommand saveDraftCommand(ReplyHeaders replyHeaders) {
         return new TriageAuditCommand(
                 TENANT_ID,
+                MAILBOX_ID,
+                MAILBOX_ID,
                 GMAIL_MESSAGE_ID,
                 GMAIL_THREAD_ID,
                 "Planning",

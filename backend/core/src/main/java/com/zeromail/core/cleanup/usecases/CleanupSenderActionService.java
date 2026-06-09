@@ -1,6 +1,8 @@
 package com.zeromail.core.cleanup.usecases;
 
 import com.zeromail.core.cleanup.domain.CleanupSenderStatus;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.usecases.RuleCompileResult;
@@ -41,12 +43,14 @@ public class CleanupSenderActionService {
     private final JdbcTemplate jdbcTemplate;
     private final CleanupSenderStatusService cleanupSenderStatusService;
     private final RuleManagementService ruleManagementService;
+    private final GmailConnectionService gmailConnectionService;
     private final TriageGmailWriter triageGmailWriter;
 
     public CleanupSenderActionService(
             JdbcTemplate jdbcTemplate,
             CleanupSenderStatusService cleanupSenderStatusService,
             RuleManagementService ruleManagementService,
+            GmailConnectionService gmailConnectionService,
             TriageGmailWriter triageGmailWriter) {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
         this.cleanupSenderStatusService =
@@ -55,6 +59,9 @@ public class CleanupSenderActionService {
         this.ruleManagementService =
                 Objects.requireNonNull(
                         ruleManagementService, "ruleManagementService must not be null");
+        this.gmailConnectionService =
+                Objects.requireNonNull(
+                        gmailConnectionService, "gmailConnectionService must not be null");
         this.triageGmailWriter =
                 Objects.requireNonNull(triageGmailWriter, "triageGmailWriter must not be null");
     }
@@ -180,9 +187,28 @@ public class CleanupSenderActionService {
                         RuleSchemaVersion.RULES_V1,
                         writeJson(senderMatcher(senderEmail)),
                         writeJson(actionIntents));
+        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
         ruleManagementService.createOrEnable(
                 new RuleCreateCommand(
-                        null, tenantId, displayName, sourceText, compileResult, templateKey, 1));
+                        null,
+                        tenantId,
+                        gmailConnectionId,
+                        displayName,
+                        sourceText,
+                        compileResult,
+                        templateKey,
+                        1));
+    }
+
+    private UUID primaryGmailConnectionIdOrThrow(UUID tenantId) {
+        // TODO(Plan 05): replace this primary mailbox bridge with the cleanup source mailbox.
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .map(MailboxRef::gmailConnectionId)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "Primary Gmail mailbox is required for cleanup rule creation"));
     }
 
     private static ObjectNode senderMatcher(String senderEmail) {

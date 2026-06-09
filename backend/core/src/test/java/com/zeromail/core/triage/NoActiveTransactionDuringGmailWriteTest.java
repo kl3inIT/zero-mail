@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
@@ -32,6 +33,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000105");
+    private static final UUID MAILBOX_ID = UUID.fromString("00000000-0000-0000-0000-000000000106");
+    private static final MailboxRef MAILBOX_REF = new MailboxRef(TENANT_ID, MAILBOX_ID);
     private static final UUID RULE_ID = UUID.fromString("00000000-0000-0000-0000-000000000205");
     private static final String GMAIL_MESSAGE_ID = "gmail-message-transaction-boundary";
     private static final String GMAIL_THREAD_ID = "gmail-thread-transaction-boundary";
@@ -63,7 +66,7 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                             return "Label_123";
                         })
                 .when(triageGmailWriter)
-                .applyLabel(eq(TENANT_ID), eq(GMAIL_MESSAGE_ID), eq("Finance"));
+                .applyLabel(eq(MAILBOX_REF), eq(GMAIL_MESSAGE_ID), eq("Finance"));
         doAnswer(
                         invocation -> {
                             transactionActiveAtWriter.add(
@@ -71,7 +74,7 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                             return null;
                         })
                 .when(triageGmailWriter)
-                .archiveSkipInbox(eq(TENANT_ID), eq(GMAIL_MESSAGE_ID));
+                .archiveSkipInbox(eq(MAILBOX_REF), eq(GMAIL_MESSAGE_ID));
         doAnswer(
                         invocation -> {
                             transactionActiveAtWriter.add(
@@ -80,7 +83,7 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                         })
                 .when(triageGmailWriter)
                 .saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         any(ReplyHeaders.class),
                         eq("Draft a safe reply for user review"),
                         eq(GMAIL_THREAD_ID));
@@ -110,7 +113,7 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                             return "Label_123";
                         })
                 .when(triageGmailWriter)
-                .removeLabel(eq(TENANT_ID), eq(GMAIL_MESSAGE_ID), eq("Label_123"));
+                .removeLabel(eq(MAILBOX_REF), eq(GMAIL_MESSAGE_ID), eq("Label_123"));
 
         ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
                 .run(
@@ -160,6 +163,8 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
             RuleActionType actionType, TriageActionResult actionResult) {
         return new TriageAuditCommand(
                 TENANT_ID,
+                MAILBOX_ID,
+                MAILBOX_ID,
                 GMAIL_MESSAGE_ID,
                 GMAIL_THREAD_ID,
                 "Transaction boundary",
@@ -192,6 +197,8 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                                     triageAuditWriter
                                             .insertPending(
                                                     TENANT_ID,
+                                                    MAILBOX_ID,
+                                                    MAILBOX_ID,
                                                     GMAIL_MESSAGE_ID,
                                                     GMAIL_THREAD_ID,
                                                     "Transaction boundary",
@@ -219,5 +226,10 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                 "insert into tenants(id, display_name) values (?, ?) on conflict (id) do nothing",
                 TENANT_ID,
                 "transaction-boundary");
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true) on conflict (id) do nothing",
+                MAILBOX_ID,
+                TENANT_ID,
+                "transaction-boundary@example.com");
     }
 }

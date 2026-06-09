@@ -5,6 +5,8 @@ import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.shared.lang.Strings;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import java.io.IOException;
@@ -34,17 +36,27 @@ public class DraftReplySourceLoader {
                     + "payload/parts(mimeType,body/data,parts))";
 
     private final GmailApiClientFactory gmailApiClientFactory;
+    private final GmailConnectionService gmailConnectionService;
 
-    public DraftReplySourceLoader(GmailApiClientFactory gmailApiClientFactory) {
+    public DraftReplySourceLoader(
+            GmailApiClientFactory gmailApiClientFactory,
+            GmailConnectionService gmailConnectionService) {
         this.gmailApiClientFactory =
                 Objects.requireNonNull(
                         gmailApiClientFactory, "gmailApiClientFactory must not be null");
+        this.gmailConnectionService =
+                Objects.requireNonNull(
+                        gmailConnectionService, "gmailConnectionService must not be null");
     }
 
     public DraftReplySource load(UUID tenantId, String gmailThreadId) throws IOException {
-        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        return load(primaryMailboxRefOrThrow(tenantId), gmailThreadId);
+    }
+
+    public DraftReplySource load(MailboxRef mailboxRef, String gmailThreadId) throws IOException {
+        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
         String threadId = Strings.requireText(gmailThreadId, "gmailThreadId");
-        Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
+        Gmail gmail = gmailApiClientFactory.buildClientForMailbox(mailboxRef);
         com.google.api.services.gmail.model.Thread gmailThread =
                 gmail.users()
                         .threads()
@@ -85,6 +97,19 @@ public class DraftReplySourceLoader {
                 hasLabel(replyTarget, "SENT"),
                 threadHasSentLabel,
                 isAutoReply(payload));
+    }
+
+    private MailboxRef primaryMailboxRefOrThrow(UUID tenantId) throws IOException {
+        try {
+            return gmailConnectionService
+                    .primaryMailboxRef(tenantId)
+                    .orElseThrow(
+                            () ->
+                                    new IllegalStateException(
+                                            "Primary Gmail mailbox is required for draft source"));
+        } catch (RuntimeException runtimeException) {
+            throw new IOException("Unable to resolve primary Gmail mailbox", runtimeException);
+        }
     }
 
     private static Optional<Message> lastInboundMessage(List<Message> messages) {

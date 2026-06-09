@@ -64,6 +64,8 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
                                 triageAuditWriter
                                         .insertPending(
                                                 tenantA,
+                                                primaryMailboxId(tenantA),
+                                                primaryMailboxId(tenantA),
                                                 "gmail-message-1",
                                                 "gmail-thread-1",
                                                 "Subject excerpt",
@@ -96,6 +98,8 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
                                 new TriageAuditEntity(
                                                 UUID.randomUUID(),
                                                 tenantA,
+                                                primaryMailboxId(tenantA),
+                                                primaryMailboxId(tenantA),
                                                 "gmail-message-invalid",
                                                 "gmail-thread-invalid",
                                                 null,
@@ -194,6 +198,8 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
                         () ->
                                 triageAuditWriter.insertTerminal(
                                         tenantId,
+                                        primaryMailboxId(tenantId),
+                                        primaryMailboxId(tenantId),
                                         "gmail-message-terminal",
                                         "gmail-thread-terminal",
                                         "Subject excerpt",
@@ -210,6 +216,8 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
                         () ->
                                 triageAuditWriter.insertTerminal(
                                         tenantId,
+                                        primaryMailboxId(tenantId),
+                                        primaryMailboxId(tenantId),
                                         "gmail-message-terminal",
                                         "gmail-thread-terminal",
                                         "Subject excerpt",
@@ -254,6 +262,8 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
                                 triageAuditWriter
                                         .insertPending(
                                                 tenantId,
+                                                primaryMailboxId(tenantId),
+                                                primaryMailboxId(tenantId),
                                                 "gmail-message-safety-net-badge",
                                                 "gmail-thread-safety-net-badge",
                                                 "Subject excerpt",
@@ -320,6 +330,8 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
                         triageAuditWriter
                                 .insertPending(
                                         tenantId,
+                                        primaryMailboxId(tenantId),
+                                        primaryMailboxId(tenantId),
                                         gmailMessageId,
                                         "thread-" + gmailMessageId,
                                         "Subject " + gmailMessageId,
@@ -338,7 +350,19 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
                 "insert into tenants(id, display_name) values (?, ?)",
                 tenantId,
                 displayNamePrefix + "-" + tenantId);
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                UUID.randomUUID(),
+                tenantId,
+                displayNamePrefix + "@example.com");
         return tenantId;
+    }
+
+    private UUID primaryMailboxId(UUID tenantId) {
+        return jdbcTemplate.queryForObject(
+                "select id from gmail_connections where tenant_id = ? and is_primary = true",
+                UUID.class,
+                tenantId);
     }
 
     private static <T> T withTenant(UUID tenantId, TenantOperation<T> tenantOperation) {

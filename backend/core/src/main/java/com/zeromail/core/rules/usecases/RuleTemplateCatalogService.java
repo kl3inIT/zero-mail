@@ -1,5 +1,7 @@
 package com.zeromail.core.rules.usecases;
 
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.domain.RuleTemplateStatus;
 import com.zeromail.core.rules.persistence.RuleEntity;
@@ -30,11 +32,15 @@ public class RuleTemplateCatalogService {
 
     private final RuleTemplateRepository ruleTemplateRepository;
     private final RuleRepository ruleRepository;
+    private final GmailConnectionService gmailConnectionService;
 
     public RuleTemplateCatalogService(
-            RuleTemplateRepository ruleTemplateRepository, RuleRepository ruleRepository) {
+            RuleTemplateRepository ruleTemplateRepository,
+            RuleRepository ruleRepository,
+            GmailConnectionService gmailConnectionService) {
         this.ruleTemplateRepository = ruleTemplateRepository;
         this.ruleRepository = ruleRepository;
+        this.gmailConnectionService = gmailConnectionService;
     }
 
     /**
@@ -68,10 +74,12 @@ public class RuleTemplateCatalogService {
                         .distinct()
                         .toList();
         Map<String, RuleEntity> materializedRulesByTemplateKey = new LinkedHashMap<>();
-        if (!templateKeys.isEmpty()) {
+        Optional<UUID> currentGmailConnectionId = primaryGmailConnectionId(tenantId);
+        if (!templateKeys.isEmpty() && currentGmailConnectionId.isPresent()) {
             for (RuleEntity materializedRule :
-                    ruleRepository.findByTenantIdAndTemplateKeyIn(tenantId, templateKeys)) {
-                // RuleEntity.templateKey is unique per (tenantId, templateKey)
+                    ruleRepository.findByTenantIdAndGmailConnectionIdAndTemplateKeyIn(
+                            tenantId, currentGmailConnectionId.orElseThrow(), templateKeys)) {
+                // RuleEntity.templateKey is unique per (tenantId, gmailConnectionId, templateKey)
                 // by the schema constraint, so putIfAbsent is defensive only.
                 materializedRulesByTemplateKey.putIfAbsent(
                         materializedRule.getTemplateKey(), materializedRule);
@@ -123,6 +131,14 @@ public class RuleTemplateCatalogService {
                                 RuleTemplateStatus.SYSTEM_DEFAULT.id()))
                 .stream()
                 .findFirst();
+    }
+
+    private Optional<UUID> primaryGmailConnectionId(UUID tenantId) {
+        // TODO(Plan 05): replace this primary mailbox bridge with the active mailbox request
+        // context.
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .map(MailboxRef::gmailConnectionId);
     }
 
     private RuleTemplateProjection toView(

@@ -12,6 +12,7 @@ import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
@@ -210,6 +211,53 @@ public class GmailPreviewReadService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public List<GmailPreviewMessage> fetchRecentInboxMessages(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            int sampleSize,
+            boolean includeBodyEvidence,
+            Duration fetchBudget) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
+        Objects.requireNonNull(fetchBudget, "fetchBudget must not be null");
+
+        GmailConnectionEntity connection =
+                gmailConnectionRepository
+                        .findByIdAndTenantId(gmailConnectionId, tenantId)
+                        .orElseThrow(
+                                () ->
+                                        new GmailPreviewReadUnavailableException(
+                                                UnavailableReason.NOT_CONNECTED));
+        if (connection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.DISCONNECTED);
+        }
+        if (connection.getRefreshTokenEncrypted() == null) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
+        }
+
+        try {
+            Gmail gmail = buildPreviewReadClient(connection, tenantId, fetchBudget);
+            List<ObservedPreviewMessage> recentInboxMessages =
+                    fetchRecentInboxMessageReferences(gmail, sampleSize);
+            if (recentInboxMessages.isEmpty()) {
+                return List.of();
+            }
+            return fetchMessagesWithinBudget(
+                    gmail, recentInboxMessages, includeBodyEvidence, fetchBudget);
+        } catch (InvalidGrantException invalidGrantException) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.REVOKED);
+        } catch (GoogleJsonResponseException googleResponseException) {
+            if (googleResponseException.getStatusCode() == 401
+                    || googleResponseException.getStatusCode() == 403) {
+                throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
+            }
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+        } catch (IOException ioException) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+        }
+    }
+
     private Gmail buildPreviewReadClient(
             GmailConnectionEntity connection, UUID tenantId, Duration requestTimeout)
             throws IOException {
@@ -286,6 +334,54 @@ public class GmailPreviewReadService {
                 log.info(
                         "event=triage_input_fetch_message_gone tenantId={} gmailMessageId={}",
                         tenantId,
+                        gmailMessageId);
+                return Optional.empty();
+            }
+            if (googleResponseException.getStatusCode() == 401
+                    || googleResponseException.getStatusCode() == 403) {
+                throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
+            }
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+        } catch (IOException ioException) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<GmailPreviewMessage> fetchTriageInput(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            String gmailMessageId,
+            String gmailThreadId,
+            Instant observedAt) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
+        Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+        Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
+        Objects.requireNonNull(observedAt, "observedAt must not be null");
+
+        ObservedPreviewMessage observedMessage =
+                new ObservedPreviewMessage(
+                        gmailMessageId, gmailThreadId, new String[0], null, observedAt);
+        try {
+            Gmail gmail =
+                    gmailApiClientFactory.buildClientForMailbox(
+                            new MailboxRef(tenantId, gmailConnectionId));
+            Message gmailMessage = triageMessageGetRequest(gmail, gmailMessageId).execute();
+            GmailPreviewMessage previewMessage =
+                    toPreviewMessage(observedMessage, gmailMessage, false);
+            log.info(
+                    "event=triage_input_fetched tenantId={} gmailConnectionId={} gmailMessageId={}",
+                    tenantId,
+                    gmailConnectionId,
+                    gmailMessageId);
+            return Optional.of(previewMessage);
+        } catch (GoogleJsonResponseException googleResponseException) {
+            if (googleResponseException.getStatusCode() == 404) {
+                log.info(
+                        "event=triage_input_fetch_message_gone tenantId={} gmailConnectionId={} gmailMessageId={}",
+                        tenantId,
+                        gmailConnectionId,
                         gmailMessageId);
                 return Optional.empty();
             }

@@ -28,6 +28,8 @@ public class TriageDraftAuditService {
     @Transactional
     public TriageDraftAuditReservation reservePendingAudit(
             UUID tenantId,
+            UUID sourceMailboxId,
+            UUID executingMailboxId,
             String gmailMessageId,
             String gmailThreadId,
             String sanitizedSubject,
@@ -42,6 +44,8 @@ public class TriageDraftAuditService {
                 triageAuditWriter
                         .insertPending(
                                 tenantId,
+                                sourceMailboxId,
+                                executingMailboxId,
                                 gmailMessageId,
                                 gmailThreadId,
                                 sanitizedSubject,
@@ -55,6 +59,7 @@ public class TriageDraftAuditService {
                                 () ->
                                         triageAuditWriter.findPendingAuditId(
                                                 tenantId,
+                                                executingMailboxId,
                                                 gmailMessageId,
                                                 ruleId,
                                                 actionType,

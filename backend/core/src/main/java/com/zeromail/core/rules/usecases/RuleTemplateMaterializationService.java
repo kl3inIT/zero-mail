@@ -1,5 +1,7 @@
 package com.zeromail.core.rules.usecases;
 
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.onboarding.usecases.OnboardingService;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
@@ -57,16 +59,19 @@ public class RuleTemplateMaterializationService {
     private final OnboardingService onboardingService;
     private final RuleTemplateCatalogService ruleTemplateCatalogService;
     private final RuleRepository ruleRepository;
+    private final GmailConnectionService gmailConnectionService;
     private final TransactionTemplate transactionTemplate;
 
     public RuleTemplateMaterializationService(
             OnboardingService onboardingService,
             RuleTemplateCatalogService ruleTemplateCatalogService,
             RuleRepository ruleRepository,
+            GmailConnectionService gmailConnectionService,
             PlatformTransactionManager transactionManager) {
         this.onboardingService = onboardingService;
         this.ruleTemplateCatalogService = ruleTemplateCatalogService;
         this.ruleRepository = ruleRepository;
+        this.gmailConnectionService = gmailConnectionService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.transactionTemplate.setPropagationBehavior(
                 TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -174,8 +179,10 @@ public class RuleTemplateMaterializationService {
 
     private TemplateMaterializationOutcome materializeTemplateOnce(
             UUID tenantId, String templateKey, boolean enableOnCreate) {
+        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
         Optional<RuleEntity> existingRule =
-                ruleRepository.findByTenantIdAndTemplateKey(tenantId, templateKey);
+                ruleRepository.findByTenantIdAndGmailConnectionIdAndTemplateKey(
+                        tenantId, gmailConnectionId, templateKey);
         if (existingRule.isPresent()) {
             return skippedExistingTemplateRule(
                     existingRule.get(), templateKey, SkippedTemplateReason.ALREADY_MATERIALIZED);
@@ -188,12 +195,16 @@ public class RuleTemplateMaterializationService {
                     templateKey, SkippedTemplateReason.UNKNOWN_OR_DEPRECATED, false);
         }
 
-        int orderIndex = (int) ruleRepository.countByTenantId(tenantId);
+        int orderIndex =
+                (int)
+                        ruleRepository.countByTenantIdAndGmailConnectionId(
+                                tenantId, gmailConnectionId);
         RuleTemplateEntity ruleTemplateEntity = template.get();
         RuleEntity ruleEntity =
                 new RuleEntity(
                         UUID.randomUUID(),
                         tenantId,
+                        gmailConnectionId,
                         ruleTemplateEntity.getDisplayName(),
                         ruleTemplateEntity.getSourceText(),
                         ruleTemplateEntity.getSourceLanguage(),
@@ -215,13 +226,25 @@ public class RuleTemplateMaterializationService {
             UUID tenantId,
             String templateKey,
             DataIntegrityViolationException dataIntegrityViolation) {
+        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
         Optional<RuleEntity> existingRule =
-                ruleRepository.findByTenantIdAndTemplateKey(tenantId, templateKey);
+                ruleRepository.findByTenantIdAndGmailConnectionIdAndTemplateKey(
+                        tenantId, gmailConnectionId, templateKey);
         if (existingRule.isEmpty()) {
             throw dataIntegrityViolation;
         }
         return skippedExistingTemplateRule(
                 existingRule.get(), templateKey, SkippedTemplateReason.CONCURRENTLY_MATERIALIZED);
+    }
+
+    private UUID primaryGmailConnectionIdOrThrow(UUID tenantId) {
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .map(MailboxRef::gmailConnectionId)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "Primary Gmail mailbox is required before rule templates can materialize"));
     }
 
     private static TemplateMaterializationOutcome skippedExistingTemplateRule(

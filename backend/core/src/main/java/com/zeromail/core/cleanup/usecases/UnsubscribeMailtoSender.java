@@ -3,6 +3,8 @@ package com.zeromail.core.cleanup.usecases;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.cleanup.domain.UnsubscribeResult;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.outbound.usecases.OutboundSendCommand;
 import com.zeromail.core.outbound.usecases.OutboundSendException;
 import com.zeromail.core.outbound.usecases.OutboundSendGateway;
@@ -16,8 +18,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +57,7 @@ public class UnsubscribeMailtoSender {
     private static final String UNKNOWN_DOMAIN = "unknown";
 
     private final OutboundSendGateway outboundSendGateway;
+    private final GmailConnectionService gmailConnectionService;
 
     /**
      * No-arg constructor used by Wave 0 reflection-based test stubs ({@code
@@ -63,11 +68,15 @@ public class UnsubscribeMailtoSender {
      */
     public UnsubscribeMailtoSender() {
         this.outboundSendGateway = null;
+        this.gmailConnectionService = null;
     }
 
     @Autowired
-    public UnsubscribeMailtoSender(OutboundSendGateway outboundSendGateway) {
+    public UnsubscribeMailtoSender(
+            OutboundSendGateway outboundSendGateway,
+            GmailConnectionService gmailConnectionService) {
         this.outboundSendGateway = outboundSendGateway;
+        this.gmailConnectionService = gmailConnectionService;
     }
 
     /**
@@ -85,6 +94,28 @@ public class UnsubscribeMailtoSender {
      */
     public UnsubscribeResult sendUnsubscribeMailto(
             UUID tenantId, String persistedListUnsubscribeMailto, String mailtoUriToSend) {
+        return sendUnsubscribeMailto(
+                tenantId,
+                () -> primaryMailboxRef(tenantId),
+                persistedListUnsubscribeMailto,
+                mailtoUriToSend);
+    }
+
+    public UnsubscribeResult sendUnsubscribeMailto(
+            MailboxRef mailboxRef, String persistedListUnsubscribeMailto, String mailtoUriToSend) {
+        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
+        return sendUnsubscribeMailto(
+                mailboxRef.tenantId(),
+                () -> mailboxRef,
+                persistedListUnsubscribeMailto,
+                mailtoUriToSend);
+    }
+
+    private UnsubscribeResult sendUnsubscribeMailto(
+            UUID tenantId,
+            Supplier<MailboxRef> mailboxRefSupplier,
+            String persistedListUnsubscribeMailto,
+            String mailtoUriToSend) {
         if (tenantId == null) {
             throw new IllegalArgumentException("tenantId must not be null");
         }
@@ -114,9 +145,11 @@ public class UnsubscribeMailtoSender {
         String senderDomain = extractDomainFromEmail(parsed.recipient());
 
         try {
+            MailboxRef mailboxRef = mailboxRefSupplier.get();
             Message gmailMessage = buildAndEncodeMessage(parsed);
             OutboundSendResult sendResult =
-                    outboundSendGateway.send(new OutboundSendCommand(tenantId, gmailMessage));
+                    outboundSendGateway.send(
+                            new OutboundSendCommand(tenantId, mailboxRef, gmailMessage));
             log.info(
                     "event=cleanup_unsubscribe_mailto_sent tenantId={} senderDomain={}",
                     tenantId,
@@ -159,6 +192,15 @@ public class UnsubscribeMailtoSender {
                     senderDomain);
             return UnsubscribeResult.failed("UNEXPECTED_ERROR");
         }
+    }
+
+    private MailboxRef primaryMailboxRef(UUID tenantId) {
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "Primary Gmail mailbox is required for mailto unsubscribe"));
     }
 
     private static Message buildAndEncodeMessage(UnsubscribeMailtoUriParser.ParsedMailto parsed)

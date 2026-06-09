@@ -20,8 +20,11 @@ import com.zeromail.api.dto.rules.RuleTestMessagesResponse;
 import com.zeromail.api.dto.rules.RuleUpdateRequest;
 import com.zeromail.api.dto.rules.RulesListResponse;
 import com.zeromail.api.error.RuleApiException;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.usecases.RuleCompileCommand;
 import com.zeromail.core.rules.usecases.RuleCompileResult;
 import com.zeromail.core.rules.usecases.RuleCompilerService;
@@ -59,6 +62,7 @@ public class RulesController {
 
     private final RuleCompilerService ruleCompilerService;
     private final RuleManagementService ruleManagementService;
+    private final GmailConnectionService gmailConnectionService;
     private final RulePreviewService rulePreviewService;
     private final RuleTemplateCatalogService ruleTemplateCatalogService;
     private final RuleTemplateMaterializationService ruleTemplateMaterializationService;
@@ -66,11 +70,13 @@ public class RulesController {
     public RulesController(
             RuleCompilerService ruleCompilerService,
             RuleManagementService ruleManagementService,
+            GmailConnectionService gmailConnectionService,
             RulePreviewService rulePreviewService,
             RuleTemplateCatalogService ruleTemplateCatalogService,
             RuleTemplateMaterializationService ruleTemplateMaterializationService) {
         this.ruleCompilerService = ruleCompilerService;
         this.ruleManagementService = ruleManagementService;
+        this.gmailConnectionService = gmailConnectionService;
         this.rulePreviewService = rulePreviewService;
         this.ruleTemplateCatalogService = ruleTemplateCatalogService;
         this.ruleTemplateMaterializationService = ruleTemplateMaterializationService;
@@ -121,11 +127,13 @@ public class RulesController {
     public RuleResponse createRule(@Valid @RequestBody RuleCreateRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
         RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
+        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
         try {
             return RuleResponse.from(
                     ruleManagementService.create(
                             new RuleCreateCommand(
                                     tenantId,
+                                    gmailConnectionId,
                                     request.displayName(),
                                     request.sourceText(),
                                     compileResult)));
@@ -139,11 +147,13 @@ public class RulesController {
             @PathVariable UUID ruleId, @Valid @RequestBody RuleUpdateRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
         RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
+        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
         try {
             return RuleResponse.from(
                     ruleManagementService.update(
                             new RuleUpdateCommand(
                                     tenantId,
+                                    gmailConnectionId,
                                     ruleId,
                                     request.displayName(),
                                     request.sourceText(),
@@ -268,6 +278,15 @@ public class RulesController {
         return RuleTemplateMaterializationResponse.from(
                 ruleTemplateMaterializationService.materializeTemplate(
                         TenantContext.currentTenantUuid(), templateKey));
+    }
+
+    private UUID primaryGmailConnectionIdOrThrow(UUID tenantId) {
+        // TODO(Plan 05): replace this primary mailbox bridge with the active mailbox request
+        // context.
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .map(MailboxRef::gmailConnectionId)
+                .orElseThrow(RuleValidationException::notFound);
     }
 
     private Integer normalizedPreviewSampleSize(Integer requestedSampleSize) {

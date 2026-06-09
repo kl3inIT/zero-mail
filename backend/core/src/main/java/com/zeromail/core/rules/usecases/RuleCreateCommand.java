@@ -5,6 +5,7 @@ import java.util.UUID;
 public record RuleCreateCommand(
         UUID ruleId,
         UUID tenantId,
+        UUID gmailConnectionId,
         String displayName,
         String sourceText,
         RuleCompileResult compileResult,
@@ -19,6 +20,9 @@ public record RuleCreateCommand(
         if (tenantId == null) {
             throw new IllegalArgumentException("tenantId must not be null");
         }
+        if (gmailConnectionId == null) {
+            throw new IllegalArgumentException("gmailConnectionId must not be null");
+        }
         displayName = requireBoundedText(displayName, "displayName", MAX_DISPLAY_NAME_LENGTH);
         sourceText = requireBoundedText(sourceText, "sourceText", MAX_SOURCE_TEXT_LENGTH);
         requireCompiled(compileResult);
@@ -29,8 +33,12 @@ public record RuleCreateCommand(
     }
 
     public RuleCreateCommand(
-            UUID tenantId, String displayName, String sourceText, RuleCompileResult compileResult) {
-        this(null, tenantId, displayName, sourceText, compileResult, null, null);
+            UUID tenantId,
+            UUID gmailConnectionId,
+            String displayName,
+            String sourceText,
+            RuleCompileResult compileResult) {
+        this(null, tenantId, gmailConnectionId, displayName, sourceText, compileResult, null, null);
     }
 
     static String requireBoundedText(String text, String fieldName, int maxLength) {

@@ -9,6 +9,8 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -33,9 +35,13 @@ class TriageGmailWriterLookupLabelIdTest {
         Gmail.Users users = mock(Gmail.Users.class);
         Gmail.Users.Labels labels = mock(Gmail.Users.Labels.class);
         Gmail.Users.Labels.List listLabelsRequest = mock(Gmail.Users.Labels.List.class);
+        GmailConnectionService gmailConnectionService = mock(GmailConnectionService.class);
         UUID tenantId = UUID.randomUUID();
+        MailboxRef mailboxRef = new MailboxRef(tenantId, UUID.randomUUID());
 
-        when(gmailApiClientFactory.buildClientForTenant(tenantId)).thenReturn(gmail);
+        when(gmailConnectionService.primaryMailboxRef(tenantId))
+                .thenReturn(Optional.of(mailboxRef));
+        when(gmailApiClientFactory.buildClientForMailbox(mailboxRef)).thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.labels()).thenReturn(labels);
         when(labels.list("me")).thenReturn(listLabelsRequest);
@@ -51,6 +57,7 @@ class TriageGmailWriterLookupLabelIdTest {
         TriageGmailWriter triageGmailWriter =
                 new TriageGmailWriter(
                         gmailApiClientFactory,
+                        gmailConnectionService,
                         mock(com.zeromail.core.inbox.usecases.InboxProjectionWriteService.class));
 
         @SuppressWarnings("unchecked")
@@ -68,9 +75,13 @@ class TriageGmailWriterLookupLabelIdTest {
         Gmail.Users users = mock(Gmail.Users.class);
         Gmail.Users.Labels labels = mock(Gmail.Users.Labels.class);
         Gmail.Users.Labels.List listLabelsRequest = mock(Gmail.Users.Labels.List.class);
+        GmailConnectionService gmailConnectionService = mock(GmailConnectionService.class);
         UUID tenantId = UUID.randomUUID();
+        MailboxRef mailboxRef = new MailboxRef(tenantId, UUID.randomUUID());
 
-        when(gmailApiClientFactory.buildClientForTenant(tenantId)).thenReturn(gmail);
+        when(gmailConnectionService.primaryMailboxRef(tenantId))
+                .thenReturn(Optional.of(mailboxRef));
+        when(gmailApiClientFactory.buildClientForMailbox(mailboxRef)).thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.labels()).thenReturn(labels);
         when(labels.list("me")).thenReturn(listLabelsRequest);
@@ -86,6 +97,7 @@ class TriageGmailWriterLookupLabelIdTest {
         TriageGmailWriter triageGmailWriter =
                 new TriageGmailWriter(
                         gmailApiClientFactory,
+                        gmailConnectionService,
                         mock(com.zeromail.core.inbox.usecases.InboxProjectionWriteService.class));
 
         @SuppressWarnings("unchecked")
@@ -103,9 +115,13 @@ class TriageGmailWriterLookupLabelIdTest {
         Gmail.Users users = mock(Gmail.Users.class);
         Gmail.Users.Labels labels = mock(Gmail.Users.Labels.class);
         Gmail.Users.Labels.List listLabelsRequest = mock(Gmail.Users.Labels.List.class);
+        GmailConnectionService gmailConnectionService = mock(GmailConnectionService.class);
         UUID tenantId = UUID.randomUUID();
+        MailboxRef mailboxRef = new MailboxRef(tenantId, UUID.randomUUID());
 
-        when(gmailApiClientFactory.buildClientForTenant(tenantId)).thenReturn(gmail);
+        when(gmailConnectionService.primaryMailboxRef(tenantId))
+                .thenReturn(Optional.of(mailboxRef));
+        when(gmailApiClientFactory.buildClientForMailbox(mailboxRef)).thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.labels()).thenReturn(labels);
         when(labels.list("me")).thenReturn(listLabelsRequest);
@@ -114,6 +130,7 @@ class TriageGmailWriterLookupLabelIdTest {
         TriageGmailWriter triageGmailWriter =
                 new TriageGmailWriter(
                         gmailApiClientFactory,
+                        gmailConnectionService,
                         mock(com.zeromail.core.inbox.usecases.InboxProjectionWriteService.class));
 
         assertThatThrownBy(

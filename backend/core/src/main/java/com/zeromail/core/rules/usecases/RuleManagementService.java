@@ -1,5 +1,7 @@
 package com.zeromail.core.rules.usecases;
 
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
@@ -23,16 +25,27 @@ public class RuleManagementService {
 
     private final RuleRepository ruleRepository;
     private final RuleNativeStateUpdater ruleNativeStateUpdater;
+    private final GmailConnectionService gmailConnectionService;
 
     public RuleManagementService(
-            RuleRepository ruleRepository, RuleNativeStateUpdater ruleNativeStateUpdater) {
+            RuleRepository ruleRepository,
+            RuleNativeStateUpdater ruleNativeStateUpdater,
+            GmailConnectionService gmailConnectionService) {
         this.ruleRepository = ruleRepository;
         this.ruleNativeStateUpdater = ruleNativeStateUpdater;
+        this.gmailConnectionService = gmailConnectionService;
     }
 
     @Transactional(readOnly = true)
     public List<RuleStatusProjection> listOrdered(UUID tenantId) {
-        return ruleRepository.findOrderedByTenantId(tenantId).stream()
+        return listOrdered(tenantId, primaryGmailConnectionIdOrThrow(tenantId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<RuleStatusProjection> listOrdered(UUID tenantId, UUID gmailConnectionId) {
+        return ruleRepository
+                .findOrderedByTenantIdAndGmailConnectionId(tenantId, gmailConnectionId)
+                .stream()
                 .map(RuleEntity::toStatusProjection)
                 .toList();
     }
@@ -43,36 +56,46 @@ public class RuleManagementService {
      */
     @Transactional(readOnly = true)
     public List<EnabledRuleSnapshot> listEnabledForExecution(UUID tenantId) {
-        return ruleRepository.findOrderedByTenantId(tenantId).stream()
-                .filter(RuleEntity::isEnabled)
-                .map(
-                        ruleEntity ->
-                                new EnabledRuleSnapshot(
-                                        ruleEntity.getId(),
-                                        ruleEntity.getDisplayName(),
-                                        ruleEntity.getOrderIndex(),
-                                        ruleEntity.getMatcherAst(),
-                                        ruleEntity.getActionIntents()))
+        return listEnabledForExecution(tenantId, primaryGmailConnectionIdOrThrow(tenantId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnabledRuleSnapshot> listEnabledForExecution(UUID tenantId, UUID sourceMailboxId) {
+        return ruleRepository
+                .findEnabledByTenantIdAndGmailConnectionIdOrderByOrderIndex(
+                        tenantId, sourceMailboxId)
+                .stream()
+                .map(RuleManagementService::toEnabledRuleSnapshot)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public RuleStatusProjection get(UUID tenantId, UUID ruleId) {
-        return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
+        return get(tenantId, primaryGmailConnectionIdOrThrow(tenantId), ruleId);
+    }
+
+    @Transactional(readOnly = true)
+    public RuleStatusProjection get(UUID tenantId, UUID gmailConnectionId, UUID ruleId) {
+        return findRuleOrThrow(tenantId, gmailConnectionId, ruleId).toStatusProjection();
     }
 
     @Transactional
     public RuleStatusProjection create(RuleCreateCommand command) {
         rejectDuplicateDefinition(
                 command.tenantId(),
+                command.gmailConnectionId(),
                 command.compileResult().matcherAst(),
                 command.compileResult().actionIntents(),
                 null);
-        int orderIndex = (int) ruleRepository.countByTenantId(command.tenantId());
+        int orderIndex =
+                (int)
+                        ruleRepository.countByTenantIdAndGmailConnectionId(
+                                command.tenantId(), command.gmailConnectionId());
         RuleEntity ruleEntity =
                 new RuleEntity(
                         command.ruleId(),
                         command.tenantId(),
+                        command.gmailConnectionId(),
                         command.displayName(),
                         command.sourceText(),
                         command.compileResult().sourceLanguage(),
@@ -90,8 +113,8 @@ public class RuleManagementService {
     public RuleStatusProjection createOrEnable(RuleCreateCommand command) {
         if (command.templateKey() != null) {
             var existingRule =
-                    ruleRepository.findByTenantIdAndTemplateKey(
-                            command.tenantId(), command.templateKey());
+                    ruleRepository.findByTenantIdAndGmailConnectionIdAndTemplateKey(
+                            command.tenantId(), command.gmailConnectionId(), command.templateKey());
             if (existingRule.isPresent()) {
                 RuleEntity ruleEntity = existingRule.orElseThrow();
                 if (!ruleEntity.isEnabled()) {
@@ -102,12 +125,14 @@ public class RuleManagementService {
         }
 
         RuleStatusProjection createdRule = create(command);
-        return enable(command.tenantId(), createdRule.ruleId().value());
+        return enable(
+                command.tenantId(), command.gmailConnectionId(), createdRule.ruleId().value());
     }
 
     @Transactional
     public RuleStatusProjection update(RuleUpdateCommand command) {
-        RuleEntity ruleEntity = findRuleOrThrow(command.tenantId(), command.ruleId());
+        RuleEntity ruleEntity =
+                findRuleOrThrow(command.tenantId(), command.gmailConnectionId(), command.ruleId());
         if (!Objects.equals(ruleEntity.getEntityVersion(), command.expectedEntityVersion())) {
             throw RuleValidationException.versionMismatch();
         }
@@ -121,6 +146,7 @@ public class RuleManagementService {
 
         rejectDuplicateDefinition(
                 command.tenantId(),
+                command.gmailConnectionId(),
                 command.compileResult().matcherAst(),
                 command.compileResult().actionIntents(),
                 command.ruleId());
@@ -144,7 +170,22 @@ public class RuleManagementService {
     @Transactional
     public RuleStatusProjection markPreviewSucceeded(
             UUID tenantId, UUID ruleId, Integer previewedEntityVersion, Instant previewedAt) {
-        RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
+        return markPreviewSucceeded(
+                tenantId,
+                primaryGmailConnectionIdOrThrow(tenantId),
+                ruleId,
+                previewedEntityVersion,
+                previewedAt);
+    }
+
+    @Transactional
+    public RuleStatusProjection markPreviewSucceeded(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            UUID ruleId,
+            Integer previewedEntityVersion,
+            Instant previewedAt) {
+        RuleEntity ruleEntity = findRuleOrThrow(tenantId, gmailConnectionId, ruleId);
         if (!Objects.equals(ruleEntity.getEntityVersion(), previewedEntityVersion)) {
             throw RuleValidationException.versionMismatch();
         }
@@ -161,34 +202,54 @@ public class RuleManagementService {
 
     @Transactional
     public RuleStatusProjection enable(UUID tenantId, UUID ruleId) {
+        return enable(tenantId, primaryGmailConnectionIdOrThrow(tenantId), ruleId);
+    }
+
+    @Transactional
+    public RuleStatusProjection enable(UUID tenantId, UUID gmailConnectionId, UUID ruleId) {
         // Preview-before-enable gate intentionally removed: v1 write actions
         // (label / archive / save_draft) are reversible and the Test tab is a
         // separate first-class entry point — users no longer need to preview
         // before flipping the switch.
-        RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
+        RuleEntity ruleEntity = findRuleOrThrow(tenantId, gmailConnectionId, ruleId);
         updateEnabled(tenantId, ruleEntity, true);
         return ruleEntity.toStatusProjection();
     }
 
     @Transactional
     public RuleStatusProjection disable(UUID tenantId, UUID ruleId) {
-        RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
+        return disable(tenantId, primaryGmailConnectionIdOrThrow(tenantId), ruleId);
+    }
+
+    @Transactional
+    public RuleStatusProjection disable(UUID tenantId, UUID gmailConnectionId, UUID ruleId) {
+        RuleEntity ruleEntity = findRuleOrThrow(tenantId, gmailConnectionId, ruleId);
         updateEnabled(tenantId, ruleEntity, false);
         return ruleEntity.toStatusProjection();
     }
 
     @Transactional
     public void delete(UUID tenantId, UUID ruleId) {
-        RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
+        delete(tenantId, primaryGmailConnectionIdOrThrow(tenantId), ruleId);
+    }
+
+    @Transactional
+    public void delete(UUID tenantId, UUID gmailConnectionId, UUID ruleId) {
+        RuleEntity ruleEntity = findRuleOrThrow(tenantId, gmailConnectionId, ruleId);
         ruleRepository.delete(ruleEntity);
         ruleRepository.flush();
-        normalizeOrder(ruleRepository.findOrderedByTenantId(tenantId));
+        normalizeOrder(
+                ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
+                        tenantId, gmailConnectionId));
         ruleRepository.flush();
     }
 
     @Transactional
     public List<RuleStatusProjection> reorder(RuleReorderCommand command) {
-        List<RuleEntity> currentRules = ruleRepository.findOrderedByTenantId(command.tenantId());
+        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(command.tenantId());
+        List<RuleEntity> currentRules =
+                ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
+                        command.tenantId(), gmailConnectionId);
         Map<UUID, RuleEntity> currentRulesById = new LinkedHashMap<>();
         for (RuleEntity currentRule : currentRules) {
             currentRulesById.put(currentRule.getId(), currentRule);
@@ -222,10 +283,26 @@ public class RuleManagementService {
         return reorderedRules.stream().map(RuleEntity::toStatusProjection).toList();
     }
 
-    private RuleEntity findRuleOrThrow(UUID tenantId, UUID ruleId) {
+    private RuleEntity findRuleOrThrow(UUID tenantId, UUID gmailConnectionId, UUID ruleId) {
         return ruleRepository
-                .findByIdAndTenantId(ruleId, tenantId)
+                .findByIdAndTenantIdAndGmailConnectionId(ruleId, tenantId, gmailConnectionId)
                 .orElseThrow(RuleValidationException::notFound);
+    }
+
+    private UUID primaryGmailConnectionIdOrThrow(UUID tenantId) {
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .map(MailboxRef::gmailConnectionId)
+                .orElseThrow(RuleValidationException::notFound);
+    }
+
+    private static EnabledRuleSnapshot toEnabledRuleSnapshot(RuleEntity ruleEntity) {
+        return new EnabledRuleSnapshot(
+                ruleEntity.getId(),
+                ruleEntity.getDisplayName(),
+                ruleEntity.getOrderIndex(),
+                ruleEntity.getMatcherAst(),
+                ruleEntity.getActionIntents());
     }
 
     private void updateEnabled(UUID tenantId, RuleEntity ruleEntity, boolean enabled) {
@@ -239,16 +316,24 @@ public class RuleManagementService {
     }
 
     private void rejectDuplicateDefinition(
-            UUID tenantId, String matcherAst, String actionIntents, UUID excludedRuleId) {
+            UUID tenantId,
+            UUID gmailConnectionId,
+            String matcherAst,
+            String actionIntents,
+            UUID excludedRuleId) {
         boolean duplicateExists =
                 excludedRuleId == null
                         ? ruleRepository
-                                .findFirstByTenantIdAndDefinition(
-                                        tenantId, matcherAst, actionIntents)
+                                .findFirstByTenantIdAndGmailConnectionIdAndDefinition(
+                                        tenantId, gmailConnectionId, matcherAst, actionIntents)
                                 .isPresent()
                         : ruleRepository
-                                .findFirstByTenantIdAndDefinitionExcludingRule(
-                                        tenantId, excludedRuleId, matcherAst, actionIntents)
+                                .findFirstByTenantIdAndGmailConnectionIdAndDefinitionExcludingRule(
+                                        tenantId,
+                                        gmailConnectionId,
+                                        excludedRuleId,
+                                        matcherAst,
+                                        actionIntents)
                                 .isPresent();
         if (duplicateExists) {
             throw RuleValidationException.duplicate();

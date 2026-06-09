@@ -1,6 +1,7 @@
 package com.zeromail.core.triage.usecases;
 
 import com.google.api.services.gmail.model.Message;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
@@ -34,10 +35,12 @@ public class OutboundRuleMessageBuilder {
             ReplyHeaders replyHeaders,
             String inboundSubject,
             String sourceMessageId,
+            MailboxRef mailboxRef,
             UUID tenantId,
             String idempotencyKey)
             throws IOException {
         Objects.requireNonNull(outboundIntent, "outboundIntent must not be null");
+        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
         return switch (outboundIntent) {
             case TriageActionResult.SendReply sendReply ->
                     buildReply(
@@ -48,7 +51,7 @@ public class OutboundRuleMessageBuilder {
                             idempotencyKey);
             case TriageActionResult.ForwardEmail forwardEmail ->
                     forwardMessageAssembler.buildForward(
-                            tenantId,
+                            mailboxRef,
                             sourceMessageId,
                             forwardEmail.recipients(),
                             List.of(),

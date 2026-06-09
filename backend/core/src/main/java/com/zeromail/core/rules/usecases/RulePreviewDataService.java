@@ -1,6 +1,8 @@
 package com.zeromail.core.rules.usecases;
 
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
+import com.zeromail.core.gmail.exception.MailboxDisconnectedException;
+import com.zeromail.core.gmail.exception.MailboxNotOwnedException;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.GmailPreviewReadService;
 import com.zeromail.core.rules.domain.MatcherNode;
@@ -39,6 +41,16 @@ public class RulePreviewDataService {
     }
 
     public List<PreviewInput> fetchPreviewInputs(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            MatcherNode matcherNode,
+            PreviewSampleSize sampleSize) {
+        Objects.requireNonNull(matcherNode, "matcherNode must not be null");
+        return fetchPreviewInputs(
+                tenantId, gmailConnectionId, matcherNode.requiresBodyEvidence(), sampleSize);
+    }
+
+    public List<PreviewInput> fetchPreviewInputs(
             UUID tenantId, boolean requiresBodyEvidence, PreviewSampleSize sampleSize) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         Objects.requireNonNull(sampleSize, "sampleSize must not be null");
@@ -58,6 +70,35 @@ public class RulePreviewDataService {
             return gmailPreviewReadService
                     .fetchRecentInboxMessages(
                             tenantId,
+                            sampleSize.value(),
+                            requiresBodyEvidence,
+                            DEFAULT_FETCH_BUDGET)
+                    .stream()
+                    .map(RulePreviewDataService::toPreviewInput)
+                    .toList();
+        } catch (
+                GmailPreviewReadService.GmailPreviewReadUnavailableException
+                        readUnavailableException) {
+            throw new GmailPreviewUnavailableException(
+                    mapReason(readUnavailableException.reason()));
+        }
+    }
+
+    public List<PreviewInput> fetchPreviewInputs(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            boolean requiresBodyEvidence,
+            PreviewSampleSize sampleSize) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
+        Objects.requireNonNull(sampleSize, "sampleSize must not be null");
+        validatePreviewMailbox(tenantId, gmailConnectionId);
+
+        try {
+            return gmailPreviewReadService
+                    .fetchRecentInboxMessages(
+                            tenantId,
+                            gmailConnectionId,
                             sampleSize.value(),
                             requiresBodyEvidence,
                             DEFAULT_FETCH_BUDGET)
@@ -109,6 +150,47 @@ public class RulePreviewDataService {
                         readUnavailableException) {
             throw new GmailPreviewUnavailableException(
                     mapReason(readUnavailableException.reason()));
+        }
+    }
+
+    public PreviewInput fetchPreviewInputById(
+            UUID tenantId, UUID gmailConnectionId, String gmailMessageId, String gmailThreadId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
+        Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+        Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
+        validatePreviewMailbox(tenantId, gmailConnectionId);
+        try {
+            return gmailPreviewReadService
+                    .fetchTriageInput(
+                            tenantId,
+                            gmailConnectionId,
+                            gmailMessageId,
+                            gmailThreadId,
+                            java.time.Instant.now())
+                    .map(RulePreviewDataService::toPreviewInput)
+                    .orElseThrow(
+                            () ->
+                                    new GmailPreviewUnavailableException(
+                                            GmailPreviewUnavailableException.Reason
+                                                    .GMAIL_UNAVAILABLE));
+        } catch (
+                GmailPreviewReadService.GmailPreviewReadUnavailableException
+                        readUnavailableException) {
+            throw new GmailPreviewUnavailableException(
+                    mapReason(readUnavailableException.reason()));
+        }
+    }
+
+    private void validatePreviewMailbox(UUID tenantId, UUID gmailConnectionId) {
+        try {
+            gmailConnectionService.resolveOwnedConnectionOrThrow(tenantId, gmailConnectionId);
+        } catch (MailboxNotOwnedException mailboxNotOwnedException) {
+            throw new GmailPreviewUnavailableException(
+                    GmailPreviewUnavailableException.Reason.NOT_CONNECTED);
+        } catch (MailboxDisconnectedException mailboxDisconnectedException) {
+            throw new GmailPreviewUnavailableException(
+                    GmailPreviewUnavailableException.Reason.DISCONNECTED);
         }
     }
 

@@ -4,6 +4,8 @@ import com.zeromail.core.chat.confirm.send.AssistantWriteCommand;
 import com.zeromail.core.chat.confirm.send.AssistantWriteExecutor.WriteToolHandler;
 import com.zeromail.core.chat.confirm.send.AssistantWriteExecutor.WriteToolResult;
 import com.zeromail.core.chat.domain.ChatToolName;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
@@ -15,6 +17,7 @@ import com.zeromail.core.triage.usecases.TriageGmailWriter;
 import java.io.IOException;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,7 +28,9 @@ public class WriteReversibleToolHandlers {
     private final Map<ChatToolName, WriteToolHandler> handlers;
 
     public WriteReversibleToolHandlers(
-            TriageGmailWriter triageGmailWriter, RuleManagementService ruleManagementService) {
+            TriageGmailWriter triageGmailWriter,
+            RuleManagementService ruleManagementService,
+            GmailConnectionService gmailConnectionService) {
         EnumMap<ChatToolName, WriteToolHandler> handlerMap = new EnumMap<>(ChatToolName.class);
         handlerMap.put(ChatToolName.APPLY_LABEL, command -> applyLabel(triageGmailWriter, command));
         handlerMap.put(
@@ -33,7 +38,8 @@ public class WriteReversibleToolHandlers {
         handlerMap.put(
                 ChatToolName.ARCHIVE_THREAD, command -> archiveThread(triageGmailWriter, command));
         handlerMap.put(
-                ChatToolName.UPDATE_RULE, command -> updateRule(ruleManagementService, command));
+                ChatToolName.UPDATE_RULE,
+                command -> updateRule(ruleManagementService, gmailConnectionService, command));
         handlerMap.put(
                 ChatToolName.DISABLE_RULE, command -> disableRule(ruleManagementService, command));
         handlerMap.put(ChatToolName.SAVE_DRAFT, command -> saveDraft(triageGmailWriter, command));
@@ -81,12 +87,16 @@ public class WriteReversibleToolHandlers {
     }
 
     private static WriteToolResult updateRule(
-            RuleManagementService ruleManagementService, AssistantWriteCommand command) {
+            RuleManagementService ruleManagementService,
+            GmailConnectionService gmailConnectionService,
+            AssistantWriteCommand command) {
         RuleCompileResult compileResult = ruleCompileResult(command);
         RuleStatusProjection projection =
                 ruleManagementService.update(
                         new RuleUpdateCommand(
                                 command.tenantId(),
+                                primaryGmailConnectionIdOrThrow(
+                                        gmailConnectionService, command.tenantId()),
                                 WriteToolArguments.uuid(command.inputJson(), "ruleId"),
                                 WriteToolArguments.text(command.inputJson(), "displayName"),
                                 WriteToolArguments.text(command.inputJson(), "sourceText"),
@@ -94,6 +104,18 @@ public class WriteReversibleToolHandlers {
                                 WriteToolArguments.integer(
                                         command.inputJson(), "expectedEntityVersion", 0)));
         return result("rule_id", projection.ruleId().toString(), "enabled", projection.enabled());
+    }
+
+    private static UUID primaryGmailConnectionIdOrThrow(
+            GmailConnectionService gmailConnectionService, UUID tenantId) {
+        // TODO(Plan 05): replace this primary mailbox bridge with MailboxContext.currentOrThrow().
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .map(MailboxRef::gmailConnectionId)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "Primary Gmail mailbox is required for rule update"));
     }
 
     private static WriteToolResult disableRule(

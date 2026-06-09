@@ -86,7 +86,10 @@ class RulePreviewServiceTest extends PostgresContainerTest {
                 tenantId,
                 () -> ruleManagementService.enable(tenantId, enabledSibling.ruleId().value()));
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(tenantId), eq(false), eq(new PreviewSampleSize(100))))
+                        eq(tenantId),
+                        eq(primaryGmailConnectionId(tenantId)),
+                        eq(false),
+                        eq(new PreviewSampleSize(100))))
                 .thenReturn(List.of(previewInput()));
 
         RulePreviewResult previewResult =
@@ -135,8 +138,12 @@ class RulePreviewServiceTest extends PostgresContainerTest {
     @Test
     void draft_preview_uses_validated_payload_and_rejects_invalid_sample_sizes() {
         UUID tenantId = UUID.fromString("00000000-0000-0000-0000-000000000502");
+        seedTenant(tenantId, "rules-preview-draft");
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(tenantId), eq(false), eq(new PreviewSampleSize(10))))
+                        eq(tenantId),
+                        eq(primaryGmailConnectionId(tenantId)),
+                        eq(false),
+                        eq(new PreviewSampleSize(10))))
                 .thenReturn(List.of(previewInput()));
 
         RulePreviewResult previewResult =
@@ -166,9 +173,26 @@ class RulePreviewServiceTest extends PostgresContainerTest {
 
     private UUID seedTenant(String displayName) {
         UUID tenantId = UUID.randomUUID();
+        seedTenant(tenantId, displayName);
+        return tenantId;
+    }
+
+    private void seedTenant(UUID tenantId, String displayName) {
+        UUID gmailConnectionId = UUID.randomUUID();
         jdbcTemplate.update(
                 "insert into tenants(id, display_name) values (?, ?)", tenantId, displayName);
-        return tenantId;
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                gmailConnectionId,
+                tenantId,
+                displayName + "@example.test");
+    }
+
+    private UUID primaryGmailConnectionId(UUID tenantId) {
+        return jdbcTemplate.queryForObject(
+                "select id from gmail_connections where tenant_id = ? and is_primary = true",
+                UUID.class,
+                tenantId);
     }
 
     private RuleCreateCommand createCommand(
@@ -180,6 +204,7 @@ class RulePreviewServiceTest extends PostgresContainerTest {
         return new RuleCreateCommand(
                 UUID.randomUUID(),
                 tenantId,
+                primaryGmailConnectionId(tenantId),
                 displayName,
                 sourceText,
                 RuleCompileResult.compiled(

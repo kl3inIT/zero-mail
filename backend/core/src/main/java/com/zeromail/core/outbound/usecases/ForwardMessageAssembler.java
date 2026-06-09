@@ -2,6 +2,7 @@ package com.zeromail.core.outbound.usecases;
 
 import com.google.api.services.gmail.Gmail;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import jakarta.activation.DataHandler;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
@@ -50,7 +51,7 @@ public class ForwardMessageAssembler {
     /**
      * Assemble a forward of {@code sourceMessageId} to the given recipients.
      *
-     * @param tenantId tenant whose Gmail connection owns the source message
+     * @param mailboxRef mailbox whose Gmail connection owns the source message
      * @param sourceMessageId Gmail message id of the email being forwarded
      * @param to non-empty list of forward recipients
      * @param cc optional cc recipients (may be null/empty)
@@ -61,7 +62,7 @@ public class ForwardMessageAssembler {
      * @return a Gmail {@link com.google.api.services.gmail.model.Message} with raw MIME set
      */
     public com.google.api.services.gmail.model.Message buildForward(
-            java.util.UUID tenantId,
+            MailboxRef mailboxRef,
             String sourceMessageId,
             List<String> to,
             List<String> cc,
@@ -69,14 +70,14 @@ public class ForwardMessageAssembler {
             String note,
             String messageId)
             throws IOException {
-        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
         requireText(sourceMessageId, "sourceMessageId");
         if (to == null || to.isEmpty()) {
             throw new IllegalArgumentException("forward recipients (to) must not be empty");
         }
         requireText(messageId, "messageId");
 
-        byte[] originalMimeBytes = fetchOriginalMimeBytes(tenantId, sourceMessageId);
+        byte[] originalMimeBytes = fetchOriginalMimeBytes(mailboxRef, sourceMessageId);
         try {
             MimeMessage forwardMessage =
                     new MimeMessage(Session.getInstance(new Properties(), null));
@@ -121,9 +122,9 @@ public class ForwardMessageAssembler {
         }
     }
 
-    private byte[] fetchOriginalMimeBytes(java.util.UUID tenantId, String sourceMessageId)
+    private byte[] fetchOriginalMimeBytes(MailboxRef mailboxRef, String sourceMessageId)
             throws IOException {
-        Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
+        Gmail gmail = gmailApiClientFactory.buildClientForMailbox(mailboxRef);
         com.google.api.services.gmail.model.Message rawSource =
                 gmail.users()
                         .messages()

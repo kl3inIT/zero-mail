@@ -17,7 +17,7 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             value =
                     """
                             INSERT INTO triage_audit (
-                              audit_id, tenant_id, gmail_message_id, gmail_thread_id,
+                              audit_id, tenant_id, source_mailbox_id, executing_mailbox_id, gmail_message_id, gmail_thread_id,
                               sanitized_subject, sanitized_sender_email,
                               rule_id, rule_name_snapshot,
                               action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
@@ -25,19 +25,21 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
                               attempt_count, last_attempt_at, lease_owner, decided_at, created_at, updated_at, version
                             )
                             VALUES (
-                              gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId,
+                              gen_random_uuid(), :tenantId, :sourceMailboxId, :executingMailboxId, :gmailMessageId, :gmailThreadId,
                               :sanitizedSubject, :sanitizedSenderEmail,
                               :ruleId, :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb), NULL,
                               :reason, 'PENDING', :blockedBySafetyNetPattern,
                               0, NULL, NULL, NOW(), NOW(), NOW(), 0
                             )
-                            ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
+                            ON CONFLICT (tenant_id, executing_mailbox_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
                             RETURNING audit_id
                             """,
             nativeQuery = true)
     @Transactional
     Optional<UUID> insertAuditPendingIfAbsent(
             @Param("tenantId") UUID tenantId,
+            @Param("sourceMailboxId") UUID sourceMailboxId,
+            @Param("executingMailboxId") UUID executingMailboxId,
             @Param("gmailMessageId") String gmailMessageId,
             @Param("gmailThreadId") String gmailThreadId,
             @Param("sanitizedSubject") String sanitizedSubject,
@@ -54,7 +56,7 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             value =
                     """
                             INSERT INTO triage_audit (
-                              audit_id, tenant_id, gmail_message_id, gmail_thread_id,
+                              audit_id, tenant_id, source_mailbox_id, executing_mailbox_id, gmail_message_id, gmail_thread_id,
                               sanitized_subject, sanitized_sender_email,
                               rule_id, rule_name_snapshot,
                               action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
@@ -62,19 +64,21 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
                               attempt_count, last_attempt_at, lease_owner, decided_at, created_at, updated_at, version
                             )
                             VALUES (
-                              gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId,
+                              gen_random_uuid(), :tenantId, :sourceMailboxId, :executingMailboxId, :gmailMessageId, :gmailThreadId,
                               :sanitizedSubject, :sanitizedSenderEmail,
                               :ruleId, :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb), NULL,
                               :reason, :decision, :blockedBySafetyNetPattern,
                               0, NULL, NULL, NOW(), NOW(), NOW(), 0
                             )
-                            ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
+                            ON CONFLICT (tenant_id, executing_mailbox_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
                             RETURNING audit_id
                             """,
             nativeQuery = true)
     @Transactional
     Optional<UUID> insertAuditTerminalIfAbsent(
             @Param("tenantId") UUID tenantId,
+            @Param("sourceMailboxId") UUID sourceMailboxId,
+            @Param("executingMailboxId") UUID executingMailboxId,
             @Param("gmailMessageId") String gmailMessageId,
             @Param("gmailThreadId") String gmailThreadId,
             @Param("sanitizedSubject") String sanitizedSubject,
@@ -94,6 +98,7 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
                             SELECT audit_id
                             FROM triage_audit
                             WHERE tenant_id = :tenantId
+                              AND executing_mailbox_id = :executingMailboxId
                               AND gmail_message_id = :gmailMessageId
                               AND rule_id = :ruleId
                               AND action_type = :actionType
@@ -103,6 +108,7 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             nativeQuery = true)
     Optional<UUID> findPendingAuditIdByKey(
             @Param("tenantId") UUID tenantId,
+            @Param("executingMailboxId") UUID executingMailboxId,
             @Param("gmailMessageId") String gmailMessageId,
             @Param("ruleId") UUID ruleId,
             @Param("actionType") String actionType,
@@ -262,7 +268,7 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             value =
                     """
                             INSERT INTO triage_audit (
-                              audit_id, tenant_id, gmail_message_id, gmail_thread_id,
+                              audit_id, tenant_id, source_mailbox_id, executing_mailbox_id, gmail_message_id, gmail_thread_id,
                               sanitized_subject, sanitized_sender_email,
                               rule_id, rule_name_snapshot,
                               action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
@@ -270,14 +276,17 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
                               decided_at, applied_at, created_at, updated_at, version, source
                             )
                             VALUES (
-                              gen_random_uuid(), :tenantId, :gmailMessageId, NULL,
+                              gen_random_uuid(), :tenantId,
+                              (SELECT id FROM gmail_connections WHERE tenant_id = :tenantId ORDER BY is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id LIMIT 1),
+                              (SELECT id FROM gmail_connections WHERE tenant_id = :tenantId ORDER BY is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id LIMIT 1),
+                              :gmailMessageId, NULL,
                               NULL, :sanitizedSenderEmail,
                               NULL, NULL, 'ARCHIVE', :argsHash, CAST(:actionArgsJson AS jsonb),
                               CAST(:gmailChangeToken AS jsonb), NULL, 'APPLIED',
                               :externalRef, 0, NULL, NULL,
                               NOW(), NOW(), NOW(), NOW(), 0, 'CLEANUP_CAMPAIGN'
                             )
-                            ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
+                            ON CONFLICT (tenant_id, executing_mailbox_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
                             RETURNING audit_id
                             """,
             nativeQuery = true)
@@ -295,7 +304,7 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             value =
                     """
                             INSERT INTO triage_audit (
-                              audit_id, tenant_id, gmail_message_id, gmail_thread_id,
+                              audit_id, tenant_id, source_mailbox_id, executing_mailbox_id, gmail_message_id, gmail_thread_id,
                               sanitized_subject, sanitized_sender_email,
                               rule_id, rule_name_snapshot,
                               action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
@@ -303,14 +312,17 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
                               decided_at, applied_at, created_at, updated_at, version, source
                             )
                             VALUES (
-                              gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId,
+                              gen_random_uuid(), :tenantId,
+                              (SELECT id FROM gmail_connections WHERE tenant_id = :tenantId ORDER BY is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id LIMIT 1),
+                              (SELECT id FROM gmail_connections WHERE tenant_id = :tenantId ORDER BY is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id LIMIT 1),
+                              :gmailMessageId, :gmailThreadId,
                               :sanitizedSubject, :sanitizedSenderEmail,
                               :ruleId, :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb),
                               CAST(:gmailChangeToken AS jsonb), :reason, 'APPLIED',
                               :externalRef, 0, NULL, NULL,
                               NOW(), NOW(), NOW(), NOW(), 0, 'TRIAGE'
                             )
-                            ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
+                            ON CONFLICT (tenant_id, executing_mailbox_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
                             RETURNING audit_id
                             """,
             nativeQuery = true)

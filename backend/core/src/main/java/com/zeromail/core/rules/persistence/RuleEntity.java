@@ -97,38 +97,6 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
         this.templateVersion = templateVersion;
     }
 
-    /**
-     * @deprecated transitional null-mailbox seam; Plan 04 migrates RuleManagementService and the
-     *     default-rule seeding path to the mailbox-carrying constructor and removes this overload.
-     */
-    @Deprecated(forRemoval = true)
-    public RuleEntity(
-            UUID ruleId,
-            UUID tenantId,
-            String displayName,
-            String sourceText,
-            RuleLanguage sourceLanguage,
-            RuleSchemaVersion schemaVersion,
-            String matcherAst,
-            String actionIntents,
-            int orderIndex,
-            String templateKey,
-            Integer templateVersion) {
-        this(
-                ruleId,
-                tenantId,
-                null,
-                displayName,
-                sourceText,
-                sourceLanguage,
-                schemaVersion,
-                matcherAst,
-                actionIntents,
-                orderIndex,
-                templateKey,
-                templateVersion);
-    }
-
     public UUID getGmailConnectionId() {
         return gmailConnectionId;
     }

@@ -17,6 +17,7 @@
             "rules :: domain",
             "gmail",
             "gmail :: gateway",
+            "gmail :: usecases",
             "thread",
             "thread :: events",
             "thread :: usecases",

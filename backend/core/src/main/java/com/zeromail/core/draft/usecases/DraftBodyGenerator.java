@@ -3,6 +3,7 @@ package com.zeromail.core.draft.usecases;
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.chat.usecases.settings.AssistantDraftSettingsService;
 import com.zeromail.core.draft.domain.ToneContext;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
@@ -75,13 +76,44 @@ public class DraftBodyGenerator implements TriageDraftBodyGenerator {
                 .call(
                         () ->
                                 generateWithTenantBound(
-                                        tenantId, threadId, inboundRawHtml, inboundSubject));
+                                        tenantId, null, threadId, inboundRawHtml, inboundSubject));
+    }
+
+    @Override
+    public String generate(
+            UUID tenantId,
+            MailboxRef mailboxRef,
+            String gmailThreadId,
+            String inboundRawHtml,
+            String inboundSubject) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
+        if (!tenantId.equals(mailboxRef.tenantId())) {
+            throw new IllegalArgumentException("mailboxRef tenantId must match tenantId");
+        }
+        String threadId = requireText(gmailThreadId, "gmailThreadId");
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(
+                        () ->
+                                generateWithTenantBound(
+                                        tenantId,
+                                        mailboxRef,
+                                        threadId,
+                                        inboundRawHtml,
+                                        inboundSubject));
     }
 
     private String generateWithTenantBound(
-            UUID tenantId, String gmailThreadId, String inboundRawHtml, String inboundSubject) {
+            UUID tenantId,
+            MailboxRef mailboxRef,
+            String gmailThreadId,
+            String inboundRawHtml,
+            String inboundSubject) {
         SanitizationContext sanitizedInbound = sanitizationPipeline.sanitize(inboundRawHtml);
-        ToneContext toneContext = toneContextBuilder.buildForCurrentTenant();
+        ToneContext toneContext =
+                mailboxRef == null
+                        ? toneContextBuilder.buildForCurrentTenant()
+                        : toneContextBuilder.buildForMailbox(mailboxRef);
         ToolCallResult toolCallResult =
                 llmGateway.chatForDraft(
                         CallSite.DRAFT,

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.api.services.gmail.model.Message;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
@@ -20,6 +21,8 @@ import org.junit.jupiter.api.Test;
 class OutboundRuleMessageBuilderTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000008401");
+    private static final UUID MAILBOX_ID = UUID.fromString("00000000-0000-0000-0000-000000008402");
+    private static final MailboxRef MAILBOX_REF = new MailboxRef(TENANT_ID, MAILBOX_ID);
     private static final String IDEMPOTENCY_KEY = "triage-audit-8401";
     private static final String SOURCE_MESSAGE_ID = "gmail-message-1";
     private static final String EXPECTED_MESSAGE_ID =
@@ -40,6 +43,7 @@ class OutboundRuleMessageBuilderTest {
                         replyHeaders(),
                         "Original subject",
                         SOURCE_MESSAGE_ID,
+                        MAILBOX_REF,
                         TENANT_ID,
                         IDEMPOTENCY_KEY));
         assertMessageId(
@@ -53,6 +57,7 @@ class OutboundRuleMessageBuilderTest {
                         null,
                         null,
                         SOURCE_MESSAGE_ID,
+                        MAILBOX_REF,
                         TENANT_ID,
                         IDEMPOTENCY_KEY));
     }
@@ -62,7 +67,7 @@ class OutboundRuleMessageBuilderTest {
             throws Exception {
         Message assembledForward = new Message().setRaw("forward-raw");
         when(forwardMessageAssembler.buildForward(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         eq(SOURCE_MESSAGE_ID),
                         eq(List.of("recipient@example.com")),
                         eq(List.of()),
@@ -78,13 +83,14 @@ class OutboundRuleMessageBuilderTest {
                         null,
                         "Quarterly planning",
                         SOURCE_MESSAGE_ID,
+                        MAILBOX_REF,
                         TENANT_ID,
                         IDEMPOTENCY_KEY);
 
         assertThat(result).isSameAs(assembledForward);
         verify(forwardMessageAssembler)
                 .buildForward(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         eq(SOURCE_MESSAGE_ID),
                         eq(List.of("recipient@example.com")),
                         eq(List.of()),

@@ -6,6 +6,8 @@ import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.zeromail.core.draft.domain.ToneContext;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.llm.exception.SanitizationException;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
@@ -19,7 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,33 +44,64 @@ public class ToneContextBuilder {
     private final SentMailSource sentMailSource;
     private final SanitizationPipeline sanitizationPipeline;
     private final Clock clock;
+    private final Function<UUID, Optional<MailboxRef>> primaryMailboxRefResolver;
 
     @Autowired
     public ToneContextBuilder(
             GmailApiClientFactory gmailApiClientFactory,
+            GmailConnectionService gmailConnectionService,
             SanitizationPipeline sanitizationPipeline) {
         this(
                 new GmailSentMailSource(gmailApiClientFactory, Clock.systemUTC()),
                 sanitizationPipeline,
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                gmailConnectionService::primaryMailboxRef);
     }
 
     public ToneContextBuilder(
             SentMailSource sentMailSource, SanitizationPipeline sanitizationPipeline, Clock clock) {
+        this(
+                sentMailSource,
+                sanitizationPipeline,
+                clock,
+                tenantId -> Optional.of(new MailboxRef(tenantId, tenantId)));
+    }
+
+    private ToneContextBuilder(
+            SentMailSource sentMailSource,
+            SanitizationPipeline sanitizationPipeline,
+            Clock clock,
+            Function<UUID, Optional<MailboxRef>> primaryMailboxRefResolver) {
         this.sentMailSource =
                 Objects.requireNonNull(sentMailSource, "sentMailSource must not be null");
         this.sanitizationPipeline =
                 Objects.requireNonNull(
                         sanitizationPipeline, "sanitizationPipeline must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
+        this.primaryMailboxRefResolver =
+                Objects.requireNonNull(
+                        primaryMailboxRefResolver, "primaryMailboxRefResolver must not be null");
     }
 
     public ToneContext buildForCurrentTenant() {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        Optional<MailboxRef> primaryMailboxRef = primaryMailboxRefResolver.apply(tenantId);
+        if (primaryMailboxRef.isEmpty()) {
+            log.info(
+                    "event=tone_context_unavailable tenantId={} reason=missing_primary_mailbox",
+                    tenantId);
+            return ToneContext.empty();
+        }
+        return buildForMailbox(primaryMailboxRef.get());
+    }
+
+    public ToneContext buildForMailbox(MailboxRef mailboxRef) {
+        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
+        UUID tenantId = mailboxRef.tenantId();
         try {
             List<String> rawSentMailBodies =
                     sentMailSource.fetchRecentSentMailBodies(
-                            tenantId, MAX_SENT_MAIL_MESSAGES, FETCH_BUDGET);
+                            mailboxRef, MAX_SENT_MAIL_MESSAGES, FETCH_BUDGET);
             ToneContext toneContext = buildFromRawBodies(rawSentMailBodies);
             log.info(
                     "event=tone_context_built tenantId={} snippetCount={}",
@@ -192,8 +227,8 @@ public class ToneContextBuilder {
 
     public interface SentMailSource {
 
-        List<String> fetchRecentSentMailBodies(UUID tenantId, int maxMessages, Duration fetchBudget)
-                throws IOException;
+        List<String> fetchRecentSentMailBodies(
+                MailboxRef mailboxRef, int maxMessages, Duration fetchBudget) throws IOException;
     }
 
     private static final class GmailSentMailSource implements SentMailSource {
@@ -215,10 +250,10 @@ public class ToneContextBuilder {
 
         @Override
         public List<String> fetchRecentSentMailBodies(
-                UUID tenantId, int maxMessages, Duration fetchBudget) throws IOException {
+                MailboxRef mailboxRef, int maxMessages, Duration fetchBudget) throws IOException {
             Instant deadline = clock.instant().plus(fetchBudget);
             try {
-                Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId, fetchBudget);
+                Gmail gmail = gmailApiClientFactory.buildClientForMailbox(mailboxRef, fetchBudget);
                 ListMessagesResponse response =
                         gmail.users()
                                 .messages()

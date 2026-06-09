@@ -21,6 +21,8 @@ import com.zeromail.core.chat.confirm.send.GmailMessageBuilder;
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.outbound.usecases.GmailOutboundSendGateway;
 import com.zeromail.core.shared.privacy.Sensitive;
@@ -28,6 +30,7 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.usecases.SenderEmailCanonicalizer;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +44,8 @@ import tools.jackson.databind.ObjectMapper;
 class AssistantSendExecutorVipIT {
 
     private final GmailApiClientFactory gmailApiClientFactory = mock(GmailApiClientFactory.class);
+    private final GmailConnectionService gmailConnectionService =
+            mock(GmailConnectionService.class);
     private final ConfirmationStateMachine confirmationStateMachine =
             mock(ConfirmationStateMachine.class);
     private final ConfirmationLeaseService confirmationLeaseService =
@@ -86,6 +91,7 @@ class AssistantSendExecutorVipIT {
                         new GmailOutboundSendGateway(gmailApiClientFactory),
                         new GmailMessageBuilder(),
                         mock(ForwardMessageAssembler.class),
+                        gmailConnectionService,
                         confirmationStateMachine,
                         confirmationLeaseService,
                         senderSafetyNetService,
@@ -110,7 +116,7 @@ class AssistantSendExecutorVipIT {
                 .isInstanceOf(VipAcknowledgmentMissingException.class);
 
         verify(confirmationStateMachine, never()).recordSendInFlight(any());
-        verify(gmailApiClientFactory, never()).buildClientForTenant(any());
+        verify(gmailApiClientFactory, never()).buildClientForMailbox(any(MailboxRef.class));
     }
 
     @Test
@@ -200,7 +206,10 @@ class AssistantSendExecutorVipIT {
         Gmail.Users users = mock(Gmail.Users.class);
         Gmail.Users.Messages messages = mock(Gmail.Users.Messages.class);
         Gmail.Users.Messages.Send sendRequest = mock(Gmail.Users.Messages.Send.class);
-        when(gmailApiClientFactory.buildClientForTenant(tenantId)).thenReturn(gmail);
+        MailboxRef mailboxRef = new MailboxRef(tenantId, UUID.randomUUID());
+        when(gmailConnectionService.primaryMailboxRef(tenantId))
+                .thenReturn(Optional.of(mailboxRef));
+        when(gmailApiClientFactory.buildClientForMailbox(mailboxRef)).thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.messages()).thenReturn(messages);
         when(messages.send(eq("me"), any(Message.class))).thenReturn(sendRequest);

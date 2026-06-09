@@ -25,7 +25,7 @@ public class GmailOutboundSendGateway implements OutboundSendGateway {
     public OutboundSendResult send(OutboundSendCommand command) throws IOException {
         Objects.requireNonNull(command, "command must not be null");
         try {
-            Gmail gmail = gmailApiClientFactory.buildClientForTenant(command.tenantId());
+            Gmail gmail = gmailApiClientFactory.buildClientForMailbox(command.mailboxRef());
             Message sendResult =
                     gmail.users().messages().send(USER_ID, command.gmailMessage()).execute();
             return new OutboundSendResult(messageId(sendResult), threadId(sendResult));
