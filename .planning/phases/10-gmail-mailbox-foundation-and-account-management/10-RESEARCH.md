@@ -546,17 +546,19 @@ static final List<String> ALLOWED_TENANT_LOOKUP_CALLERS = List.of(
 | A3 | The `api.chat.AssistantPendingActionReconciler` tenant-only caller stays as-is in Phase 10 (out of the `core` ArchUnit scope) | Token cache blast radius | Phase 11 must migrate it; flagged so it isn't forgotten |
 | A4 | Gmail `users.stop` is the correct watch-teardown call and revoke endpoint is `oauth2.googleapis.com/revoke` | Disconnect state machine | Low — verified against existing working code, not just docs |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Disconnect of the primary mailbox**
-   - What we know: GMA-05 says disconnect one mailbox without disconnecting the workspace; `uq_gmail_conn_primary` allows zero primary rows.
-   - What's unclear: auto-promote vs. block.
-   - Recommendation: auto-promote the next CONNECTED mailbox (or leave zero primary if none) in the same transaction. Confirm with user.
+> Both items below were resolved in-plan during Phase 10 planning. Kept here as a decision record; nothing remains open.
 
-2. **`PENDING` status usage in the add flow**
-   - What we know: enum has NOT_CONNECTED/PENDING/CONNECTED/DISCONNECTED.
-   - What's unclear: does the add path INSERT a `PENDING` row at flow start (before callback) or only INSERT a `CONNECTED` row in the success handler?
-   - Recommendation: INSERT `CONNECTED` in the success handler (single write, no orphan PENDING rows if the user abandons consent). Use `PENDING` only if a pre-flow row is needed for the partial-unique-on-active-email pre-check — likely unnecessary. Planner decides.
+1. **Disconnect of the primary mailbox** — RESOLVED (A1: auto-promote).
+   - What we knew: GMA-05 says disconnect one mailbox without disconnecting the workspace; `uq_gmail_conn_primary` allows zero primary rows.
+   - Was unclear: auto-promote vs. block.
+   - **Resolution:** Auto-promote the next CONNECTED mailbox (earliest `connected_at`) to primary in the same disconnect transaction; if none remain, leave zero primary (legal under the partial index). Implemented by `GmailConnectionService.disconnect(MailboxRef)` in **Plan 04 Task 3** (recorded as a must_have and in the plan `<objective>` DECISION note).
+
+2. **`PENDING` status usage in the add flow** — RESOLVED (insert CONNECTED only).
+   - What we knew: enum has NOT_CONNECTED/PENDING/CONNECTED/DISCONNECTED.
+   - Was unclear: does the add path INSERT a `PENDING` row at flow start (before callback) or only INSERT a `CONNECTED` row in the success handler?
+   - **Resolution:** INSERT `CONNECTED` in the OAuth success handler only — a single write with no orphan `PENDING` rows if the user abandons consent; the `uq_gmail_conn_active_email` partial index + the `assertNoActiveDuplicate` pre-check cover duplicate detection without a pre-flow `PENDING` row. Implemented by the add/reconnect success-handler branch in **Plan 05**.
 
 ## Environment Availability
 
