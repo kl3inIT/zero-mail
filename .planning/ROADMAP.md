@@ -61,7 +61,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 08.1. Inbox Zero-style Rule Actions & Examples Catalog | v1.2 | 6/6 | Complete | 2026-05-25 |
 | 08-bulk-unsubscribe. Bulk Unsubscribe Campaign | v1.2 | — | Complete | 2026-05 |
 | 9. User Settings UI on Curated Catalog | v1.2 | 7/7 | Complete | 2026-05-29 |
-| 10. Gmail Mailbox Foundation and Account Management | v1.3 | 0/? | Pending | — |
+| 10. Gmail Mailbox Foundation and Account Management | v1.3 | 0/6 | Planned | — |
 | 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 0/? | Pending | — |
 
 ### Phase 10: Gmail Mailbox Foundation and Account Management
@@ -70,6 +70,15 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 **Requirements:** WSP-01..07, GMA-01..07, AUD-04, VER-01
 **Depends on:** Phase 9 (User Settings UI), current Gmail OAuth/connection schema, code research in `.planning/research/V1.3-CODE-RESEARCH.md`
 **Mode:** sequential foundation before Phase 11
+**Plans:** 6 plans (4 waves)
+
+Plans:
+- [ ] 10-01-PLAN.md — Wave 0 validation spine: 8 RED test scaffolds + old-single-account fixture (Nyquist)
+- [ ] 10-02-PLAN.md — Liquibase changeset 119 (drop tenant-unique, add duplicate-active + primary partial indexes, backfill) + entity is_primary/display_purpose + findByIdAndTenantId
+- [ ] 10-03-PLAN.md — Mailbox-aware GmailApiClientFactory: MailboxRef, buildClientForMailbox, cache re-key to gmailConnectionId, @Deprecated tenant adapter, ArchUnit allow-list
+- [ ] 10-04-PLAN.md — Ownership seam (resolveOwnedConnectionOrThrow 404/409) + mailbox-scoped disconnect/set-primary + duplicate-active mapping + metadata-only list projection
+- [ ] 10-05-PLAN.md — OAuth intent split: resolver attributes + IntentCarrying session shim + success-handler first-login/add/reconnect branching + SecurityConfig wiring (WR-06)
+- [ ] 10-06-PLAN.md — Connected-accounts REST: list / set-primary / disconnect + add/reconnect OAuth triggers + MailboxSummaryResponse DTO
 
 Expected plan areas:
 
