@@ -16,7 +16,7 @@
 
 ### Workspace and Mailbox Model
 
-- [ ] **WSP-01**: User's existing tenant is represented as one workspace without changing login/session semantics.
+- [x] **WSP-01**: User's existing tenant is represented as one workspace without changing login/session semantics.
 - [x] **WSP-02**: Existing one-Gmail data migrates to one primary Gmail mailbox while preserving encrypted tokens, connection state, history state, and metadata/audit continuity where possible.
 - [x] **WSP-03**: System stores a stable Gmail mailbox identifier on every new mailbox-scoped record that can contain per-account state or provenance.
 - [x] **WSP-04**: Backend APIs, UI labels, and logs consistently distinguish workspace, user, and Gmail mailbox without exposing future team/member controls.
@@ -26,10 +26,10 @@
 
 ### Gmail Account Management
 
-- [ ] **GMA-01**: User can connect an additional Gmail or Google Workspace mailbox without replacing the existing connected mailbox.
+- [x] **GMA-01**: User can connect an additional Gmail or Google Workspace mailbox without replacing the existing connected mailbox.
 - [x] **GMA-02**: User can view all connected Gmail mailboxes with email, display name/purpose label, status, primary/default marker, watch expiry, ingestion health, and last sync metadata.
 - [x] **GMA-03**: User can choose one primary/default Gmail mailbox for surfaces that need a default account.
-- [ ] **GMA-04**: User can reconnect one mailbox and refresh its encrypted token/scopes without touching other mailboxes.
+- [x] **GMA-04**: User can reconnect one mailbox and refresh its encrypted token/scopes without touching other mailboxes.
 - [x] **GMA-05**: User can disconnect one mailbox; the app stops watch renewal, ingestion, and automation for that mailbox without disconnecting the workspace.
 - [x] **GMA-06**: System prevents duplicate active Gmail addresses in the same workspace and returns a clear error when a Gmail address is already connected elsewhere.
 - [x] **GMA-07**: OAuth flow separates first-login Gmail provisioning from add-mailbox and reconnect-mailbox flows, so connecting another Gmail never replaces the current mailbox row by accident.
@@ -119,17 +119,17 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WSP-01 | Phase 10 | Pending |
+| WSP-01 | Phase 10 | Complete |
 | WSP-02 | Phase 10 | Complete |
 | WSP-03 | Phase 10 | Complete |
 | WSP-04 | Phase 10 | Complete |
 | WSP-05 | Phase 10 | Complete |
 | WSP-06 | Phase 10 | Complete |
 | WSP-07 | Phase 10 | Complete |
-| GMA-01 | Phase 10 | Pending |
+| GMA-01 | Phase 10 | Complete |
 | GMA-02 | Phase 10 | Complete |
 | GMA-03 | Phase 10 | Complete |
-| GMA-04 | Phase 10 | Pending |
+| GMA-04 | Phase 10 | Complete |
 | GMA-05 | Phase 10 | Complete |
 | GMA-06 | Phase 10 | Complete |
 | GMA-07 | Phase 10 | Complete |
