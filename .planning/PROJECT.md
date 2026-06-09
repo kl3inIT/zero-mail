@@ -22,7 +22,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 **Delivered:** Admin console foundation (Phase 8), Inbox Zero-style examples/actions with user-enabled outbound automation (Phase 08.1), the user Settings UI on the admin-curated catalog (Phase 9), and a bonus bulk-unsubscribe campaign phase. 70/73 requirements complete. No GA tag this milestone — visual refresh, hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, and the formal GA tag deferred to v1.3+.
 
-**Current milestone:** v1.3 Gmail Workspace Foundation. Scope: production multi-Gmail support inside a workspace, account-scoped rules/audit/outbound behavior, and a workspace-ready product/data model that can later support shared inbox/team workflows from SEED-005 without shipping full collaboration yet.
+**Current milestone:** v1.3 Gmail Workspace Foundation. Phase 10 completed on 2026-06-09, delivering the backend multi-Gmail mailbox foundation and account-management API surface. Phase 11 is next: mailbox-scoped ingestion, automation, UI switching, and end-to-end verification.
 
 <details>
 <summary>v1.2 target features (shipped)</summary>
@@ -270,4 +270,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-07 starting v1.3 Gmail Workspace Foundation (multi-Gmail + workspace-ready foundation; SEED-005 activated as context, full team collaboration deferred)*
+*Last updated: 2026-06-09 after Phase 10 completion (backend multi-Gmail mailbox foundation complete; Phase 11 mailbox-scoped ingestion/automation/UI next)*

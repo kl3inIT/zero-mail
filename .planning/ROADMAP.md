@@ -42,10 +42,10 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 <details open>
 <summary>🚧 v1.3 Gmail Workspace Foundation (active) — 2 phases</summary>
 
-- [ ] Phase 10: Gmail Mailbox Foundation and Account Management
+- [x] Phase 10: Gmail Mailbox Foundation and Account Management (completed 2026-06-09)
 - [ ] Phase 11: Mailbox-Scoped Ingestion, Automation, UI, and Verification
 
-43/43 v1.3 requirements pending. Scope is Gmail-only workspace-shared, mailbox-isolated foundation; Microsoft, Zalo OA, CRM, and full team collaboration remain deferred.
+16/43 v1.3 requirements complete; 27/43 pending. Scope is Gmail-only workspace-shared, mailbox-isolated foundation; Microsoft, Zalo OA, CRM, and full team collaboration remain deferred.
 
 </details>
 
@@ -61,7 +61,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 08.1. Inbox Zero-style Rule Actions & Examples Catalog | v1.2 | 6/6 | Complete | 2026-05-25 |
 | 08-bulk-unsubscribe. Bulk Unsubscribe Campaign | v1.2 | — | Complete | 2026-05 |
 | 9. User Settings UI on Curated Catalog | v1.2 | 7/7 | Complete | 2026-05-29 |
-| 10. Gmail Mailbox Foundation and Account Management | v1.3 | 6/6 | Complete   | 2026-06-09 |
+| 10. Gmail Mailbox Foundation and Account Management | v1.3 | 6/6 | Complete    | 2026-06-09 |
 | 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 0/? | Pending | — |
 
 ### Phase 10: Gmail Mailbox Foundation and Account Management
