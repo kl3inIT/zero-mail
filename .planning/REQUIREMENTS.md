@@ -18,7 +18,7 @@
 
 - [ ] **WSP-01**: User's existing tenant is represented as one workspace without changing login/session semantics.
 - [x] **WSP-02**: Existing one-Gmail data migrates to one primary Gmail mailbox while preserving encrypted tokens, connection state, history state, and metadata/audit continuity where possible.
-- [ ] **WSP-03**: System stores a stable Gmail mailbox identifier on every new mailbox-scoped record that can contain per-account state or provenance.
+- [x] **WSP-03**: System stores a stable Gmail mailbox identifier on every new mailbox-scoped record that can contain per-account state or provenance.
 - [ ] **WSP-04**: Backend APIs, UI labels, and logs consistently distinguish workspace, user, and Gmail mailbox without exposing future team/member controls.
 - [x] **WSP-05**: System fails closed when a mailbox id is missing, invalid, disconnected, or not owned by the current tenant/workspace.
 - [x] **WSP-06**: Mailbox-scoped API requests go through a shared backend guard/context that validates `(tenantId, gmailMailboxId)` ownership before controller/service execution; tenant-only default mailbox fallback is allowed only for explicitly legacy/default surfaces, never for internal Gmail write paths.
@@ -121,7 +121,7 @@
 |-------------|-------|--------|
 | WSP-01 | Phase 10 | Pending |
 | WSP-02 | Phase 10 | Complete |
-| WSP-03 | Phase 10 | Pending |
+| WSP-03 | Phase 10 | Complete |
 | WSP-04 | Phase 10 | Pending |
 | WSP-05 | Phase 10 | Complete |
 | WSP-06 | Phase 10 | Complete |
