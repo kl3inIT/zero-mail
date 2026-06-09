@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
 import java.net.URI;
 import java.time.Instant;
@@ -54,6 +55,7 @@ class GoogleOAuthSuccessHandlerTest {
                         provisioning,
                         authorizedClients,
                         userRepo,
+                        mock(GmailConnectionService.class),
                         ruleTemplateMaterialization,
                         PROPS);
 

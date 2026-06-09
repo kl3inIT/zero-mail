@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
 import java.time.Instant;
 import java.util.Map;
@@ -106,6 +107,7 @@ class OAuthIntentRoutingTest {
                         mock(OAuthProvisioningService.class),
                         authorizedClientService,
                         mock(UserRepository.class),
+                        mock(GmailConnectionService.class),
                         mock(RuleTemplateMaterializationService.class),
                         new ApiProperties(null, null, null));
         MockHttpServletRequest request = new MockHttpServletRequest();
