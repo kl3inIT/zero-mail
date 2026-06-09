@@ -1397,7 +1397,9 @@
       "title": "Zero Mail — AI tự động dọn Gmail, đạt inbox zero"
     },
     "tagline": "Zero Mail tự động đọc, phân loại và soạn sẵn câu trả lời cho Gmail của bạn — theo quy tắc bạn viết bằng tiếng Việt. Không còn cảnh mỗi sáng mở hộp thư và ngồi lọc 30 phút.",
-    "videoPlaceholder": "Video demo sẽ sớm có mặt"
+    "playDemo": "Phát video demo Zero Mail",
+    "videoThumbnailAlt": "Video demo sản phẩm Zero Mail",
+    "videoTitle": "Video demo sản phẩm Zero Mail"
   },
   "landingFaq": {
     "header": {

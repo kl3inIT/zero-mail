@@ -70,6 +70,10 @@ function buildCsp(nonce: string): string {
     "font-src 'self' data:",
     `connect-src 'self'${connectExtras ? ` ${connectExtras}` : ''}`,
     "form-action 'self'",
+    // Allow the privacy-friendly YouTube embed used by the landing hero demo
+    // video (loaded only on click via a facade). youtube-nocookie avoids
+    // setting tracking cookies until the user actually plays.
+    "frame-src 'self' https://www.youtube-nocookie.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "object-src 'none'",

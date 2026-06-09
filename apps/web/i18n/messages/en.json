@@ -1397,7 +1397,9 @@
       "title": "Zero Mail — AI inbox cleanup for Gmail, reach inbox zero"
     },
     "tagline": "Zero Mail reads, sorts, and drafts replies for your Gmail — by rules you write in plain English. No more 30-minute morning triage.",
-    "videoPlaceholder": "Product demo coming soon"
+    "playDemo": "Play the Zero Mail demo video",
+    "videoThumbnailAlt": "Zero Mail product demo video",
+    "videoTitle": "Zero Mail product demo"
   },
   "landingFaq": {
     "header": {
