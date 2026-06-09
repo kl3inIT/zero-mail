@@ -147,12 +147,12 @@ class TelegramUpdateRouterTest {
 
         router.route(callbackUpdate(104L, "callback-1", "confirm:" + chatMessageId));
 
-        verify(telegramApiClient).answerCallbackQuery("callback-1", "Dang xu ly...");
+        verify(telegramApiClient).answerCallbackQuery("callback-1", "Đang xử lý...");
         verify(confirmActionService).confirmByChatMessageId(eq(chatMessageId), eq(false), any());
         ArgumentCaptor<TelegramSendMessageRequest> replyCaptor =
                 ArgumentCaptor.forClass(TelegramSendMessageRequest.class);
         verify(telegramApiClient).sendMessage(replyCaptor.capture());
-        assertThat(replyCaptor.getValue().text()).contains("Da gui");
+        assertThat(replyCaptor.getValue().text()).contains("Đã gửi");
     }
 
     private static TelegramUpdateRequest update(long updateId, String text) {
