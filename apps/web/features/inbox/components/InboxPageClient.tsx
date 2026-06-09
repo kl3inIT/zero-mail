@@ -132,10 +132,10 @@ export function InboxPageClient() {
     messages.length < INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT;
   const inboxCountCaption = locale.startsWith('vi')
     ? isInboxBackgroundWarmupActive
-      ? `\u0110ang t\u1ea3i n\u1ec1n... \u0110\u00e3 t\u1ea3i ${messages.length} email`
+      ? `\u0110ang t\u1ea3i... \u0110\u00e3 t\u1ea3i ${messages.length} email`
       : `\u0110\u00e3 t\u1ea3i ${messages.length} email`
     : isInboxBackgroundWarmupActive
-      ? `Background loading... ${messages.length} loaded`
+      ? `Loading... ${messages.length} loaded`
       : `${messages.length} loaded`;
   const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
   // Wave 1 fallback observability — quietly log when the projection couldn't satisfy the page so
