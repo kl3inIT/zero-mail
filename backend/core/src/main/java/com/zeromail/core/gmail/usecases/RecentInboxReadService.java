@@ -174,11 +174,12 @@ public class RecentInboxReadService {
                 case PROJECTION_CURSOR_PREFIX -> {
                     ProjectionCursorEnvelope projectionCursorEnvelope =
                             decodeProjectionCursorEnvelope(innerCursor);
-                    yield fetchPageFromProjection(
+                    yield fetchPageFromProjectionOrLiveGmail(
                             tenantId,
                             projectionCursorEnvelope.innerCursor(),
                             requestedLimit,
-                            projectionCursorEnvelope.loadedBefore());
+                            projectionCursorEnvelope.loadedBefore(),
+                            "projection_cursor_unavailable");
                 }
                 case LIVE_GMAIL_CURSOR_PREFIX ->
                         fetchPageFromLiveGmail(tenantId, innerCursor, requestedLimit);
@@ -200,7 +201,9 @@ public class RecentInboxReadService {
         }
 
         int firstPageLimit = effectiveLimit(requestedLimit);
-        RecentInboxPage projectionPage = fetchPageFromProjection(tenantId, null, requestedLimit, 0);
+        RecentInboxPage projectionPage =
+                fetchPageFromProjectionOrLiveGmail(
+                        tenantId, null, requestedLimit, 0, "projection_first_page_unavailable");
         if (projectionPage.messages().size() == firstPageLimit && firstPageLimit > 0) {
             return projectionPage;
         }
@@ -210,6 +213,25 @@ public class RecentInboxReadService {
                 projectionPage.messages().isEmpty() ? "projection_empty" : "projection_partial",
                 projectionPage.messages().size());
         return fetchPageFromLiveGmail(tenantId, null, requestedLimit);
+    }
+
+    private RecentInboxPage fetchPageFromProjectionOrLiveGmail(
+            UUID tenantId,
+            String innerCursor,
+            int requestedLimit,
+            int loadedBefore,
+            String fallbackReason) {
+        try {
+            return fetchPageFromProjection(tenantId, innerCursor, requestedLimit, loadedBefore);
+        } catch (IllegalStateException projectionFailure) {
+            log.warn(
+                    "event=inbox_read_projection_fallback tenantId={} reason={} exception={}",
+                    tenantId,
+                    fallbackReason,
+                    projectionFailure.getClass().getSimpleName());
+            return fetchPageFromLiveGmail(
+                    tenantId, inboxCursorCodec.encode(null, loadedBefore), requestedLimit);
+        }
     }
 
     private RecentInboxPage fetchPageFromProjection(

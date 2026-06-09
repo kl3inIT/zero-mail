@@ -198,6 +198,25 @@ class RecentInboxReadServiceOrchestratorTest {
     }
 
     @Test
+    void firstPage_projectionIllegalState_fallsBackToLiveGmail() {
+        GmailInboxSyncStateEntity syncState =
+                syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
+        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
+                .thenThrow(new IllegalStateException("projection decrypt failed"));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, null, 20))
+                .isInstanceOf(RecentInboxUnavailableException.class)
+                .matches(
+                        exception ->
+                                ((RecentInboxUnavailableException) exception).reason()
+                                        == RecentInboxUnavailableReason.NOT_CONNECTED,
+                        "projection failure should fall back to live Gmail");
+        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
+    }
+
+    @Test
     void cursorWithPPrefix_routesToProjectionWithStrippedInnerCursorAndKeepsLoadedCount() {
         GmailInboxSyncStateEntity syncState =
                 syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
@@ -229,6 +248,37 @@ class RecentInboxReadServiceOrchestratorTest {
         // findById is called by the lazy backfill enqueue (Phase A invariant), but the orchestrator
         // routing on the cursor branch must not consult it again — projection routing is sticky.
         verifyNoInteractions(gmailConnectionRepository, gmailApiClientFactory);
+    }
+
+    @Test
+    void cursorWithPPrefix_projectionIllegalState_fallsBackToLiveGmailWithLoadedCount() {
+        GmailInboxSyncStateEntity syncState =
+                syncStateWithLastFullSyncAt(Instant.parse("2026-01-01T00:00:00Z"));
+        when(inboxSyncStateRepository.findById(TENANT_ID)).thenReturn(Optional.of(syncState));
+        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
+                .thenReturn(
+                        new InboxProjectionPage(
+                                projectionRows(20),
+                                "inner-keyset-cursor",
+                                InboxProjectionDataSource.PROJECTION));
+        when(inboxProjectionReadService.fetchInboxPage(
+                        eq(TENANT_ID), eq("inner-keyset-cursor"), anyInt()))
+                .thenThrow(new IllegalStateException("projection decrypt failed"));
+        when(gmailConnectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.empty());
+
+        RecentInboxPage firstPage = recentInboxReadService.fetchPage(TENANT_ID, null, 20);
+
+        assertThatThrownBy(
+                        () ->
+                                recentInboxReadService.fetchPage(
+                                        TENANT_ID, firstPage.nextCursor(), 20))
+                .isInstanceOf(RecentInboxUnavailableException.class)
+                .matches(
+                        exception ->
+                                ((RecentInboxUnavailableException) exception).reason()
+                                        == RecentInboxUnavailableReason.NOT_CONNECTED,
+                        "projection cursor failure should fall back to live Gmail");
+        verify(gmailConnectionRepository).findByTenantId(TENANT_ID);
     }
 
     @Test
