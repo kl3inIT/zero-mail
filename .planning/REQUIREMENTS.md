@@ -19,15 +19,15 @@
 - [ ] **WSP-01**: User's existing tenant is represented as one workspace without changing login/session semantics.
 - [x] **WSP-02**: Existing one-Gmail data migrates to one primary Gmail mailbox while preserving encrypted tokens, connection state, history state, and metadata/audit continuity where possible.
 - [x] **WSP-03**: System stores a stable Gmail mailbox identifier on every new mailbox-scoped record that can contain per-account state or provenance.
-- [ ] **WSP-04**: Backend APIs, UI labels, and logs consistently distinguish workspace, user, and Gmail mailbox without exposing future team/member controls.
+- [x] **WSP-04**: Backend APIs, UI labels, and logs consistently distinguish workspace, user, and Gmail mailbox without exposing future team/member controls.
 - [x] **WSP-05**: System fails closed when a mailbox id is missing, invalid, disconnected, or not owned by the current tenant/workspace.
 - [x] **WSP-06**: Mailbox-scoped API requests go through a shared backend guard/context that validates `(tenantId, gmailMailboxId)` ownership before controller/service execution; tenant-only default mailbox fallback is allowed only for explicitly legacy/default surfaces, never for internal Gmail write paths.
-- [ ] **WSP-07**: Workspace-level state owns shared business configuration such as credits, billing, AI provider/model/BYOK, global pause/auto-send controls, safety policy, templates/catalog, and future business context; mailbox-level state owns Gmail OAuth, watch/history, connection health, inbox data, rules, Gmail actions, outbound execution, audit provenance, and display identity.
+- [x] **WSP-07**: Workspace-level state owns shared business configuration such as credits, billing, AI provider/model/BYOK, global pause/auto-send controls, safety policy, templates/catalog, and future business context; mailbox-level state owns Gmail OAuth, watch/history, connection health, inbox data, rules, Gmail actions, outbound execution, audit provenance, and display identity.
 
 ### Gmail Account Management
 
 - [ ] **GMA-01**: User can connect an additional Gmail or Google Workspace mailbox without replacing the existing connected mailbox.
-- [ ] **GMA-02**: User can view all connected Gmail mailboxes with email, display name/purpose label, status, primary/default marker, watch expiry, ingestion health, and last sync metadata.
+- [x] **GMA-02**: User can view all connected Gmail mailboxes with email, display name/purpose label, status, primary/default marker, watch expiry, ingestion health, and last sync metadata.
 - [x] **GMA-03**: User can choose one primary/default Gmail mailbox for surfaces that need a default account.
 - [ ] **GMA-04**: User can reconnect one mailbox and refresh its encrypted token/scopes without touching other mailboxes.
 - [x] **GMA-05**: User can disconnect one mailbox; the app stops watch renewal, ingestion, and automation for that mailbox without disconnecting the workspace.
@@ -122,12 +122,12 @@
 | WSP-01 | Phase 10 | Pending |
 | WSP-02 | Phase 10 | Complete |
 | WSP-03 | Phase 10 | Complete |
-| WSP-04 | Phase 10 | Pending |
+| WSP-04 | Phase 10 | Complete |
 | WSP-05 | Phase 10 | Complete |
 | WSP-06 | Phase 10 | Complete |
-| WSP-07 | Phase 10 | Pending |
+| WSP-07 | Phase 10 | Complete |
 | GMA-01 | Phase 10 | Pending |
-| GMA-02 | Phase 10 | Pending |
+| GMA-02 | Phase 10 | Complete |
 | GMA-03 | Phase 10 | Complete |
 | GMA-04 | Phase 10 | Pending |
 | GMA-05 | Phase 10 | Complete |
