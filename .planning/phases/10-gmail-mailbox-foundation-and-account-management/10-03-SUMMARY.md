@@ -92,7 +92,7 @@ Verified with `rg -n "\.buildClientForTenant\(" backend/core/src/main backend/ap
 - `com.zeromail.core.chat.usecases.tools.ListLabelsToolHandler`
 - `com.zeromail.core.chat.usecases.tools.SearchInboxToolHandler`
 - `com.zeromail.core.draft.usecases.DraftReplySourceLoader`
-- `com.zeromail.core.draft.usecases.ToneContextBuilder`
+- `com.zeromail.core.draft.usecases.ToneContextBuilder$GmailSentMailSource`
 - `com.zeromail.core.gmail.usecases.GmailPreviewReadService`
 - `com.zeromail.core.outbound.usecases.ForwardMessageAssembler`
 - `com.zeromail.core.outbound.usecases.GmailOutboundSendGateway`
