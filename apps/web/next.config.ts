@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
     '/terms': ['./docs/**/*.mdx'],
     '/docs': ['./docs/**/*.mdx'],
     '/docs/[slug]': ['./docs/**/*.mdx'],
+    // Blog MDX is read at runtime via a dynamically-built path (lib/blog/loader.ts);
+    // force it into the trace so /blog and posts don't 404 in standalone output.
+    '/blog': ['./blog/**/*.mdx'],
+    '/blog/[slug]': ['./blog/**/*.mdx'],
+    '/sitemap.xml': ['./blog/**/*.mdx', './docs/**/*.mdx'],
   },
   turbopack: {
     root: workspaceRoot,
