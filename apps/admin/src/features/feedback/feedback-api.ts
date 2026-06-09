@@ -1,68 +1,52 @@
-// TODO: regenerate admin-schema after backend deployment and replace with typed api client
-// (GET /api/admin/feedback will appear in admin-schema.d.ts after regen)
-import { getAdminApiBase } from '@/lib/api/admin-base-url';
+import { api } from '@/lib/api/admin-client';
+import type { components } from '@/lib/api/admin-schema';
 
-export type FeedbackType = 'BUG_REPORT' | 'FEATURE_REQUEST' | 'GENERAL';
-export type FeedbackStatus = 'OPEN' | 'RESOLVED';
-
-export type FeedbackRow = {
-  id: string;
-  tenantId: string | null;
-  type: FeedbackType;
-  subject: string;
-  message: string;
-  contactEmail: string;
-  status: FeedbackStatus;
-  adminNotes: string | null;
-  resolvedAt: string | null;
-  createdAt: string;
-};
-
-export type FeedbackListResponse = {
-  rows: FeedbackRow[];
-  openCount: number;
-};
-
+export type FeedbackRow = components['schemas']['FeedbackRowResponse'];
+export type FeedbackListResponse = components['schemas']['FeedbackListResponse'];
+export type FeedbackType = FeedbackRow['type'];
+export type FeedbackStatus = FeedbackRow['status'];
 export type FeedbackStatusFilter = FeedbackStatus | 'ALL';
 
-function readXsrfCookie(): string | undefined {
-  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : undefined;
-}
-
-function xsrfHeaders(): HeadersInit {
-  const token = readXsrfCookie();
-  return token ? { 'X-XSRF-TOKEN': token } : {};
+function unwrap<T>(
+  result: { data?: T; error?: unknown; response: Response },
+  message: string,
+): T {
+  if (result.error || !result.response.ok || result.data === undefined) {
+    throw result.error ?? new Error(message);
+  }
+  return result.data;
 }
 
 export async function fetchFeedbackList(
   status: FeedbackStatusFilter,
   limit = 50,
 ): Promise<FeedbackListResponse> {
-  const params = new URLSearchParams({ limit: String(limit) });
-  if (status !== 'ALL') params.set('status', status);
-  const response = await fetch(`${getAdminApiBase()}/api/admin/feedback?${params}`, {
-    credentials: 'include',
+  const result = await api.GET('/api/admin/feedback', {
+    params: {
+      query: {
+        status: status === 'ALL' ? undefined : status,
+        limit,
+      },
+    },
   });
-  if (!response.ok) throw new Error(`Không thể tải danh sách feedback: ${response.status}`);
-  return response.json() as Promise<FeedbackListResponse>;
+  return unwrap(result, `Không thể tải danh sách feedback: ${result.response.status}`);
 }
 
 export async function resolveFeedback(id: string, adminNotes?: string): Promise<void> {
-  const response = await fetch(`${getAdminApiBase()}/api/admin/feedback/${id}/resolve`, {
-    method: 'PATCH',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...xsrfHeaders() },
-    body: JSON.stringify({ adminNotes: adminNotes ?? null }),
+  const result = await api.PATCH('/api/admin/feedback/{id}/resolve', {
+    params: { path: { id } },
+    body: { adminNotes: adminNotes ?? null },
   });
-  if (!response.ok) throw new Error(`Không thể resolve feedback: ${response.status}`);
+  if (!result.response.ok) {
+    throw result.error ?? new Error(`Không thể resolve feedback: ${result.response.status}`);
+  }
 }
 
 export async function reopenFeedback(id: string): Promise<void> {
-  const response = await fetch(`${getAdminApiBase()}/api/admin/feedback/${id}/reopen`, {
-    method: 'PATCH',
-    credentials: 'include',
-    headers: { ...xsrfHeaders() },
+  const result = await api.PATCH('/api/admin/feedback/{id}/reopen', {
+    params: { path: { id } },
   });
-  if (!response.ok) throw new Error(`Không thể reopen feedback: ${response.status}`);
+  if (!result.response.ok) {
+    throw result.error ?? new Error(`Không thể reopen feedback: ${result.response.status}`);
+  }
 }
