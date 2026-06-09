@@ -1,102 +1,108 @@
 ---
 phase: 11
+cycle: 2
 reviewers: [codex]
-reviewed_at: 2026-06-09T09:25:58Z
+reviewed_at: 2026-06-09T16:55:00Z
 plans_reviewed: [11-01-PLAN.md, 11-02-PLAN.md, 11-03-PLAN.md, 11-04-PLAN.md, 11-05-PLAN.md, 11-06-PLAN.md]
+prior_cycle: 1
 ---
 
-# Cross-AI Plan Review — Phase 11
+# Cross-AI Plan Review — Phase 11 (Cycle 2 Re-Review)
+
+This is **cycle 2**. The plans were revised to address the 6 HIGH concerns raised in cycle 1.
+Codex re-reviewed the revised plan set to verify resolution and surface new concerns.
 
 ## Codex Review
 
 **Summary**
 
-The plans are directionally strong and show good command of the phase's core invariant: every Gmail runtime path must move from tenant scope to tenant + mailbox scope without weakening privacy. The wave structure, migration-first thinking, AAD continuity, ArchUnit boundary work, and real-Gmail smoke are all appropriate. However, the plan set is not yet safely executable as written. Several waves intentionally permit compile-broken seams, Pub/Sub mailbox resolution may be ambiguous across tenants, the triage audit schema has naming/idempotency contradictions, and the backend API surface needed by the frontend is underplanned. Overall, this should be revised before execution.
+The cycle-2 plans are materially stronger: they add compile-green RED tests, choose a concrete Pub/Sub ambiguity strategy, add copy-rules API work, enumerate more outbound paths, and broaden ingestion beyond the obvious delivery service. Codex would not approve them as-is yet. Several prior HIGHs are only partially closed because the revised text still has internal contradictions or misses existing compile/runtime call sites. The biggest remaining risks are compile-broken waves from unlisted Java files, wrong-mailbox reads in forward/draft assembly, incomplete rule test DTO coverage, and a Liquibase YAML comment issue that can break migration parsing.
 
-**Strengths**
+### Cycle 1 HIGH Concern Resolution
 
-- Clear phase decomposition: schema foundation → ingestion/rules runtime → request binding → frontend integration.
-- Correctly avoids a v1.3 unified all-mailboxes view and keeps action context tied to one active mailbox.
-- Strong privacy posture: AAD is explicitly unchanged, raw email content is excluded from events/logs, and real-Gmail smoke includes log inspection.
-- Good focus on hard invariants: same Gmail message id in two mailboxes, mailbox-owned rules, outbound send gateway, source/executing mailbox audit.
-- ArchUnit allow-list draining is a useful enforcement mechanism for eliminating `buildClientForTenant` and `findByTenantId` drift.
-- The two-CONNECTED-mailbox isolation fixture is the right test primitive for this phase.
-- OpenAPI regeneration and typed frontend APIs are correctly called out instead of hand-editing generated schema.
+1. **PARTIALLY RESOLVED — Compile-broken intermediate waves**
+   The plans now explicitly require `compileTestJava` green, use reflection/probes for Wave 1 RED tests, add transitional event constructors in Plan 02, and update outbound command callers in Plan 04. Still open: Plan 02 changes `RuleEntity` constructor/projection behavior without listing `RuleStatusProjection`, `RuleManagementService`, or `RuleTemplateMaterializationService`; Plan 03 changes `InboxBackfillEnqueuer` without listing all current callers; Plan 04 says to update `TriageAuditSaga` but does not list it in `files_modified`.
 
-**Concerns**
+2. **RESOLVED — Pub/Sub tenant resolution ambiguity**
+   Plan 02 adds changeset 127 with a global partial unique index on `lower(google_email) WHERE status='CONNECTED'`, plus a HALT precondition for existing cross-tenant duplicates. Plan 03 then resolves Pub/Sub email to `TenantMailboxRef(tenantId, gmailConnectionId)` and treats `>1` rows as invariant corruption rather than relying on `LIMIT 1`.
 
-- **[HIGH] Compile-broken waves undermine execution.** Plan 01 says tests should compile but also allows `compileTestJava` to fail on future symbols. Plan 02 similarly allows event constructor seams to break compile until Plan 03. That makes intermediate verification unreliable and blocks parallel/autonomous execution.
+3. **PARTIALLY RESOLVED — `triage_audit` schema/idempotency contradiction**
+   The concrete implementation tasks align on `source_mailbox_id`, `executing_mailbox_id`, and `ux_triage_audit_idem(tenant_id, executing_mailbox_id, gmail_message_id, rule_id, action_type, args_hash) NULLS NOT DISTINCT`, which is the right fix. But Plan 02's `artifacts_this_phase_produces` still says `gmail_connection_id` is added to `triage_audit`, contradicting the task and acceptance criteria. That ambiguity must be removed before execution.
 
-- **[HIGH] Pub/Sub lookup may route to the wrong tenant.** Plan 03 resolves mailbox by `LOWER(google_email)` with `LIMIT 1`, while the text says uniqueness is per `(tenant,email)`. Gmail Pub/Sub push gives email/history id, not tenant. If the same Gmail account can be connected to two workspaces, this is a cross-tenant isolation flaw. The plan needs either global active-email uniqueness, per-connection routing, or explicit rejection of duplicate active Gmail grants across tenants.
+4. **PARTIALLY RESOLVED — Missing backend API surface for rules/copy-rules**
+   Plan 05 now adds `POST /api/rules/copy`, `CopyRulesRequest`, `CopyRulesResponse`, and structured `gmailConnectionId` on create/update/draft-preview DTOs and `RuleResponse`. It still misses the existing rule test DTO path: `RuleTestMessageRequest` currently exists and is not listed for mailbox ownership, despite the prior concern explicitly calling out preview/test DTOs.
 
-- **[HIGH] `triage_audit` mailbox schema is internally inconsistent.** Plan 02 adds `source_mailbox_id` and `executing_mailbox_id`, but then says recreate the idempotency index with `gmail_connection_id`. That column is not clearly defined for `triage_audit`. Pick a concrete index shape, preferably including `executing_mailbox_id` and possibly `source_mailbox_id`, then align migration, writer, tests, and docs.
+5. **PARTIALLY RESOLVED — Outbound/chat caller migration under-scoped and mis-ordered**
+   The ordering problem is mostly addressed: `OutboundSendCommand` gets `MailboxRef`, three direct constructor call sites are enumerated, `AssistantSendExecutor` has a temporary Plan 04 path and a Plan 05 close-out, and undo is included. Scope is still incomplete: `ForwardMessageAssembler` currently fetches the original message via `buildClientForTenant`, and draft/reply read paths such as `DraftReplySourceLoader`/`ToneContextBuilder` remain unenumerated. Plan 04 also omits `TriageAuditSaga` from `files_modified` even though it must change.
 
-- **[HIGH] Backend API surface for rules/copy-rules is missing.** Plan 04 creates core `CopyRulesService`, but no API controller/DTO/OpenAPI contract is planned. Plan 06 expects generated schema and a frontend endpoint. The same gap exists for rule create/edit/preview/test DTOs that now need structured `gmailConnectionId`.
+6. **PARTIALLY RESOLVED — Ingestion scope broader than listed files**
+   Plan 03 now explicitly covers watch renewal, history-lost, ingestion health, observed/projection rows, events, sync state, and per-mailbox backfill jobs. Remaining gap: changing `InboxBackfillEnqueuer.enqueueIfNotPending` requires updating current callers such as `OAuthProvisioningService` and `RecentInboxReadService`; those are not all listed in the ingestion plan, creating either a compile break or a surviving tenant-only enqueue path.
 
-- **[HIGH] Outbound/chat caller migration is under-scoped and incorrectly ordered.** Plan 04 changes `OutboundSendCommand` to require `MailboxRef`, but MailboxContext/active-mailbox binding lands in Plan 05. Chat-confirmed sends, forward/reply assemblers, undo/revert, and rule-triggered send constructors are mentioned but not explicitly listed as modified files or test targets.
+### New Concerns
 
-- **[HIGH] Ingestion scope is broader than the listed files.** Adding mailbox ids to `pubsub_delivery`, sync state, processing jobs, observed rows, and projection upserts likely requires repository/DAO/job payload changes beyond the files named in Plan 03. Watch renewal, history-lost handling, backfill jobs, ingestion health, and per-mailbox processing-job idempotency need explicit implementation targets.
+- **[HIGH] Liquibase YAML uses XML-style comments.** Plan 02 asks for `<!-- DEPLOY -->` comment blocks inside YAML changelogs. YAML comments should use `#`; literal XML comments can make the changelog invalid or parsed incorrectly.
 
-- **[MEDIUM] Session-based active mailbox conflicts with the "sticky across devices" rationale.** Spring Session is lighter, but it is per browser session. If cross-device stickiness matters, use a persisted per-user/per-tenant active mailbox column. If session storage remains, namespace the attribute by tenant and document that cross-device persistence is intentionally not delivered.
+- **[HIGH] Rule entity/projection compile hole.** Plan 02 says `RuleEntity.gmailConnectionId` is surfaced through `toStatusProjection()`, but does not include `RuleStatusProjection` or the services constructing `new RuleEntity(...)`. That undermines the compile-green guarantee. (Overlaps cycle-1 HIGH #1.)
 
-- **[MEDIUM] Migration deployment risk is under-specified.** PK/index swaps on projection/audit/observed tables can lock hot tables. The plan needs preflight queries, queue/worker drain guidance, and an explicit strategy for in-flight `processing_job` rows before changing idempotency keys.
+- **[HIGH] Forward/draft mailbox reads are still wrong-mailbox capable.** Migrating the final send gateway is not enough if the source MIME/thread context is fetched from the tenant primary. `ForwardMessageAssembler`, `DraftReplySourceLoader`, and related draft context readers need a `MailboxRef` or active mailbox resolution. (Overlaps cycle-1 HIGH #5.)
 
-- **[MEDIUM] Error handling needs sharper boundaries.** Pub/Sub "unknown mailbox" should drop safely, but DB lookup failures must not be treated as unknown. Active mailbox resolution should define behavior for no connected mailbox, disconnected active mailbox, and disconnecting the currently active mailbox.
+- **[HIGH] Backfill enqueue migration is not call-site complete.** `InboxBackfillEnqueuer` cannot safely switch to mailbox scope without updating OAuth provisioning/add-reconnect flows and read-triggered backfill callers in the same compile-safe wave. (Overlaps cycle-1 HIGH #6.)
 
-- **[MEDIUM] Frontend scope is too narrow.** `AppSidebar.tsx` and `CopyRulesDialog.tsx` are not enough to guarantee inbox, needs-reply, rules, audit, analytics, and send previews render active-mailbox provenance correctly. The actual feature components/query hooks that display or refetch those surfaces should be named.
+- **[MEDIUM] `processing_job` mailbox scope is internally fuzzy.** Plan 02 adds a `gmail_connection_id` column, while Plan 03 discusses deduping via payload JSON. Pick one canonical DB predicate, preferably the real column, and use payload only as job data.
 
-- **[LOW] Requirement IDs drift.** Plans reference `VER-01`, but Phase 11 requirements list `VER-02..04`. Clean this up to avoid false completion accounting.
+- **[MEDIUM] Global duplicate Gmail grant needs service-level error handling.** The global unique index solves isolation, but add/reconnect should pre-check or map the unique violation to a clear 409-style product error instead of surfacing an OAuth callback 500 after consent.
 
-**Suggestions**
+- **[MEDIUM] Session-only active mailbox weakens D-03's cross-device rationale.** The plan documents this limitation, which is good, but the original decision text mentioned cross-device stickiness. Confirm that v1.3 accepts per-session stickiness, or use a persisted per-user column.
 
-- Require every plan to leave `compileJava` and `compileTestJava` green. RED tests should compile and fail at assertion/runtime, or be introduced in the same plan as the minimal production contract they compile against.
+### Suggestions
 
-- Decide the Gmail Pub/Sub tenant-resolution model before implementation. Add a migration/precondition/test for duplicate active Gmail addresses across tenants, or introduce a routing mechanism that makes tenant resolution unambiguous.
+- Amend Plan 02 to include `RuleStatusProjection`, `RuleManagementService`, `RuleTemplateMaterializationService`, and any tests using the old `RuleEntity` constructor, or add a transitional constructor with an explicit removal plan.
+- Delete every `triage_audit.gmail_connection_id` reference from Plan 02. Make `source_mailbox_id` and `executing_mailbox_id` the only schema terms, and name `executing_mailbox_id` as the locked idempotency axis everywhere.
+- Add `RuleTestMessageRequest` and its controller path to Plan 05 so rule test runs receive structured mailbox scope or are explicitly bound through `MailboxContext`.
+- Add `ForwardMessageAssembler`, `DraftReplySourceLoader`, `ToneContextBuilder`, and any forward/reply/draft source loaders to the mailbox migration. The source-message read and the send execution must use the same concrete mailbox.
+- Add `OAuthProvisioningService` and all `InboxBackfillEnqueuer.enqueueIfNotPending(...)` callers to Plan 03 or keep a compile-safe overload that immediately delegates through a resolved `MailboxRef`.
+- Replace `<!-- DEPLOY -->` with YAML-safe `# DEPLOY` comments or Liquibase `comment:` fields.
+- Define `processing_job` mailbox idempotency precisely: column name, unique/dedup predicate, idempotency key format, payload JSON shape, and migration behavior for existing open jobs.
 
-- Rewrite the triage audit migration contract with exact columns and index DDL. Example: `source_mailbox_id uuid NOT NULL`, `executing_mailbox_id uuid NOT NULL`, and idempotency on `(tenant_id, executing_mailbox_id, gmail_message_id, rule_id, action_type, args_hash) NULLS NOT DISTINCT`, unless there is a clear reason to include both mailbox ids.
+### Risk Assessment: HIGH
 
-- Add a backend API plan section for mailbox-owned rules and copy-rules: controller, request/response DTOs, OpenAPI annotations, ownership validation, and frontend generated-type consumption.
-
-- Split outbound migration into explicit substeps: core command/gateway, triage caller, chat caller, forward/reply assemblers, undo/revert, and audit failure handling. Put active-mailbox-dependent API callers after MailboxContext exists.
-
-- Add concrete tasks for watch renewal, history-lost handling, ingestion health, `processing_job` payload/idempotency, and inbox sync-state consumers.
-
-- Namespace the active mailbox session attribute by tenant, or choose a persisted column if cross-device stickiness is required.
-
-- Expand Plan 06's file list to include the actual inbox, needs-reply, rules, audit, analytics, and send-preview components touched by active-mailbox provenance.
-
-**Risk Assessment: HIGH**
-
-The architecture is sound, but the current plan set has several execution blockers and isolation-sensitive gaps. The highest-risk items are ambiguous Pub/Sub tenant resolution, compile-broken intermediate waves, inconsistent audit idempotency schema, and missing API/caller coverage for rules and outbound sends. Once those are corrected, the plan likely drops to MEDIUM risk because the remaining complexity is mostly broad refactoring plus careful migration/testing rather than new product ambiguity.
+HIGH until the above amendments are made. The revised plan set is directionally sound and much closer than cycle 1, but it still has execution-blocking compile risks and at least one remaining wrong-mailbox data path in outbound forward/draft handling. After fixing the listed plan gaps, the residual risk would drop to MEDIUM, mainly due to the size of the schema migration and end-to-end mailbox isolation surface.
 
 ---
 
 ## Consensus Summary
 
-Only one reviewer (Codex) was invoked for this cycle, so consensus reflects that single independent review. The review confirms the architecture and phase decomposition are sound but flags the plan set as **not yet safely executable** without revision.
+Only one reviewer (Codex) was invoked this cycle, so consensus reflects that single independent re-review. Codex confirms the cycle-2 revisions are a clear improvement but the plan set is **not yet safely executable** — 1 of 6 prior HIGHs is fully closed (Pub/Sub tenant resolution), the other 5 are only partially resolved, and the revisions introduced compile/parse-level HIGH issues.
+
+### Cycle 1 → Cycle 2 HIGH Resolution Snapshot
+
+| # | Cycle 1 HIGH | Status |
+|---|--------------|--------|
+| 1 | Compile-broken intermediate waves | PARTIALLY RESOLVED |
+| 2 | Pub/Sub tenant resolution ambiguity | **RESOLVED** |
+| 3 | `triage_audit` schema/idempotency contradiction | PARTIALLY RESOLVED |
+| 4 | Missing backend API surface for rules/copy-rules | PARTIALLY RESOLVED |
+| 5 | Outbound/chat caller migration under-scoped/mis-ordered | PARTIALLY RESOLVED |
+| 6 | Ingestion scope broader than listed files | PARTIALLY RESOLVED |
+
+### Distinct Unresolved HIGH Concerns (cycle 2)
+
+1. **Compile holes from unlisted Java call sites** — `RuleEntity` constructor/`RuleStatusProjection`/`RuleManagementService`/`RuleTemplateMaterializationService` and `TriageAuditSaga` not enumerated in `files_modified`; breaks the compile-green guarantee. (cycle-1 #1 + new "Rule entity/projection compile hole")
+2. **`triage_audit` schema contradiction** — `artifacts_this_phase_produces` still lists `gmail_connection_id` on `triage_audit`, contradicting the locked `executing_mailbox_id` idempotency DDL. (cycle-1 #3)
+3. **Missing `RuleTestMessageRequest` mailbox scope** — rule test/preview DTO path not bound to mailbox ownership / `MailboxContext`. (cycle-1 #4)
+4. **Forward/draft wrong-mailbox reads** — `ForwardMessageAssembler`/`DraftReplySourceLoader`/`ToneContextBuilder` read source MIME/thread via tenant primary, not the active mailbox. (cycle-1 #5 + new HIGH)
+5. **Backfill enqueue not call-site complete** — `InboxBackfillEnqueuer.enqueueIfNotPending` callers (`OAuthProvisioningService`, `RecentInboxReadService`) not migrated in the same wave. (cycle-1 #6 + new HIGH)
+6. **Liquibase YAML XML-style comments** — `<!-- DEPLOY -->` inside YAML changelogs can break/incorrectly parse the changelog; use `#` or Liquibase `comment:`. (new HIGH)
 
 ### Agreed Strengths
-
-- Correct core invariant: tenant → tenant + mailbox scoping across every Gmail runtime path without weakening privacy.
-- Migration-first sequencing, unchanged AAD, ArchUnit allow-list draining, and the two-CONNECTED-mailbox isolation fixture.
-- Privacy posture preserved (no raw email content/prompts in events or logs); real-Gmail smoke includes log inspection.
-
-### Agreed Concerns (highest priority)
-
-1. **[HIGH] Compile-broken intermediate waves** — Plans 01/02 permit `compileTestJava` / event-constructor seams to break until later plans, undermining per-wave verification and parallel execution.
-2. **[HIGH] Pub/Sub tenant resolution ambiguity** — `LOWER(google_email)` + `LIMIT 1` can route to the wrong tenant when the same Gmail account is connected to two workspaces; needs global active-email uniqueness, per-connection routing, or explicit rejection of duplicate active grants.
-3. **[HIGH] `triage_audit` schema/idempotency contradiction** — `source_mailbox_id`/`executing_mailbox_id` added but idempotency index references undefined `gmail_connection_id`; pick concrete DDL and align migration/writer/tests/docs.
-4. **[HIGH] Missing backend API surface for rules/copy-rules** — core `CopyRulesService` has no controller/DTO/OpenAPI contract; rule create/edit/preview/test DTOs need structured `gmailConnectionId`.
-5. **[HIGH] Outbound/chat caller migration under-scoped and mis-ordered** — `OutboundSendCommand` requires `MailboxRef` before `MailboxContext` exists; chat sends, forward/reply assemblers, undo/revert, rule-triggered send constructors not enumerated.
-6. **[HIGH] Ingestion scope broader than listed files** — mailbox ids across `pubsub_delivery`, sync state, processing jobs, observed rows, projection upserts; watch renewal, history-lost, backfill, ingestion health, per-mailbox job idempotency need explicit targets.
-
-Plus MEDIUM items (session vs cross-device active-mailbox stickiness, hot-table migration locking, error-boundary definitions, narrow frontend file list) and a LOW requirement-ID drift (`VER-01` vs `VER-02..04`).
+- Concrete Pub/Sub isolation fix (global partial unique index + HALT precondition + `TenantMailboxRef`, no `LIMIT 1`).
+- Compile-green RED test discipline with reflection probes and transitional event constructors.
+- Copy-rules API surface (`POST /api/rules/copy`, request/response DTOs) and structured `gmailConnectionId` on rule DTOs now planned.
+- Broadened ingestion scope (watch renewal, history-lost, ingestion health, per-mailbox backfill).
 
 ### Divergent Views
-
 None — single reviewer this cycle.
 
 ### Recommended Next Step
-
-Revise the plans before execution, then optionally re-review:
+Amend the plans to close the 6 distinct unresolved HIGH concerns, then re-review or proceed to execution once compile-safety, the `triage_audit` artifacts/DDL contradiction, forward/draft read-path mailbox scoping, backfill call-site completeness, the rule-test DTO, and the YAML comment format are corrected:
   /gsd-plan-phase 11 --reviews
