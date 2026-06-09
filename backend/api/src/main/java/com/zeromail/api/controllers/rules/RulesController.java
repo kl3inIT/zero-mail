@@ -20,8 +20,8 @@ import com.zeromail.api.dto.rules.RuleTestMessagesResponse;
 import com.zeromail.api.dto.rules.RuleUpdateRequest;
 import com.zeromail.api.dto.rules.RulesListResponse;
 import com.zeromail.api.error.RuleApiException;
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.mailbox.MailboxContext;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.exception.RuleValidationException;
@@ -92,7 +92,9 @@ public class RulesController {
                 ruleTemplateMaterializationService.materializeSelectedTemplates(tenantId);
         RulesListResponse response =
                 new RulesListResponse(
-                        ruleManagementService.listOrdered(tenantId).stream()
+                        ruleManagementService
+                                .listOrdered(tenantId, activeGmailConnectionIdOrThrow())
+                                .stream()
                                 .map(RuleResponse::from)
                                 .toList(),
                         ruleTemplateCatalogService.listActiveTemplates(tenantId).stream()
@@ -104,8 +106,9 @@ public class RulesController {
 
     @GetMapping("/{ruleId}")
     public RuleResponse getRule(@PathVariable UUID ruleId) {
+        UUID tenantId = TenantContext.currentTenantUuid();
         return RuleResponse.from(
-                ruleManagementService.get(TenantContext.currentTenantUuid(), ruleId));
+                ruleManagementService.get(tenantId, activeGmailConnectionIdOrThrow(), ruleId));
     }
 
     @PostMapping("/compile")
@@ -127,7 +130,8 @@ public class RulesController {
     public RuleResponse createRule(@Valid @RequestBody RuleCreateRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
         RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
-        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
+        UUID gmailConnectionId =
+                validatedGmailConnectionIdOrThrow(tenantId, request.gmailConnectionId());
         try {
             return RuleResponse.from(
                     ruleManagementService.create(
@@ -147,7 +151,8 @@ public class RulesController {
             @PathVariable UUID ruleId, @Valid @RequestBody RuleUpdateRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
         RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
-        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
+        UUID gmailConnectionId =
+                validatedGmailConnectionIdOrThrow(tenantId, request.gmailConnectionId());
         try {
             return RuleResponse.from(
                     ruleManagementService.update(
@@ -168,16 +173,20 @@ public class RulesController {
     public RuleResponse updateEnabled(
             @PathVariable UUID ruleId, @Valid @RequestBody RuleEnabledRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
         if (request.enabled()) {
-            return RuleResponse.from(ruleManagementService.enable(tenantId, ruleId));
+            return RuleResponse.from(
+                    ruleManagementService.enable(tenantId, gmailConnectionId, ruleId));
         }
-        return RuleResponse.from(ruleManagementService.disable(tenantId, ruleId));
+        return RuleResponse.from(
+                ruleManagementService.disable(tenantId, gmailConnectionId, ruleId));
     }
 
     @DeleteMapping("/{ruleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteRule(@PathVariable UUID ruleId) {
-        ruleManagementService.delete(TenantContext.currentTenantUuid(), ruleId);
+        UUID tenantId = TenantContext.currentTenantUuid();
+        ruleManagementService.delete(tenantId, activeGmailConnectionIdOrThrow(), ruleId);
     }
 
     @PostMapping("/{ruleId}/preview")
@@ -209,6 +218,8 @@ public class RulesController {
         }
     }
 
+    // Rule test messages are scoped by the bound MailboxContext; the request body carries only
+    // Gmail message identity so clients cannot spoof a different mailbox for test reads.
     @GetMapping("/test/messages")
     public RuleTestMessagesResponse listTestMessages(
             @RequestParam(name = "sampleSize", required = false) Integer sampleSize) {
@@ -251,10 +262,14 @@ public class RulesController {
             @Valid @RequestBody RuleDraftPreviewRequest request) {
         Integer normalizedSampleSize = normalizedPreviewSampleSize(request.sampleSize());
         RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
+        UUID tenantId = TenantContext.currentTenantUuid();
+        UUID gmailConnectionId =
+                validatedGmailConnectionIdOrThrow(tenantId, request.gmailConnectionId());
         try {
             return RulePreviewResponse.from(
                     rulePreviewService.previewDraft(
-                            TenantContext.currentTenantUuid(),
+                            tenantId,
+                            gmailConnectionId,
                             compileResult.matcherAst(),
                             compileResult.actionIntents(),
                             normalizedSampleSize,
@@ -280,13 +295,13 @@ public class RulesController {
                         TenantContext.currentTenantUuid(), templateKey));
     }
 
-    private UUID primaryGmailConnectionIdOrThrow(UUID tenantId) {
-        // TODO(Plan 05): replace this primary mailbox bridge with the active mailbox request
-        // context.
-        return gmailConnectionService
-                .primaryMailboxRef(tenantId)
-                .map(MailboxRef::gmailConnectionId)
-                .orElseThrow(RuleValidationException::notFound);
+    private UUID activeGmailConnectionIdOrThrow() {
+        return MailboxContext.currentOptional().orElseThrow(RuleValidationException::notFound);
+    }
+
+    private UUID validatedGmailConnectionIdOrThrow(UUID tenantId, UUID gmailConnectionId) {
+        gmailConnectionService.resolveOwnedConnectionOrThrow(tenantId, gmailConnectionId);
+        return gmailConnectionId;
     }
 
     private Integer normalizedPreviewSampleSize(Integer requestedSampleSize) {

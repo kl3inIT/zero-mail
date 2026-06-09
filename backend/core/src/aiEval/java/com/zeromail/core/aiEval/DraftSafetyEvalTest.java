@@ -21,16 +21,20 @@ import com.zeromail.core.draft.usecases.DraftReplySourceLoader;
 import com.zeromail.core.draft.usecases.DraftReplySourceLoader.DraftReplySource;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftCommand;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftService;
+import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.domain.ActionValidator;
 import com.zeromail.core.llm.domain.AllowListedTools;
 import com.zeromail.core.llm.domain.LlmToolProfile;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.usecases.LlmTool;
+import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
 import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
 import com.zeromail.core.triage.domain.ReplyHeaders;
+import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
 import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
@@ -82,9 +86,11 @@ class DraftSafetyEvalTest {
         DraftReplySourceLoader draftReplySourceLoader = mock(DraftReplySourceLoader.class);
         DraftBodyGenerator draftBodyGenerator = mock(DraftBodyGenerator.class);
         TriageGmailWriter triageGmailWriter = mock(TriageGmailWriter.class);
+        GmailConnectionService gmailConnectionService = mock(GmailConnectionService.class);
         ClassifyThreadReplyStatusService classifyThreadReplyStatusService =
                 mock(ClassifyThreadReplyStatusService.class);
         TriageAuditWriter triageAuditWriter = mock(TriageAuditWriter.class);
+        MailboxRef mailboxRef = new MailboxRef(TENANT_ID, UUID.randomUUID());
         TriageAuditRepository triageAuditRepository = mock(TriageAuditRepository.class);
         TriageDraftAuditService triageDraftAuditService =
                 new TriageDraftAuditService(
@@ -97,8 +103,15 @@ class DraftSafetyEvalTest {
                 .thenReturn(Optional.of(lockHandle));
         when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.empty());
-        when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
-        when(draftBodyGenerator.generate(any(), anyString(), anyString(), anyString()))
+        when(gmailConnectionService.primaryMailboxRef(TENANT_ID))
+                .thenReturn(Optional.of(mailboxRef));
+        when(draftReplySourceLoader.load(mailboxRef, THREAD_ID)).thenReturn(source());
+        when(draftBodyGenerator.generate(
+                        any(UUID.class),
+                        any(MailboxRef.class),
+                        anyString(),
+                        anyString(),
+                        anyString()))
                 .thenThrow(new SafetyViolationException());
         GenerateThreadDraftService service =
                 new GenerateThreadDraftService(
@@ -106,6 +119,7 @@ class DraftSafetyEvalTest {
                         draftReplySourceLoader,
                         draftBodyGenerator,
                         triageGmailWriter,
+                        gmailConnectionService,
                         classifyThreadReplyStatusService,
                         triageDraftAuditService,
                         eventPublisher,
@@ -119,18 +133,22 @@ class DraftSafetyEvalTest {
                 .isInstanceOf(SafetyViolationException.class)
                 .hasMessage(null);
 
-        verify(triageGmailWriter, never()).saveDraft(any(), any(), anyString(), anyString());
+        verify(triageGmailWriter, never())
+                .saveDraft(
+                        any(MailboxRef.class), any(ReplyHeaders.class), anyString(), anyString());
         verify(triageAuditWriter, never())
                 .insertPending(
-                        any(),
+                        any(UUID.class),
+                        any(UUID.class),
+                        any(UUID.class),
                         anyString(),
                         anyString(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        anyString(),
+                        anyString(),
+                        any(UUID.class),
+                        anyString(),
+                        any(RuleActionType.class),
+                        any(TriageActionResult.class),
                         anyString());
         verify(triageAuditRepository, never()).markApplied(any(), any(), anyString(), any(), any());
         verify(classifyThreadReplyStatusService, never()).classify(any());

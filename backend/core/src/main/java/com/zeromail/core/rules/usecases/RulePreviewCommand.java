@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record RulePreviewCommand(
         UUID tenantId,
+        UUID gmailConnectionId,
         UUID ruleId,
         MatcherNode matcherNode,
         List<ActionIntent> actionIntents,
@@ -18,7 +19,8 @@ public record RulePreviewCommand(
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         actionIntents = actionIntents == null ? List.of() : List.copyOf(actionIntents);
         boolean savedRulePreview = ruleId != null;
-        boolean draftPreview = matcherNode != null && !actionIntents.isEmpty();
+        boolean draftPreview =
+                gmailConnectionId != null && matcherNode != null && !actionIntents.isEmpty();
         if (savedRulePreview == draftPreview) {
             throw new IllegalArgumentException(
                     "Preview command must target either a saved rule or a draft matcher/action payload");
@@ -36,25 +38,40 @@ public record RulePreviewCommand(
             Integer requestedSampleSize,
             boolean evaluateSemanticIntents) {
         return new RulePreviewCommand(
-                tenantId, ruleId, null, List.of(), requestedSampleSize, evaluateSemanticIntents);
+                tenantId,
+                null,
+                ruleId,
+                null,
+                List.of(),
+                requestedSampleSize,
+                evaluateSemanticIntents);
     }
 
     public static RulePreviewCommand draft(
             UUID tenantId,
+            UUID gmailConnectionId,
             MatcherNode matcherNode,
             List<ActionIntent> actionIntents,
             Integer requestedSampleSize) {
-        return draft(tenantId, matcherNode, actionIntents, requestedSampleSize, false);
+        return draft(
+                tenantId,
+                gmailConnectionId,
+                matcherNode,
+                actionIntents,
+                requestedSampleSize,
+                false);
     }
 
     public static RulePreviewCommand draft(
             UUID tenantId,
+            UUID gmailConnectionId,
             MatcherNode matcherNode,
             List<ActionIntent> actionIntents,
             Integer requestedSampleSize,
             boolean evaluateSemanticIntents) {
         return new RulePreviewCommand(
                 tenantId,
+                gmailConnectionId,
                 null,
                 matcherNode,
                 actionIntents,

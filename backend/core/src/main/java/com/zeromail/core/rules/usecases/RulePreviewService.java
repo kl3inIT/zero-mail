@@ -1,10 +1,9 @@
 package com.zeromail.core.rules.usecases;
 
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.gmail.gateway.MailboxRef;
-import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.SemanticIntentRequest;
+import com.zeromail.core.mailbox.MailboxContext;
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
 import com.zeromail.core.rules.domain.ActionProposalMerger;
@@ -52,7 +51,6 @@ public class RulePreviewService {
     private final RuleRepository ruleRepository;
     private final RuleManagementService ruleManagementService;
     private final RulePreviewDataService rulePreviewDataService;
-    private final GmailConnectionService gmailConnectionService;
     private final RuleEvaluator ruleEvaluator;
     private final ActionProposalMerger actionProposalMerger;
     private final ObjectMapper objectMapper;
@@ -64,13 +62,11 @@ public class RulePreviewService {
             RuleRepository ruleRepository,
             RuleManagementService ruleManagementService,
             RulePreviewDataService rulePreviewDataService,
-            GmailConnectionService gmailConnectionService,
             LlmGateway llmGateway) {
         this(
                 ruleRepository,
                 ruleManagementService,
                 rulePreviewDataService,
-                gmailConnectionService,
                 new RuleEvaluator(),
                 new ActionProposalMerger(),
                 JsonMapper.builder().build(),
@@ -90,7 +86,6 @@ public class RulePreviewService {
                 ruleRepository,
                 ruleManagementService,
                 rulePreviewDataService,
-                null,
                 ruleEvaluator,
                 actionProposalMerger,
                 objectMapper,
@@ -102,7 +97,6 @@ public class RulePreviewService {
             RuleRepository ruleRepository,
             RuleManagementService ruleManagementService,
             RulePreviewDataService rulePreviewDataService,
-            GmailConnectionService gmailConnectionService,
             RuleEvaluator ruleEvaluator,
             ActionProposalMerger actionProposalMerger,
             ObjectMapper objectMapper,
@@ -116,7 +110,6 @@ public class RulePreviewService {
         this.rulePreviewDataService =
                 Objects.requireNonNull(
                         rulePreviewDataService, "rulePreviewDataService must not be null");
-        this.gmailConnectionService = gmailConnectionService;
         this.ruleEvaluator =
                 Objects.requireNonNull(ruleEvaluator, "ruleEvaluator must not be null");
         this.actionProposalMerger =
@@ -163,9 +156,26 @@ public class RulePreviewService {
             List<ActionIntent> actionIntents,
             Integer requestedSampleSize,
             boolean evaluateSemanticIntents) {
+        return previewDraft(
+                tenantId,
+                activeGmailConnectionIdOrThrow(),
+                matcherNode,
+                actionIntents,
+                requestedSampleSize,
+                evaluateSemanticIntents);
+    }
+
+    public RulePreviewResult previewDraft(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            MatcherNode matcherNode,
+            List<ActionIntent> actionIntents,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
         return preview(
                 RulePreviewCommand.draft(
                         tenantId,
+                        gmailConnectionId,
                         matcherNode,
                         actionIntents,
                         requestedSampleSize,
@@ -190,7 +200,7 @@ public class RulePreviewService {
             UUID tenantId, Integer requestedSampleSize, boolean evaluateSemanticIntents) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         PreviewSampleSize sampleSize = PreviewSampleSize.normalize(requestedSampleSize);
-        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
         List<RuleEntity> orderedRules =
                 ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
                         tenantId, gmailConnectionId);
@@ -230,7 +240,7 @@ public class RulePreviewService {
     public RuleTestMessageList listRecentTestMessages(UUID tenantId, Integer requestedSampleSize) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         PreviewSampleSize sampleSize = PreviewSampleSize.normalize(requestedSampleSize);
-        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
         List<RulePreviewDataService.PreviewInput> previewInputs =
                 rulePreviewDataService.fetchPreviewInputs(
                         tenantId, gmailConnectionId, false, sampleSize);
@@ -260,7 +270,7 @@ public class RulePreviewService {
         Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
         Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
         PreviewSampleSize singleMessageSize = PreviewSampleSize.normalize(null);
-        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
         List<RuleEntity> orderedRules =
                 ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
                         tenantId, gmailConnectionId);
@@ -313,6 +323,22 @@ public class RulePreviewService {
                 evaluateSemanticIntents);
     }
 
+    public RulePreviewResult previewDraft(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            String matcherAst,
+            String actionIntents,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
+        return previewDraft(
+                tenantId,
+                gmailConnectionId,
+                parseMatcher(matcherAst),
+                parseActionIntents(actionIntents),
+                requestedSampleSize,
+                evaluateSemanticIntents);
+    }
+
     public RuleCustomPreviewResult previewCustomMail(
             UUID tenantId, String subject, String body, List<UUID> requestedRuleIds) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -320,7 +346,7 @@ public class RulePreviewService {
                 requestedRuleIds == null || requestedRuleIds.isEmpty()
                         ? null
                         : Set.copyOf(requestedRuleIds);
-        UUID gmailConnectionId = primaryGmailConnectionIdOrThrow(tenantId);
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
         List<RuleEntity> orderedRules =
                 ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
                         tenantId, gmailConnectionId);
@@ -598,17 +624,8 @@ public class RulePreviewService {
         return SemanticEvalContentBuilder.build(evaluationInput);
     }
 
-    private UUID primaryGmailConnectionIdOrThrow(UUID tenantId) {
-        if (gmailConnectionService == null) {
-            throw new IllegalStateException(
-                    "GmailConnectionService is required for mailbox preview");
-        }
-        // TODO(Plan 05): replace this primary mailbox bridge with the active mailbox request
-        // context.
-        return gmailConnectionService
-                .primaryMailboxRef(tenantId)
-                .map(MailboxRef::gmailConnectionId)
-                .orElseThrow(RuleValidationException::notFound);
+    private static UUID activeGmailConnectionIdOrThrow() {
+        return MailboxContext.currentOptional().orElseThrow(RuleValidationException::notFound);
     }
 
     private PreviewTarget savedPreviewTarget(RulePreviewCommand command) {
@@ -635,7 +652,7 @@ public class RulePreviewService {
 
     private PreviewTarget draftPreviewTarget(RulePreviewCommand command) {
         return new PreviewTarget(
-                primaryGmailConnectionIdOrThrow(command.tenantId()),
+                command.gmailConnectionId(),
                 List.of(
                         new PreviewCandidate(
                                 DRAFT_RULE_ID,

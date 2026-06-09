@@ -167,6 +167,7 @@ public class SecurityConfig {
     SecurityFilterChain chain(
             HttpSecurity http,
             TenantBindingFilter tenantFilter,
+            MailboxBindingFilter mailboxFilter,
             GoogleOAuthSuccessHandler successHandler,
             LoginRedirectAuthenticationFailureHandler failureHandler,
             GoogleAuthorizationRequestResolver authRequestResolver,
@@ -245,7 +246,8 @@ public class SecurityConfig {
                                         .invalidateHttpSession(true)
                                         .deleteCookies("ZEROMAIL_SESSION", "JSESSIONID"))
                 .sessionManagement(Customizer.withDefaults())
-                .addFilterAfter(tenantFilter, AuthorizationFilter.class);
+                .addFilterAfter(tenantFilter, AuthorizationFilter.class)
+                .addFilterAfter(mailboxFilter, TenantBindingFilter.class);
         return http.build();
     }
 

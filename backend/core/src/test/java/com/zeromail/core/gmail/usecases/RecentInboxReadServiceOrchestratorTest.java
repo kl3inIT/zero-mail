@@ -61,7 +61,6 @@ class RecentInboxReadServiceOrchestratorTest {
         inboxProjectionReadService = mock(InboxProjectionReadService.class);
         recentInboxReadService =
                 new RecentInboxReadService(
-                        gmailConnectionRepository,
                         gmailApiClientFactory,
                         cryptoProperties(),
                         new JsoupSafeHtmlSanitizer(),

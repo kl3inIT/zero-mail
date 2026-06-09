@@ -3,6 +3,7 @@ package com.zeromail.api.security;
 import com.zeromail.api.security.events.GmailConnectionRevokedEvent;
 import com.zeromail.api.security.events.OAuth2TokenRefreshFailed;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
@@ -47,13 +48,22 @@ public class GmailAccessGuard {
         } catch (IllegalArgumentException invalidTenantIdException) {
             return;
         }
+        UUID gmailConnectionId;
+        try {
+            gmailConnectionId = UUID.fromString(event.gmailConnectionId());
+        } catch (IllegalArgumentException | NullPointerException invalidMailboxIdException) {
+            return;
+        }
+        MailboxRef mailboxRef = new MailboxRef(tenant, gmailConnectionId);
         ScopedValue.where(TenantContext.TENANT, tenant.toString())
                 .run(
                         () ->
                                 transactionTemplate.executeWithoutResult(
                                         _ ->
                                                 connectionRepository
-                                                        .findByTenantId(tenant)
+                                                        .findByIdAndTenantId(
+                                                                mailboxRef.gmailConnectionId(),
+                                                                mailboxRef.tenantId())
                                                         .ifPresent(
                                                                 connection -> {
                                                                     connection.setStatus(
@@ -65,7 +75,8 @@ public class GmailAccessGuard {
                                                                             connection);
                                                                     eventPublisher.publishEvent(
                                                                             new GmailConnectionRevokedEvent(
-                                                                                    tenant,
+                                                                                    mailboxRef
+                                                                                            .tenantId(),
                                                                                     Instant.now()));
                                                                 })));
     }

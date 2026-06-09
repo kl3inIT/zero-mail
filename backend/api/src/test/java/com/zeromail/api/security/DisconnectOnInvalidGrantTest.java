@@ -18,36 +18,88 @@ import org.springframework.context.ApplicationEventPublisher;
 
 class DisconnectOnInvalidGrantTest extends ApiPostgresTestBase {
 
-    @Autowired TenantRepository tenants;
-    @Autowired GmailConnectionRepository conns;
-    @Autowired ApplicationEventPublisher publisher;
+    @Autowired TenantRepository tenantRepository;
+    @Autowired GmailConnectionRepository gmailConnectionRepository;
+    @Autowired ApplicationEventPublisher eventPublisher;
 
     @Test
-    void invalid_grant_flips_status_to_DISCONNECTED() {
+    void invalid_grant_disconnects_specific_mailbox_only() throws Exception {
         UUID tenantId = UUID.randomUUID();
-        tenants.save(new TenantEntity(tenantId, "t"));
-
+        UUID primaryGmailConnectionId = UUID.randomUUID();
+        UUID failingGmailConnectionId = UUID.randomUUID();
+        tenantRepository.save(new TenantEntity(tenantId, "invalid-grant-specific"));
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(
                         () -> {
-                            var conn =
-                                    new GmailConnectionEntity(
-                                            UUID.randomUUID(),
-                                            tenantId,
-                                            "user@example.com",
-                                            GmailConnectionStatus.CONNECTED);
-                            conn.setConnectedAt(Instant.now());
-                            conn.setRefreshTokenEncrypted(new byte[] {1, 2, 3});
-                            conns.save(conn);
+                            saveConnection(
+                                    tenantId,
+                                    primaryGmailConnectionId,
+                                    "primary@example.test",
+                                    true);
+                            saveConnection(
+                                    tenantId,
+                                    failingGmailConnectionId,
+                                    "failing@example.test",
+                                    false);
                         });
 
-        publisher.publishEvent(
+        eventPublisher.publishEvent(
+                new OAuth2TokenRefreshFailed(
+                        tenantId.toString(),
+                        failingGmailConnectionId.toString(),
+                        "invalid_grant",
+                        Instant.now()));
+
+        GmailConnectionEntity primaryConnection =
+                findConnection(tenantId, primaryGmailConnectionId);
+        GmailConnectionEntity failingConnection =
+                findConnection(tenantId, failingGmailConnectionId);
+        assertThat(primaryConnection.getStatus()).isEqualTo(GmailConnectionStatus.CONNECTED);
+        assertThat(primaryConnection.getDisconnectedAt()).isNull();
+        assertThat(failingConnection.getStatus()).isEqualTo(GmailConnectionStatus.DISCONNECTED);
+        assertThat(failingConnection.getDisconnectedAt()).isNotNull();
+    }
+
+    @Test
+    void invalid_grant_without_mailbox_id_does_not_disconnect_any_mailbox() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
+        tenantRepository.save(new TenantEntity(tenantId, "invalid-grant-legacy"));
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () ->
+                                saveConnection(
+                                        tenantId,
+                                        gmailConnectionId,
+                                        "legacy-primary@example.test",
+                                        true));
+
+        eventPublisher.publishEvent(
                 new OAuth2TokenRefreshFailed(tenantId.toString(), "invalid_grant", Instant.now()));
 
-        var reloaded =
-                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> conns.findByTenantId(tenantId).orElseThrow());
-        assertThat(reloaded.getStatus()).isEqualTo(GmailConnectionStatus.DISCONNECTED);
-        assertThat(reloaded.getDisconnectedAt()).isNotNull();
+        GmailConnectionEntity reloadedConnection = findConnection(tenantId, gmailConnectionId);
+        assertThat(reloadedConnection.getStatus()).isEqualTo(GmailConnectionStatus.CONNECTED);
+        assertThat(reloadedConnection.getDisconnectedAt()).isNull();
+    }
+
+    private void saveConnection(
+            UUID tenantId, UUID gmailConnectionId, String googleEmail, boolean primary) {
+        GmailConnectionEntity gmailConnection =
+                new GmailConnectionEntity(
+                        gmailConnectionId, tenantId, googleEmail, GmailConnectionStatus.CONNECTED);
+        gmailConnection.setPrimary(primary);
+        gmailConnection.setConnectedAt(Instant.now());
+        gmailConnection.setRefreshTokenEncrypted(new byte[] {1, 2, 3});
+        gmailConnectionRepository.save(gmailConnection);
+    }
+
+    private GmailConnectionEntity findConnection(UUID tenantId, UUID gmailConnectionId)
+            throws Exception {
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(
+                        () ->
+                                gmailConnectionRepository
+                                        .findByIdAndTenantId(gmailConnectionId, tenantId)
+                                        .orElseThrow());
     }
 }

@@ -6,6 +6,7 @@
             "inbox :: domain",
             "inbox :: persistence",
             "inbox :: usecases",
+            "mailbox",
             "shared :: crypto",
             "shared :: exception",
             "shared :: html",

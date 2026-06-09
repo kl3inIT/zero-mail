@@ -150,6 +150,7 @@ class RulePreviewServiceTest extends PostgresContainerTest {
                 rulePreviewService.preview(
                         RulePreviewCommand.draft(
                                 tenantId,
+                                primaryGmailConnectionId(tenantId),
                                 new MatcherNode.SenderDomainMatcher("sender-domain", "stripe.com"),
                                 List.of(new ActionIntent.Archive()),
                                 10));
@@ -164,6 +165,7 @@ class RulePreviewServiceTest extends PostgresContainerTest {
                                 rulePreviewService.preview(
                                         RulePreviewCommand.draft(
                                                 tenantId,
+                                                primaryGmailConnectionId(tenantId),
                                                 new MatcherNode.SenderDomainMatcher(
                                                         "sender-domain", "stripe.com"),
                                                 List.of(new ActionIntent.Archive()),

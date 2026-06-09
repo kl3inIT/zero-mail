@@ -1,6 +1,7 @@
 package com.zeromail.api.security;
 
 import com.zeromail.api.security.events.OAuth2TokenRefreshFailed;
+import com.zeromail.core.mailbox.MailboxContext;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
@@ -38,8 +39,11 @@ public class DisconnectDetectingRefreshTokenClient
         } catch (OAuth2AuthorizationException authorizationException) {
             if ("invalid_grant".equals(authorizationException.getError().getErrorCode())) {
                 String tenantId = TenantContext.currentOptional().orElse("unknown");
+                String gmailConnectionId =
+                        MailboxContext.currentOptional().map(Object::toString).orElse(null);
                 eventPublisher.publishEvent(
-                        new OAuth2TokenRefreshFailed(tenantId, "invalid_grant", Instant.now()));
+                        new OAuth2TokenRefreshFailed(
+                                tenantId, gmailConnectionId, "invalid_grant", Instant.now()));
             }
             throw authorizationException;
         }

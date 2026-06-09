@@ -22,7 +22,7 @@ import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.MailboxRef;
-import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.mailbox.MailboxContext;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.outbound.usecases.GmailOutboundSendGateway;
 import com.zeromail.core.shared.privacy.Sensitive;
@@ -30,7 +30,6 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.usecases.SenderEmailCanonicalizer;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,8 +43,6 @@ import tools.jackson.databind.ObjectMapper;
 class AssistantSendExecutorVipIT {
 
     private final GmailApiClientFactory gmailApiClientFactory = mock(GmailApiClientFactory.class);
-    private final GmailConnectionService gmailConnectionService =
-            mock(GmailConnectionService.class);
     private final ConfirmationStateMachine confirmationStateMachine =
             mock(ConfirmationStateMachine.class);
     private final ConfirmationLeaseService confirmationLeaseService =
@@ -91,7 +88,6 @@ class AssistantSendExecutorVipIT {
                         new GmailOutboundSendGateway(gmailApiClientFactory),
                         new GmailMessageBuilder(),
                         mock(ForwardMessageAssembler.class),
-                        gmailConnectionService,
                         confirmationStateMachine,
                         confirmationLeaseService,
                         senderSafetyNetService,
@@ -104,12 +100,14 @@ class AssistantSendExecutorVipIT {
     void vip_recipient_without_acknowledgment_is_rejected_before_audit_or_gmail_send()
             throws Exception {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         when(senderSafetyNetService.isProtected(tenantId, "ceo@acme.test")).thenReturn(true);
 
         assertThatThrownBy(
                         () ->
-                                withTenant(
+                                withTenantAndMailbox(
                                         tenantId,
+                                        gmailConnectionId,
                                         () ->
                                                 assistantSendExecutor.execute(
                                                         command(tenantId, false))))
@@ -122,16 +120,22 @@ class AssistantSendExecutorVipIT {
     @Test
     void acknowledged_vip_recipient_sends_and_commits_audit_row() throws Exception {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         UUID auditId = UUID.randomUUID();
         when(confirmationStateMachine.recordSendInFlight(any(SendInFlightCommand.class)))
                 .thenReturn(auditId);
-        Gmail gmail = configureGmail(tenantId);
+        Gmail gmail = configureGmail(tenantId, gmailConnectionId);
 
         AssistantSendExecutor.AssistantSendResult result =
-                withTenant(tenantId, () -> assistantSendExecutor.execute(command(tenantId, true)));
+                withTenantAndMailbox(
+                        tenantId,
+                        gmailConnectionId,
+                        () -> assistantSendExecutor.execute(command(tenantId, true)));
 
         assertThat(result.state()).isEqualTo("CONFIRMED");
         verify(gmail).users();
+        verify(gmailApiClientFactory)
+                .buildClientForMailbox(new MailboxRef(tenantId, gmailConnectionId));
         verify(confirmationStateMachine).recordSendInFlight(any(SendInFlightCommand.class));
         verify(confirmationStateMachine)
                 .commitSendCompleted(eq(auditId), any(SendCommitCommand.class));
@@ -147,10 +151,11 @@ class AssistantSendExecutorVipIT {
     @Test
     void recipient_hash_covers_all_to_cc_and_bcc_recipients() throws Exception {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         UUID auditId = UUID.randomUUID();
         when(confirmationStateMachine.recordSendInFlight(any(SendInFlightCommand.class)))
                 .thenReturn(auditId);
-        configureGmail(tenantId);
+        configureGmail(tenantId, gmailConnectionId);
 
         ArgumentCaptor<SendInFlightCommand> sendInFlightCaptor =
                 ArgumentCaptor.forClass(SendInFlightCommand.class);
@@ -172,7 +177,10 @@ class AssistantSendExecutorVipIT {
                         true,
                         Map.of("state", "preview"),
                         "confirm-test-single");
-        withTenant(tenantId, () -> assistantSendExecutor.execute(singleRecipientCommand));
+        withTenantAndMailbox(
+                tenantId,
+                gmailConnectionId,
+                () -> assistantSendExecutor.execute(singleRecipientCommand));
 
         AssistantSendCommand multiRecipientCommand =
                 new AssistantSendCommand(
@@ -191,7 +199,10 @@ class AssistantSendExecutorVipIT {
                         true,
                         Map.of("state", "preview"),
                         "confirm-test-multi");
-        withTenant(tenantId, () -> assistantSendExecutor.execute(multiRecipientCommand));
+        withTenantAndMailbox(
+                tenantId,
+                gmailConnectionId,
+                () -> assistantSendExecutor.execute(multiRecipientCommand));
 
         verify(confirmationStateMachine, org.mockito.Mockito.times(2))
                 .recordSendInFlight(sendInFlightCaptor.capture());
@@ -201,14 +212,12 @@ class AssistantSendExecutorVipIT {
         assertThat(singleHash).isNotEqualTo(multiHash);
     }
 
-    private Gmail configureGmail(UUID tenantId) throws Exception {
+    private Gmail configureGmail(UUID tenantId, UUID gmailConnectionId) throws Exception {
         Gmail gmail = mock(Gmail.class);
         Gmail.Users users = mock(Gmail.Users.class);
         Gmail.Users.Messages messages = mock(Gmail.Users.Messages.class);
         Gmail.Users.Messages.Send sendRequest = mock(Gmail.Users.Messages.Send.class);
-        MailboxRef mailboxRef = new MailboxRef(tenantId, UUID.randomUUID());
-        when(gmailConnectionService.primaryMailboxRef(tenantId))
-                .thenReturn(Optional.of(mailboxRef));
+        MailboxRef mailboxRef = new MailboxRef(tenantId, gmailConnectionId);
         when(gmailApiClientFactory.buildClientForMailbox(mailboxRef)).thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.messages()).thenReturn(messages);
@@ -237,10 +246,14 @@ class AssistantSendExecutorVipIT {
                 "confirm-test-vip");
     }
 
-    private static <T> T withTenant(UUID tenantId, TenantCallable<T> tenantCallable)
+    private static <T> T withTenantAndMailbox(
+            UUID tenantId, UUID gmailConnectionId, TenantCallable<T> tenantCallable)
             throws Exception {
         return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .call(tenantCallable::call);
+                .call(
+                        () ->
+                                ScopedValue.where(MailboxContext.MAILBOX, gmailConnectionId)
+                                        .call(tenantCallable::call));
     }
 
     @FunctionalInterface

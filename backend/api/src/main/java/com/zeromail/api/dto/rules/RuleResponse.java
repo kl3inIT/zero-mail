@@ -8,6 +8,7 @@ import java.util.UUID;
 @Schema(
         requiredProperties = {
             "ruleId",
+            "gmailConnectionId",
             "displayName",
             "sourceText",
             "enabled",
@@ -25,6 +26,7 @@ import java.util.UUID;
         })
 public record RuleResponse(
         UUID ruleId,
+        UUID gmailConnectionId,
         String displayName,
         String sourceText,
         boolean enabled,
@@ -43,6 +45,7 @@ public record RuleResponse(
     public static RuleResponse from(RuleStatusProjection ruleStatusProjection) {
         return new RuleResponse(
                 ruleStatusProjection.ruleId().value(),
+                ruleStatusProjection.gmailConnectionId(),
                 ruleStatusProjection.displayName(),
                 ruleStatusProjection.sourceText(),
                 ruleStatusProjection.enabled(),

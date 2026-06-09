@@ -14,13 +14,12 @@ import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartBody;
 import com.google.api.services.gmail.model.Thread;
-import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
+import com.zeromail.core.gmail.exception.MailboxDisconnectedException;
+import com.zeromail.core.gmail.exception.MailboxNotOwnedException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.gateway.MailboxRef;
-import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
-import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateId;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
@@ -29,6 +28,7 @@ import com.zeromail.core.inbox.usecases.InboxProjectionMessage;
 import com.zeromail.core.inbox.usecases.InboxProjectionPage;
 import com.zeromail.core.inbox.usecases.InboxProjectionReadService;
 import com.zeromail.core.inbox.usecases.InvalidProjectionCursorException;
+import com.zeromail.core.mailbox.MailboxContext;
 import com.zeromail.core.shared.crypto.CryptoProperties;
 import com.zeromail.core.shared.html.SafeHtmlSanitizer;
 import java.io.IOException;
@@ -98,7 +98,6 @@ public class RecentInboxReadService {
     private static final String THREAD_FULL_FIELDS =
             "id,messages(id,threadId,labelIds,internalDate,snippet,payload)";
 
-    private final GmailConnectionRepository gmailConnectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
     private final SafeHtmlSanitizer safeHtmlSanitizer;
     private final InboxCursorCodec inboxCursorCodec;
@@ -107,16 +106,12 @@ public class RecentInboxReadService {
     private final InboxProjectionReadService inboxProjectionReadService;
 
     public RecentInboxReadService(
-            GmailConnectionRepository gmailConnectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
             CryptoProperties cryptoProperties,
             SafeHtmlSanitizer safeHtmlSanitizer,
             InboxBackfillEnqueuer inboxBackfillEnqueuer,
             GmailInboxSyncStateRepository inboxSyncStateRepository,
             InboxProjectionReadService inboxProjectionReadService) {
-        this.gmailConnectionRepository =
-                Objects.requireNonNull(
-                        gmailConnectionRepository, "gmailConnectionRepository must not be null");
         this.gmailApiClientFactory =
                 Objects.requireNonNull(
                         gmailApiClientFactory, "gmailApiClientFactory must not be null");
@@ -174,8 +169,7 @@ public class RecentInboxReadService {
             };
         }
 
-        // TODO(Plan 05): use MailboxContext.currentOrThrow().
-        Optional<MailboxRef> currentMailboxRef = primaryMailboxRef(tenantId);
+        Optional<MailboxRef> currentMailboxRef = activeMailboxRef(tenantId);
         // Lazy backfill trigger (Phase A wave 3): the first time a tenant fetches the inbox after
         // connecting, kick off an asynchronous backfill so the projection is ready by the time
         // Phase B swaps the read path to the DB. Live Gmail still serves the fallback response;
@@ -242,7 +236,7 @@ public class RecentInboxReadService {
         }
         int gmailPageLimit = effectiveLimit(requestedLimit, inboxCursor.loadedCount());
         try {
-            Gmail gmail = gmailForTenant(tenantId);
+            Gmail gmail = gmailForActiveMailbox(tenantId);
             ListMessagesResponse listResponse =
                     gmail.users()
                             .messages()
@@ -338,7 +332,7 @@ public class RecentInboxReadService {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         String messageId = requireMessageId(gmailMessageId);
         try {
-            Gmail gmail = gmailForTenant(tenantId);
+            Gmail gmail = gmailForActiveMailbox(tenantId);
             Message gmailMessage =
                     gmail.users()
                             .messages()
@@ -373,7 +367,7 @@ public class RecentInboxReadService {
             throw new IllegalArgumentException("gmailDraftId must not be blank");
         }
         try {
-            Gmail gmail = gmailForTenant(tenantId);
+            Gmail gmail = gmailForActiveMailbox(tenantId);
             Draft draft =
                     gmail.users()
                             .drafts()
@@ -411,7 +405,7 @@ public class RecentInboxReadService {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         String threadId = requireThreadId(gmailThreadId);
         try {
-            Gmail gmail = gmailForTenant(tenantId);
+            Gmail gmail = gmailForActiveMailbox(tenantId);
             Thread thread =
                     gmail.users()
                             .threads()
@@ -515,7 +509,7 @@ public class RecentInboxReadService {
             return Optional.empty();
         }
         try {
-            Gmail gmail = gmailForTenant(tenantId);
+            Gmail gmail = gmailForActiveMailbox(tenantId);
             Message gmailMessage =
                     gmail.users()
                             .messages()
@@ -534,28 +528,25 @@ public class RecentInboxReadService {
         }
     }
 
-    private Optional<MailboxRef> primaryMailboxRef(UUID tenantId) {
-        return gmailConnectionRepository
-                .findByTenantId(tenantId)
-                .map(gmailConnection -> new MailboxRef(tenantId, gmailConnection.getId()));
+    private Optional<MailboxRef> activeMailboxRef(UUID tenantId) {
+        return MailboxContext.currentOptional()
+                .map(gmailConnectionId -> new MailboxRef(tenantId, gmailConnectionId));
     }
 
-    private Gmail gmailForTenant(UUID tenantId) throws IOException {
-        GmailConnectionEntity gmailConnection =
-                gmailConnectionRepository
-                        .findByTenantId(tenantId)
+    private Gmail gmailForActiveMailbox(UUID tenantId) throws IOException {
+        MailboxRef mailboxRef =
+                activeMailboxRef(tenantId)
                         .orElseThrow(
                                 () ->
                                         new RecentInboxUnavailableException(
                                                 RecentInboxUnavailableReason.NOT_CONNECTED));
-        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+        try {
+            return gmailApiClientFactory.buildClientForMailbox(mailboxRef, GMAIL_REQUEST_TIMEOUT);
+        } catch (MailboxDisconnectedException mailboxDisconnectedException) {
             throw new RecentInboxUnavailableException(RecentInboxUnavailableReason.DISCONNECTED);
+        } catch (MailboxNotOwnedException mailboxNotOwnedException) {
+            throw new RecentInboxUnavailableException(RecentInboxUnavailableReason.NOT_CONNECTED);
         }
-        if (gmailConnection.getRefreshTokenEncrypted() == null) {
-            throw new RecentInboxUnavailableException(RecentInboxUnavailableReason.NO_READ_GRANT);
-        }
-        return gmailApiClientFactory.buildClientForConnection(
-                gmailConnection, tenantId, GMAIL_REQUEST_TIMEOUT);
     }
 
     private static int effectiveLimit(int requestedLimit, int loadedCount) {

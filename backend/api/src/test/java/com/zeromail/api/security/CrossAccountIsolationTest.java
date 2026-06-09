@@ -1,14 +1,24 @@
 package com.zeromail.api.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.ListLabelsResponse;
+import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
-import java.util.Map;
+import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -16,12 +26,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.RestClient;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * RED contract for AUD-06 and the Phase 10 CR-01 multi-row-primary shim gap.
@@ -46,7 +55,8 @@ class CrossAccountIsolationTest extends ApiPostgresTestBase {
     @Autowired UserRepository userRepository;
     @Autowired TestSessionSupport.TestSessionMinter testSessionMinter;
     @Autowired JdbcTemplate jdbcTemplate;
-    @Autowired ObjectMapper objectMapper;
+
+    @MockitoBean GmailApiClientFactory gmailApiClientFactory;
 
     @Test
     void activeMailboxSelectionReturnsNotFoundForForeignMailboxId() {
@@ -90,10 +100,11 @@ class CrossAccountIsolationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    void inboxReadsResolveOnlyTheActiveMailbox() {
+    void inboxReadsResolveOnlyTheActiveMailbox() throws Exception {
         SeedData seedData = seedUser("cross-account-inbox");
         SeededMailboxes seededMailboxes =
                 seedConnectedMailboxes(seedData.tenantId(), "cross-account-inbox");
+        configureEmptyInboxRead(seedData.tenantId(), seededMailboxes.secondaryGmailConnectionId());
         RestClient restClient = authenticatedClient(seedData);
 
         ResponseEntity<String> activateSecondaryResponse =
@@ -106,20 +117,30 @@ class CrossAccountIsolationTest extends ApiPostgresTestBase {
         ResponseEntity<String> inboxResponse =
                 getWithoutThrowing(restClient, "/api/gmail/inbox?limit=20");
 
-        assertThat(activateSecondaryResponse.getStatusCode().value()).isEqualTo(204);
+        assertThat(activateSecondaryResponse.getStatusCode().value()).isEqualTo(200);
+        assertThat(activateSecondaryResponse.getBody())
+                .contains(seededMailboxes.secondaryGmailConnectionId().toString());
         assertThat(activeMailboxResponse.getStatusCode().value()).isEqualTo(200);
         assertThat(activeMailboxResponse.getBody())
                 .contains(seededMailboxes.secondaryGmailConnectionId().toString());
         assertThat(inboxResponse.getStatusCode().value()).isEqualTo(200);
-        assertThat(Objects.requireNonNullElse(inboxResponse.getBody(), ""))
-                .doesNotContain(seededMailboxes.primaryGmailConnectionId().toString());
+        verify(gmailApiClientFactory)
+                .buildClientForMailbox(
+                        new MailboxRef(
+                                seedData.tenantId(), seededMailboxes.secondaryGmailConnectionId()),
+                        Duration.ofSeconds(6));
+        verify(gmailApiClientFactory, never())
+                .buildClientForMailbox(
+                        new MailboxRef(
+                                seedData.tenantId(), seededMailboxes.primaryGmailConnectionId()),
+                        Duration.ofSeconds(6));
     }
 
     @Test
-    void confirmedOutboundSendUsesTheActiveExecutingMailbox() throws Exception {
-        SeedData seedData = seedUser("cross-account-send");
+    void resolverFallsBackToPrimaryWhenSelectedMailboxIsDisconnected() {
+        SeedData seedData = seedUser("cross-account-fallback");
         SeededMailboxes seededMailboxes =
-                seedConnectedMailboxes(seedData.tenantId(), "cross-account-send");
+                seedConnectedMailboxes(seedData.tenantId(), "cross-account-fallback");
         RestClient restClient = authenticatedClient(seedData);
 
         ResponseEntity<String> activateSecondaryResponse =
@@ -127,27 +148,17 @@ class CrossAccountIsolationTest extends ApiPostgresTestBase {
                         restClient,
                         ACTIVE_MAILBOX_PATH,
                         seededMailboxes.secondaryGmailConnectionId());
-        ResponseEntity<String> confirmResponse =
-                postJsonWithoutThrowing(
-                        restClient,
-                        "/api/chat/{chatId}/confirm",
-                        UUID.randomUUID(),
-                        Map.of(
-                                "toolCallId",
-                                "tool-send-active-mailbox",
-                                "contentOverride",
-                                Map.of("body", "User-authored mailbox routing smoke body"),
-                                "vipAcknowledged",
-                                true));
+        jdbcTemplate.update(
+                "update gmail_connections set status = 'DISCONNECTED' where id = ?",
+                seededMailboxes.secondaryGmailConnectionId());
+        ResponseEntity<String> activeMailboxResponse =
+                getWithoutThrowing(restClient, "/api/gmail/active-mailbox");
 
-        assertThat(activateSecondaryResponse.getStatusCode().value()).isEqualTo(204);
-        assertThat(confirmResponse.getStatusCode().value())
-                .as(
-                        "send confirmation must execute under the active mailbox binding, not tenant primary")
-                .isEqualTo(200);
-        assertThat(Objects.requireNonNullElse(confirmResponse.getBody(), ""))
-                .contains(seededMailboxes.secondaryGmailConnectionId().toString())
-                .doesNotContain(seededMailboxes.primaryGmailConnectionId().toString());
+        assertThat(activateSecondaryResponse.getStatusCode().value()).isEqualTo(200);
+        assertThat(activeMailboxResponse.getStatusCode().value()).isEqualTo(200);
+        assertThat(activeMailboxResponse.getBody())
+                .contains(seededMailboxes.primaryGmailConnectionId().toString())
+                .doesNotContain(seededMailboxes.secondaryGmailConnectionId().toString());
     }
 
     private ResponseEntity<String> putWithoutThrowing(
@@ -169,16 +180,30 @@ class CrossAccountIsolationTest extends ApiPostgresTestBase {
                 .toEntity(String.class);
     }
 
-    private ResponseEntity<String> postJsonWithoutThrowing(
-            RestClient restClient, String uriTemplate, UUID pathId, Object body) throws Exception {
-        return restClient
-                .post()
-                .uri(uriTemplate, pathId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(objectMapper.writeValueAsString(body))
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (_, _) -> {})
-                .toEntity(String.class);
+    private void configureEmptyInboxRead(UUID tenantId, UUID gmailConnectionId) throws Exception {
+        Gmail gmail = mock(Gmail.class);
+        Gmail.Users users = mock(Gmail.Users.class);
+        Gmail.Users.Messages messages = mock(Gmail.Users.Messages.class);
+        Gmail.Users.Messages.List messageListRequest = mock(Gmail.Users.Messages.List.class);
+        Gmail.Users.Labels labels = mock(Gmail.Users.Labels.class);
+        Gmail.Users.Labels.List labelListRequest = mock(Gmail.Users.Labels.List.class);
+
+        when(gmailApiClientFactory.buildClientForMailbox(
+                        new MailboxRef(tenantId, gmailConnectionId), Duration.ofSeconds(6)))
+                .thenReturn(gmail);
+        when(gmail.users()).thenReturn(users);
+        when(users.messages()).thenReturn(messages);
+        when(messages.list("me")).thenReturn(messageListRequest);
+        when(messageListRequest.setLabelIds(List.of("INBOX"))).thenReturn(messageListRequest);
+        when(messageListRequest.setMaxResults(20L)).thenReturn(messageListRequest);
+        when(messageListRequest.setPageToken(null)).thenReturn(messageListRequest);
+        when(messageListRequest.setFields("messages(id,threadId),nextPageToken"))
+                .thenReturn(messageListRequest);
+        when(messageListRequest.execute())
+                .thenReturn(new ListMessagesResponse().setMessages(List.of()));
+        when(users.labels()).thenReturn(labels);
+        when(labels.list("me")).thenReturn(labelListRequest);
+        when(labelListRequest.execute()).thenReturn(new ListLabelsResponse().setLabels(List.of()));
     }
 
     private RestClient authenticatedClient(SeedData seedData) {
