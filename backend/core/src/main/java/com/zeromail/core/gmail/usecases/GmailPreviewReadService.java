@@ -51,6 +51,7 @@ public class GmailPreviewReadService {
                     "From",
                     "To",
                     "Cc",
+                    "Bcc",
                     "Subject",
                     "Message-ID",
                     "References",
@@ -75,6 +76,7 @@ public class GmailPreviewReadService {
             "id,threadId,labelIds,internalDate,payload/headers";
     private static final String RECENT_INBOX_LIST_FIELDS = "messages(id,threadId)";
     private static final String INBOX_LABEL_ID = "INBOX";
+    private static final String SENT_LABEL_ID = "SENT";
     private static final int RECENT_INBOX_MAX_MESSAGES = 100;
     private static final List<String> THREAD_DISPLAY_METADATA_HEADERS =
             List.of("From", "To", "Cc", "Subject");
@@ -191,12 +193,54 @@ public class GmailPreviewReadService {
         try {
             Gmail gmail = buildPreviewReadClient(connection, tenantId, fetchBudget);
             List<ObservedPreviewMessage> recentInboxMessages =
-                    fetchRecentInboxMessageReferences(gmail, sampleSize);
+                    fetchRecentMessageReferences(gmail, INBOX_LABEL_ID, sampleSize);
             if (recentInboxMessages.isEmpty()) {
                 return List.of();
             }
             return fetchMessagesWithinBudget(
                     gmail, recentInboxMessages, includeBodyEvidence, fetchBudget);
+        } catch (InvalidGrantException invalidGrantException) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.REVOKED);
+        } catch (GoogleJsonResponseException googleResponseException) {
+            if (googleResponseException.getStatusCode() == 401
+                    || googleResponseException.getStatusCode() == 403) {
+                throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
+            }
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+        } catch (IOException ioException) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<GmailPreviewMessage> fetchRecentSentMessages(
+            UUID tenantId, int sampleSize, boolean includeBodyEvidence, Duration fetchBudget) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(fetchBudget, "fetchBudget must not be null");
+
+        GmailConnectionEntity connection =
+                gmailConnectionRepository
+                        .findByTenantId(tenantId)
+                        .orElseThrow(
+                                () ->
+                                        new GmailPreviewReadUnavailableException(
+                                                UnavailableReason.NOT_CONNECTED));
+        if (connection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.DISCONNECTED);
+        }
+        if (connection.getRefreshTokenEncrypted() == null) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
+        }
+
+        try {
+            Gmail gmail = buildPreviewReadClient(connection, tenantId, fetchBudget);
+            List<ObservedPreviewMessage> recentSentMessages =
+                    fetchRecentMessageReferences(gmail, SENT_LABEL_ID, sampleSize);
+            if (recentSentMessages.isEmpty()) {
+                return List.of();
+            }
+            return fetchMessagesWithinBudget(
+                    gmail, recentSentMessages, includeBodyEvidence, fetchBudget);
         } catch (InvalidGrantException invalidGrantException) {
             throw new GmailPreviewReadUnavailableException(UnavailableReason.REVOKED);
         } catch (GoogleJsonResponseException googleResponseException) {
@@ -224,8 +268,8 @@ public class GmailPreviewReadService {
                 tokenResult.accessToken().value(), requestTimeout);
     }
 
-    private List<ObservedPreviewMessage> fetchRecentInboxMessageReferences(
-            Gmail gmail, int requestedSampleSize) throws IOException {
+    private List<ObservedPreviewMessage> fetchRecentMessageReferences(
+            Gmail gmail, String labelId, int requestedSampleSize) throws IOException {
         int sampleSize = Math.min(Math.max(requestedSampleSize, 0), RECENT_INBOX_MAX_MESSAGES);
         if (sampleSize == 0) {
             return List.of();
@@ -234,7 +278,7 @@ public class GmailPreviewReadService {
                 gmail.users()
                         .messages()
                         .list("me")
-                        .setLabelIds(List.of(INBOX_LABEL_ID))
+                        .setLabelIds(List.of(labelId))
                         .setMaxResults((long) sampleSize)
                         .setFields(RECENT_INBOX_LIST_FIELDS)
                         .execute();
@@ -253,7 +297,7 @@ public class GmailPreviewReadService {
                             messageReference.getId(),
                             Objects.requireNonNullElse(
                                     messageReference.getThreadId(), messageReference.getId()),
-                            new String[] {INBOX_LABEL_ID},
+                            new String[] {labelId},
                             null,
                             observedAt));
         }

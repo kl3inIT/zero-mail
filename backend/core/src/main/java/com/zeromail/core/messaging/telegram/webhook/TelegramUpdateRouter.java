@@ -71,16 +71,15 @@ public class TelegramUpdateRouter {
 
     private static final String CALLBACK_CANCELED_REPLY = "Đã hủy hành động này.";
 
-    private static final String CALLBACK_NOT_FOUND_REPLY =
-            "Hành động này không còn khả dụng. Hãy mở web để kiểm tra lại.";
+    private static final String CALLBACK_NOT_FOUND_REPLY = "Hành động này không còn khả dụng.";
 
     private static final String CALLBACK_CONFLICT_REPLY =
-            "Hành động này đang được xử lý hoặc đã thay đổi. Hãy mở web để kiểm tra lại.";
+            "Hành động này đang được xử lý hoặc đã thay đổi.";
 
     private static final String CALLBACK_VIP_REPLY =
             "Người nhận nằm trong safety-net. Hãy mở web để xác nhận rõ ràng trước khi gửi.";
 
-    private static final String CALLBACK_FAILED_REPLY = "Gửi thất bại. Hãy mở web để kiểm tra lại.";
+    private static final String CALLBACK_FAILED_REPLY = "Gửi thất bại.";
 
     private final TelegramUpdateProcessedJdbcRepository telegramUpdateProcessedJdbcRepository;
     private final TelegramAccountJdbcRepository telegramAccountJdbcRepository;

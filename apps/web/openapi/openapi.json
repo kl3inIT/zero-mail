@@ -13,7 +13,9 @@
   "paths": {
     "/api/tenant/triage-pause": {
       "put": {
-        "tags": ["tenant"],
+        "tags": [
+          "tenant"
+        ],
         "operationId": "setTriagePause",
         "requestBody": {
           "content": {
@@ -101,7 +103,9 @@
     },
     "/api/settings/voice/": {
       "get": {
-        "tags": ["settings-voice"],
+        "tags": [
+          "settings-voice"
+        ],
         "operationId": "getVoiceSettings",
         "responses": {
           "200": {
@@ -177,7 +181,9 @@
         }
       },
       "put": {
-        "tags": ["settings-voice"],
+        "tags": [
+          "settings-voice"
+        ],
         "operationId": "updateVoiceSettings",
         "requestBody": {
           "content": {
@@ -265,7 +271,9 @@
     },
     "/api/settings/voice": {
       "get": {
-        "tags": ["settings-voice"],
+        "tags": [
+          "settings-voice"
+        ],
         "operationId": "getVoiceSettings_1",
         "responses": {
           "200": {
@@ -341,7 +349,9 @@
         }
       },
       "put": {
-        "tags": ["settings-voice"],
+        "tags": [
+          "settings-voice"
+        ],
         "operationId": "updateVoiceSettings_1",
         "requestBody": {
           "content": {
@@ -429,7 +439,9 @@
     },
     "/api/settings/behavior": {
       "get": {
-        "tags": ["settings-behavior"],
+        "tags": [
+          "settings-behavior"
+        ],
         "operationId": "getBehaviorSettings",
         "responses": {
           "200": {
@@ -505,7 +517,9 @@
         }
       },
       "put": {
-        "tags": ["settings-behavior"],
+        "tags": [
+          "settings-behavior"
+        ],
         "operationId": "updateBehaviorSettings",
         "requestBody": {
           "content": {
@@ -593,7 +607,9 @@
     },
     "/api/settings/behavior/": {
       "get": {
-        "tags": ["settings-behavior"],
+        "tags": [
+          "settings-behavior"
+        ],
         "operationId": "getBehaviorSettings_1",
         "responses": {
           "200": {
@@ -669,7 +685,9 @@
         }
       },
       "put": {
-        "tags": ["settings-behavior"],
+        "tags": [
+          "settings-behavior"
+        ],
         "operationId": "updateBehaviorSettings_1",
         "requestBody": {
           "content": {
@@ -757,7 +775,9 @@
     },
     "/api/rules/{ruleId}": {
       "get": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "getRule",
         "parameters": [
           {
@@ -844,7 +864,9 @@
         }
       },
       "put": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "updateRule",
         "parameters": [
           {
@@ -941,7 +963,9 @@
         }
       },
       "delete": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "deleteRule",
         "parameters": [
           {
@@ -1023,7 +1047,9 @@
     },
     "/api/rules/settings/automation": {
       "get": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "getSettings",
         "responses": {
           "200": {
@@ -1099,7 +1125,9 @@
         }
       },
       "put": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "updateSettings",
         "requestBody": {
           "content": {
@@ -1187,7 +1215,9 @@
     },
     "/api/knowledge-snippets/{snippetId}": {
       "put": {
-        "tags": ["knowledge-snippets"],
+        "tags": [
+          "knowledge-snippets"
+        ],
         "operationId": "update",
         "parameters": [
           {
@@ -1284,7 +1314,9 @@
         }
       },
       "delete": {
-        "tags": ["knowledge-snippets"],
+        "tags": [
+          "knowledge-snippets"
+        ],
         "operationId": "delete",
         "parameters": [
           {
@@ -1366,7 +1398,9 @@
     },
     "/api/composer/drafts": {
       "get": {
-        "tags": ["composer-draft"],
+        "tags": [
+          "composer-draft"
+        ],
         "operationId": "find",
         "parameters": [
           {
@@ -1452,7 +1486,9 @@
         }
       },
       "put": {
-        "tags": ["composer-draft"],
+        "tags": [
+          "composer-draft"
+        ],
         "operationId": "upsert",
         "requestBody": {
           "content": {
@@ -1540,7 +1576,9 @@
     },
     "/api/byok/model": {
       "put": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "setModel",
         "requestBody": {
           "content": {
@@ -1628,7 +1666,9 @@
     },
     "/api/byok/active": {
       "put": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "activate",
         "requestBody": {
           "content": {
@@ -1716,7 +1756,9 @@
     },
     "/api/unsubscribe/senders/action": {
       "post": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "action",
         "requestBody": {
           "content": {
@@ -1804,7 +1846,9 @@
     },
     "/api/unsubscribe/campaigns/execute": {
       "post": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "execute",
         "requestBody": {
           "content": {
@@ -1892,7 +1936,9 @@
     },
     "/api/triage/sender-safety-net/{senderEmail}/opt-in": {
       "post": {
-        "tags": ["triage"],
+        "tags": [
+          "triage"
+        ],
         "operationId": "optIn",
         "parameters": [
           {
@@ -1980,7 +2026,9 @@
     },
     "/api/triage/audit/{auditId}/undo": {
       "post": {
-        "tags": ["triage"],
+        "tags": [
+          "triage"
+        ],
         "operationId": "undo",
         "parameters": [
           {
@@ -2069,7 +2117,9 @@
     },
     "/api/threads/{gmailThreadId}/resolve": {
       "post": {
-        "tags": ["thread-draft"],
+        "tags": [
+          "thread-draft"
+        ],
         "operationId": "resolve",
         "parameters": [
           {
@@ -2150,7 +2200,9 @@
     },
     "/api/threads/{gmailThreadId}/draft": {
       "post": {
-        "tags": ["thread-draft"],
+        "tags": [
+          "thread-draft"
+        ],
         "operationId": "generateDraft",
         "parameters": [
           {
@@ -2238,7 +2290,9 @@
     },
     "/api/threads/backfill": {
       "post": {
-        "tags": ["thread-inbox"],
+        "tags": [
+          "thread-inbox"
+        ],
         "operationId": "backfill",
         "parameters": [
           {
@@ -2328,7 +2382,9 @@
     },
     "/api/tenant/disconnect": {
       "post": {
-        "tags": ["disconnect-controller"],
+        "tags": [
+          "disconnect-controller"
+        ],
         "operationId": "disconnect",
         "responses": {
           "200": {
@@ -2397,9 +2453,101 @@
         }
       }
     },
+    "/api/support/feedback": {
+      "post": {
+        "tags": [
+          "support"
+        ],
+        "operationId": "submitFeedback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackSubmissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackSubmissionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/voice/generate-from-sent": {
       "post": {
-        "tags": ["settings-voice"],
+        "tags": [
+          "settings-voice"
+        ],
         "operationId": "generateFromSent",
         "requestBody": {
           "content": {
@@ -2486,7 +2634,9 @@
     },
     "/api/rules": {
       "get": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "listRules",
         "responses": {
           "200": {
@@ -2562,7 +2712,9 @@
         }
       },
       "post": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "createRule",
         "requestBody": {
           "content": {
@@ -2650,7 +2802,9 @@
     },
     "/api/rules/{ruleId}/preview": {
       "post": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "previewSavedRule",
         "parameters": [
           {
@@ -2749,7 +2903,9 @@
     },
     "/api/rules/test/message": {
       "post": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "testSingleMessage",
         "requestBody": {
           "content": {
@@ -2837,7 +2993,9 @@
     },
     "/api/rules/templates/{templateKey}/materialize": {
       "post": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "materializeTemplate",
         "parameters": [
           {
@@ -2925,7 +3083,9 @@
     },
     "/api/rules/preview": {
       "post": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "previewDraftRule",
         "requestBody": {
           "content": {
@@ -3013,7 +3173,9 @@
     },
     "/api/rules/preview-enabled": {
       "post": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "previewAllEnabledRules",
         "requestBody": {
           "content": {
@@ -3101,7 +3263,9 @@
     },
     "/api/rules/preview-custom": {
       "post": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "previewCustomMail",
         "requestBody": {
           "content": {
@@ -3189,7 +3353,9 @@
     },
     "/api/rules/compile": {
       "post": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "compile",
         "requestBody": {
           "content": {
@@ -3277,7 +3443,9 @@
     },
     "/api/plan-upgrades/webhooks/sepay": {
       "post": {
-        "tags": ["plan-upgrade-webhook-controller"],
+        "tags": [
+          "plan-upgrade-webhook-controller"
+        ],
         "operationId": "sepay",
         "requestBody": {
           "content": {
@@ -3364,7 +3532,9 @@
     },
     "/api/plan-upgrades/webhooks/lemon-squeezy": {
       "post": {
-        "tags": ["plan-upgrade-webhook-controller"],
+        "tags": [
+          "plan-upgrade-webhook-controller"
+        ],
         "operationId": "lemonSqueezy",
         "parameters": [
           {
@@ -3454,7 +3624,9 @@
     },
     "/api/plan-upgrades/plans/{planCode}/checkout": {
       "post": {
-        "tags": ["plan-upgrades"],
+        "tags": [
+          "plan-upgrades"
+        ],
         "operationId": "legacyLemonSqueezyCheckout",
         "parameters": [
           {
@@ -3542,7 +3714,9 @@
     },
     "/api/plan-upgrades/checkout": {
       "post": {
-        "tags": ["plan-upgrades"],
+        "tags": [
+          "plan-upgrades"
+        ],
         "operationId": "checkout",
         "requestBody": {
           "content": {
@@ -3630,7 +3804,9 @@
     },
     "/api/onboarding/select-template": {
       "post": {
-        "tags": ["onboarding-controller"],
+        "tags": [
+          "onboarding-controller"
+        ],
         "operationId": "selectTemplate",
         "requestBody": {
           "content": {
@@ -3711,7 +3887,9 @@
     },
     "/api/onboarding/complete": {
       "post": {
-        "tags": ["onboarding-controller"],
+        "tags": [
+          "onboarding-controller"
+        ],
         "operationId": "complete",
         "responses": {
           "200": {
@@ -3782,7 +3960,9 @@
     },
     "/api/knowledge-snippets/": {
       "get": {
-        "tags": ["knowledge-snippets"],
+        "tags": [
+          "knowledge-snippets"
+        ],
         "operationId": "list",
         "responses": {
           "200": {
@@ -3858,7 +4038,9 @@
         }
       },
       "post": {
-        "tags": ["knowledge-snippets"],
+        "tags": [
+          "knowledge-snippets"
+        ],
         "operationId": "create",
         "requestBody": {
           "content": {
@@ -3946,7 +4128,9 @@
     },
     "/api/knowledge-snippets": {
       "get": {
-        "tags": ["knowledge-snippets"],
+        "tags": [
+          "knowledge-snippets"
+        ],
         "operationId": "list_1",
         "responses": {
           "200": {
@@ -4022,7 +4206,9 @@
         }
       },
       "post": {
-        "tags": ["knowledge-snippets"],
+        "tags": [
+          "knowledge-snippets"
+        ],
         "operationId": "create_1",
         "requestBody": {
           "content": {
@@ -4108,9 +4294,91 @@
         }
       }
     },
+    "/api/integrations/telegram/pairing": {
+      "post": {
+        "tags": [
+          "telegram-integration-controller"
+        ],
+        "operationId": "pairing",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramPairingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/gmail/inbox/{gmailMessageId}/read": {
       "post": {
-        "tags": ["gmail-inbox"],
+        "tags": [
+          "gmail-inbox"
+        ],
         "operationId": "markRead",
         "parameters": [
           {
@@ -4191,7 +4459,9 @@
     },
     "/api/cleanup/suppression": {
       "get": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "list_2",
         "responses": {
           "200": {
@@ -4267,7 +4537,9 @@
         }
       },
       "post": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "add",
         "requestBody": {
           "content": {
@@ -4355,7 +4627,9 @@
     },
     "/api/chat": {
       "post": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "operationId": "streamChat",
         "requestBody": {
           "content": {
@@ -4443,7 +4717,9 @@
     },
     "/api/chat/{chatId}/confirm": {
       "post": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "operationId": "confirm",
         "parameters": [
           {
@@ -4542,7 +4818,9 @@
     },
     "/api/chat/{chatId}/cancel": {
       "post": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "operationId": "cancel",
         "parameters": [
           {
@@ -4641,7 +4919,9 @@
     },
     "/api/byok/test-connection": {
       "post": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "testConnection",
         "responses": {
           "200": {
@@ -4719,7 +4999,9 @@
     },
     "/api/byok/": {
       "get": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "get",
         "responses": {
           "200": {
@@ -4795,7 +5077,9 @@
         }
       },
       "post": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "save",
         "requestBody": {
           "content": {
@@ -4881,7 +5165,9 @@
         }
       },
       "delete": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "delete_1",
         "responses": {
           "204": {
@@ -4952,7 +5238,9 @@
     },
     "/api/byok": {
       "get": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "get_1",
         "responses": {
           "200": {
@@ -5028,7 +5316,9 @@
         }
       },
       "post": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "save_1",
         "requestBody": {
           "content": {
@@ -5114,7 +5404,9 @@
         }
       },
       "delete": {
-        "tags": ["byok"],
+        "tags": [
+          "byok"
+        ],
         "operationId": "delete_2",
         "responses": {
           "204": {
@@ -5185,7 +5477,9 @@
     },
     "/api/rules/{ruleId}/enabled": {
       "patch": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "updateEnabled",
         "parameters": [
           {
@@ -5284,7 +5578,9 @@
     },
     "/api/me/notifications": {
       "get": {
-        "tags": ["notifications"],
+        "tags": [
+          "notifications"
+        ],
         "operationId": "get_2",
         "responses": {
           "200": {
@@ -5360,7 +5656,9 @@
         }
       },
       "patch": {
-        "tags": ["notifications"],
+        "tags": [
+          "notifications"
+        ],
         "operationId": "update_1",
         "requestBody": {
           "content": {
@@ -5448,7 +5746,9 @@
     },
     "/api/me/language": {
       "patch": {
-        "tags": ["me-controller"],
+        "tags": [
+          "me-controller"
+        ],
         "operationId": "updateLanguage",
         "requestBody": {
           "content": {
@@ -5536,7 +5836,9 @@
     },
     "/api/unsubscribe/stats/timeline": {
       "get": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "timeline",
         "parameters": [
           {
@@ -5654,7 +5956,9 @@
     },
     "/api/unsubscribe/stats/messages": {
       "get": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "messages",
         "parameters": [
           {
@@ -5792,7 +6096,9 @@
     },
     "/api/unsubscribe/stats/messages/{gmailMessageId}/body": {
       "get": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "messageBody",
         "parameters": [
           {
@@ -5882,7 +6188,9 @@
     },
     "/api/unsubscribe/candidates": {
       "get": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "listCandidates",
         "parameters": [
           {
@@ -5996,7 +6304,9 @@
     },
     "/api/triage/sender-safety-net": {
       "get": {
-        "tags": ["triage"],
+        "tags": [
+          "triage"
+        ],
         "operationId": "listProtectedSenders",
         "responses": {
           "200": {
@@ -6074,7 +6384,9 @@
     },
     "/api/triage/audit": {
       "get": {
-        "tags": ["triage"],
+        "tags": [
+          "triage"
+        ],
         "operationId": "list_3",
         "parameters": [
           {
@@ -6198,7 +6510,9 @@
     },
     "/api/threads": {
       "get": {
-        "tags": ["thread-inbox"],
+        "tags": [
+          "thread-inbox"
+        ],
         "operationId": "list_4",
         "parameters": [
           {
@@ -6224,7 +6538,7 @@
             "schema": {
               "type": "integer",
               "format": "int32",
-              "default": 50
+              "default": 20
             }
           },
           {
@@ -6313,7 +6627,9 @@
     },
     "/api/threads/to-reply-count": {
       "get": {
-        "tags": ["thread-inbox"],
+        "tags": [
+          "thread-inbox"
+        ],
         "operationId": "toReplyCount",
         "responses": {
           "200": {
@@ -6391,7 +6707,9 @@
     },
     "/api/threads/counts": {
       "get": {
-        "tags": ["thread-inbox"],
+        "tags": [
+          "thread-inbox"
+        ],
         "operationId": "counts",
         "responses": {
           "200": {
@@ -6469,7 +6787,9 @@
     },
     "/api/tenant/connect-gmail": {
       "get": {
-        "tags": ["connect-gmail-controller"],
+        "tags": [
+          "connect-gmail-controller"
+        ],
         "operationId": "connect",
         "responses": {
           "200": {
@@ -6540,7 +6860,9 @@
     },
     "/api/settings/catalog": {
       "get": {
-        "tags": ["settings-catalog"],
+        "tags": [
+          "settings-catalog"
+        ],
         "operationId": "getCatalog",
         "parameters": [
           {
@@ -6628,7 +6950,9 @@
     },
     "/api/settings/catalog/": {
       "get": {
-        "tags": ["settings-catalog"],
+        "tags": [
+          "settings-catalog"
+        ],
         "operationId": "getCatalog_1",
         "parameters": [
           {
@@ -6716,7 +7040,9 @@
     },
     "/api/settings/ai/cost/": {
       "get": {
-        "tags": ["settings-ai-cost"],
+        "tags": [
+          "settings-ai-cost"
+        ],
         "operationId": "cost",
         "parameters": [
           {
@@ -6805,7 +7131,9 @@
     },
     "/api/settings/ai/cost": {
       "get": {
-        "tags": ["settings-ai-cost"],
+        "tags": [
+          "settings-ai-cost"
+        ],
         "operationId": "cost_1",
         "parameters": [
           {
@@ -6894,7 +7222,9 @@
     },
     "/api/rules/test/messages": {
       "get": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "listTestMessages",
         "parameters": [
           {
@@ -6983,7 +7313,9 @@
     },
     "/api/rules/templates": {
       "get": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "listTemplates",
         "responses": {
           "200": {
@@ -7064,7 +7396,9 @@
     },
     "/api/rules/catalog/examples": {
       "get": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "examples",
         "parameters": [
           {
@@ -7153,7 +7487,9 @@
     },
     "/api/rules/catalog/actions": {
       "get": {
-        "tags": ["rules"],
+        "tags": [
+          "rules"
+        ],
         "operationId": "actions",
         "parameters": [
           {
@@ -7242,7 +7578,9 @@
     },
     "/api/plan-upgrades/plans": {
       "get": {
-        "tags": ["plan-upgrades"],
+        "tags": [
+          "plan-upgrades"
+        ],
         "operationId": "plans",
         "responses": {
           "200": {
@@ -7320,7 +7658,9 @@
     },
     "/api/plan-upgrades/bank-transfer-intents/{intentId}": {
       "get": {
-        "tags": ["plan-upgrades"],
+        "tags": [
+          "plan-upgrades"
+        ],
         "operationId": "bankTransferIntent",
         "parameters": [
           {
@@ -7409,7 +7749,9 @@
     },
     "/api/me": {
       "get": {
-        "tags": ["me-controller"],
+        "tags": [
+          "me-controller"
+        ],
         "operationId": "me",
         "responses": {
           "200": {
@@ -7485,9 +7827,91 @@
         }
       }
     },
+    "/api/integrations/telegram/status": {
+      "get": {
+        "tags": [
+          "telegram-integration-controller"
+        ],
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/gmail/inbox": {
       "get": {
-        "tags": ["gmail-inbox"],
+        "tags": [
+          "gmail-inbox"
+        ],
         "operationId": "list_5",
         "parameters": [
           {
@@ -7585,7 +8009,9 @@
     },
     "/api/gmail/inbox/{gmailMessageId}": {
       "get": {
-        "tags": ["gmail-inbox"],
+        "tags": [
+          "gmail-inbox"
+        ],
         "operationId": "detail",
         "parameters": [
           {
@@ -7673,7 +8099,9 @@
     },
     "/api/gmail/inbox/threads/{gmailThreadId}": {
       "get": {
-        "tags": ["gmail-inbox"],
+        "tags": [
+          "gmail-inbox"
+        ],
         "operationId": "threadDetail",
         "parameters": [
           {
@@ -7761,7 +8189,9 @@
     },
     "/api/gmail/inbox/drafts/{gmailDraftId}": {
       "get": {
-        "tags": ["gmail-inbox"],
+        "tags": [
+          "gmail-inbox"
+        ],
         "operationId": "draftDetail",
         "parameters": [
           {
@@ -7849,8 +8279,10 @@
     },
     "/api/gmail/connection/status": {
       "get": {
-        "tags": ["gmail"],
-        "operationId": "status",
+        "tags": [
+          "gmail"
+        ],
+        "operationId": "status_1",
         "responses": {
           "200": {
             "description": "OK",
@@ -7927,7 +8359,9 @@
     },
     "/api/credits/ledger": {
       "get": {
-        "tags": ["credits"],
+        "tags": [
+          "credits"
+        ],
         "operationId": "ledger",
         "parameters": [
           {
@@ -8025,7 +8459,9 @@
     },
     "/api/credits/balance": {
       "get": {
-        "tags": ["credits"],
+        "tags": [
+          "credits"
+        ],
         "operationId": "balance",
         "responses": {
           "200": {
@@ -8103,7 +8539,9 @@
     },
     "/api/chat/{chatId}": {
       "get": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "operationId": "get_3",
         "parameters": [
           {
@@ -8190,7 +8628,9 @@
         }
       },
       "delete": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "operationId": "delete_3",
         "parameters": [
           {
@@ -8272,7 +8712,9 @@
     },
     "/api/chat/history": {
       "get": {
-        "tags": ["Chat"],
+        "tags": [
+          "Chat"
+        ],
         "operationId": "list_6",
         "parameters": [
           {
@@ -8372,7 +8814,9 @@
     },
     "/api/analytics/summary": {
       "get": {
-        "tags": ["analytics"],
+        "tags": [
+          "analytics"
+        ],
         "operationId": "summary",
         "parameters": [
           {
@@ -8460,7 +8904,9 @@
     },
     "/api/triage/sender-safety-net/{id}": {
       "delete": {
-        "tags": ["triage"],
+        "tags": [
+          "triage"
+        ],
         "operationId": "delete_4",
         "parameters": [
           {
@@ -8542,7 +8988,9 @@
     },
     "/api/me/account": {
       "delete": {
-        "tags": ["account-deletion-controller"],
+        "tags": [
+          "account-deletion-controller"
+        ],
         "operationId": "deleteAccount",
         "responses": {
           "200": {
@@ -8611,9 +9059,91 @@
         }
       }
     },
+    "/api/integrations/telegram/connection": {
+      "delete": {
+        "tags": [
+          "telegram-disconnect-controller"
+        ],
+        "operationId": "disconnect_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramDisconnectResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/composer/drafts/{draftId}": {
       "delete": {
-        "tags": ["composer-draft"],
+        "tags": [
+          "composer-draft"
+        ],
         "operationId": "delete_5",
         "parameters": [
           {
@@ -8694,7 +9224,9 @@
     },
     "/api/cleanup/suppression/{suppressionId}": {
       "delete": {
-        "tags": ["cleanup"],
+        "tags": [
+          "cleanup"
+        ],
         "operationId": "remove",
         "parameters": [
           {
@@ -8784,7 +9316,9 @@
             "type": "boolean"
           }
         },
-        "required": ["paused"]
+        "required": [
+          "paused"
+        ]
       },
       "TriagePauseResponse": {
         "type": "object",
@@ -8793,7 +9327,9 @@
             "type": "boolean"
           }
         },
-        "required": ["paused"]
+        "required": [
+          "paused"
+        ]
       },
       "VoiceSettingsUpdateRequest": {
         "type": "object",
@@ -8815,7 +9351,10 @@
           },
           "aiOutputLanguage": {
             "type": "string",
-            "enum": ["vi", "en"],
+            "enum": [
+              "vi",
+              "en"
+            ],
             "pattern": "^(vi|en)$"
           }
         }
@@ -8834,10 +9373,18 @@
           },
           "aiOutputLanguage": {
             "type": "string",
-            "enum": ["vi", "en"]
+            "enum": [
+              "vi",
+              "en"
+            ]
           }
         },
-        "required": ["aiOutputLanguage", "emailSignature", "personalInstructions", "writingStyle"]
+        "required": [
+          "aiOutputLanguage",
+          "emailSignature",
+          "personalInstructions",
+          "writingStyle"
+        ]
       },
       "BehaviorSettingsUpdateRequest": {
         "type": "object",
@@ -8847,7 +9394,11 @@
           },
           "draftConfidence": {
             "type": "string",
-            "enum": ["LOW", "MEDIUM", "HIGH"],
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
             "pattern": "^(LOW|MEDIUM|HIGH)$"
           },
           "sensitiveDataProtection": {
@@ -8863,13 +9414,21 @@
           },
           "draftConfidence": {
             "type": "string",
-            "enum": ["LOW", "MEDIUM", "HIGH"]
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
           },
           "sensitiveDataProtection": {
             "type": "boolean"
           }
         },
-        "required": ["autoDraftReplies", "draftConfidence", "sensitiveDataProtection"]
+        "required": [
+          "autoDraftReplies",
+          "draftConfidence",
+          "sensitiveDataProtection"
+        ]
       },
       "CompiledPayloadRequest": {
         "type": "object",
@@ -8891,7 +9450,13 @@
             "type": "string"
           }
         },
-        "required": ["actionIntents", "matcherAst", "schemaVersion", "sourceLanguage", "status"]
+        "required": [
+          "actionIntents",
+          "matcherAst",
+          "schemaVersion",
+          "sourceLanguage",
+          "status"
+        ]
       },
       "RuleUpdateRequest": {
         "type": "object",
@@ -8914,7 +9479,12 @@
             "format": "int32"
           }
         },
-        "required": ["compiled", "displayName", "entityVersion", "sourceText"]
+        "required": [
+          "compiled",
+          "displayName",
+          "entityVersion",
+          "sourceText"
+        ]
       },
       "RuleResponse": {
         "type": "object",
@@ -8953,18 +9523,30 @@
             "format": "int32"
           },
           "lastPreviewedEntityVersion": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int32"
           },
           "lastPreviewedAt": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "templateKey": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "templateVersion": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int32"
           },
           "customized": {
@@ -8996,7 +9578,9 @@
             "type": "boolean"
           }
         },
-        "required": ["autoSendRulesEnabled"]
+        "required": [
+          "autoSendRulesEnabled"
+        ]
       },
       "RuleAutomationSettingsResponse": {
         "type": "object",
@@ -9005,7 +9589,9 @@
             "type": "boolean"
           }
         },
-        "required": ["autoSendRulesEnabled"]
+        "required": [
+          "autoSendRulesEnabled"
+        ]
       },
       "KnowledgeSnippetRequest": {
         "type": "object",
@@ -9021,7 +9607,10 @@
             "minLength": 0
           }
         },
-        "required": ["content", "title"]
+        "required": [
+          "content",
+          "title"
+        ]
       },
       "KnowledgeSnippetResponse": {
         "type": "object",
@@ -9041,7 +9630,12 @@
             "format": "date-time"
           }
         },
-        "required": ["content", "id", "title", "updatedAt"]
+        "required": [
+          "content",
+          "id",
+          "title",
+          "updatedAt"
+        ]
       },
       "ComposerDraftUpsertRequestDto": {
         "type": "object",
@@ -9074,7 +9668,11 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["reply", "reply_all", "forward"],
+            "enum": [
+              "reply",
+              "reply_all",
+              "forward"
+            ],
             "minLength": 1
           },
           "toAddresses": {
@@ -9103,7 +9701,10 @@
             "minLength": 0
           }
         },
-        "required": ["gmailThreadId", "mode"]
+        "required": [
+          "gmailThreadId",
+          "mode"
+        ]
       },
       "ComposerDraftResponseDto": {
         "type": "object",
@@ -9158,14 +9759,21 @@
             "minLength": 0
           }
         },
-        "required": ["modelId"]
+        "required": [
+          "modelId"
+        ]
       },
       "ByokResponse": {
         "type": "object",
         "properties": {
           "provider": {
             "type": "string",
-            "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK"]
+            "enum": [
+              "OPENAI",
+              "ANTHROPIC",
+              "GOOGLE",
+              "DEEPSEEK"
+            ]
           },
           "baseUrl": {
             "type": "string"
@@ -9181,14 +9789,25 @@
           },
           "lastTestResult": {
             "type": "string",
-            "enum": ["OK", "INVALID_KEY", "RATE_LIMITED", "NETWORK_ERROR", "TIMEOUT"]
+            "enum": [
+              "OK",
+              "INVALID_KEY",
+              "RATE_LIMITED",
+              "NETWORK_ERROR",
+              "TIMEOUT"
+            ]
           },
           "lastTestedAt": {
             "type": "string",
             "format": "date-time"
           }
         },
-        "required": ["active", "baseUrl", "lastFourChars", "provider"]
+        "required": [
+          "active",
+          "baseUrl",
+          "lastFourChars",
+          "provider"
+        ]
       },
       "ByokActivateRequest": {
         "type": "object",
@@ -9197,7 +9816,9 @@
             "type": "boolean"
           }
         },
-        "required": ["active"]
+        "required": [
+          "active"
+        ]
       },
       "CleanupSenderActionRequest": {
         "type": "object",
@@ -9230,7 +9851,10 @@
             "minLength": 0
           }
         },
-        "required": ["action", "senderEmails"]
+        "required": [
+          "action",
+          "senderEmails"
+        ]
       },
       "CleanupSenderActionResponse": {
         "type": "object",
@@ -9263,7 +9887,9 @@
             "minItems": 0
           }
         },
-        "required": ["senderEmails"]
+        "required": [
+          "senderEmails"
+        ]
       },
       "CampaignExecuteResponse": {
         "type": "object",
@@ -9293,7 +9919,10 @@
           },
           "patternKind": {
             "type": "string",
-            "enum": ["EMAIL", "DOMAIN"]
+            "enum": [
+              "EMAIL",
+              "DOMAIN"
+            ]
           },
           "createdByUser": {
             "type": "boolean"
@@ -9334,7 +9963,11 @@
             "format": "date-time"
           }
         },
-        "required": ["auditId", "decision", "revertedAt"]
+        "required": [
+          "auditId",
+          "decision",
+          "revertedAt"
+        ]
       },
       "ThreadDraftResponse": {
         "type": "object",
@@ -9352,7 +9985,12 @@
             "type": "string"
           }
         },
-        "required": ["draftId", "gmailThreadId", "openInGmailUrl", "status"]
+        "required": [
+          "draftId",
+          "gmailThreadId",
+          "openInGmailUrl",
+          "status"
+        ]
       },
       "NeedsReplyBackfillResponse": {
         "type": "object",
@@ -9370,7 +10008,58 @@
             "format": "int32"
           }
         },
-        "required": ["threadsClassified", "threadsFailed", "threadsScanned"]
+        "required": [
+          "threadsClassified",
+          "threadsFailed",
+          "threadsScanned"
+        ]
+      },
+      "FeedbackSubmissionRequest": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "BUG_REPORT",
+              "FEATURE_REQUEST",
+              "GENERAL"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 0
+          },
+          "contactEmail": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "contactEmail",
+          "message",
+          "subject",
+          "type"
+        ]
+      },
+      "FeedbackSubmissionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
       },
       "GenerateFromSentRequest": {
         "type": "object",
@@ -9391,7 +10080,9 @@
             "type": "string"
           }
         },
-        "required": ["generatedStyle"]
+        "required": [
+          "generatedStyle"
+        ]
       },
       "RuleCreateRequest": {
         "type": "object",
@@ -9410,7 +10101,11 @@
             "$ref": "#/components/schemas/CompiledPayloadRequest"
           }
         },
-        "required": ["compiled", "displayName", "sourceText"]
+        "required": [
+          "compiled",
+          "displayName",
+          "sourceText"
+        ]
       },
       "RulePreviewRequest": {
         "type": "object",
@@ -9447,7 +10142,12 @@
             }
           }
         },
-        "required": ["actionTypeId", "contributingRuleIds", "evidenceIds", "safeLabel"]
+        "required": [
+          "actionTypeId",
+          "contributingRuleIds",
+          "evidenceIds",
+          "safeLabel"
+        ]
       },
       "ConflictChipResponse": {
         "type": "object",
@@ -9469,7 +10169,11 @@
             }
           }
         },
-        "required": ["conflictTypeId", "contributingRuleIds", "metadata"]
+        "required": [
+          "conflictTypeId",
+          "contributingRuleIds",
+          "metadata"
+        ]
       },
       "EvidenceChipResponse": {
         "type": "object",
@@ -9481,7 +10185,10 @@
             "type": "string"
           }
         },
-        "required": ["matcherNodeId", "reasonKey"]
+        "required": [
+          "matcherNodeId",
+          "reasonKey"
+        ]
       },
       "ImpactSummaryResponse": {
         "type": "object",
@@ -9517,7 +10224,10 @@
             "type": "boolean"
           },
           "noWriteNoticeKey": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -9618,7 +10328,11 @@
             "type": "boolean"
           }
         },
-        "required": ["impactSummary", "rows", "savedRuleMarkedPreviewed"]
+        "required": [
+          "impactSummary",
+          "rows",
+          "savedRuleMarkedPreviewed"
+        ]
       },
       "RuleTestMessageRequest": {
         "type": "object",
@@ -9632,7 +10346,10 @@
             "minLength": 1
           }
         },
-        "required": ["gmailMessageId", "gmailThreadId"]
+        "required": [
+          "gmailMessageId",
+          "gmailThreadId"
+        ]
       },
       "RuleTemplateMaterializationResponse": {
         "type": "object",
@@ -9680,7 +10397,10 @@
             "type": "string"
           }
         },
-        "required": ["reason", "templateKey"]
+        "required": [
+          "reason",
+          "templateKey"
+        ]
       },
       "RuleDraftPreviewRequest": {
         "type": "object",
@@ -9696,7 +10416,9 @@
             "type": "boolean"
           }
         },
-        "required": ["compiled"]
+        "required": [
+          "compiled"
+        ]
       },
       "RuleEnabledPreviewRequest": {
         "type": "object",
@@ -9793,7 +10515,9 @@
             }
           }
         },
-        "required": ["entries"]
+        "required": [
+          "entries"
+        ]
       },
       "RuleCompileRequest": {
         "type": "object",
@@ -9824,7 +10548,9 @@
             "minLength": 0
           }
         },
-        "required": ["sourceText"]
+        "required": [
+          "sourceText"
+        ]
       },
       "ClarificationResponse": {
         "type": "object",
@@ -9836,7 +10562,10 @@
             "type": "string"
           }
         },
-        "required": ["language", "question"]
+        "required": [
+          "language",
+          "question"
+        ]
       },
       "CompiledPayloadResponse": {
         "type": "object",
@@ -9876,7 +10605,9 @@
             "type": "string"
           }
         },
-        "required": ["reason"]
+        "required": [
+          "reason"
+        ]
       },
       "RuleCompileResponse": {
         "type": "object",
@@ -9894,7 +10625,9 @@
             "$ref": "#/components/schemas/InvalidCompileResponse"
           }
         },
-        "required": ["status"]
+        "required": [
+          "status"
+        ]
       },
       "WebhookAcknowledgmentResponse": {
         "type": "object",
@@ -9905,7 +10638,9 @@
             "description": "Whether the webhook was accepted"
           }
         },
-        "required": ["success"]
+        "required": [
+          "success"
+        ]
       },
       "ContentDisposition": {
         "type": "object",
@@ -9925,10 +10660,10 @@
           "attachment": {
             "type": "boolean"
           },
-          "formData": {
+          "inline": {
             "type": "boolean"
           },
-          "inline": {
+          "formData": {
             "type": "boolean"
           }
         }
@@ -10028,6 +10763,32 @@
             "type": "integer",
             "format": "int64"
           },
+          "connection": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ifModifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/MediaType"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpRange"
+            }
+          },
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
           "contentDisposition": {
             "$ref": "#/components/schemas/ContentDisposition"
           },
@@ -10037,67 +10798,10 @@
               "type": "string"
             }
           },
-          "range": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpRange"
-            }
-          },
-          "allow": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpMethod"
-            },
-            "uniqueItems": true
-          },
-          "origin": {
-            "type": "string"
-          },
           "ifMatch": {
             "type": "array",
             "items": {
               "type": "string"
-            }
-          },
-          "ifNoneMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
-          "cacheControl": {
-            "type": "string"
-          },
-          "contentLanguage": {
-            "type": "string"
-          },
-          "etag": {
-            "type": "string"
-          },
-          "connection": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accept": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
-          },
-          "acceptPatch": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
             }
           },
           "acceptLanguage": {
@@ -10119,7 +10823,65 @@
             "type": "string",
             "writeOnly": true
           },
+          "acceptPatch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "contentLanguage": {
+            "type": "string"
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
           "acceptLanguageAsLocales": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlMaxAge": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ifNoneMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allow": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            },
+            "uniqueItems": true
+          },
+          "cacheControl": {
+            "type": "string"
+          },
+          "accept": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "etag": {
+            "type": "string"
+          },
+          "upgrade": {
+            "type": "string"
+          },
+          "pragma": {
+            "type": "string"
+          },
+          "vary": {
             "type": "array",
             "items": {
               "type": "string"
@@ -10143,17 +10905,13 @@
           "accessControlAllowOrigin": {
             "type": "string"
           },
-          "accessControlExposeHeaders": {
+          "accessControlRequestHeaders": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
-          "accessControlMaxAge": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "accessControlRequestHeaders": {
+          "accessControlExposeHeaders": {
             "type": "array",
             "items": {
               "type": "string"
@@ -10161,29 +10919,6 @@
           },
           "accessControlRequestMethod": {
             "$ref": "#/components/schemas/HttpMethod"
-          },
-          "expires": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "pragma": {
-            "type": "string"
-          },
-          "upgrade": {
-            "type": "string"
-          },
-          "vary": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifModifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "contentType": {
-            "$ref": "#/components/schemas/MediaType"
           }
         }
       },
@@ -10208,11 +10943,8 @@
             "type": "number",
             "format": "double"
           },
-          "concrete": {
-            "type": "boolean"
-          },
-          "wildcardType": {
-            "type": "boolean"
+          "charset": {
+            "type": "string"
           },
           "wildcardSubtype": {
             "type": "boolean"
@@ -10220,8 +10952,11 @@
           "subtypeSuffix": {
             "type": "string"
           },
-          "charset": {
-            "type": "string"
+          "wildcardType": {
+            "type": "boolean"
+          },
+          "concrete": {
+            "type": "boolean"
           }
         }
       },
@@ -10247,7 +10982,12 @@
           },
           "status": {
             "type": "string",
-            "enum": ["PENDING", "PAID", "EXPIRED", "VOIDED"]
+            "enum": [
+              "PENDING",
+              "PAID",
+              "EXPIRED",
+              "VOIDED"
+            ]
           },
           "expiresAt": {
             "type": "string",
@@ -10257,7 +10997,10 @@
             "type": "string"
           },
           "bankName": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "accountNumber": {
             "type": "string"
@@ -10293,12 +11036,18 @@
           "paymentMethod": {
             "type": "string",
             "description": "Payment method used for this checkout",
-            "enum": ["LEMON_SQUEEZY", "SEPAY_BANK_TRANSFER"]
+            "enum": [
+              "LEMON_SQUEEZY",
+              "SEPAY_BANK_TRANSFER"
+            ]
           },
           "status": {
             "type": "string",
             "description": "Client action state",
-            "enum": ["REDIRECT_REQUIRED", "WAITING_FOR_TRANSFER"]
+            "enum": [
+              "REDIRECT_REQUIRED",
+              "WAITING_FOR_TRANSFER"
+            ]
           },
           "checkoutUrl": {
             "type": "string",
@@ -10309,7 +11058,10 @@
             "description": "Bank transfer instructions when paymentMethod is SEPAY_BANK_TRANSFER"
           }
         },
-        "required": ["paymentMethod", "status"]
+        "required": [
+          "paymentMethod",
+          "status"
+        ]
       },
       "BillingCheckoutRequest": {
         "type": "object",
@@ -10317,29 +11069,59 @@
           "planCode": {
             "type": "string",
             "description": "Selected billing plan code",
-            "enum": ["PLUS", "PRO"],
+            "enum": [
+              "PLUS",
+              "PRO"
+            ],
             "minLength": 1
           },
           "paymentMethod": {
             "type": "string",
             "description": "Payment method for this checkout",
-            "enum": ["LEMON_SQUEEZY", "SEPAY_BANK_TRANSFER"],
+            "enum": [
+              "LEMON_SQUEEZY",
+              "SEPAY_BANK_TRANSFER"
+            ],
             "minLength": 1
           }
         },
-        "required": ["paymentMethod", "planCode"]
+        "required": [
+          "paymentMethod",
+          "planCode"
+        ]
       },
       "SelectTemplateRequest": {
         "type": "object",
         "properties": {
           "templateKey": {
             "type": "string",
-            "enum": ["archive-receipts", "label-newsletters", "pin-calendar"],
+            "enum": [
+              "archive-receipts",
+              "label-newsletters",
+              "pin-calendar"
+            ],
             "minLength": 1,
             "pattern": "archive-receipts|label-newsletters|pin-calendar"
           }
         },
-        "required": ["templateKey"]
+        "required": [
+          "templateKey"
+        ]
+      },
+      "TelegramPairingResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "deeplink": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "SuppressionAddRequest": {
         "type": "object",
@@ -10350,7 +11132,9 @@
             "minLength": 0
           }
         },
-        "required": ["senderEmailOrDomain"]
+        "required": [
+          "senderEmailOrDomain"
+        ]
       },
       "SuppressionEntryResponse": {
         "type": "object",
@@ -10389,7 +11173,10 @@
             "type": "string"
           }
         },
-        "required": ["chatId", "userText"]
+        "required": [
+          "chatId",
+          "userText"
+        ]
       },
       "SseEmitter": {
         "type": "object",
@@ -10415,7 +11202,10 @@
             "type": "boolean"
           }
         },
-        "required": ["toolCallId", "vipAcknowledged"]
+        "required": [
+          "toolCallId",
+          "vipAcknowledged"
+        ]
       },
       "ConfirmActionResponseDto": {
         "type": "object",
@@ -10424,14 +11214,22 @@
             "type": "string"
           }
         },
-        "required": ["state"]
+        "required": [
+          "state"
+        ]
       },
       "ByokTestConnectionResponse": {
         "type": "object",
         "properties": {
           "result": {
             "type": "string",
-            "enum": ["OK", "INVALID_KEY", "RATE_LIMITED", "NETWORK_ERROR", "TIMEOUT"]
+            "enum": [
+              "OK",
+              "INVALID_KEY",
+              "RATE_LIMITED",
+              "NETWORK_ERROR",
+              "TIMEOUT"
+            ]
           },
           "models": {
             "type": "array",
@@ -10440,14 +11238,21 @@
             }
           }
         },
-        "required": ["result"]
+        "required": [
+          "result"
+        ]
       },
       "ByokSaveRequest": {
         "type": "object",
         "properties": {
           "provider": {
             "type": "string",
-            "enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "DEEPSEEK"],
+            "enum": [
+              "OPENAI",
+              "ANTHROPIC",
+              "GOOGLE",
+              "DEEPSEEK"
+            ],
             "minLength": 1,
             "pattern": "^(OPENAI|ANTHROPIC|GOOGLE|DEEPSEEK|OPENROUTER|ROUTER_9R)$"
           },
@@ -10467,7 +11272,11 @@
             "minLength": 0
           }
         },
-        "required": ["apiKey", "baseUrl", "provider"]
+        "required": [
+          "apiKey",
+          "baseUrl",
+          "provider"
+        ]
       },
       "RuleEnabledRequest": {
         "type": "object",
@@ -10476,7 +11285,9 @@
             "type": "boolean"
           }
         },
-        "required": ["enabled"]
+        "required": [
+          "enabled"
+        ]
       },
       "NotificationPreferencesUpdateRequest": {
         "type": "object",
@@ -10498,7 +11309,11 @@
             "minimum": 1
           }
         },
-        "required": ["digestEnabled", "digestSendDayOfWeek", "digestSendHourLocal"]
+        "required": [
+          "digestEnabled",
+          "digestSendDayOfWeek",
+          "digestSendHourLocal"
+        ]
       },
       "NotificationPreferencesResponse": {
         "type": "object",
@@ -10539,7 +11354,9 @@
             "pattern": "vi|en"
           }
         },
-        "required": ["language"]
+        "required": [
+          "language"
+        ]
       },
       "GmailConnectionStatusExtended": {
         "type": "object",
@@ -10551,10 +11368,17 @@
             "type": "string"
           },
           "googleEmail": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
-        "required": ["googleEmail", "ingestionHealth", "status"]
+        "required": [
+          "googleEmail",
+          "ingestionHealth",
+          "status"
+        ]
       },
       "MeResponse": {
         "type": "object",
@@ -10581,11 +11405,17 @@
             "$ref": "#/components/schemas/GmailConnectionStatusExtended"
           },
           "displayName": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Google profile display name. Read transiently from the OAuth session principal on each request — never persisted to the database (privacy)."
           },
           "avatarUrl": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Google profile picture URL. Read transiently from the OAuth session principal on each request — never persisted to the database (privacy)."
           }
         },
@@ -10719,7 +11549,9 @@
             }
           }
         },
-        "required": ["senders"]
+        "required": [
+          "senders"
+        ]
       },
       "AuditEntryResponse": {
         "type": "object",
@@ -10735,10 +11567,16 @@
             "type": "string"
           },
           "subject": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "senderEmail": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "ruleName": {
             "type": "string"
@@ -10761,10 +11599,16 @@
             "format": "date-time"
           },
           "draftId": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "blockedBySafetyNetPattern": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -10792,10 +11636,16 @@
             }
           },
           "nextCursor": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
-        "required": ["items", "nextCursor"]
+        "required": [
+          "items",
+          "nextCursor"
+        ]
       },
       "NeedsReplyListResponse": {
         "type": "object",
@@ -10807,14 +11657,24 @@
             }
           },
           "nextCursor": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "toReplyCount": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int64"
           }
         },
-        "required": ["items", "nextCursor", "toReplyCount"]
+        "required": [
+          "items",
+          "nextCursor",
+          "toReplyCount"
+        ]
       },
       "NeedsReplyRowResponse": {
         "type": "object",
@@ -10823,13 +11683,22 @@
             "type": "string"
           },
           "subject": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "otherParty": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "lastActivityAt": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "draftStatus": {
@@ -10842,15 +11711,24 @@
             "type": "string"
           },
           "snippet": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Short preview of the latest message in the thread, fetched live from Gmail (never persisted)."
           },
           "latestMessageId": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Gmail message id of the latest message in the thread, used to open an in-place reader. Null when the live Gmail display fetch was unavailable."
           },
           "draftId": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Gmail draft id of the saved reply draft for this thread, used to preview the draft body in-place. Null when the thread has no draft."
           }
         },
@@ -10872,7 +11750,9 @@
             "format": "int64"
           }
         },
-        "required": ["toReplyCount"]
+        "required": [
+          "toReplyCount"
+        ]
       },
       "NeedsReplyCountsResponse": {
         "type": "object",
@@ -10890,7 +11770,11 @@
             "format": "int64"
           }
         },
-        "required": ["awaitingCount", "draftedCount", "toReplyCount"]
+        "required": [
+          "awaitingCount",
+          "draftedCount",
+          "toReplyCount"
+        ]
       },
       "CuratedCatalogModelResponse": {
         "type": "object",
@@ -10921,7 +11805,13 @@
             "format": "date-time"
           }
         },
-        "required": ["defaultModel", "displayName", "modelId", "provider", "recommended"]
+        "required": [
+          "defaultModel",
+          "displayName",
+          "modelId",
+          "provider",
+          "recommended"
+        ]
       },
       "CuratedCatalogResponse": {
         "type": "object",
@@ -10933,7 +11823,9 @@
             }
           }
         },
-        "required": ["features"]
+        "required": [
+          "features"
+        ]
       },
       "FeatureCatalogResponse": {
         "type": "object",
@@ -10951,7 +11843,10 @@
             "type": "string"
           }
         },
-        "required": ["feature", "models"]
+        "required": [
+          "feature",
+          "models"
+        ]
       },
       "AiCostResponse": {
         "type": "object",
@@ -10960,7 +11855,9 @@
             "type": "number"
           }
         },
-        "required": ["usd"]
+        "required": [
+          "usd"
+        ]
       },
       "RuleTemplateResponse": {
         "type": "object",
@@ -11029,7 +11926,11 @@
             "$ref": "#/components/schemas/RuleTemplateMaterializationResponse"
           }
         },
-        "required": ["materialization", "rules", "templates"]
+        "required": [
+          "materialization",
+          "rules",
+          "templates"
+        ]
       },
       "Message": {
         "type": "object",
@@ -11080,7 +11981,9 @@
             }
           }
         },
-        "required": ["messages"]
+        "required": [
+          "messages"
+        ]
       },
       "RuleCatalogExampleResponse": {
         "type": "object",
@@ -11097,7 +12000,11 @@
             "format": "int32"
           }
         },
-        "required": ["displayOrder", "exampleId", "exampleText"]
+        "required": [
+          "displayOrder",
+          "exampleId",
+          "exampleText"
+        ]
       },
       "RuleCatalogExamplesResponse": {
         "type": "object",
@@ -11109,7 +12016,9 @@
             }
           }
         },
-        "required": ["personas"]
+        "required": [
+          "personas"
+        ]
       },
       "RuleCatalogPersonaResponse": {
         "type": "object",
@@ -11138,7 +12047,13 @@
             }
           }
         },
-        "required": ["displayName", "displayOrder", "examples", "personaId", "personaKey"]
+        "required": [
+          "displayName",
+          "displayOrder",
+          "examples",
+          "personaId",
+          "personaKey"
+        ]
       },
       "RuleCatalogActionDescriptorResponse": {
         "type": "object",
@@ -11182,7 +12097,9 @@
             }
           }
         },
-        "required": ["actions"]
+        "required": [
+          "actions"
+        ]
       },
       "BillingPlanListResponse": {
         "type": "object",
@@ -11190,7 +12107,11 @@
           "currentPlanCode": {
             "type": "string",
             "description": "Tenant\u0027s currently-active plan code. Falls back to FREE when no active paid plan period exists.",
-            "enum": ["FREE", "PLUS", "PRO"]
+            "enum": [
+              "FREE",
+              "PLUS",
+              "PRO"
+            ]
           },
           "plans": {
             "type": "array",
@@ -11199,14 +12120,21 @@
             }
           }
         },
-        "required": ["currentPlanCode", "plans"]
+        "required": [
+          "currentPlanCode",
+          "plans"
+        ]
       },
       "BillingPlanResponse": {
         "type": "object",
         "properties": {
           "code": {
             "type": "string",
-            "enum": ["FREE", "PLUS", "PRO"]
+            "enum": [
+              "FREE",
+              "PLUS",
+              "PRO"
+            ]
           },
           "displayName": {
             "type": "string"
@@ -11217,7 +12145,10 @@
           },
           "billingCycle": {
             "type": "string",
-            "enum": ["NONE", "MONTH"]
+            "enum": [
+              "NONE",
+              "MONTH"
+            ]
           },
           "currency": {
             "type": "string"
@@ -11268,7 +12199,13 @@
           },
           "category": {
             "type": "string",
-            "enum": ["TRIAGE", "COMPOSE", "RULES", "CLEANUP", "INTERNAL"]
+            "enum": [
+              "TRIAGE",
+              "COMPOSE",
+              "RULES",
+              "CLEANUP",
+              "INTERNAL"
+            ]
           },
           "creditCost": {
             "type": "integer",
@@ -11285,7 +12222,12 @@
             "description": "Null \u003d unlimited"
           }
         },
-        "required": ["category", "code", "creditCost", "displayName"]
+        "required": [
+          "category",
+          "code",
+          "creditCost",
+          "displayName"
+        ]
       },
       "KnowledgeSnippetListResponse": {
         "type": "object",
@@ -11297,7 +12239,31 @@
             }
           }
         },
-        "required": ["items"]
+        "required": [
+          "items"
+        ]
+      },
+      "TelegramStatusResponse": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "telegramUsername": {
+            "type": "string"
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActiveAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "GmailInboxLabelResponse": {
         "type": "object",
@@ -11309,7 +12275,10 @@
             "type": "string"
           }
         },
-        "required": ["id", "name"]
+        "required": [
+          "id",
+          "name"
+        ]
       },
       "GmailInboxMessageResponse": {
         "type": "object",
@@ -11393,7 +12362,10 @@
             }
           },
           "nextCursor": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "loadedCount": {
             "type": "integer",
@@ -11406,10 +12378,20 @@
           "dataSource": {
             "type": "string",
             "description": "Source of this page. PROJECTION \u003d DB-backed inbox projection; LIVE_GMAIL \u003d live Gmail metadata fallback; SYNCING \u003d backfill in flight, items is empty, render a syncing banner.",
-            "enum": ["PROJECTION", "LIVE_GMAIL", "SYNCING"]
+            "enum": [
+              "PROJECTION",
+              "LIVE_GMAIL",
+              "SYNCING"
+            ]
           }
         },
-        "required": ["dataSource", "items", "loadedCount", "maxMessages", "nextCursor"]
+        "required": [
+          "dataSource",
+          "items",
+          "loadedCount",
+          "maxMessages",
+          "nextCursor"
+        ]
       },
       "GmailInboxMessageDetailResponse": {
         "type": "object",
@@ -11426,7 +12408,11 @@
             "description": "Transient sanitized Gmail HTML render. Not persisted by Zero Mail."
           }
         },
-        "required": ["message", "renderedHtml", "renderedText"]
+        "required": [
+          "message",
+          "renderedHtml",
+          "renderedText"
+        ]
       },
       "GmailThreadDetailResponse": {
         "type": "object",
@@ -11444,7 +12430,11 @@
             }
           }
         },
-        "required": ["gmailThreadId", "messages", "subject"]
+        "required": [
+          "gmailThreadId",
+          "messages",
+          "subject"
+        ]
       },
       "GmailConnectionStatusResponse": {
         "type": "object",
@@ -11453,10 +12443,16 @@
             "type": "string"
           },
           "googleEmail": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
-        "required": ["connectionStatus", "googleEmail"]
+        "required": [
+          "connectionStatus",
+          "googleEmail"
+        ]
       },
       "BillingLedgerEntryResponse": {
         "type": "object",
@@ -11509,7 +12505,9 @@
             "type": "string"
           }
         },
-        "required": ["entries"]
+        "required": [
+          "entries"
+        ]
       },
       "BillingBalanceResponse": {
         "type": "object",
@@ -11588,7 +12586,13 @@
             }
           }
         },
-        "required": ["createdAt", "id", "messages", "title", "updatedAt"]
+        "required": [
+          "createdAt",
+          "id",
+          "messages",
+          "title",
+          "updatedAt"
+        ]
       },
       "ChatMessageDto": {
         "type": "object",
@@ -11599,7 +12603,12 @@
           },
           "role": {
             "type": "string",
-            "enum": ["USER", "ASSISTANT", "SYSTEM", "TOOL"]
+            "enum": [
+              "USER",
+              "ASSISTANT",
+              "SYSTEM",
+              "TOOL"
+            ]
           },
           "parts": {
             "$ref": "#/components/schemas/ChatMessagePartsDto"
@@ -11609,7 +12618,12 @@
             "format": "date-time"
           }
         },
-        "required": ["createdAt", "id", "parts", "role"]
+        "required": [
+          "createdAt",
+          "id",
+          "parts",
+          "role"
+        ]
       },
       "ChatMessagePartsDto": {
         "type": "object",
@@ -11625,7 +12639,10 @@
             }
           }
         },
-        "required": ["parts", "schemaVersion"]
+        "required": [
+          "parts",
+          "schemaVersion"
+        ]
       },
       "ChatPartDto": {
         "type": "object",
@@ -11671,7 +12688,9 @@
             "type": "string"
           }
         },
-        "required": ["type"]
+        "required": [
+          "type"
+        ]
       },
       "ChatHistoryListResponseDto": {
         "type": "object",
@@ -11691,7 +12710,11 @@
             "format": "int32"
           }
         },
-        "required": ["chats", "pageOffset", "pageSize"]
+        "required": [
+          "chats",
+          "pageOffset",
+          "pageSize"
+        ]
       },
       "ChatHistorySummaryDto": {
         "type": "object",
@@ -11712,7 +12735,12 @@
             "format": "int32"
           }
         },
-        "required": ["id", "messageCount", "title", "updatedAt"]
+        "required": [
+          "id",
+          "messageCount",
+          "title",
+          "updatedAt"
+        ]
       },
       "ActionMixResponse": {
         "type": "object",
@@ -11733,7 +12761,12 @@
             "format": "int64"
           }
         },
-        "required": ["actionType", "applied", "failed", "reverted"]
+        "required": [
+          "actionType",
+          "applied",
+          "failed",
+          "reverted"
+        ]
       },
       "AnalyticsSummaryResponse": {
         "type": "object",
@@ -11757,6 +12790,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TopSenderResponse"
+            }
+          },
+          "topRecipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailAddressLoadResponse"
             }
           },
           "ruleHits": {
@@ -11808,6 +12847,7 @@
           "replyBuckets",
           "ruleHits",
           "timeSavedSeconds",
+          "topRecipients",
           "topSenders",
           "volumeApplied",
           "volumeObserved",
@@ -11830,7 +12870,11 @@
             "format": "int64"
           }
         },
-        "required": ["failedActions", "noRuleMatched", "pendingActions"]
+        "required": [
+          "failedActions",
+          "noRuleMatched",
+          "pendingActions"
+        ]
       },
       "CategoryLoadResponse": {
         "type": "object",
@@ -11843,7 +12887,10 @@
             "format": "int64"
           }
         },
-        "required": ["category", "count"]
+        "required": [
+          "category",
+          "count"
+        ]
       },
       "DailyLoadResponse": {
         "type": "object",
@@ -11864,7 +12911,12 @@
             "format": "int64"
           }
         },
-        "required": ["applied", "day", "observed", "reverted"]
+        "required": [
+          "applied",
+          "day",
+          "observed",
+          "reverted"
+        ]
       },
       "DomainLoadResponse": {
         "type": "object",
@@ -11877,7 +12929,26 @@
             "format": "int64"
           }
         },
-        "required": ["count", "domain"]
+        "required": [
+          "count",
+          "domain"
+        ]
+      },
+      "EmailAddressLoadResponse": {
+        "type": "object",
+        "properties": {
+          "emailAddress": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "count",
+          "emailAddress"
+        ]
       },
       "ReplyBucketResponse": {
         "type": "object",
@@ -11894,7 +12965,11 @@
             "format": "int64"
           }
         },
-        "required": ["bucket", "count", "withDraft"]
+        "required": [
+          "bucket",
+          "count",
+          "withDraft"
+        ]
       },
       "RuleHitResponse": {
         "type": "object",
@@ -11915,7 +12990,12 @@
             "format": "int64"
           }
         },
-        "required": ["applied", "decisions", "reverted", "ruleName"]
+        "required": [
+          "applied",
+          "decisions",
+          "reverted",
+          "ruleName"
+        ]
       },
       "TopSenderResponse": {
         "type": "object",
@@ -11928,7 +13008,18 @@
             "format": "int64"
           }
         },
-        "required": ["count", "senderEmail"]
+        "required": [
+          "count",
+          "senderEmail"
+        ]
+      },
+      "TelegramDisconnectResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
       },
       "ApiError": {
         "type": "object",
@@ -11996,7 +13087,9 @@
             "description": "Transitional alias of `code`, kept for one phase per CONTEXT.md decision D-C1. Prefer `code`."
           }
         },
-        "required": ["code"]
+        "required": [
+          "code"
+        ]
       },
       "FieldErrorDto": {
         "type": "object",
@@ -12033,7 +13126,10 @@
             "description": "Allow-listed scalars (numbers, booleans, dotted keys, short resource identifiers). Never raw user content."
           }
         },
-        "required": ["code", "field"]
+        "required": [
+          "code",
+          "field"
+        ]
       }
     }
   }

@@ -9,6 +9,7 @@ import com.zeromail.core.analytics.projection.AutomationOpportunityProjection;
 import com.zeromail.core.analytics.projection.CategoryLoadProjection;
 import com.zeromail.core.analytics.projection.DailyLoadProjection;
 import com.zeromail.core.analytics.projection.DomainLoadProjection;
+import com.zeromail.core.analytics.projection.EmailAddressLoadProjection;
 import com.zeromail.core.analytics.projection.ReplyBucketProjection;
 import com.zeromail.core.analytics.projection.RuleHitProjection;
 import com.zeromail.core.analytics.projection.TopSenderProjection;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -80,6 +82,10 @@ public class AnalyticsSummaryQueryService {
         if (recentInboxAnalytics.available()) {
             topSenders = recentInboxAnalytics.topSenders();
         }
+        RecentSentAnalytics recentSentAnalytics =
+                fetchRecentSentAnalytics(
+                        tenantId, requestedWindow.startInclusive(), requestedWindow.endExclusive());
+        List<EmailAddressLoadProjection> topRecipients = recentSentAnalytics.topRecipients();
         List<RuleHitProjection> ruleHits =
                 analyticsSummaryReadRepository.findRuleHits(
                         tenantId, windowStartInclusive, windowEndExclusive);
@@ -120,6 +126,7 @@ public class AnalyticsSummaryQueryService {
                 volumeApplied,
                 timeSavedSeconds,
                 topSenders,
+                topRecipients,
                 ruleHits,
                 dailyLoad,
                 actionMix,
@@ -167,6 +174,36 @@ public class AnalyticsSummaryQueryService {
                     tenantId,
                     unavailableException.reason());
             return RecentInboxAnalytics.unavailable();
+        }
+    }
+
+    private RecentSentAnalytics fetchRecentSentAnalytics(
+            UUID tenantId, Instant windowStartInclusive, Instant windowEndExclusive) {
+        try {
+            List<GmailPreviewMessage> recentSentMessages =
+                    gmailPreviewReadService.fetchRecentSentMessages(
+                            tenantId,
+                            RECENT_INBOX_ANALYTICS_SAMPLE_SIZE,
+                            false,
+                            RECENT_INBOX_ANALYTICS_FETCH_BUDGET);
+            List<GmailPreviewMessage> messagesInWindow =
+                    recentSentMessages.stream()
+                            .filter(
+                                    gmailPreviewMessage ->
+                                            !gmailPreviewMessage
+                                                            .internalDate()
+                                                            .isBefore(windowStartInclusive)
+                                                    && gmailPreviewMessage
+                                                            .internalDate()
+                                                            .isBefore(windowEndExclusive))
+                            .toList();
+            return RecentSentAnalytics.available(messagesInWindow);
+        } catch (GmailPreviewReadUnavailableException unavailableException) {
+            log.info(
+                    "event=analytics_recent_sent_unavailable tenantId={} reason={}",
+                    tenantId,
+                    unavailableException.reason());
+            return RecentSentAnalytics.unavailable();
         }
     }
 
@@ -222,6 +259,23 @@ public class AnalyticsSummaryQueryService {
         }
     }
 
+    private record RecentSentAnalytics(
+            boolean available, List<EmailAddressLoadProjection> topRecipients) {
+
+        private static RecentSentAnalytics unavailable() {
+            return new RecentSentAnalytics(false, List.of());
+        }
+
+        private static RecentSentAnalytics available(List<GmailPreviewMessage> messages) {
+            return new RecentSentAnalytics(
+                    true, AnalyticsSummaryQueryService.topRecipients(messages));
+        }
+
+        private RecentSentAnalytics {
+            topRecipients = List.copyOf(topRecipients);
+        }
+    }
+
     private static List<TopSenderProjection> topSenders(List<GmailPreviewMessage> messages) {
         return countByValue(
                         messages.stream()
@@ -246,6 +300,29 @@ public class AnalyticsSummaryQueryService {
                                                         .internalDate()
                                                         .atZone(ZoneOffset.UTC)))
                         .toList());
+    }
+
+    private static List<EmailAddressLoadProjection> topRecipients(
+            List<GmailPreviewMessage> messages) {
+        return countByValue(
+                        messages.stream()
+                                .flatMap(
+                                        gmailPreviewMessage ->
+                                                Stream.concat(
+                                                        gmailPreviewMessage
+                                                                .sanitizedToRecipientEmails()
+                                                                .stream(),
+                                                        gmailPreviewMessage
+                                                                .sanitizedCcRecipientEmails()
+                                                                .stream()))
+                                .filter(recipientEmail -> !recipientEmail.isBlank())
+                                .toList())
+                .entrySet()
+                .stream()
+                .sorted(countDescendingKeyAscending())
+                .limit(10)
+                .map(entry -> new EmailAddressLoadProjection(entry.getKey(), entry.getValue()))
+                .toList();
     }
 
     private static List<DomainLoadProjection> domainLoad(List<GmailPreviewMessage> messages) {

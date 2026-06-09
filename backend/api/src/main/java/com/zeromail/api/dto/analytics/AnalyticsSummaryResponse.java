@@ -6,6 +6,7 @@ import com.zeromail.core.analytics.projection.AutomationOpportunityProjection;
 import com.zeromail.core.analytics.projection.CategoryLoadProjection;
 import com.zeromail.core.analytics.projection.DailyLoadProjection;
 import com.zeromail.core.analytics.projection.DomainLoadProjection;
+import com.zeromail.core.analytics.projection.EmailAddressLoadProjection;
 import com.zeromail.core.analytics.projection.ReplyBucketProjection;
 import com.zeromail.core.analytics.projection.RuleHitProjection;
 import com.zeromail.core.analytics.projection.TopSenderProjection;
@@ -19,6 +20,7 @@ import java.util.List;
             "volumeApplied",
             "timeSavedSeconds",
             "topSenders",
+            "topRecipients",
             "ruleHits",
             "dailyLoad",
             "actionMix",
@@ -33,6 +35,7 @@ public record AnalyticsSummaryResponse(
         long volumeApplied,
         long timeSavedSeconds,
         List<TopSenderResponse> topSenders,
+        List<EmailAddressLoadResponse> topRecipients,
         List<RuleHitResponse> ruleHits,
         List<DailyLoadResponse> dailyLoad,
         List<ActionMixResponse> actionMix,
@@ -43,6 +46,7 @@ public record AnalyticsSummaryResponse(
 
     public AnalyticsSummaryResponse {
         topSenders = List.copyOf(topSenders);
+        topRecipients = List.copyOf(topRecipients);
         ruleHits = List.copyOf(ruleHits);
         dailyLoad = List.copyOf(dailyLoad);
         actionMix = List.copyOf(actionMix);
@@ -59,6 +63,7 @@ public record AnalyticsSummaryResponse(
                 projection.volumeApplied(),
                 projection.timeSavedSeconds(),
                 projection.topSenders().stream().map(TopSenderResponse::from).toList(),
+                projection.topRecipients().stream().map(EmailAddressLoadResponse::from).toList(),
                 projection.ruleHits().stream().map(RuleHitResponse::from).toList(),
                 projection.dailyLoad().stream().map(DailyLoadResponse::from).toList(),
                 projection.actionMix().stream().map(ActionMixResponse::from).toList(),
@@ -72,6 +77,13 @@ public record AnalyticsSummaryResponse(
     public record TopSenderResponse(String senderEmail, long count) {
         private static TopSenderResponse from(TopSenderProjection projection) {
             return new TopSenderResponse(projection.senderEmail(), projection.count());
+        }
+    }
+
+    @Schema(requiredProperties = {"emailAddress", "count"})
+    public record EmailAddressLoadResponse(String emailAddress, long count) {
+        private static EmailAddressLoadResponse from(EmailAddressLoadProjection projection) {
+            return new EmailAddressLoadResponse(projection.emailAddress(), projection.count());
         }
     }
 
