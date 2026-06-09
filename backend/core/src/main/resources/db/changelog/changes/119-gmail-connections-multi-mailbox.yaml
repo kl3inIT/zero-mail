@@ -1,0 +1,61 @@
+databaseChangeLog:
+  - changeSet:
+      id: 119-gmail-connections-multi-mailbox
+      author: zeromail
+      comment: >
+        Single changeSet by design: relax one-Gmail-per-tenant and add the mailbox identity
+        constraints atomically. The duplicate-active precondition HALTs on legacy duplicate
+        CONNECTED rows so an operator can dedupe and rerun; required mailbox columns and indexes are
+        never marked applied without being created.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 10 migration halted: a tenant has more than one CONNECTED gmail_connections row
+            for the same lowercased email. Dedupe the legacy duplicates, then re-run the migration.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT tenant_id, lower(google_email)
+                FROM gmail_connections
+                WHERE status = 'CONNECTED'
+                GROUP BY tenant_id, lower(google_email)
+                HAVING count(*) > 1
+              ) duplicates;
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE gmail_connections
+                DROP CONSTRAINT uq_gmail_connections_tenant_id;
+
+              CREATE UNIQUE INDEX uq_gmail_conn_active_email
+                ON gmail_connections (tenant_id, lower(google_email))
+                WHERE status = 'CONNECTED';
+
+              ALTER TABLE gmail_connections
+                ADD COLUMN is_primary boolean NOT NULL DEFAULT false;
+
+              ALTER TABLE gmail_connections
+                ADD COLUMN display_purpose varchar;
+
+              UPDATE gmail_connections gc SET is_primary = true
+              WHERE gc.id IN (
+                SELECT DISTINCT ON (tenant_id) id
+                FROM gmail_connections
+                ORDER BY tenant_id, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+              );
+
+              CREATE UNIQUE INDEX uq_gmail_conn_primary
+                ON gmail_connections (tenant_id)
+                WHERE is_primary = true;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS uq_gmail_conn_primary;
+              ALTER TABLE gmail_connections DROP COLUMN IF EXISTS is_primary;
+              ALTER TABLE gmail_connections DROP COLUMN IF EXISTS display_purpose;
+              DROP INDEX IF EXISTS uq_gmail_conn_active_email;
+              ALTER TABLE gmail_connections
+                ADD CONSTRAINT uq_gmail_connections_tenant_id UNIQUE (tenant_id);
