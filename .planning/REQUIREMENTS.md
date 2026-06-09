@@ -37,16 +37,16 @@
 ### Ingestion and Inbox Data
 
 - [ ] **ING-01**: Pub/Sub delivery resolves the correct Gmail mailbox before fetching Gmail history, and unknown mailbox delivery fails or drops safely without cross-account processing.
-- [ ] **ING-02**: History sync, backfill, watch renewal, and ingestion health run independently per Gmail mailbox.
-- [ ] **ING-03**: Idempotency keys for Pub/Sub deliveries, observed messages, processing jobs, and inbox projections include mailbox scope wherever Gmail ids are not sufficient across accounts.
+- [x] **ING-02**: History sync, backfill, watch renewal, and ingestion health run independently per Gmail mailbox.
+- [x] **ING-03**: Idempotency keys for Pub/Sub deliveries, observed messages, processing jobs, and inbox projections include mailbox scope wherever Gmail ids are not sufficient across accounts.
 - [ ] **ING-04**: Inbox, needs-reply, and analytics default to the active mailbox context; any future all-mailboxes roll-up is read-only, carries explicit mailbox provenance, and cannot become an implicit Gmail action context.
 - [ ] **ING-05**: Multi-Gmail ingestion preserves the existing no-long-term raw body, prompt/completion, and embedding storage posture.
-- [ ] **ING-06**: Gmail client lookup, access-token cache, watch renewal, backfill, history cursor updates, and projection encryption/decryption compatibility are mailbox-aware; any encryption AAD change has an explicit compatibility or app-level re-encryption plan.
+- [x] **ING-06**: Gmail client lookup, access-token cache, watch renewal, backfill, history cursor updates, and projection encryption/decryption compatibility are mailbox-aware; any encryption AAD change has an explicit compatibility or app-level re-encryption plan.
 
 ### Account-Scoped Automation
 
-- [ ] **AUTO-01**: Rules belong to one Gmail mailbox by default; applying the same rule to another mailbox requires explicit copy/template action and must not silently create an all-mailbox runtime rule in v1.3.
-- [ ] **AUTO-02**: Rule compiler and manual editor persist the owning Gmail mailbox id as structured data; original natural-language input remains metadata only.
+- [x] **AUTO-01**: Rules belong to one Gmail mailbox by default; applying the same rule to another mailbox requires explicit copy/template action and must not silently create an all-mailbox runtime rule in v1.3.
+- [x] **AUTO-02**: Rule compiler and manual editor persist the owning Gmail mailbox id as structured data; original natural-language input remains metadata only.
 - [ ] **AUTO-03**: Rule preview and test runs sample only messages from the owning mailbox and show active mailbox context in results.
 - [ ] **AUTO-04**: Runtime triage evaluates only rules owned by the source Gmail mailbox.
 - [ ] **AUTO-05**: Gmail label, archive, draft, read/unread, star, spam, and digest actions resolve Gmail state against the executing mailbox, not a tenant-global Gmail client.
@@ -54,7 +54,7 @@
 
 ### Audit, Safety, and Authorization
 
-- [ ] **AUD-01**: Triage audit rows expose the source Gmail mailbox and executing Gmail mailbox for every Gmail write/read-derived action.
+- [x] **AUD-01**: Triage audit rows expose the source Gmail mailbox and executing Gmail mailbox for every Gmail write/read-derived action.
 - [ ] **AUD-02**: Undo/revert targets the same Gmail mailbox that originally executed the action.
 - [ ] **AUD-03**: Sender safety-net/protected-sender decisions remain tenant-owned and record triggering mailbox metadata without leaking content.
 - [x] **AUD-04**: Admin/operator tenant inspection shows metadata-only multi-mailbox health without exposing tokens, raw bodies, prompts, or completions.
@@ -75,7 +75,7 @@
 
 - [x] **VER-01**: Liquibase migration is roll-forward, preserves existing tenants, and has coverage for old single-account fixtures.
 - [ ] **VER-02**: OpenAPI is regenerated after DTO/API changes and frontend feature APIs use generated types.
-- [ ] **VER-03**: Backend tests cover migration, repository lookup, Pub/Sub routing, watch renewal, idempotency, mailbox-owned rules, outbound gateway, and audit invariants.
+- [x] **VER-03**: Backend tests cover migration, repository lookup, Pub/Sub routing, watch renewal, idempotency, mailbox-owned rules, outbound gateway, and audit invariants.
 - [ ] **VER-04**: Frontend tests and Playwright cover connect, list, active-mailbox switching, mailbox-owned rules, send-from visibility, and audit workflows in a real browser.
 
 ## Future Requirements
@@ -136,18 +136,18 @@
 | AUD-04 | Phase 10 | Complete |
 | VER-01 | Phase 10 | Complete |
 | ING-01 | Phase 11 | Pending |
-| ING-02 | Phase 11 | Pending |
-| ING-03 | Phase 11 | Pending |
+| ING-02 | Phase 11 | Complete |
+| ING-03 | Phase 11 | Complete |
 | ING-04 | Phase 11 | Pending |
 | ING-05 | Phase 11 | Pending |
-| ING-06 | Phase 11 | Pending |
-| AUTO-01 | Phase 11 | Pending |
-| AUTO-02 | Phase 11 | Pending |
+| ING-06 | Phase 11 | Complete |
+| AUTO-01 | Phase 11 | Complete |
+| AUTO-02 | Phase 11 | Complete |
 | AUTO-03 | Phase 11 | Pending |
 | AUTO-04 | Phase 11 | Pending |
 | AUTO-05 | Phase 11 | Pending |
 | AUTO-06 | Phase 11 | Pending |
-| AUD-01 | Phase 11 | Pending |
+| AUD-01 | Phase 11 | Complete |
 | AUD-02 | Phase 11 | Pending |
 | AUD-03 | Phase 11 | Pending |
 | AUD-05 | Phase 11 | Pending |
@@ -160,7 +160,7 @@
 | UX-05 | Phase 11 | Pending |
 | UX-06 | Phase 11 | Pending |
 | VER-02 | Phase 11 | Pending |
-| VER-03 | Phase 11 | Pending |
+| VER-03 | Phase 11 | Complete |
 | VER-04 | Phase 11 | Pending |
 
 **Coverage:**
