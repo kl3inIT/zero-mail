@@ -1,7 +1,7 @@
 # Requirements: Zero Mail v1.3 Gmail Workspace Foundation
 
 **Defined:** 2026-06-07
-**Status:** Reconciled after code research (`.planning/research/V1.3-CODE-RESEARCH.md`). The initial requirements were draft v0; this version reflects the single-Gmail assumptions found in Zero Mail and the mailbox-scoping pattern found in Inbox Zero. Phase 11 Plan 03 completed mailbox-scoped ingestion threading requirements.
+**Status:** Reconciled after code research (`.planning/research/V1.3-CODE-RESEARCH.md`). The initial requirements were draft v0; this version reflects the single-Gmail assumptions found in Zero Mail and the mailbox-scoping pattern found in Inbox Zero. Phase 11 Plan 04 completed mailbox-owned automation, outbound, and audit provenance requirements.
 **Core Value:** AI auto-triage that users trust with their real Gmail inbox.
 
 ## Scope Inputs
@@ -47,16 +47,16 @@
 
 - [x] **AUTO-01**: Rules belong to one Gmail mailbox by default; applying the same rule to another mailbox requires explicit copy/template action and must not silently create an all-mailbox runtime rule in v1.3.
 - [x] **AUTO-02**: Rule compiler and manual editor persist the owning Gmail mailbox id as structured data; original natural-language input remains metadata only.
-- [ ] **AUTO-03**: Rule preview and test runs sample only messages from the owning mailbox and show active mailbox context in results.
-- [ ] **AUTO-04**: Runtime triage evaluates only rules owned by the source Gmail mailbox.
-- [ ] **AUTO-05**: Gmail label, archive, draft, read/unread, star, spam, and digest actions resolve Gmail state against the executing mailbox, not a tenant-global Gmail client.
-- [ ] **AUTO-06**: Rule-triggered and chat-triggered send/reply/forward actions use the shared outbound gateway with the correct Gmail mailbox and record blocked/failed outcomes without executing under another mailbox.
+- [x] **AUTO-03**: Rule preview and test runs sample only messages from the owning mailbox and show active mailbox context in results.
+- [x] **AUTO-04**: Runtime triage evaluates only rules owned by the source Gmail mailbox.
+- [x] **AUTO-05**: Gmail label, archive, draft, read/unread, star, spam, and digest actions resolve Gmail state against the executing mailbox, not a tenant-global Gmail client.
+- [x] **AUTO-06**: Rule-triggered and chat-triggered send/reply/forward actions use the shared outbound gateway with the correct Gmail mailbox and record blocked/failed outcomes without executing under another mailbox.
 
 ### Audit, Safety, and Authorization
 
 - [x] **AUD-01**: Triage audit rows expose the source Gmail mailbox and executing Gmail mailbox for every Gmail write/read-derived action.
-- [ ] **AUD-02**: Undo/revert targets the same Gmail mailbox that originally executed the action.
-- [ ] **AUD-03**: Sender safety-net/protected-sender decisions remain tenant-owned and record triggering mailbox metadata without leaking content.
+- [x] **AUD-02**: Undo/revert targets the same Gmail mailbox that originally executed the action.
+- [x] **AUD-03**: Sender safety-net/protected-sender decisions remain tenant-owned and record triggering mailbox metadata without leaking content.
 - [x] **AUD-04**: Admin/operator tenant inspection shows metadata-only multi-mailbox health without exposing tokens, raw bodies, prompts, or completions.
 - [ ] **AUD-05**: Architectural tests forbid tenant-only Gmail client lookup in new mailbox-scoped flows where mailbox context is required.
 - [ ] **AUD-06**: Cross-account isolation tests prove one mailbox cannot read, write, archive, draft, or send as another mailbox through crafted ids.
@@ -143,13 +143,13 @@
 | ING-06 | Phase 11 | Complete |
 | AUTO-01 | Phase 11 | Complete |
 | AUTO-02 | Phase 11 | Complete |
-| AUTO-03 | Phase 11 | Pending |
-| AUTO-04 | Phase 11 | Pending |
-| AUTO-05 | Phase 11 | Pending |
-| AUTO-06 | Phase 11 | Pending |
+| AUTO-03 | Phase 11 | Complete |
+| AUTO-04 | Phase 11 | Complete |
+| AUTO-05 | Phase 11 | Complete |
+| AUTO-06 | Phase 11 | Complete |
 | AUD-01 | Phase 11 | Complete |
-| AUD-02 | Phase 11 | Pending |
-| AUD-03 | Phase 11 | Pending |
+| AUD-02 | Phase 11 | Complete |
+| AUD-03 | Phase 11 | Complete |
 | AUD-05 | Phase 11 | Pending |
 | AUD-06 | Phase 11 | Pending |
 | AUD-07 | Phase 11 | Complete |
@@ -171,4 +171,4 @@
 
 ---
 *Requirements defined: 2026-06-07*
-*Last updated: 2026-06-09 after Phase 11 Plan 03 mailbox-scoped ingestion threading*
+*Last updated: 2026-06-09 after Phase 11 Plan 04 mailbox-owned automation*
