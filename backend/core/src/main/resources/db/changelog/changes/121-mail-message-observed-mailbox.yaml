@@ -1,0 +1,72 @@
+# DEPLOY: This changeset swaps the mail_message_observed primary key and takes an ACCESS EXCLUSIVE lock.
+# DEPLOY: PREFLIGHT check for open processing_job rows and in-flight Pub/Sub deliveries before deploy.
+# DEPLOY: DRAIN by stopping the single-node worker/SKIP-LOCKED poller; Pub/Sub buffers and retries delivery.
+# DEPLOY: APPLY during low traffic, then RESUME the worker after Liquibase completes.
+databaseChangeLog:
+  - changeSet:
+      id: 121-mail-message-observed-mailbox
+      author: zeromail
+      comment: >
+        Add mailbox identity to observed-message rows so the same Gmail message id can exist in two
+        connected mailboxes without ON CONFLICT dropping one mailbox's row.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 11 migration halted: mail_message_observed has tenant rows whose tenant has no
+            gmail_connections row. Create or restore the tenant mailbox before rerunning.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT DISTINCT mail_message_observed.tenant_id
+                FROM mail_message_observed
+                WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM gmail_connections
+                  WHERE gmail_connections.tenant_id = mail_message_observed.tenant_id
+                )
+              ) missing_mailbox;
+      changes:
+        - addColumn:
+            tableName: mail_message_observed
+            columns:
+              - column:
+                  name: gmail_connection_id
+                  type: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              WITH primary_mailboxes AS (
+                SELECT DISTINCT ON (tenant_id)
+                  tenant_id,
+                  id AS gmail_connection_id
+                FROM gmail_connections
+                ORDER BY tenant_id, is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+              )
+              UPDATE mail_message_observed
+              SET gmail_connection_id = primary_mailboxes.gmail_connection_id
+              FROM primary_mailboxes
+              WHERE mail_message_observed.tenant_id = primary_mailboxes.tenant_id
+                AND mail_message_observed.gmail_connection_id IS NULL;
+        - addNotNullConstraint:
+            tableName: mail_message_observed
+            columnName: gmail_connection_id
+            columnDataType: uuid
+        - dropPrimaryKey:
+            tableName: mail_message_observed
+            constraintName: pk_mail_message_observed
+        - addPrimaryKey:
+            tableName: mail_message_observed
+            columnNames: tenant_id, gmail_connection_id, gmail_message_id
+            constraintName: pk_mail_message_observed
+      rollback:
+        - dropPrimaryKey:
+            tableName: mail_message_observed
+            constraintName: pk_mail_message_observed
+        - addPrimaryKey:
+            tableName: mail_message_observed
+            columnNames: tenant_id, gmail_message_id
+            constraintName: pk_mail_message_observed
+        - dropColumn:
+            tableName: mail_message_observed
+            columnName: gmail_connection_id

@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 123-gmail-inbox-sync-state-mailbox
+      author: zeromail
+      comment: >
+        Make Gmail inbox sync state per mailbox rather than per tenant. Existing state rows backfill
+        to the tenant's deterministic primary mailbox.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 11 migration halted: gmail_inbox_sync_state has tenant rows whose tenant has no
+            gmail_connections row. Create or restore the tenant mailbox before rerunning.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT DISTINCT gmail_inbox_sync_state.tenant_id
+                FROM gmail_inbox_sync_state
+                WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM gmail_connections
+                  WHERE gmail_connections.tenant_id = gmail_inbox_sync_state.tenant_id
+                )
+              ) missing_mailbox;
+      changes:
+        - addColumn:
+            tableName: gmail_inbox_sync_state
+            columns:
+              - column:
+                  name: gmail_connection_id
+                  type: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              WITH primary_mailboxes AS (
+                SELECT DISTINCT ON (tenant_id)
+                  tenant_id,
+                  id AS gmail_connection_id
+                FROM gmail_connections
+                ORDER BY tenant_id, is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+              )
+              UPDATE gmail_inbox_sync_state
+              SET gmail_connection_id = primary_mailboxes.gmail_connection_id
+              FROM primary_mailboxes
+              WHERE gmail_inbox_sync_state.tenant_id = primary_mailboxes.tenant_id
+                AND gmail_inbox_sync_state.gmail_connection_id IS NULL;
+        - addNotNullConstraint:
+            tableName: gmail_inbox_sync_state
+            columnName: gmail_connection_id
+            columnDataType: uuid
+        - dropPrimaryKey:
+            tableName: gmail_inbox_sync_state
+            constraintName: pk_gmail_inbox_sync_state
+        - addPrimaryKey:
+            tableName: gmail_inbox_sync_state
+            columnNames: tenant_id, gmail_connection_id
+            constraintName: pk_gmail_inbox_sync_state
+      rollback:
+        - dropPrimaryKey:
+            tableName: gmail_inbox_sync_state
+            constraintName: pk_gmail_inbox_sync_state
+        - addPrimaryKey:
+            tableName: gmail_inbox_sync_state
+            columnNames: tenant_id
+            constraintName: pk_gmail_inbox_sync_state
+        - dropColumn:
+            tableName: gmail_inbox_sync_state
+            columnName: gmail_connection_id

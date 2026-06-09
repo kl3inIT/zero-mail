@@ -1,0 +1,92 @@
+# DEPLOY: This changeset adds mailbox scope to processing_job and changes open backfill dedup semantics.
+# DEPLOY: PREFLIGHT run a read-only check for status IN ('PENDING','PROCESSING') processing_job rows.
+# DEPLOY: DRAIN by stopping the single-node worker/SKIP-LOCKED poller before applying this migration.
+# DEPLOY: APPLY during low traffic. Current open INBOX_PROJECTION_BACKFILL jobs backfill to the primary mailbox.
+# DEPLOY: RESUME the worker after Liquibase completes; future code enqueues one open backfill per mailbox.
+databaseChangeLog:
+  - changeSet:
+      id: 124-processing-job-mailbox
+      author: zeromail
+      comment: >
+        Add mailbox scope to tenant processing jobs. This codebase does not have a processing_job
+        idempotency_key column; open INBOX_PROJECTION_BACKFILL dedup becomes a partial unique index
+        on tenant + mailbox for pending/processing jobs, which Plan 03's enqueuer query will use.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 11 migration halted: processing_job rows must be tenant-owned and map to an
+            existing Gmail connection before gmail_connection_id can become NOT NULL. Drain or
+            resolve system/duplicate open jobs, then rerun.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM processing_job WHERE tenant_id IS NULL;
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT DISTINCT processing_job.tenant_id
+                FROM processing_job
+                WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM gmail_connections
+                  WHERE gmail_connections.tenant_id = processing_job.tenant_id
+                )
+              ) missing_mailbox;
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT tenant_id
+                FROM processing_job
+                WHERE job_type = 'INBOX_PROJECTION_BACKFILL'
+                  AND status IN ('PENDING', 'PROCESSING')
+                GROUP BY tenant_id
+                HAVING count(*) > 1
+              ) duplicate_open_backfills;
+      changes:
+        - addColumn:
+            tableName: processing_job
+            columns:
+              - column:
+                  name: gmail_connection_id
+                  type: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              WITH primary_mailboxes AS (
+                SELECT DISTINCT ON (tenant_id)
+                  tenant_id,
+                  id AS gmail_connection_id
+                FROM gmail_connections
+                ORDER BY tenant_id, is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+              )
+              UPDATE processing_job
+              SET gmail_connection_id = primary_mailboxes.gmail_connection_id
+              FROM primary_mailboxes
+              WHERE processing_job.tenant_id = primary_mailboxes.tenant_id
+                AND processing_job.gmail_connection_id IS NULL;
+        - addNotNullConstraint:
+            tableName: processing_job
+            columnName: gmail_connection_id
+            columnDataType: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE INDEX idx_processing_job_tenant_mailbox_type
+                ON processing_job (tenant_id, gmail_connection_id, job_type)
+                WHERE tenant_id IS NOT NULL;
+
+              CREATE UNIQUE INDEX uq_processing_job_open_inbox_backfill_mailbox
+                ON processing_job (tenant_id, gmail_connection_id)
+                WHERE job_type = 'INBOX_PROJECTION_BACKFILL'
+                  AND status IN ('PENDING', 'PROCESSING');
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS uq_processing_job_open_inbox_backfill_mailbox;
+              DROP INDEX IF EXISTS idx_processing_job_tenant_mailbox_type;
+        - dropColumn:
+            tableName: processing_job
+            columnName: gmail_connection_id

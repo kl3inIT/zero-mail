@@ -1,0 +1,105 @@
+# DEPLOY: This changeset swaps gmail_inbox_projection PK/indexes and takes ACCESS EXCLUSIVE locks.
+# DEPLOY: PREFLIGHT check for open processing_job rows and in-flight Pub/Sub deliveries before deploy.
+# DEPLOY: DRAIN by stopping the single-node worker/SKIP-LOCKED poller; Pub/Sub buffers and retries delivery.
+# DEPLOY: APPLY during low traffic. Projection ciphertext AAD is intentionally unchanged.
+# DEPLOY: RESUME the worker after Liquibase completes.
+databaseChangeLog:
+  - changeSet:
+      id: 122-gmail-inbox-projection-mailbox
+      author: zeromail
+      comment: >
+        Add mailbox identity to the inbox projection key and indexes. Existing ciphertext stays
+        decryptable because InboxProjectionCipher AAD remains tenantId:gmailMessageId:field.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 11 migration halted: gmail_inbox_projection has tenant rows whose tenant has no
+            gmail_connections row. Create or restore the tenant mailbox before rerunning.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT DISTINCT gmail_inbox_projection.tenant_id
+                FROM gmail_inbox_projection
+                WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM gmail_connections
+                  WHERE gmail_connections.tenant_id = gmail_inbox_projection.tenant_id
+                )
+              ) missing_mailbox;
+      changes:
+        - addColumn:
+            tableName: gmail_inbox_projection
+            columns:
+              - column:
+                  name: gmail_connection_id
+                  type: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              WITH primary_mailboxes AS (
+                SELECT DISTINCT ON (tenant_id)
+                  tenant_id,
+                  id AS gmail_connection_id
+                FROM gmail_connections
+                ORDER BY tenant_id, is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+              )
+              UPDATE gmail_inbox_projection
+              SET gmail_connection_id = primary_mailboxes.gmail_connection_id
+              FROM primary_mailboxes
+              WHERE gmail_inbox_projection.tenant_id = primary_mailboxes.tenant_id
+                AND gmail_inbox_projection.gmail_connection_id IS NULL;
+        - addNotNullConstraint:
+            tableName: gmail_inbox_projection
+            columnName: gmail_connection_id
+            columnDataType: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS idx_gmail_inbox_projection_expires_at;
+              DROP INDEX IF EXISTS idx_gmail_inbox_projection_thread;
+              DROP INDEX IF EXISTS idx_gmail_inbox_projection_list;
+
+              ALTER TABLE gmail_inbox_projection
+                DROP CONSTRAINT pk_gmail_inbox_projection;
+
+              ALTER TABLE gmail_inbox_projection
+                ADD CONSTRAINT pk_gmail_inbox_projection
+                PRIMARY KEY (tenant_id, gmail_connection_id, gmail_message_id);
+
+              CREATE INDEX idx_gmail_inbox_projection_list
+                ON gmail_inbox_projection (tenant_id, gmail_connection_id, received_at DESC, gmail_message_id DESC)
+                WHERE inbox_state = 'INBOX';
+
+              CREATE INDEX idx_gmail_inbox_projection_thread
+                ON gmail_inbox_projection (tenant_id, gmail_connection_id, gmail_thread_id, received_at DESC);
+
+              CREATE INDEX idx_gmail_inbox_projection_expires_at
+                ON gmail_inbox_projection (tenant_id, gmail_connection_id, expires_at);
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS idx_gmail_inbox_projection_expires_at;
+              DROP INDEX IF EXISTS idx_gmail_inbox_projection_thread;
+              DROP INDEX IF EXISTS idx_gmail_inbox_projection_list;
+
+              ALTER TABLE gmail_inbox_projection
+                DROP CONSTRAINT pk_gmail_inbox_projection;
+
+              ALTER TABLE gmail_inbox_projection
+                ADD CONSTRAINT pk_gmail_inbox_projection
+                PRIMARY KEY (tenant_id, gmail_message_id);
+
+              CREATE INDEX idx_gmail_inbox_projection_list
+                ON gmail_inbox_projection (tenant_id, received_at DESC, gmail_message_id DESC)
+                WHERE inbox_state = 'INBOX';
+
+              CREATE INDEX idx_gmail_inbox_projection_thread
+                ON gmail_inbox_projection (tenant_id, gmail_thread_id, received_at DESC);
+
+              CREATE INDEX idx_gmail_inbox_projection_expires_at
+                ON gmail_inbox_projection (expires_at);
+        - dropColumn:
+            tableName: gmail_inbox_projection
+            columnName: gmail_connection_id

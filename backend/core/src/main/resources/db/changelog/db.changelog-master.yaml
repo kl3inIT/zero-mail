@@ -329,3 +329,18 @@ databaseChangeLog:
   - include:
       file: changes/119-gmail-connections-multi-mailbox.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/120-pubsub-delivery-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/121-mail-message-observed-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/122-gmail-inbox-projection-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/123-gmail-inbox-sync-state-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/124-processing-job-mailbox.yaml
+      relativeToChangelogFile: true
