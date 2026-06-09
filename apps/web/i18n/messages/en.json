@@ -286,6 +286,7 @@
     },
     "groupBy": {
       "day": "Day",
+      "helper": "How data is grouped on the chart (by day, week, month…)",
       "label": "Group by",
       "month": "Month",
       "week": "Week",
@@ -365,6 +366,7 @@
       "title": "Analytics"
     },
     "range": {
+      "helper": "The time period the statistics cover",
       "label": "Date range",
       "lastMonth": "Last month",
       "lastThreeMonths": "Last 3 months",

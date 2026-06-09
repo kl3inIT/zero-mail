@@ -499,43 +499,57 @@ function AnalyticsToolbar({
   const groupByLabel = t(`analytics.groupBy.${groupBy}`);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <Select
-        value={selectedWindow}
-        onValueChange={(nextValue) => onWindowChange(nextValue as AnalyticsWindow)}
-      >
-        <SelectTrigger
-          className="bg-background h-11 w-full justify-between gap-3 px-4 text-base sm:w-[260px]"
-          aria-label={t('analytics.range.label')}
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="analytics-range" className="text-foreground text-sm font-medium">
+          {t('analytics.range.label')}
+        </label>
+        <Select
+          value={selectedWindow}
+          onValueChange={(nextValue) => onWindowChange(nextValue as AnalyticsWindow)}
         >
-          <Calendar className="text-muted-foreground size-4" aria-hidden="true" />
-          <SelectValue>{rangeLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent align="start" className="min-w-[240px]">
-          <SelectItem value="7d">{t('analytics.range.lastWeek')}</SelectItem>
-          <SelectItem value="30d">{t('analytics.range.lastMonth')}</SelectItem>
-          <SelectItem value="90d">{t('analytics.range.lastThreeMonths')}</SelectItem>
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            id="analytics-range"
+            className="bg-background h-11 w-full justify-between gap-3 px-4 text-base sm:w-[260px]"
+            aria-label={t('analytics.range.label')}
+          >
+            <Calendar className="text-muted-foreground size-4" aria-hidden="true" />
+            <SelectValue>{rangeLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start" className="min-w-[240px]">
+            <SelectItem value="7d">{t('analytics.range.lastWeek')}</SelectItem>
+            <SelectItem value="30d">{t('analytics.range.lastMonth')}</SelectItem>
+            <SelectItem value="90d">{t('analytics.range.lastThreeMonths')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground text-xs">{t('analytics.range.helper')}</span>
+      </div>
 
-      <Select
-        value={groupBy}
-        onValueChange={(nextValue) => onGroupByChange(nextValue as GroupByMode)}
-      >
-        <SelectTrigger
-          className="bg-background h-11 w-full justify-between gap-3 px-4 text-base sm:w-[220px]"
-          aria-label={t('analytics.groupBy.label')}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="analytics-groupby" className="text-foreground text-sm font-medium">
+          {t('analytics.groupBy.label')}
+        </label>
+        <Select
+          value={groupBy}
+          onValueChange={(nextValue) => onGroupByChange(nextValue as GroupByMode)}
         >
-          <Grid2X2 className="text-muted-foreground size-4" aria-hidden="true" />
-          <SelectValue>{groupByLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent align="start" className="min-w-[188px]">
-          <SelectItem value="day">{t('analytics.groupBy.day')}</SelectItem>
-          <SelectItem value="week">{t('analytics.groupBy.week')}</SelectItem>
-          <SelectItem value="month">{t('analytics.groupBy.month')}</SelectItem>
-          <SelectItem value="year">{t('analytics.groupBy.year')}</SelectItem>
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            id="analytics-groupby"
+            className="bg-background h-11 w-full justify-between gap-3 px-4 text-base sm:w-[220px]"
+            aria-label={t('analytics.groupBy.label')}
+          >
+            <Grid2X2 className="text-muted-foreground size-4" aria-hidden="true" />
+            <SelectValue>{groupByLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start" className="min-w-[188px]">
+            <SelectItem value="day">{t('analytics.groupBy.day')}</SelectItem>
+            <SelectItem value="week">{t('analytics.groupBy.week')}</SelectItem>
+            <SelectItem value="month">{t('analytics.groupBy.month')}</SelectItem>
+            <SelectItem value="year">{t('analytics.groupBy.year')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground text-xs">{t('analytics.groupBy.helper')}</span>
+      </div>
     </div>
   );
 }

@@ -286,6 +286,7 @@
     },
     "groupBy": {
       "day": "Ngày",
+      "helper": "Cách gộp dữ liệu trên biểu đồ (theo ngày, tuần, tháng…)",
       "label": "Nhóm dữ liệu",
       "month": "Tháng",
       "week": "Tuần",
@@ -365,6 +366,7 @@
       "title": "Phân tích"
     },
     "range": {
+      "helper": "Phạm vi thời gian được tính trong số liệu",
       "label": "Khoảng thời gian",
       "lastMonth": "Tháng trước",
       "lastThreeMonths": "3 tháng qua",
