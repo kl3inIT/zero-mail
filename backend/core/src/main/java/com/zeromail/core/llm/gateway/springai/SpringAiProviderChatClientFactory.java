@@ -144,8 +144,7 @@ public class SpringAiProviderChatClientFactory {
                 OpenAiChatOptions.builder()
                         .model(model)
                         .temperature(temperature)
-                        .timeout(timeoutFor(source))
-                        .internalToolExecutionEnabled(false);
+                        .timeout(timeoutFor(source));
         if (toolChoiceRequired) {
             chatOptionsBuilder.toolChoice(OpenAiToolChoiceOptions.required());
         }
@@ -187,7 +186,6 @@ public class SpringAiProviderChatClientFactory {
         chatOptionsBuilder.temperature(temperature);
         chatOptionsBuilder.maxTokens(maxTokens == null ? ANTHROPIC_DEFAULT_MAX_TOKENS : maxTokens);
         chatOptionsBuilder.timeout(timeoutFor(source));
-        chatOptionsBuilder.internalToolExecutionEnabled(false);
         if (toolChoiceRequired) {
             chatOptionsBuilder.toolChoice(ToolChoice.ofAny(ToolChoiceAny.builder().build()));
         }
@@ -209,7 +207,7 @@ public class SpringAiProviderChatClientFactory {
                         .build();
         return GoogleGenAiChatModel.builder()
                 .genAiClient(genAiClient)
-                .defaultOptions(googleOptions(model, temperature, false).build())
+                .options(googleOptions(model, temperature, false).build())
                 .build();
     }
 
@@ -219,10 +217,7 @@ public class SpringAiProviderChatClientFactory {
             throw new UnsupportedOperationException(
                     "Google GenAI forced tool choice is not supported by this adapter");
         }
-        return GoogleGenAiChatOptions.builder()
-                .model(model)
-                .temperature(temperature)
-                .internalToolExecutionEnabled(false);
+        return GoogleGenAiChatOptions.builder().model(model).temperature(temperature);
     }
 
     private DeepSeekChatModel deepSeekModel(
@@ -238,17 +233,14 @@ public class SpringAiProviderChatClientFactory {
                         .build();
         return DeepSeekChatModel.builder()
                 .deepSeekApi(deepSeekApi)
-                .defaultOptions(deepSeekOptions(model, temperature, false).build())
+                .options(deepSeekOptions(model, temperature, false).build())
                 .build();
     }
 
     private DeepSeekChatOptions.Builder deepSeekOptions(
             String model, double temperature, boolean toolChoiceRequired) {
         DeepSeekChatOptions.Builder chatOptionsBuilder =
-                DeepSeekChatOptions.builder()
-                        .model(model)
-                        .temperature(temperature)
-                        .internalToolExecutionEnabled(false);
+                DeepSeekChatOptions.builder().model(model).temperature(temperature);
         if (toolChoiceRequired) {
             chatOptionsBuilder.toolChoice("required");
         }

@@ -29,7 +29,7 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 class SpringAiLlmModelClientTest {
 
     @Test
-    void applies_required_tool_choice_and_disables_internal_tool_execution() {
+    void applies_required_tool_choice_and_disables_advisor_auto_registration() {
         ChatClient platformChatClient = mock(ChatClient.class);
         ChatClient.ChatClientRequestSpec chatClientRequestSpecification =
                 mock(ChatClient.ChatClientRequestSpec.class);
@@ -40,8 +40,7 @@ class SpringAiLlmModelClientTest {
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.user(anyString()))
                 .thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.tools(
-                        ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any()))
+        when(chatClientRequestSpecification.tools(any(Object[].class)))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.advisors(
                         ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any()))
@@ -76,7 +75,6 @@ class SpringAiLlmModelClientTest {
                         toolChoice ->
                                 assertThat(toolChoice.asAuto())
                                         .isEqualTo(ChatCompletionToolChoiceOption.Auto.REQUIRED));
-        assertThat(capturedOptions.getInternalToolExecutionEnabled()).isFalse();
         assertThat(capturedOptions.getModel()).isEqualTo("openai/gpt-5.4-nano");
         assertThat(capturedOptions.getTemperature()).isEqualTo(0.0);
         assertThat(chatResult.toolCalls())
@@ -101,8 +99,7 @@ class SpringAiLlmModelClientTest {
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.user(anyString()))
                 .thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.tools(
-                        ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any()))
+        when(chatClientRequestSpecification.tools(any(Object[].class)))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.advisors(
                         ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any()))
@@ -152,8 +149,7 @@ class SpringAiLlmModelClientTest {
 
         modelClient.call(request);
 
-        verify(chatClientRequestSpecification, never())
-                .tools(ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any());
+        verify(chatClientRequestSpecification, never()).tools(any(Object[].class));
     }
 
     private void assertRawToolCallAdvisorAutoRegistrationDisabled(
@@ -167,7 +163,7 @@ class SpringAiLlmModelClientTest {
         advisorSpecConsumerCaptor.getValue().accept(advisorSpec);
 
         verify(advisorSpec)
-                .param(ChatClientAttributes.TOOL_CALL_ADVISOR_AUTO_REGISTER.getKey(), false);
+                .param(ChatClientAttributes.TOOL_CALLING_ADVISOR_AUTO_REGISTER.getKey(), false);
     }
 
     private LlmChatRequest request() {

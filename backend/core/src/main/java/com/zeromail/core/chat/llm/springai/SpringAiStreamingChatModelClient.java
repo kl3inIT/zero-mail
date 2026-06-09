@@ -28,6 +28,7 @@ import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
 import reactor.core.scheduler.Scheduler;
@@ -103,10 +104,10 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                 .chatClient()
                 .prompt(prompt)
                 .tools(
-                        toolSpec ->
-                                toolSpec.callbacks(
-                                        toolCallbackTranslator.translate(
-                                                streamRequest.toolCatalog())))
+                        (Object[])
+                                toolCallbackTranslator
+                                        .translate(streamRequest.toolCatalog())
+                                        .toArray(ToolCallback[]::new))
                 .advisors(SpringAiRawToolCallSupport::preserveRawToolCalls)
                 .options(chatModelFactory.optionsFor(resolvedChatClient))
                 .stream()

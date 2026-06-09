@@ -89,7 +89,8 @@ public class SpringAiLlmModelClient implements LlmModelClient {
         if (!request.tools().isEmpty()) {
             requestSpecification =
                     requestSpecification.tools(
-                            toolSpec -> toolSpec.callbacks(translateTools(request.tools())));
+                            (Object[])
+                                    translateTools(request.tools()).toArray(ToolCallback[]::new));
         }
         ChatResponse chatResponse =
                 requestSpecification
@@ -108,8 +109,7 @@ public class SpringAiLlmModelClient implements LlmModelClient {
                 OpenAiChatOptions.builder()
                         .model(request.model())
                         .temperature(request.temperature())
-                        .timeout(llmProperties.readTimeout())
-                        .internalToolExecutionEnabled(false);
+                        .timeout(llmProperties.readTimeout());
         if (request.toolChoiceRequired()) {
             chatOptionsBuilder.toolChoice(OpenAiToolChoiceOptions.required());
         }

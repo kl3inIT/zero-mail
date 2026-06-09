@@ -21,7 +21,6 @@ class PlatformChatClientConfig {
                                 .model(llmProperties.compileModel())
                                 .temperature(0.0)
                                 .timeout(llmProperties.readTimeout())
-                                .internalToolExecutionEnabled(false)
                                 .build())
                 .build();
     }

@@ -40,6 +40,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        generate_statistics: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 100
   thymeleaf:
     # Email templates use a dedicated ClassLoaderTemplateResolver in
     # DigestRendererConfig, not Spring Boot's default classpath:/templates/.
@@ -83,6 +88,8 @@ server:
 management:
   observations:
     enabled: true
+    annotations:
+      enabled: true
   # See backend/api/application.yml: disable the redundant OTLP metrics push (localhost:4318) on
   # every profile; metrics go via Prometheus scrape, traces via OTLP→Alloy in prod.
   otlp:
