@@ -8,6 +8,6 @@ public final class SpringAiRawToolCallSupport {
     private SpringAiRawToolCallSupport() {}
 
     public static void preserveRawToolCalls(ChatClient.AdvisorSpec advisorSpec) {
-        advisorSpec.param(ChatClientAttributes.TOOL_CALL_ADVISOR_AUTO_REGISTER.getKey(), false);
+        advisorSpec.param(ChatClientAttributes.TOOL_CALLING_ADVISOR_AUTO_REGISTER.getKey(), false);
     }
 }

@@ -10,13 +10,9 @@
     },
     "postgres": {
       "type": "stdio",
-      "command": "powershell.exe",
+      "command": "bash",
       "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "scripts/mcp/postgres-mcp.ps1"
+        "scripts/mcp/postgres-mcp.sh"
       ]
     }
   }

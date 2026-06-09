@@ -5,6 +5,7 @@ import Hero from '@/features/landing/components/Hero';
 import HowItWorks from '@/features/landing/components/HowItWorks';
 import Testimonials from '@/features/landing/components/Testimonials';
 import FAQ from '@/features/landing/components/FAQ';
+import Contact from '@/features/landing/components/Contact';
 
 /**
  * Homepage SEO surface. Overrides the bare brand title (`common.app.title` =
@@ -34,6 +35,7 @@ export default function LandingPage() {
       <HowItWorks />
       <Testimonials />
       <FAQ />
+      <Contact />
     </>
   );
 }

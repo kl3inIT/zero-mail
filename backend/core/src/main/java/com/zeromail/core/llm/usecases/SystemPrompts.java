@@ -122,10 +122,16 @@ public final class SystemPrompts {
                     - The UI needs an editable draft now. Do not ask for sender, subject, keyword,
                       or label details when the user already gave a broad topic or meaning and a
                       safe action.
-                    - In this mode, clarificationRequired must be false unless the user omitted
-                      every safe action or requested a forbidden action.
+                    - In this mode, clarificationRequired MUST be false unless the user omitted
+                      every safe action or requested a forbidden action. "No concrete recipient"
+                      is the only outbound-action exception; all other ambiguity must be resolved
+                      into a best-effort draft, never a clarification question.
                     - Broad topical conditions are valid. Represent them as SEMANTIC_INTENT with
-                      deferred=true.
+                      deferred=true. A multi-part "X or Y or Z" condition is a single SEMANTIC_INTENT
+                      that describes all parts — never ask the user to split or simplify it.
+                    - If the user text already contains a concrete recipient email (local@domain.tld),
+                      clarificationRequired MUST be false — compile the forward_email or send_email
+                      rule immediately with that recipient.
                     - If the user says mail is related to a topic and asks to label it, use the
                       topic as the SEMANTIC_INTENT and the requested label text as the label action.
                     - Example pattern: Vietnamese text meaning "emails related to studying should

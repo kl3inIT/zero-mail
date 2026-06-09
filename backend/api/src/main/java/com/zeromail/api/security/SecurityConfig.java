@@ -204,7 +204,10 @@ public class SecurityConfig {
                                                 "/v3/api-docs/**",
                                                 "/swagger-ui/**",
                                                 "/login/oauth2/**",
-                                                "/oauth2/**")
+                                                "/oauth2/**",
+                                                // Support feedback — open to unauthenticated users
+                                                // (landing page submissions).
+                                                "/api/support/feedback")
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())

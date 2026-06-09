@@ -61,6 +61,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        generate_statistics: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 100
   ai:
     # spring.ai.model.*=none + chat[.client].observations.log-prompt/completion=false are
     # centralized in zero-mail-shared.yml (imported above). Only api-specific keys remain here.
@@ -216,3 +221,6 @@ management:
   metrics:
     enable:
       all: true
+  observations:
+    annotations:
+      enabled: true

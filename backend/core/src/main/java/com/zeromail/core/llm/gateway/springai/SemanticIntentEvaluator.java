@@ -125,7 +125,6 @@ public class SemanticIntentEvaluator
                                             .temperature(0.0)
                                             .maxTokens(512)
                                             .timeout(llmProperties.readTimeout())
-                                            .internalToolExecutionEnabled(false)
                                             .build())
                             .build();
             return evaluateWithClient(

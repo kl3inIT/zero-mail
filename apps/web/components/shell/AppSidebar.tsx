@@ -11,6 +11,7 @@ import {
   ChevronsUpDown,
   CreditCard,
   Crown,
+  HelpCircle,
   Inbox,
   ListChecks,
   LogOut,
@@ -66,7 +67,8 @@ type NavItem = {
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.rules'
-    | 'nav.cleanupUnsubscribe';
+    | 'nav.cleanupUnsubscribe'
+    | 'nav.support';
   icon: typeof Inbox;
 };
 
@@ -90,6 +92,7 @@ const AUTOMATION_NAV: NavItem[] = [
 const TOOLS_NAV: NavItem[] = [
   { href: '/cleanup/bulk-unsubscribe' as Route, labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+  { href: '/support' as Route, labelKey: 'nav.support', icon: HelpCircle },
 ];
 
 const ACCOUNT_NAV: AccountNavItem[] = [

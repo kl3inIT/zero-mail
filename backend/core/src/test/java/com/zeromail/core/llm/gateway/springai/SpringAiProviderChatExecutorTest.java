@@ -80,8 +80,7 @@ class SpringAiProviderChatExecutorTest {
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.user(anyString()))
                 .thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.tools(
-                        ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any()))
+        when(chatClientRequestSpecification.tools(any(Object[].class)))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.advisors(
                         ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any()))
@@ -169,8 +168,7 @@ class SpringAiProviderChatExecutorTest {
 
         executor.call(credential, request);
 
-        verify(chatClientRequestSpecification, never())
-                .tools(ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any());
+        verify(chatClientRequestSpecification, never()).tools(any(Object[].class));
     }
 
     private void assertRawToolCallAdvisorAutoRegistrationDisabled(
@@ -184,7 +182,7 @@ class SpringAiProviderChatExecutorTest {
         advisorSpecConsumerCaptor.getValue().accept(advisorSpec);
 
         verify(advisorSpec)
-                .param(ChatClientAttributes.TOOL_CALL_ADVISOR_AUTO_REGISTER.getKey(), false);
+                .param(ChatClientAttributes.TOOL_CALLING_ADVISOR_AUTO_REGISTER.getKey(), false);
     }
 
     private ChatResponse chatResponseWithToolCalls(List<AssistantMessage.ToolCall> toolCalls) {
