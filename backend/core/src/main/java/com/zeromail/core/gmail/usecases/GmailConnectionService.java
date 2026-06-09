@@ -121,16 +121,13 @@ public class GmailConnectionService {
                 _ -> {
                     GmailConnectionEntity targetConnection =
                             resolveOwnedConnectionOrThrow(tenantId, gmailConnectionId);
-                    List<GmailConnectionEntity> gmailConnections =
-                            connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId);
-                    for (GmailConnectionEntity gmailConnection : gmailConnections) {
-                        if (gmailConnection.isPrimary()
-                                && !gmailConnection.getId().equals(gmailConnectionId)) {
-                            gmailConnection.setPrimary(false);
-                            connectionRepository.save(gmailConnection);
-                        }
-                    }
-                    connectionRepository.flush();
+                    // Clear every other primary atomically via a bulk UPDATE and flush it to the DB
+                    // BEFORE promoting the target. This removes the dependency on Hibernate flush
+                    // ordering that previously kept two is_primary=true rows from coexisting in the
+                    // transaction and tripping uq_gmail_conn_primary.
+                    connectionRepository.clearPrimaryForTenantExcept(tenantId, gmailConnectionId);
+                    // The bulk UPDATE bypasses the persistence context, so refresh the managed
+                    // target's flag from the just-resolved CONNECTED row before promoting it.
                     if (!targetConnection.isPrimary()) {
                         targetConnection.setPrimary(true);
                         connectionRepository.saveAndFlush(targetConnection);

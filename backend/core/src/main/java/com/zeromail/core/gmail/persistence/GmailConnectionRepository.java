@@ -68,4 +68,19 @@ public interface GmailConnectionRepository extends JpaRepository<GmailConnection
     @Transactional
     int updateLastSyncedHistoryIdMonotonic(
             @Param("tenantId") UUID tenantId, @Param("newId") Long newId);
+
+    /**
+     * Atomically clears the primary flag on every row of a tenant except the one being promoted.
+     * Used by {@code GmailConnectionService.setPrimary} so the "exactly one primary" invariant no
+     * longer depends on Hibernate flush ordering between an entity-level clear and the target set.
+     */
+    @Modifying
+    @Query(
+            "UPDATE GmailConnectionEntity c SET c.isPrimary = false "
+                    + "WHERE c.tenantId = :tenantId "
+                    + "AND c.id <> :keepMailboxId "
+                    + "AND c.isPrimary = true")
+    @Transactional
+    int clearPrimaryForTenantExcept(
+            @Param("tenantId") UUID tenantId, @Param("keepMailboxId") UUID keepMailboxId);
 }
