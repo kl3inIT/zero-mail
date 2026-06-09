@@ -61,7 +61,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 08.1. Inbox Zero-style Rule Actions & Examples Catalog | v1.2 | 6/6 | Complete | 2026-05-25 |
 | 08-bulk-unsubscribe. Bulk Unsubscribe Campaign | v1.2 | — | Complete | 2026-05 |
 | 9. User Settings UI on Curated Catalog | v1.2 | 7/7 | Complete | 2026-05-29 |
-| 10. Gmail Mailbox Foundation and Account Management | v1.3 | 5/6 | In Progress|  |
+| 10. Gmail Mailbox Foundation and Account Management | v1.3 | 6/6 | Complete   | 2026-06-09 |
 | 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 0/? | Pending | — |
 
 ### Phase 10: Gmail Mailbox Foundation and Account Management
@@ -70,7 +70,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 **Requirements:** WSP-01..07, GMA-01..07, AUD-04, VER-01
 **Depends on:** Phase 9 (User Settings UI), current Gmail OAuth/connection schema, code research in `.planning/research/V1.3-CODE-RESEARCH.md`
 **Mode:** sequential foundation before Phase 11
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 Plans:
 **Wave 1**
 
@@ -91,7 +91,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 10-06-PLAN.md — Connected-accounts REST: list / set-primary / disconnect + add/reconnect OAuth triggers + MailboxSummaryResponse DTO
+- [x] 10-06-PLAN.md — Connected-accounts REST: list / set-primary / disconnect + add/reconnect OAuth triggers + MailboxSummaryResponse DTO
 
 Expected plan areas:
 
