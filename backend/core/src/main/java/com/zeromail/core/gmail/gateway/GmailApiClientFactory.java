@@ -65,6 +65,17 @@ public class GmailApiClientFactory {
         this.refreshTokenCipher = refreshTokenCipher;
     }
 
+    /**
+     * Evicts any cached access token for the given connection. Called by {@code
+     * GmailConnectionService} whenever a connection's grant changes (disconnect, reconnect) so a
+     * cached, still-valid access token can never outlive the grant it was minted from. CASA V13.1.5
+     * disconnect intent requires that a disconnected/revoked mailbox stops being usable immediately,
+     * not after the access-token TTL (~59 min) elapses.
+     */
+    public void evictAccessToken(UUID gmailConnectionId) {
+        accessTokenCache.remove(gmailConnectionId);
+    }
+
     public Gmail buildGmailClient(String accessToken) throws IOException {
         return buildGmailClient(accessToken, null);
     }
@@ -151,6 +162,17 @@ public class GmailApiClientFactory {
             GmailConnectionEntity gmailConnection, UUID tenantId, Duration requestTimeout)
             throws IOException {
         UUID gmailConnectionId = gmailConnection.getId();
+        // Re-verify the grant before serving a cached token: a stale cache entry (e.g. from a
+        // race with a concurrent disconnect that has not yet called evictAccessToken) must never
+        // outlive the CONNECTED status of the row it was minted from.
+        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            accessTokenCache.remove(gmailConnectionId);
+            throw new IllegalStateException(
+                    "Gmail mailbox is not connected for tenantId: "
+                            + tenantId
+                            + ", gmailConnectionId: "
+                            + gmailConnectionId);
+        }
         TokenRefreshResult cachedToken = accessTokenCache.get(gmailConnectionId);
         if (cachedToken != null && cachedToken.expiresAt().isAfter(Instant.now())) {
             return buildGmailClient(cachedToken.accessToken().value(), requestTimeout);

@@ -224,6 +224,9 @@ public class GmailConnectionService {
     }
 
     private void applyDisconnectedState(GmailConnectionEntity gmailConnection) {
+        // Evict any cached access token for this connection so a still-valid (~59 min TTL) token
+        // can never keep issuing Gmail API calls against a mailbox the user just disconnected.
+        gmailApiClientFactory.evictAccessToken(gmailConnection.getId());
         gmailConnection.setStatus(GmailConnectionStatus.DISCONNECTED);
         gmailConnection.setDisconnectedAt(Instant.now());
         gmailConnection.setRefreshTokenEncrypted(null);
@@ -459,6 +462,10 @@ public class GmailConnectionService {
             } catch (DataIntegrityViolationException dataIntegrityViolation) {
                 rethrowDuplicateActiveMailboxIfMatched(tenantId, dataIntegrityViolation);
             }
+            // Reconnect reuses the same gmailConnectionId with a NEW refresh token; evict the
+            // cached access token derived from the OLD grant so post-reconnect calls never run on
+            // the stale token until its TTL expires.
+            gmailApiClientFactory.evictAccessToken(targetMailboxId);
         } finally {
             Arrays.fill(plaintextRefreshTokenBytes, (byte) 0);
         }
