@@ -419,7 +419,11 @@ public class GmailConnectionService {
             gmailConnection.setRefreshTokenEncrypted(refreshTokenEncrypted);
             gmailConnection.setScopesGranted(scopesGranted);
             gmailConnection.setConnectedAt(Instant.now());
-            gmailConnection.setPrimary(false);
+            // Become primary when the tenant currently has no CONNECTED primary, so the first/only
+            // connected mailbox is never left with zero primaries (which would strand every
+            // "operate on primary" consumer). promoteNextPrimaryMailbox only repairs disconnects of
+            // an existing primary, not this fresh-add case.
+            gmailConnection.setPrimary(!tenantHasConnectedPrimary(tenantId));
             try {
                 connectionRepository.saveAndFlush(gmailConnection);
             } catch (DataIntegrityViolationException dataIntegrityViolation) {
@@ -439,11 +443,22 @@ public class GmailConnectionService {
             String plaintextRefreshToken) {
         GmailConnectionEntity gmailConnection =
                 resolveReconnectableConnectionOrThrow(tenantId, targetMailboxId);
+        // Defensive 409 if another active mailbox already owns this email (the disconnected target
+        // freed the partial-unique slot and an add re-used the address); excludes the target row.
+        assertNoActiveDuplicateExcludingTarget(
+                tenantId, gmailConnection.getGoogleEmail(), targetMailboxId);
+        // Resolve whether another CONNECTED primary already exists BEFORE flipping the target back
+        // to CONNECTED, so a tenant left with no live primary (e.g. CR-03 disconnected-only state)
+        // promotes this reconnected mailbox instead of being stranded with zero primaries.
+        boolean tenantHadConnectedPrimary = tenantHasConnectedPrimary(tenantId);
         byte[] plaintextRefreshTokenBytes = plaintextRefreshToken.getBytes(StandardCharsets.UTF_8);
         try {
             byte[] refreshTokenEncrypted =
                     refreshTokenCipher.encrypt(plaintextRefreshTokenBytes, tenantId.toString());
             gmailConnection.setStatus(GmailConnectionStatus.CONNECTED);
+            if (!tenantHadConnectedPrimary) {
+                gmailConnection.setPrimary(true);
+            }
             gmailConnection.setRefreshTokenEncrypted(refreshTokenEncrypted);
             gmailConnection.setScopesGranted(scopesGranted);
             gmailConnection.setConnectedAt(Instant.now());
@@ -539,12 +554,27 @@ public class GmailConnectionService {
                         });
     }
 
+    private boolean tenantHasConnectedPrimary(UUID tenantId) {
+        return connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                .anyMatch(
+                        gmailConnection ->
+                                gmailConnection.isPrimary()
+                                        && gmailConnection.getStatus()
+                                                == GmailConnectionStatus.CONNECTED);
+    }
+
     private void assertNoActiveDuplicate(UUID tenantId, String googleEmail) {
+        assertNoActiveDuplicateExcludingTarget(tenantId, googleEmail, null);
+    }
+
+    private void assertNoActiveDuplicateExcludingTarget(
+            UUID tenantId, String googleEmail, UUID excludedMailboxId) {
         boolean duplicateActiveMailboxExists =
                 connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
                         .anyMatch(
                                 gmailConnection ->
-                                        gmailConnection.getStatus()
+                                        !gmailConnection.getId().equals(excludedMailboxId)
+                                                && gmailConnection.getStatus()
                                                         == GmailConnectionStatus.CONNECTED
                                                 && gmailConnection
                                                         .getGoogleEmail()
