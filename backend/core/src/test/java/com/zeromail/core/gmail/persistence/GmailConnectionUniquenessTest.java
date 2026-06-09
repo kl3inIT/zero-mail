@@ -11,15 +11,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * AUTH-02 enforcement: only one Gmail connection per tenant. The unique constraint
- * uq_gmail_connections_tenant_id (changeset 003) must reject the second insert.
+ * Phase 10 multi-mailbox invariant: one tenant may have multiple active Gmail connections, but not
+ * two active rows for the same lowercased Gmail address.
  */
 class GmailConnectionUniquenessTest extends PostgresContainerTest {
 
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    void second_insert_for_same_tenant_fails() {
+    void same_tenant_accepts_different_active_emails_but_rejects_duplicate_active_email() {
         UUID tenantId = UUID.randomUUID();
         jdbc.update("insert into tenants(id, display_name) values(?, ?)", tenantId, "T");
         jdbc.update(
@@ -28,6 +28,12 @@ class GmailConnectionUniquenessTest extends PostgresContainerTest {
                 tenantId,
                 "a@example.com",
                 "CONNECTED");
+        jdbc.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status) values(?, ?, ?, ?)",
+                UUID.randomUUID(),
+                tenantId,
+                "b@example.com",
+                "CONNECTED");
 
         assertThatThrownBy(
                         () ->
@@ -35,7 +41,7 @@ class GmailConnectionUniquenessTest extends PostgresContainerTest {
                                         "insert into gmail_connections(id, tenant_id, google_email, status) values(?, ?, ?, ?)",
                                         UUID.randomUUID(),
                                         tenantId,
-                                        "b@example.com",
+                                        "A@example.com",
                                         "CONNECTED"))
                 .isInstanceOfAny(DataIntegrityViolationException.class, SQLException.class);
     }

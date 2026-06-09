@@ -2,17 +2,24 @@ package com.zeromail.core.gmail.usecases;
 
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.domain.GmailIngestionHealth;
+import com.zeromail.core.gmail.exception.DuplicateActiveMailboxException;
+import com.zeromail.core.gmail.exception.MailboxDisconnectedException;
+import com.zeromail.core.gmail.exception.MailboxNotOwnedException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GoogleOAuthRevokeClient;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.projection.GmailConnectionProjection;
+import com.zeromail.core.gmail.projection.MailboxSummaryProjection;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +33,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class GmailConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(GmailConnectionService.class);
+    private static final String DUPLICATE_ACTIVE_EMAIL_CONSTRAINT = "uq_gmail_conn_active_email";
 
     private final GmailConnectionRepository connectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
@@ -62,6 +70,70 @@ public class GmailConnectionService {
                                         connection.getIngestionHealth().name(),
                                         connection.getGoogleEmail()))
                 .orElseGet(GmailConnectionProjection::notConnected);
+    }
+
+    @Transactional(readOnly = true)
+    public GmailConnectionEntity resolveOwnedConnectionOrThrow(
+            UUID tenantId, UUID gmailConnectionId) {
+        GmailConnectionEntity gmailConnection =
+                connectionRepository
+                        .findByIdAndTenantId(gmailConnectionId, tenantId)
+                        .orElseThrow(
+                                () -> {
+                                    log.warn(
+                                            "event=gmail_mailbox_resolve_denied tenantId={} gmailConnectionId={} reason=not_owned",
+                                            tenantId,
+                                            gmailConnectionId);
+                                    return new MailboxNotOwnedException(
+                                            tenantId, gmailConnectionId);
+                                });
+        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            log.warn(
+                    "event=gmail_mailbox_resolve_denied tenantId={} gmailConnectionId={} reason=not_connected",
+                    tenantId,
+                    gmailConnectionId);
+            throw new MailboxDisconnectedException(
+                    tenantId, gmailConnectionId, gmailConnection.getStatus());
+        }
+        return gmailConnection;
+    }
+
+    @Transactional(readOnly = true)
+    public GmailConnectionEntity resolveReconnectableConnectionOrThrow(
+            UUID tenantId, UUID gmailConnectionId) {
+        return connectionRepository
+                .findByIdAndTenantId(gmailConnectionId, tenantId)
+                .orElseThrow(
+                        () -> {
+                            log.warn(
+                                    "event=gmail_mailbox_reconnect_resolve_denied tenantId={} gmailConnectionId={} reason=not_owned",
+                                    tenantId,
+                                    gmailConnectionId);
+                            return new MailboxNotOwnedException(tenantId, gmailConnectionId);
+                        });
+    }
+
+    public void setPrimary(UUID tenantId, UUID gmailConnectionId) {
+        disconnectTransaction.executeWithoutResult(
+                _ -> {
+                    resolveOwnedConnectionOrThrow(tenantId, gmailConnectionId);
+                    List<GmailConnectionEntity> gmailConnections =
+                            connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId);
+                    for (GmailConnectionEntity gmailConnection : gmailConnections) {
+                        boolean shouldBePrimary = gmailConnection.getId().equals(gmailConnectionId);
+                        if (gmailConnection.isPrimary() != shouldBePrimary) {
+                            gmailConnection.setPrimary(shouldBePrimary);
+                            connectionRepository.save(gmailConnection);
+                        }
+                    }
+                });
+    }
+
+    @Transactional(readOnly = true)
+    public List<MailboxSummaryProjection> listMailboxes(UUID tenantId) {
+        return connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                .map(MailboxSummaryProjection::from)
+                .toList();
     }
 
     /**
@@ -281,5 +353,66 @@ public class GmailConnectionService {
                             connection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
                             connectionRepository.save(connection);
                         });
+    }
+
+    private void assertNoActiveDuplicate(UUID tenantId, String googleEmail) {
+        boolean duplicateActiveMailboxExists =
+                connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                        .anyMatch(
+                                gmailConnection ->
+                                        gmailConnection.getStatus()
+                                                        == GmailConnectionStatus.CONNECTED
+                                                && gmailConnection
+                                                        .getGoogleEmail()
+                                                        .equalsIgnoreCase(googleEmail));
+        if (duplicateActiveMailboxExists) {
+            throw new DuplicateActiveMailboxException(tenantId);
+        }
+    }
+
+    private void rethrowDuplicateActiveMailboxIfMatched(
+            UUID tenantId, DataIntegrityViolationException dataIntegrityViolation) {
+        if (containsConstraintName(dataIntegrityViolation, DUPLICATE_ACTIVE_EMAIL_CONSTRAINT)) {
+            throw new DuplicateActiveMailboxException(tenantId);
+        }
+        throw dataIntegrityViolation;
+    }
+
+    private static boolean containsConstraintName(Throwable throwable, String expectedConstraint) {
+        Throwable currentThrowable = throwable;
+        while (currentThrowable != null) {
+            String constraintName = constraintName(currentThrowable);
+            if (expectedConstraint.equals(constraintName)) {
+                return true;
+            }
+            currentThrowable = currentThrowable.getCause();
+        }
+        return false;
+    }
+
+    private static String constraintName(Throwable throwable) {
+        String directConstraintName = invokeStringMethod(throwable, "getConstraintName");
+        if (directConstraintName != null) {
+            return directConstraintName;
+        }
+        Object serverErrorMessage = invokeObjectMethod(throwable, "getServerErrorMessage");
+        if (serverErrorMessage == null) {
+            return null;
+        }
+        return invokeStringMethod(serverErrorMessage, "getConstraint");
+    }
+
+    private static String invokeStringMethod(Object target, String methodName) {
+        Object value = invokeObjectMethod(target, methodName);
+        return value instanceof String stringValue ? stringValue : null;
+    }
+
+    private static Object invokeObjectMethod(Object target, String methodName) {
+        try {
+            Method method = target.getClass().getMethod(methodName);
+            return method.invoke(target);
+        } catch (ReflectiveOperationException | SecurityException ignoredReflectionFailure) {
+            return null;
+        }
     }
 }
