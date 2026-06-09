@@ -7,6 +7,7 @@
             "inbox :: persistence",
             "inbox :: usecases",
             "shared :: crypto",
+            "shared :: exception",
             "shared :: html",
             "shared :: privacy",
             "shared :: persistence",
