@@ -29,6 +29,19 @@ public class TelegramWebhookSecurityConfig {
         return registration;
     }
 
+    /**
+     * Dedicated filter chain for the Telegram webhook endpoint only.
+     *
+     * <p>CSRF protection is intentionally disabled here. CSRF defends stateful, cookie/session
+     * authenticated browser requests where the browser auto-attaches ambient credentials. This
+     * endpoint is the opposite: a {@code STATELESS} machine-to-machine POST from Telegram's
+     * servers, with no session and no cookies. Authentication is the shared {@code
+     * X-Telegram-Bot-Api-Secret-Token} header validated in constant time by {@link
+     * TelegramWebhookSecretFilter}; a forged cross-site request cannot supply that secret. Spring's
+     * CSRF token would also break the integration because Telegram does not (and cannot) send one.
+     * The main application chains keep {@code csrf().spa()} enabled — this carve-out is scoped to
+     * the webhook path via {@code securityMatcher} and does not relax CSRF anywhere else.
+     */
     @Bean
     @Order(2)
     SecurityFilterChain telegramWebhookFilterChain(
