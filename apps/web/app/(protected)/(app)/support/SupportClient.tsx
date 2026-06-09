@@ -74,36 +74,37 @@ export function SupportClient({ initialUser }: SupportClientProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-auto p-3 sm:p-6">
-        <div className="mx-auto w-full max-w-2xl space-y-8">
-          <header className="space-y-1">
-            <h1 className="text-foreground text-2xl font-semibold tracking-normal">
-              {t('pageTitle')}
-            </h1>
-            <p className="text-muted-foreground text-sm">{t('pageDescription')}</p>
-          </header>
+      <div className="flex-1 space-y-6 overflow-auto p-4 sm:p-6">
+        <header className="space-y-1">
+          <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+            {t('pageTitle')}
+          </h1>
+          <p className="text-muted-foreground text-sm">{t('pageDescription')}</p>
+        </header>
 
-          {succeeded ? (
-            <div className="border-border bg-muted/30 flex flex-col items-center gap-3 rounded-xl border p-10 text-center">
-              <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
-                <MessageCircle className="text-primary size-6" />
-              </div>
-              <p className="text-foreground font-semibold">{t('successTitle')}</p>
-              <p className="text-muted-foreground text-sm">{t('successBody')}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-1"
-                onClick={() => {
-                  setSucceeded(false);
-                  submitMutation.reset();
-                }}
-              >
-                {t('successReset')}
-              </Button>
+        {succeeded ? (
+          <div className="border-border bg-muted/30 flex flex-col items-center gap-3 rounded-xl border p-10 text-center">
+            <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+              <MessageCircle className="text-primary size-6" />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <p className="text-foreground font-semibold">{t('successTitle')}</p>
+            <p className="text-muted-foreground text-sm">{t('successBody')}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-1"
+              onClick={() => {
+                setSucceeded(false);
+                submitMutation.reset();
+              }}
+            >
+              {t('successReset')}
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+            {/* Form — left column */}
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Type selector */}
               <div className="space-y-2">
                 <span className="text-foreground text-sm font-medium">{t('typeLabel')}</span>
@@ -155,7 +156,7 @@ export function SupportClient({ initialUser }: SupportClientProps) {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={messagePlaceholder}
-                  rows={6}
+                  rows={7}
                   maxLength={5000}
                   required
                   className="resize-none"
@@ -187,8 +188,43 @@ export function SupportClient({ initialUser }: SupportClientProps) {
                 </Button>
               </div>
             </form>
-          )}
-        </div>
+
+            {/* Info sidebar — right column, desktop only */}
+            <aside className="hidden space-y-4 lg:block">
+              <div className="border-border bg-muted/30 space-y-4 rounded-xl border p-5">
+                <div className="space-y-1">
+                  <p className="text-foreground text-sm font-semibold">
+                    {t('sidebarResponseTitle')}
+                  </p>
+                  <p className="text-muted-foreground text-sm">{t('sidebarResponseBody')}</p>
+                </div>
+                <div className="border-border space-y-3 border-t pt-4">
+                  <div className="space-y-1">
+                    <p className="text-foreground flex items-center gap-2 text-sm font-medium">
+                      <Bug className="size-3.5" aria-hidden="true" />
+                      {t('typeBug')}
+                    </p>
+                    <p className="text-muted-foreground text-xs">{t('sidebarBugHint')}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-foreground flex items-center gap-2 text-sm font-medium">
+                      <Lightbulb className="size-3.5" aria-hidden="true" />
+                      {t('typeFeature')}
+                    </p>
+                    <p className="text-muted-foreground text-xs">{t('sidebarFeatureHint')}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-foreground flex items-center gap-2 text-sm font-medium">
+                      <MessageCircle className="size-3.5" aria-hidden="true" />
+                      {t('typeGeneral')}
+                    </p>
+                    <p className="text-muted-foreground text-xs">{t('sidebarGeneralHint')}</p>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
       </div>
     </div>
   );

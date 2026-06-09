@@ -1553,6 +1553,11 @@
     "successTitle": "Sent!",
     "successBody": "Thanks for your message. We'll get back to you soon.",
     "successReset": "Send another",
+    "sidebarResponseTitle": "What to expect",
+    "sidebarResponseBody": "We read every message and reply within one business day.",
+    "sidebarBugHint": "Include steps to reproduce, what you saw, and what you expected.",
+    "sidebarFeatureHint": "Describe the problem it would solve and how you'd use it.",
+    "sidebarGeneralHint": "Any question about rules, billing, Gmail connection, or the product.",
     "placeholders": {
       "bug": "What happened, what you expected, and steps to reproduce…",
       "feature": "Describe the feature and how it would help you…",

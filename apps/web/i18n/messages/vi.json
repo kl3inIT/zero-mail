@@ -1553,6 +1553,11 @@
     "successTitle": "Đã gửi!",
     "successBody": "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm.",
     "successReset": "Gửi thêm",
+    "sidebarResponseTitle": "Điều bạn có thể mong đợi",
+    "sidebarResponseBody": "Chúng tôi đọc mọi tin nhắn và phản hồi trong vòng một ngày làm việc.",
+    "sidebarBugHint": "Mô tả các bước tái hiện, điều bạn thấy và điều bạn mong đợi.",
+    "sidebarFeatureHint": "Mô tả vấn đề tính năng sẽ giải quyết và cách bạn muốn dùng nó.",
+    "sidebarGeneralHint": "Bất kỳ câu hỏi nào về rules, billing, kết nối Gmail, hoặc sản phẩm.",
     "placeholders": {
       "bug": "Điều gì xảy ra, bạn mong đợi điều gì, và các bước để tái hiện…",
       "feature": "Mô tả tính năng và cách nó giúp ích cho bạn…",
