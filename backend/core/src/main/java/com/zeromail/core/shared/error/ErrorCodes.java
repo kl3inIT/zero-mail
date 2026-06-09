@@ -24,6 +24,9 @@ public final class ErrorCodes {
     public static final String CONFLICT = "error.conflict";
     public static final String BAD_REQUEST = "error.badRequest";
     public static final String GMAIL_DISCONNECTED = "error.gmail.disconnected";
+    public static final String GMAIL_MAILBOX_NOT_FOUND = "error.gmail.mailbox.not_found";
+    public static final String GMAIL_MAILBOX_DUPLICATE_ACTIVE =
+            "error.gmail.mailbox.duplicate_active";
     public static final String AUTH_CONSENT_DENIED = "error.auth.consent_denied";
     public static final String AUTH_GMAIL_SCOPE_REQUIRED = "error.auth.gmail_scope_required";
     public static final String BILLING_INSUFFICIENT_CREDITS = "error.billing.insufficient";
