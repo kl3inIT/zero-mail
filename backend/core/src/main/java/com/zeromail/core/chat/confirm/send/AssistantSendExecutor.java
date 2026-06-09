@@ -6,7 +6,6 @@ import com.zeromail.core.chat.confirm.ConfirmationStateMachine.SendCommitCommand
 import com.zeromail.core.chat.confirm.ConfirmationStateMachine.SendInFlightCommand;
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.exception.GmailSendFailedException;
-import com.zeromail.core.chat.exception.RecipientInvalidException;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.outbound.usecases.OutboundSendCommand;
@@ -191,23 +190,13 @@ public class AssistantSendExecutor {
         }
         try {
             for (InternetAddress internetAddress : InternetAddress.parse(rawRecipients, false)) {
-                String parsedAddress = internetAddress.getAddress();
-                if (!isEmailAddress(parsedAddress)) {
-                    // Non-strict parse tolerates a bare display name (no '@'); reject it here so a
-                    // recipient like "Nhat Nhu" fails fast as a recipient error, not deeper in the
-                    // Gmail build, and never reaches the outbound gateway.
-                    throw new RecipientInvalidException();
+                if (hasText(internetAddress.getAddress())) {
+                    recipients.add(internetAddress.getAddress());
                 }
-                recipients.add(parsedAddress);
             }
         } catch (AddressException addressException) {
-            throw new RecipientInvalidException(addressException);
+            throw new IllegalArgumentException("recipient address is invalid", addressException);
         }
-    }
-
-    private static boolean isEmailAddress(String value) {
-        int atIndex = value == null ? -1 : value.indexOf('@');
-        return atIndex > 0 && atIndex < value.length() - 1;
     }
 
     private String recipientHash(AssistantSendCommand command) {

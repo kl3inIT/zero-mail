@@ -662,7 +662,6 @@
       "memoryDestination": "Sau khi lưu, mục này sẽ xuất hiện trong Cài đặt AI -> Kho kiến thức.",
       "outsideSourceThread": "Thêm bởi AI · xác minh",
       "overwriteNotice": "Sẽ ghi đè hướng dẫn hiện tại",
-      "recipientInvalid": "Người nhận chưa phải là địa chỉ email hợp lệ. Hãy bấm Sửa và nhập email dạng name@example.com trước khi gửi.",
       "removeSender": "Bỏ khỏi danh sách an toàn",
       "ruleEditHint": "Sửa nội dung \"Khi\" sẽ tính lại điều kiện và hành động khi bạn xác nhận.",
       "ruleName": "Tên quy tắc",
@@ -975,9 +974,6 @@
       "body": "Vui lòng thử lại. Nếu lỗi tiếp tục xảy ra, hãy tải lại trang hoặc đăng nhập lại.",
       "reset": "Thử lại",
       "title": "Đã xảy ra lỗi"
-    },
-    "chat": {
-      "recipientInvalid": "Địa chỉ người nhận không hợp lệ. Hãy sửa lại thành email dạng name@example.com rồi gửi lại."
     },
     "cleanup": {
       "campaign": {

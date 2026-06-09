@@ -81,7 +81,6 @@ export function PreviewCard({
     action: { ...action, state: localState ?? action.state },
     vipAcknowledged,
     submitting: confirmAction.isPending || cancelAction.isPending,
-    contentOverride,
   });
   const titleId = `preview-card-${action.toolCallId}`;
   const bodySlot = BODY_SLOT_MAP[action.kind];
@@ -198,11 +197,6 @@ export function PreviewCard({
           onOverrideChange: handleOverrideChange,
           recipients: computed.recipients,
         })}
-        {computed.status === 'pending' && computed.recipientInvalid && (
-          <p className="text-destructive text-sm" data-testid="preview-recipient-invalid">
-            {t('recipientInvalid')}
-          </p>
-        )}
         {confirmAction.isError && <p className="text-destructive text-sm">{t('actionError')}</p>}
       </CardContent>
       {computed.status === 'pending' && (

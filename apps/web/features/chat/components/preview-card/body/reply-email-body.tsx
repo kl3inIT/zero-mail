@@ -1,7 +1,6 @@
 import { useTranslations } from 'next-intl';
 
 import { Textarea } from '@/components/ui/textarea';
-import { RecipientField } from '@/features/chat/components/preview-card/body/recipient-field';
 import { CopyButton } from '@/features/chat/components/preview-card/copy-button';
 import { OutsideSourceThreadBadge } from '@/features/chat/components/preview-card/outside-source-thread-badge';
 import {
@@ -52,18 +51,11 @@ export function ReplyEmailBody({
       </div>
       <div className="grid gap-1">
         <p className="text-muted-foreground text-xs font-medium uppercase">{t('to')}</p>
-        {editing ? (
-          <RecipientField
-            defaultValue={recipients.map((recipient) => recipient.email).join(', ')}
-            onChange={(value) => onOverrideChange('to', value)}
-          />
-        ) : (
-          <div className="grid gap-1">
-            {recipients.map((recipient) => (
-              <RecipientRow key={recipient.email} recipient={recipient} />
-            ))}
-          </div>
-        )}
+        <div className="grid gap-1">
+          {recipients.map((recipient) => (
+            <RecipientRow key={recipient.email} recipient={recipient} />
+          ))}
+        </div>
       </div>
       <div className="grid gap-1">
         <p className="text-muted-foreground text-xs font-medium uppercase">{t('body')}</p>

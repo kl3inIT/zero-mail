@@ -52,19 +52,6 @@ export type Recipient = {
   outsideSourceThread?: boolean;
 };
 
-// Pragmatic single-address shape check (local@domain.tld). Mirrors the backend's intent: reject a
-// display name like "Nhat Nhu" in a recipient field before the send fails server-side with a 400.
-// Not a full RFC 5322 validator — the backend (InternetAddress.parse) remains the source of truth.
-const EMAIL_ADDRESS_PATTERN = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
-
-export function isEmailAddressList(value: string): boolean {
-  const addresses = value
-    .split(',')
-    .map((address) => address.trim())
-    .filter(Boolean);
-  return addresses.length > 0 && addresses.every((address) => EMAIL_ADDRESS_PATTERN.test(address));
-}
-
 export type PreviewCardAction = {
   kind: BodySlotToolName;
   chatId: string;
@@ -89,7 +76,6 @@ export type PreviewCardComputedState = {
   vipRequired: boolean;
   draftBody: string;
   recipients: Recipient[];
-  recipientInvalid: boolean;
 };
 
 export function isBodySlotToolName(toolName: string): toolName is BodySlotToolName {
@@ -209,15 +195,10 @@ export function usePreviewCardState({
   action,
   vipAcknowledged,
   submitting,
-  contentOverride = {},
 }: {
   action: PreviewCardAction;
   vipAcknowledged: boolean;
   submitting: boolean;
-  // The user's in-progress edits from the preview card. Recipient validation must see these so
-  // fixing a bad `to` in the editor re-enables the Send button (otherwise the button stays
-  // disabled against the stale assistant-supplied value and the user is stuck).
-  contentOverride?: Record<string, unknown>;
 }): PreviewCardComputedState {
   return useMemo(() => {
     const status = actionStatus(action);
@@ -231,8 +212,6 @@ export function usePreviewCardState({
       action.confirmation?.vip,
     );
 
-    const recipientInvalid = isSendTool && hasInvalidRecipient(action, contentOverride);
-
     return {
       status,
       isTerminal,
@@ -244,51 +223,11 @@ export function usePreviewCardState({
       vipRequired,
       draftBody: actionDraftBody(action),
       recipients: actionRecipients(action),
-      recipientInvalid,
       sendEnabled:
         action.persistenceConfirmed &&
         !isTerminal &&
         !submitting &&
-        !recipientInvalid &&
         (!vipRequired || vipAcknowledged),
     };
-  }, [action, submitting, vipAcknowledged, contentOverride]);
-}
-
-// `to` is required and must be a list of valid email addresses; `cc`/`bcc` are optional but, when
-// present, must also be valid. Prefers the user's override over the assistant-supplied input.
-function hasInvalidRecipient(
-  action: PreviewCardAction,
-  contentOverride: Record<string, unknown>,
-): boolean {
-  const toText = effectiveRecipientText(action, contentOverride, 'to');
-  if (!isEmailAddressList(toText)) {
-    return true;
-  }
-  for (const optionalField of ['cc', 'bcc'] as const) {
-    const optionalText = effectiveRecipientText(action, contentOverride, optionalField);
-    if (optionalText.trim() !== '' && !isEmailAddressList(optionalText)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function effectiveRecipientText(
-  action: PreviewCardAction,
-  contentOverride: Record<string, unknown>,
-  field: 'to' | 'cc' | 'bcc',
-): string {
-  const overridden = contentOverride[field];
-  if (overridden !== undefined) {
-    return textValue(overridden);
-  }
-  if (field === 'to') {
-    // Fall back to the normalized recipient list (covers array-shaped `toRecipients`).
-    const recipients = actionRecipients(action);
-    if (recipients.length > 0) {
-      return recipients.map((recipient) => recipient.email).join(', ');
-    }
-  }
-  return textValue(action.input[field]);
+  }, [action, submitting, vipAcknowledged]);
 }

@@ -1,24 +1,10 @@
 package com.zeromail.core.chat.domain.sendaction;
 
-import org.springframework.ai.tool.annotation.ToolParam;
-
 @SuppressWarnings("unused")
 public record ReplyEmailToolArgs(
         String sourceMessageId,
-        @ToolParam(
-                        description =
-                                "Recipient email address in the form name@example.com (normally"
-                                        + " the original sender). Must be a real email address, never"
-                                        + " a person's display name or nickname. Derive it from the"
-                                        + " replied-to message via getMessage, or ask the user -- do"
-                                        + " not put a name here.")
-                String to,
-        @ToolParam(
-                        description =
-                                "Optional CC recipients as comma-separated email addresses (e.g."
-                                        + " a@x.com, b@y.com). Real email addresses only, never display"
-                                        + " names.")
-                String cc,
+        String to,
+        String cc,
         String subject,
         String gmailThreadId,
         String body) {

@@ -662,7 +662,6 @@
       "memoryDestination": "After saving, this item appears in AI settings -> Knowledge.",
       "outsideSourceThread": "Added by AI · verify",
       "overwriteNotice": "Will overwrite current instructions",
-      "recipientInvalid": "The recipient is not a valid email address yet. Click Edit and enter an address like name@example.com before sending.",
       "removeSender": "Remove from safety net",
       "ruleEditHint": "Editing the \"When\" text recompiles the condition and action when you confirm.",
       "ruleName": "Rule name",
@@ -975,9 +974,6 @@
       "body": "Please try again. If the problem persists, reload the page or sign in again.",
       "reset": "Try again",
       "title": "Something went wrong"
-    },
-    "chat": {
-      "recipientInvalid": "The recipient address is not valid. Fix it to an address like name@example.com and send again."
     },
     "cleanup": {
       "campaign": {
