@@ -45,7 +45,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 - [x] Phase 10: Gmail Mailbox Foundation and Account Management (completed 2026-06-09)
 - [ ] Phase 11: Mailbox-Scoped Ingestion, Automation, UI, and Verification
 
-16/43 v1.3 requirements complete; 27/43 pending. Scope is Gmail-only workspace-shared, mailbox-isolated foundation; Microsoft, Zalo OA, CRM, and full team collaboration remain deferred.
+19/43 v1.3 requirements complete; 24/43 pending. Scope is Gmail-only workspace-shared, mailbox-isolated foundation; Microsoft, Zalo OA, CRM, and full team collaboration remain deferred.
 
 </details>
 
@@ -62,7 +62,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 08-bulk-unsubscribe. Bulk Unsubscribe Campaign | v1.2 | — | Complete | 2026-05 |
 | 9. User Settings UI on Curated Catalog | v1.2 | 7/7 | Complete | 2026-05-29 |
 | 10. Gmail Mailbox Foundation and Account Management | v1.3 | 6/6 | Complete    | 2026-06-09 |
-| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 2/6 | In Progress | — |
+| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 3/6 | In Progress | — |
 
 ### Phase 10: Gmail Mailbox Foundation and Account Management
 
@@ -115,7 +115,7 @@ Expected plan areas:
 **Requirements:** ING-01..06, AUTO-01..06, AUD-01..03, AUD-05..07, UX-01..06, VER-02..04
 **Depends on:** Phase 10 mailbox foundation and account metadata
 **Mode:** final integration phase
-**Plans:** 2/6 plans executed
+**Plans:** 3/6 plans executed
 
 Plans:
 
@@ -129,7 +129,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2; 03 and 04 run in parallel — disjoint packages)*
 
-- [ ] 11-03-PLAN.md — Ingestion threading: Pub/Sub (tenant,mailbox) lookup, per-connection cursor, mailbox-keyed observed/projection/events, buildClientForMailbox
+- [x] 11-03-PLAN.md — Ingestion threading: Pub/Sub (tenant,mailbox) lookup, per-connection cursor, mailbox-keyed observed/projection/events, buildClientForMailbox
 - [ ] 11-04-PLAN.md — Mailbox-owned rules + copy-rules + triage dispatch + mailbox-aware writes/outbound send + audit provenance
 
 **Wave 4** *(blocked on Waves 3)*

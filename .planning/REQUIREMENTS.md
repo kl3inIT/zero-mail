@@ -1,7 +1,7 @@
 # Requirements: Zero Mail v1.3 Gmail Workspace Foundation
 
 **Defined:** 2026-06-07
-**Status:** Reconciled after code research (`.planning/research/V1.3-CODE-RESEARCH.md`). The initial requirements were draft v0; this version reflects the single-Gmail assumptions found in Zero Mail and the mailbox-scoping pattern found in Inbox Zero.
+**Status:** Reconciled after code research (`.planning/research/V1.3-CODE-RESEARCH.md`). The initial requirements were draft v0; this version reflects the single-Gmail assumptions found in Zero Mail and the mailbox-scoping pattern found in Inbox Zero. Phase 11 Plan 03 completed mailbox-scoped ingestion threading requirements.
 **Core Value:** AI auto-triage that users trust with their real Gmail inbox.
 
 ## Scope Inputs
@@ -36,11 +36,11 @@
 
 ### Ingestion and Inbox Data
 
-- [ ] **ING-01**: Pub/Sub delivery resolves the correct Gmail mailbox before fetching Gmail history, and unknown mailbox delivery fails or drops safely without cross-account processing.
+- [x] **ING-01**: Pub/Sub delivery resolves the correct Gmail mailbox before fetching Gmail history, and unknown mailbox delivery fails or drops safely without cross-account processing.
 - [x] **ING-02**: History sync, backfill, watch renewal, and ingestion health run independently per Gmail mailbox.
 - [x] **ING-03**: Idempotency keys for Pub/Sub deliveries, observed messages, processing jobs, and inbox projections include mailbox scope wherever Gmail ids are not sufficient across accounts.
 - [ ] **ING-04**: Inbox, needs-reply, and analytics default to the active mailbox context; any future all-mailboxes roll-up is read-only, carries explicit mailbox provenance, and cannot become an implicit Gmail action context.
-- [ ] **ING-05**: Multi-Gmail ingestion preserves the existing no-long-term raw body, prompt/completion, and embedding storage posture.
+- [x] **ING-05**: Multi-Gmail ingestion preserves the existing no-long-term raw body, prompt/completion, and embedding storage posture.
 - [x] **ING-06**: Gmail client lookup, access-token cache, watch renewal, backfill, history cursor updates, and projection encryption/decryption compatibility are mailbox-aware; any encryption AAD change has an explicit compatibility or app-level re-encryption plan.
 
 ### Account-Scoped Automation
@@ -60,7 +60,7 @@
 - [x] **AUD-04**: Admin/operator tenant inspection shows metadata-only multi-mailbox health without exposing tokens, raw bodies, prompts, or completions.
 - [ ] **AUD-05**: Architectural tests forbid tenant-only Gmail client lookup in new mailbox-scoped flows where mailbox context is required.
 - [ ] **AUD-06**: Cross-account isolation tests prove one mailbox cannot read, write, archive, draft, or send as another mailbox through crafted ids.
-- [ ] **AUD-07**: Application logs and external error telemetry do not emit raw connected mailbox emails, sender/recipient emails, subjects, snippets, bodies, raw headers, tokens, prompts, or completions; use tenant id, mailbox id, technical status, and optional masked/hash values instead. Storing connected mailbox email in DB/UI remains allowed product state.
+- [x] **AUD-07**: Application logs and external error telemetry do not emit raw connected mailbox emails, sender/recipient emails, subjects, snippets, bodies, raw headers, tokens, prompts, or completions; use tenant id, mailbox id, technical status, and optional masked/hash values instead. Storing connected mailbox email in DB/UI remains allowed product state.
 
 ### User Experience
 
@@ -135,11 +135,11 @@
 | GMA-07 | Phase 10 | Complete |
 | AUD-04 | Phase 10 | Complete |
 | VER-01 | Phase 10 | Complete |
-| ING-01 | Phase 11 | Pending |
+| ING-01 | Phase 11 | Complete |
 | ING-02 | Phase 11 | Complete |
 | ING-03 | Phase 11 | Complete |
 | ING-04 | Phase 11 | Pending |
-| ING-05 | Phase 11 | Pending |
+| ING-05 | Phase 11 | Complete |
 | ING-06 | Phase 11 | Complete |
 | AUTO-01 | Phase 11 | Complete |
 | AUTO-02 | Phase 11 | Complete |
@@ -152,7 +152,7 @@
 | AUD-03 | Phase 11 | Pending |
 | AUD-05 | Phase 11 | Pending |
 | AUD-06 | Phase 11 | Pending |
-| AUD-07 | Phase 11 | Pending |
+| AUD-07 | Phase 11 | Complete |
 | UX-01 | Phase 11 | Pending |
 | UX-02 | Phase 11 | Pending |
 | UX-03 | Phase 11 | Pending |
@@ -171,4 +171,4 @@
 
 ---
 *Requirements defined: 2026-06-07*
-*Last updated: 2026-06-07 after v1.3 code research reconciliation*
+*Last updated: 2026-06-09 after Phase 11 Plan 03 mailbox-scoped ingestion threading*
