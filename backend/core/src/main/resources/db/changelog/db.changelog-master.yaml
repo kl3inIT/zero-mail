@@ -350,3 +350,6 @@ databaseChangeLog:
   - include:
       file: changes/126-rules-mailbox-ownership.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/127-gmail-conn-global-active-email-unique.yaml
+      relativeToChangelogFile: true
