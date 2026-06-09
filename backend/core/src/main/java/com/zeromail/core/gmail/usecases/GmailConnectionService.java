@@ -556,22 +556,48 @@ public class GmailConnectionService {
 
     private void rethrowDuplicateActiveMailboxIfMatched(
             UUID tenantId, DataIntegrityViolationException dataIntegrityViolation) {
-        if (containsConstraintName(dataIntegrityViolation, DUPLICATE_ACTIVE_EMAIL_CONSTRAINT)) {
+        if (matchesDuplicateActiveEmailConstraint(dataIntegrityViolation)) {
             throw new DuplicateActiveMailboxException(tenantId);
         }
         throw dataIntegrityViolation;
     }
 
-    private static boolean containsConstraintName(Throwable throwable, String expectedConstraint) {
+    /**
+     * Maps a {@link DataIntegrityViolationException} to the duplicate-active-mailbox case without
+     * depending solely on driver-specific reflective accessors. Two independent signals are checked
+     * across the cause chain: (1) the reflective {@code getConstraintName()/getServerErrorMessage()}
+     * getters (when the PG driver exposes them), and (2) a SQLState {@code 23505}
+     * (unique_violation) whose message text mentions the partial-unique index name. Either match is
+     * sufficient, so the 409 translation does not break if Boot 4's exception nesting hides the
+     * reflective getters.
+     */
+    private static boolean matchesDuplicateActiveEmailConstraint(Throwable throwable) {
         Throwable currentThrowable = throwable;
         while (currentThrowable != null) {
-            String constraintName = constraintName(currentThrowable);
-            if (expectedConstraint.equals(constraintName)) {
+            if (DUPLICATE_ACTIVE_EMAIL_CONSTRAINT.equals(constraintName(currentThrowable))) {
+                return true;
+            }
+            if (isUniqueViolation(currentThrowable)
+                    && messageMentions(currentThrowable, DUPLICATE_ACTIVE_EMAIL_CONSTRAINT)) {
                 return true;
             }
             currentThrowable = currentThrowable.getCause();
         }
         return false;
+    }
+
+    private static boolean isUniqueViolation(Throwable throwable) {
+        if (throwable instanceof java.sql.SQLException sqlException) {
+            return "23505".equals(sqlException.getSQLState());
+        }
+        // PSQLException exposes getSQLState() too, but may not be a SQLException subtype on every
+        // classpath shape; fall back to the reflective getter so the check stays driver-agnostic.
+        return "23505".equals(invokeStringMethod(throwable, "getSQLState"));
+    }
+
+    private static boolean messageMentions(Throwable throwable, String token) {
+        String message = throwable.getMessage();
+        return message != null && message.contains(token);
     }
 
     private static String constraintName(Throwable throwable) {
