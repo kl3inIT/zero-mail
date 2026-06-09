@@ -163,17 +163,9 @@ public class AllowListedTools {
                                 "type",
                                 "object",
                                 "description",
-                                "rules.v1 matcher tree using the locked matcher vocabulary. The matcher represents the email condition only. Boolean groups use ALL, ANY, or NOT and carry children. Leaf matchers carry their own value field.",
+                                "rules.v1 matcher tree using the locked matcher vocabulary. The matcher represents the email condition only. Boolean groups use ALL, ANY, or NOT and carry children. Leaf matchers carry their own payload field.",
                                 "properties",
-                                Map.of(
-                                        "type",
-                                        Map.of(
-                                                "type",
-                                                "string",
-                                                "enum",
-                                                RULE_MATCHER_TYPE_IDS,
-                                                "description",
-                                                "Matcher kind — exact UPPERCASE_UNDERSCORE id from rules.v1. Do NOT use AND/OR/&&/||.")),
+                                matcherProperties(),
                                 "required",
                                 List.of("type")),
                 "actionIntents",
@@ -193,6 +185,109 @@ public class AllowListedTools {
                 "clarificationRequired", Map.of("type", "boolean"),
                 "clarificationQuestion",
                         Map.of("type", List.of("string", "null"), "maxLength", 240));
+    }
+
+    private static Map<String, Object> matcherProperties() {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put(
+                "type",
+                Map.of(
+                        "type",
+                        "string",
+                        "enum",
+                        RULE_MATCHER_TYPE_IDS,
+                        "description",
+                        "Matcher kind — exact UPPERCASE_UNDERSCORE id from rules.v1. Do NOT use AND/OR/&&/||."));
+        properties.put(
+                "intent",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "SEMANTIC_INTENT: concise description of the email meaning to recognize, in the user's language. Required when type=SEMANTIC_INTENT."));
+        properties.put(
+                "deferred",
+                Map.of(
+                        "type",
+                        "boolean",
+                        "description",
+                        "SEMANTIC_INTENT: always true — match each email individually at triage time."));
+        properties.put(
+                "email",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "SENDER_EMAIL / RECIPIENT_TO / RECIPIENT_CC: full email address."));
+        properties.put(
+                "domain",
+                Map.of("type", "string", "description", "SENDER_DOMAIN: domain name without @."));
+        properties.put(
+                "text",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "SUBJECT_CONTAINS / SUBJECT_EQUALS: subject text to match."));
+        properties.put(
+                "regexPattern",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "SUBJECT_REGEX: Java-compatible regex for the subject line."));
+        properties.put(
+                "labelId",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "GMAIL_LABEL_PRESENT / GMAIL_LABEL_ABSENT: Gmail label id or display name."));
+        properties.put(
+                "category",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "GMAIL_CATEGORY_PRESENT / GMAIL_CATEGORY_ABSENT: Gmail category id (e.g. CATEGORY_PROMOTIONS)."));
+        properties.put(
+                "minAgeDays",
+                Map.of(
+                        "type",
+                        "integer",
+                        "description",
+                        "MESSAGE_AGE: minimum message age in days."));
+        properties.put(
+                "maxAgeDays",
+                Map.of(
+                        "type",
+                        "integer",
+                        "description",
+                        "MESSAGE_AGE: maximum message age in days."));
+        properties.put(
+                "onOrAfter",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "MESSAGE_DATE: ISO yyyy-mm-dd lower date bound (inclusive)."));
+        properties.put(
+                "onOrBefore",
+                Map.of(
+                        "type",
+                        "string",
+                        "description",
+                        "MESSAGE_DATE: ISO yyyy-mm-dd upper date bound (inclusive)."));
+        properties.put(
+                "children",
+                Map.of(
+                        "type",
+                        "array",
+                        "description",
+                        "ALL / ANY / NOT: array of nested matcher objects.",
+                        "items",
+                        Map.of("type", "object")));
+        return Map.copyOf(properties);
     }
 
     private static Map<String, Object> ruleActionIntentProperties() {

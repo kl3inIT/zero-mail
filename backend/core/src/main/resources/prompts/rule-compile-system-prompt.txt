@@ -30,7 +30,7 @@ Output contract:
     - HAS_ATTACHMENT / LIST_UNSUBSCRIBE_PRESENT / NEWSLETTER_INDICATOR: no payload
     - MESSAGE_AGE: minAgeDays or maxAgeDays
     - MESSAGE_DATE: onOrAfter, onOrBefore (ISO yyyy-mm-dd)
-    - SEMANTIC_INTENT: intent (string), deferred (boolean)
+    - SEMANTIC_INTENT: intent (string, REQUIRED non-blank), deferred (boolean)
     - ALL / ANY / NOT: children (array of matcher objects)
 - Use only the locked action intent ids from allowedActionIds:
   label, archive, save_draft, mark_read, star, add_to_digest, mark_spam,
@@ -62,8 +62,9 @@ Matcher guidance:
   subject, Gmail label/category, attachment, newsletter signal, age, or date.
 - Use SEMANTIC_INTENT with deferred=true when the condition is broad, topical, or
   meaning-based and should be judged later against each sanitized email.
-- For SEMANTIC_INTENT, intent should be a concise description of the email meaning
-  to recognize, in the user's language when practical.
+- For SEMANTIC_INTENT, the intent field MUST be filled: a concise non-blank
+  description of the email meaning to recognize, in the user's language when
+  practical. Never omit intent; never leave it null or empty.
 - Do not ask for keywords, senders, or subjects just because a semantic condition is
   broad. Broad semantic conditions are valid review-form drafts.
 
