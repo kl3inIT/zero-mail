@@ -1520,6 +1520,30 @@
       "text": "Finally an \"unsubscribe\" app that *actually* unsubscribes you and filters through Gmail filters (instead of always depending on a 3rd-party app)."
     }
   },
+  "support": {
+    "sheetTitle": "Help & Feedback",
+    "sheetDescription": "Report a bug, suggest a feature, or ask a question. We read every message.",
+    "typeLabel": "Type",
+    "typeBug": "Bug",
+    "typeFeature": "Feature",
+    "typeGeneral": "Question",
+    "subjectLabel": "Subject",
+    "subjectOptional": "(optional)",
+    "messageLabel": "Message",
+    "emailLabel": "Your email",
+    "emailHint": "We'll reply here if needed.",
+    "submit": "Send",
+    "submitting": "Sending…",
+    "trust": "We usually reply within 24 hours on business days.",
+    "successTitle": "Sent!",
+    "successBody": "Thanks for your message. We'll get back to you soon.",
+    "successReset": "Send another",
+    "placeholders": {
+      "bug": "What happened, what you expected, and steps to reproduce…",
+      "feature": "Describe the feature and how it would help you…",
+      "general": "What would you like to tell us?"
+    }
+  },
   "legal": {
     "contact": {
       "body": "Reach the Zero Mail team at zeromail.platform@gmail.com.",

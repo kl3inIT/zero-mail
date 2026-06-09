@@ -1520,6 +1520,30 @@
       "text": "Cuối cùng cũng có một ứng dụng 'hủy đăng ký' giúp bạn *thực sự* hủy đăng ký và lọc thông qua bộ lọc Gmail (thay vì luôn phụ thuộc vào ứng dụng bên thứ 3)."
     }
   },
+  "support": {
+    "sheetTitle": "Hỗ trợ & Phản hồi",
+    "sheetDescription": "Báo lỗi, đề xuất tính năng, hoặc đặt câu hỏi. Chúng tôi đọc mọi tin nhắn.",
+    "typeLabel": "Loại",
+    "typeBug": "Lỗi",
+    "typeFeature": "Tính năng",
+    "typeGeneral": "Câu hỏi",
+    "subjectLabel": "Tiêu đề",
+    "subjectOptional": "(tùy chọn)",
+    "messageLabel": "Nội dung",
+    "emailLabel": "Email của bạn",
+    "emailHint": "Chúng tôi sẽ trả lời tại đây nếu cần.",
+    "submit": "Gửi",
+    "submitting": "Đang gửi…",
+    "trust": "Chúng tôi thường trả lời trong vòng 24 giờ vào ngày làm việc.",
+    "successTitle": "Đã gửi!",
+    "successBody": "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm.",
+    "successReset": "Gửi thêm",
+    "placeholders": {
+      "bug": "Điều gì xảy ra, bạn mong đợi điều gì, và các bước để tái hiện…",
+      "feature": "Mô tả tính năng và cách nó giúp ích cho bạn…",
+      "general": "Bạn muốn cho chúng tôi biết điều gì?"
+    }
+  },
   "legal": {
     "contact": {
       "body": "Liên hệ Zero Mail team qua zeromail.platform@gmail.com.",
