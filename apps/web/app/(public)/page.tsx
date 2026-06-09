@@ -4,8 +4,8 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { getCurrentUserCached } from '@/features/account/api/account-api';
+import Features from '@/features/landing/components/Features';
 import Hero from '@/features/landing/components/Hero';
-import HowItWorks from '@/features/landing/components/HowItWorks';
 import Testimonials from '@/features/landing/components/Testimonials';
 import FAQ from '@/features/landing/components/FAQ';
 import Contact from '@/features/landing/components/Contact';
@@ -59,7 +59,7 @@ export default async function LandingPage() {
   return (
     <>
       <Hero />
-      <HowItWorks />
+      <Features />
       <Testimonials />
       <FAQ />
       <Contact />
