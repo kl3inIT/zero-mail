@@ -1,16 +1,18 @@
+import { getTranslations } from 'next-intl/server';
+
 import { ContactForm } from './ContactForm';
 
-export default function Contact() {
+export default async function Contact() {
+  const t = await getTranslations('landingContact');
+
   return (
     <section className="zm-section bg-(--bg) py-24" id="contact">
       <div className="zm-container max-w-xl">
         <div className="mb-10 text-center">
           <h2 className="mb-3 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            Get in touch
+            {t('heading')}
           </h2>
-          <p className="text-[17px] leading-relaxed text-(--text-muted)">
-            Bug report, feature idea, or just a question? Drop us a message.
-          </p>
+          <p className="text-[17px] leading-relaxed text-(--text-muted)">{t('subheading')}</p>
         </div>
 
         <ContactForm />

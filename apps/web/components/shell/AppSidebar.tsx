@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
@@ -52,7 +51,6 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useLogout } from '@/features/account/hooks/useLogout';
-import { FeedbackSheet } from '@/features/support/components/FeedbackSheet';
 import { useBillingPlans } from '@/features/billing/hooks/useBillingPlans';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { getApiUrl } from '@/lib/api/base-url';
@@ -69,7 +67,8 @@ type NavItem = {
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.rules'
-    | 'nav.cleanupUnsubscribe';
+    | 'nav.cleanupUnsubscribe'
+    | 'nav.support';
   icon: typeof Inbox;
 };
 
@@ -93,6 +92,7 @@ const AUTOMATION_NAV: NavItem[] = [
 const TOOLS_NAV: NavItem[] = [
   { href: '/cleanup/bulk-unsubscribe' as Route, labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+  { href: '/support' as Route, labelKey: 'nav.support', icon: HelpCircle },
 ];
 
 const ACCOUNT_NAV: AccountNavItem[] = [
@@ -255,8 +255,6 @@ export function AppSidebar() {
   const t = useTranslations();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const [feedbackSheetOpen, setFeedbackSheetOpen] = useState(false);
-  const currentUserQuery = useCurrentUser();
 
   function renderNavItem(item: NavItem) {
     const Icon = item.icon;
@@ -346,27 +344,7 @@ export function AppSidebar() {
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
-              {TOOLS_NAV.map(renderNavItem)}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  tooltip={t('nav.support')}
-                  onClick={() => setFeedbackSheetOpen(true)}
-                  className={cn(
-                    'flex h-9 cursor-pointer items-center gap-3 rounded-lg font-medium transition-colors',
-                    isCollapsed
-                      ? 'mx-auto h-9 w-9 justify-center p-0'
-                      : 'mx-2 w-[calc(100%-1rem)] px-3',
-                    'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
-                  )}
-                >
-                  <HelpCircle className="size-4 shrink-0" aria-hidden="true" />
-                  <span className="truncate text-sm group-data-[collapsible=icon]:hidden">
-                    {t('nav.support')}
-                  </span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <SidebarMenu className="gap-0.5">{TOOLS_NAV.map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
@@ -375,12 +353,6 @@ export function AppSidebar() {
         <AccountMenu collapsed={isCollapsed} />
       </SidebarFooter>
       <SidebarRail />
-
-      <FeedbackSheet
-        open={feedbackSheetOpen}
-        onOpenChange={setFeedbackSheetOpen}
-        initialEmail={currentUserQuery.data?.email ?? ''}
-      />
     </Sidebar>
   );
 }

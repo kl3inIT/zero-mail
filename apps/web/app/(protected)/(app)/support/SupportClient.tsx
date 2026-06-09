@@ -1,84 +1,70 @@
 'use client';
 
 import { useState } from 'react';
-import { Bug, Lightbulb, MessageCircle, Send } from 'lucide-react';
+import { Bug, Lightbulb, MessageCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import type { CurrentUser } from '@/features/account/api/account-api';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import type { FeedbackType } from '@/features/support/api/support-api';
 import { useSubmitFeedback } from '@/features/support/hooks/use-submit-feedback';
+import { cn } from '@/lib/utils';
 
-type Tab = 'BUG_REPORT' | 'FEATURE_REQUEST' | 'GENERAL';
-
-const TAB_CONFIG: Record<
-  Tab,
-  {
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    subjectPlaceholder: string;
-    messagePlaceholder: string;
-  }
-> = {
-  BUG_REPORT: {
-    label: 'Bug Report',
-    icon: Bug,
-    subjectPlaceholder: 'e.g. Rule is not triggering on matching emails',
-    messagePlaceholder: 'Describe what happened, what you expected, and steps to reproduce...',
-  },
-  FEATURE_REQUEST: {
-    label: 'Feature Request',
-    icon: Lightbulb,
-    subjectPlaceholder: 'e.g. Support for multiple Gmail accounts',
-    messagePlaceholder: 'Describe the feature you would like and how it would help you...',
-  },
-  GENERAL: {
-    label: 'General',
-    icon: MessageCircle,
-    subjectPlaceholder: 'e.g. Question about billing',
-    messagePlaceholder: 'What would you like to tell us?',
-  },
+type TypeOption = {
+  value: FeedbackType;
+  labelKey: 'typeBug' | 'typeFeature' | 'typeGeneral';
+  icon: typeof Bug;
 };
+
+const TYPE_OPTIONS: TypeOption[] = [
+  { value: 'BUG_REPORT', labelKey: 'typeBug', icon: Bug },
+  { value: 'FEATURE_REQUEST', labelKey: 'typeFeature', icon: Lightbulb },
+  { value: 'GENERAL', labelKey: 'typeGeneral', icon: MessageCircle },
+];
 
 type SupportClientProps = {
   initialUser?: CurrentUser;
 };
 
 export function SupportClient({ initialUser }: SupportClientProps) {
+  const t = useTranslations('support');
   const { data: currentUser } = useCurrentUser(initialUser);
   const submitMutation = useSubmitFeedback();
 
-  const [activeTab, setActiveTab] = useState<Tab>('BUG_REPORT');
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('BUG_REPORT');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [contactEmail, setContactEmail] = useState(currentUser?.email ?? '');
+  const [succeeded, setSucceeded] = useState(false);
 
-  const config = TAB_CONFIG[activeTab];
-  const Icon = config.icon;
+  const messagePlaceholder =
+    feedbackType === 'BUG_REPORT'
+      ? t('placeholders.bug')
+      : feedbackType === 'FEATURE_REQUEST'
+        ? t('placeholders.feature')
+        : t('placeholders.general');
 
-  function handleTabChange(value: string) {
-    setActiveTab(value as Tab);
-    setSubject('');
-    setMessage('');
-  }
+  const isValid = message.trim().length > 0 && contactEmail.trim().length > 0;
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (submitMutation.isPending) return;
+    const trimmedMessage = message.trim();
+    const derivedSubject = subject.trim() || trimmedMessage.slice(0, 60);
     submitMutation.mutate(
       {
-        type: activeTab as FeedbackType,
-        subject: subject.trim(),
-        message: message.trim(),
+        type: feedbackType,
+        subject: derivedSubject,
+        message: trimmedMessage,
         contactEmail: contactEmail.trim(),
       },
       {
         onSuccess: () => {
+          setSucceeded(true);
           setSubject('');
           setMessage('');
         },
@@ -86,120 +72,124 @@ export function SupportClient({ initialUser }: SupportClientProps) {
     );
   }
 
-  const isValid =
-    subject.trim().length > 0 && message.trim().length > 0 && contactEmail.trim().length > 0;
-
   return (
-    <div className="mx-auto max-w-2xl space-y-6 py-8">
-      <div>
-        <h1 className="text-foreground text-2xl font-semibold tracking-tight">
-          Help &amp; Feedback
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Report a bug, request a feature, or get in touch. We read every submission.
-        </p>
-      </div>
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-auto p-3 sm:p-6">
+        <div className="mx-auto w-full max-w-2xl space-y-8">
+          <header className="space-y-1">
+            <h1 className="text-foreground text-2xl font-semibold tracking-normal">
+              {t('pageTitle')}
+            </h1>
+            <p className="text-muted-foreground text-sm">{t('pageDescription')}</p>
+          </header>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Send us a message</CardTitle>
-          <CardDescription>
-            Select the type of feedback and describe what&apos;s on your mind.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList className="grid w-full grid-cols-3">
-                {(Object.entries(TAB_CONFIG) as [Tab, (typeof TAB_CONFIG)[Tab]][]).map(
-                  ([key, cfg]) => {
-                    const TabIcon = cfg.icon;
-                    return (
-                      <TabsTrigger key={key} value={key} className="gap-1.5 text-xs">
-                        <TabIcon className="size-3.5" />
-                        {cfg.label}
-                      </TabsTrigger>
-                    );
-                  },
-                )}
-              </TabsList>
-
-              {(Object.keys(TAB_CONFIG) as Tab[]).map((key) => (
-                <TabsContent key={key} value={key} className="mt-5 space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="subject">Subject</Label>
-                    <Input
-                      id="subject"
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      placeholder={TAB_CONFIG[key].subjectPlaceholder}
-                      maxLength={200}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="message">Message</Label>
-                    <Textarea
-                      id="message"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder={TAB_CONFIG[key].messagePlaceholder}
-                      rows={6}
-                      maxLength={5000}
-                      required
-                    />
-                  </div>
-                </TabsContent>
-              ))}
-            </Tabs>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="contactEmail">Your email</Label>
-              <Input
-                id="contactEmail"
-                type="email"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                placeholder="you@example.com"
-                maxLength={320}
-                required
-              />
-              <p className="text-muted-foreground text-xs">
-                We will reply here if follow-up is needed.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-2 text-sm">
-                <Icon className="text-muted-foreground size-4" />
-                <span className="text-muted-foreground">{config.label}</span>
+          {succeeded ? (
+            <div className="border-border bg-muted/30 flex flex-col items-center gap-3 rounded-xl border p-10 text-center">
+              <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                <MessageCircle className="text-primary size-6" />
               </div>
+              <p className="text-foreground font-semibold">{t('successTitle')}</p>
+              <p className="text-muted-foreground text-sm">{t('successBody')}</p>
               <Button
-                type="submit"
-                disabled={!isValid || submitMutation.isPending}
-                className="gap-1.5"
+                variant="outline"
+                size="sm"
+                className="mt-1"
+                onClick={() => {
+                  setSucceeded(false);
+                  submitMutation.reset();
+                }}
               >
-                <Send className="size-3.5" />
-                {submitMutation.isPending ? 'Sending…' : 'Send feedback'}
+                {t('successReset')}
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Type selector */}
+              <div className="space-y-2">
+                <span className="text-foreground text-sm font-medium">{t('typeLabel')}</span>
+                <div className="flex gap-2">
+                  {TYPE_OPTIONS.map((option) => {
+                    const Icon = option.icon;
+                    const isActive = feedbackType === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setFeedbackType(option.value)}
+                        className={cn(
+                          'flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                        )}
+                      >
+                        <Icon className="size-4 shrink-0" aria-hidden="true" />
+                        {t(option.labelKey)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-      <Card className="bg-muted/40">
-        <CardContent className="pt-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <div className="flex-1 space-y-1">
-              <p className="text-foreground text-sm font-medium">Looking for quick answers?</p>
-              <p className="text-muted-foreground text-xs">
-                Common questions about rules, billing, and Gmail connection are answered in our
-                docs.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              {/* Subject — optional */}
+              <div className="space-y-1.5">
+                <Label htmlFor="support-subject" className="text-sm font-medium">
+                  {t('subjectLabel')}{' '}
+                  <span className="text-muted-foreground font-normal">{t('subjectOptional')}</span>
+                </Label>
+                <Input
+                  id="support-subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  maxLength={200}
+                />
+              </div>
+
+              {/* Message */}
+              <div className="space-y-1.5">
+                <Label htmlFor="support-message" className="text-sm font-medium">
+                  {t('messageLabel')}
+                </Label>
+                <Textarea
+                  id="support-message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder={messagePlaceholder}
+                  rows={6}
+                  maxLength={5000}
+                  required
+                  className="resize-none"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <Label htmlFor="support-email" className="text-sm font-medium">
+                  {t('emailLabel')}
+                </Label>
+                <Input
+                  id="support-email"
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  maxLength={320}
+                  required
+                />
+                <p className="text-muted-foreground text-xs">{t('emailHint')}</p>
+              </div>
+
+              {/* Submit row */}
+              <div className="flex items-center justify-between gap-4 pt-1">
+                <p className="text-muted-foreground text-xs">{t('trust')}</p>
+                <Button type="submit" disabled={!isValid || submitMutation.isPending}>
+                  {submitMutation.isPending ? t('submitting') : t('submit')}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
