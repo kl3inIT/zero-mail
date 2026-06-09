@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   BarChart3,
+  Blocks,
   Bot,
   ChevronsUpDown,
   CreditCard,
@@ -68,6 +69,7 @@ type NavItem = {
     | 'nav.analytics'
     | 'nav.rules'
     | 'nav.cleanupUnsubscribe'
+    | 'nav.integrations'
     | 'nav.support';
   icon: typeof Inbox;
 };
@@ -92,6 +94,7 @@ const AUTOMATION_NAV: NavItem[] = [
 const TOOLS_NAV: NavItem[] = [
   { href: '/cleanup/bulk-unsubscribe' as Route, labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+  { href: '/integrations' as Route, labelKey: 'nav.integrations', icon: Blocks },
   { href: '/support' as Route, labelKey: 'nav.support', icon: HelpCircle },
 ];
 

@@ -1203,6 +1203,7 @@
     "product": "Product",
     "resources": "Resources",
     "security": "Security",
+    "support": "Customer support",
     "tagline": "AI Gmail auto-triage you can trust — labels, drafts replies, and clears your inbox by the rules you set.",
     "terms": "Terms"
   },
@@ -1374,6 +1375,10 @@
       },
       "unselected": "Select a message to read it."
     }
+  },
+  "integrations": {
+    "heading": "Integrations",
+    "description": "Connect Zero Mail to the channels and tools you already use."
   },
   "landing": {
     "continueSetupCta": "Continue setup",
@@ -1824,6 +1829,7 @@
     "getStarted": "Get started free",
     "how": "How it works",
     "inbox": "Inbox",
+    "integrations": "Integrations",
     "languageSelector": "Language",
     "logoLabel": "Zero Mail home",
     "needsReply": "Needs reply",

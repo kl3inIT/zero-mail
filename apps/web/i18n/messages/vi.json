@@ -1203,6 +1203,7 @@
     "product": "Sản phẩm",
     "resources": "Tài nguyên",
     "security": "Bảo mật",
+    "support": "Hỗ trợ khách hàng",
     "tagline": "AI phân loại Gmail tự động bạn có thể tin tưởng — gắn nhãn, soạn nháp trả lời và dọn hộp thư theo quy tắc bạn đặt.",
     "terms": "Điều khoản"
   },
@@ -1374,6 +1375,10 @@
       },
       "unselected": "Chọn một email để xem nội dung."
     }
+  },
+  "integrations": {
+    "heading": "Tích hợp",
+    "description": "Kết nối Zero Mail với các kênh và công cụ bạn đang dùng."
   },
   "landing": {
     "continueSetupCta": "Tiếp tục thiết lập",
@@ -1824,6 +1829,7 @@
     "getStarted": "Bắt đầu miễn phí",
     "how": "Cách hoạt động",
     "inbox": "Hộp thư",
+    "integrations": "Tích hợp",
     "languageSelector": "Ngôn ngữ",
     "logoLabel": "Trang chủ Zero Mail",
     "needsReply": "Cần trả lời",

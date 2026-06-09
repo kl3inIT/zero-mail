@@ -38,6 +38,11 @@ export default async function Footer() {
               <Link href="/privacy">{t('footer.privacy')}</Link>
               <Link href="/terms">{t('footer.terms')}</Link>
             </div>
+            <div className="zm-footer-col">
+              <h2>{t('footer.support')}</h2>
+              <a href="tel:+84354536022">0354 536 022</a>
+              <a href="mailto:zeromail.platform@gmail.com">zeromail.platform@gmail.com</a>
+            </div>
           </div>
         </div>
         <div className="zm-footer-bottom">
