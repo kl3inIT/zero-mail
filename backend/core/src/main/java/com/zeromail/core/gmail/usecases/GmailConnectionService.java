@@ -119,15 +119,21 @@ public class GmailConnectionService {
     public void setPrimary(UUID tenantId, UUID gmailConnectionId) {
         disconnectTransaction.executeWithoutResult(
                 _ -> {
-                    resolveOwnedConnectionOrThrow(tenantId, gmailConnectionId);
+                    GmailConnectionEntity targetConnection =
+                            resolveOwnedConnectionOrThrow(tenantId, gmailConnectionId);
                     List<GmailConnectionEntity> gmailConnections =
                             connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId);
                     for (GmailConnectionEntity gmailConnection : gmailConnections) {
-                        boolean shouldBePrimary = gmailConnection.getId().equals(gmailConnectionId);
-                        if (gmailConnection.isPrimary() != shouldBePrimary) {
-                            gmailConnection.setPrimary(shouldBePrimary);
+                        if (gmailConnection.isPrimary()
+                                && !gmailConnection.getId().equals(gmailConnectionId)) {
+                            gmailConnection.setPrimary(false);
                             connectionRepository.save(gmailConnection);
                         }
+                    }
+                    connectionRepository.flush();
+                    if (!targetConnection.isPrimary()) {
+                        targetConnection.setPrimary(true);
+                        connectionRepository.saveAndFlush(targetConnection);
                     }
                 });
     }
@@ -393,6 +399,69 @@ public class GmailConnectionService {
         connection.setConnectedAt(Instant.now());
         connection.setDisconnectedAt(null);
         connectionRepository.save(connection);
+    }
+
+    @Transactional
+    public UUID addConnection(
+            UUID tenantId, String googleEmail, String scopesGranted, String plaintextRefreshToken) {
+        assertNoActiveDuplicate(tenantId, googleEmail);
+        UUID gmailConnectionId = UUID.randomUUID();
+        byte[] plaintextRefreshTokenBytes = plaintextRefreshToken.getBytes(StandardCharsets.UTF_8);
+        try {
+            byte[] refreshTokenEncrypted =
+                    refreshTokenCipher.encrypt(plaintextRefreshTokenBytes, tenantId.toString());
+            GmailConnectionEntity gmailConnection =
+                    new GmailConnectionEntity(
+                            gmailConnectionId,
+                            tenantId,
+                            googleEmail,
+                            GmailConnectionStatus.CONNECTED);
+            gmailConnection.setRefreshTokenEncrypted(refreshTokenEncrypted);
+            gmailConnection.setScopesGranted(scopesGranted);
+            gmailConnection.setConnectedAt(Instant.now());
+            gmailConnection.setPrimary(false);
+            try {
+                connectionRepository.saveAndFlush(gmailConnection);
+            } catch (DataIntegrityViolationException dataIntegrityViolation) {
+                rethrowDuplicateActiveMailboxIfMatched(tenantId, dataIntegrityViolation);
+            }
+            return gmailConnectionId;
+        } finally {
+            Arrays.fill(plaintextRefreshTokenBytes, (byte) 0);
+        }
+    }
+
+    @Transactional
+    public void reconnect(
+            UUID tenantId,
+            UUID targetMailboxId,
+            String scopesGranted,
+            String plaintextRefreshToken) {
+        GmailConnectionEntity gmailConnection =
+                resolveReconnectableConnectionOrThrow(tenantId, targetMailboxId);
+        byte[] plaintextRefreshTokenBytes = plaintextRefreshToken.getBytes(StandardCharsets.UTF_8);
+        try {
+            byte[] refreshTokenEncrypted =
+                    refreshTokenCipher.encrypt(plaintextRefreshTokenBytes, tenantId.toString());
+            gmailConnection.setStatus(GmailConnectionStatus.CONNECTED);
+            gmailConnection.setRefreshTokenEncrypted(refreshTokenEncrypted);
+            gmailConnection.setScopesGranted(scopesGranted);
+            gmailConnection.setConnectedAt(Instant.now());
+            gmailConnection.setDisconnectedAt(null);
+            gmailConnection.setWatchExpiresAt(null);
+            gmailConnection.setWatchHistoryId(null);
+            gmailConnection.setWatchRenewedAt(null);
+            gmailConnection.setLastSyncedHistoryId(null);
+            gmailConnection.setWatchConsecutiveFailures(0);
+            gmailConnection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+            try {
+                connectionRepository.saveAndFlush(gmailConnection);
+            } catch (DataIntegrityViolationException dataIntegrityViolation) {
+                rethrowDuplicateActiveMailboxIfMatched(tenantId, dataIntegrityViolation);
+            }
+        } finally {
+            Arrays.fill(plaintextRefreshTokenBytes, (byte) 0);
+        }
     }
 
     @Transactional
