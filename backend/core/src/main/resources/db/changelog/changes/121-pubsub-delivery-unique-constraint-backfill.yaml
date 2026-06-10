@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: 121-pubsub-delivery-unique-constraint-backfill
+      author: zeromail
+      comment: >-
+        Roll-forward repair for environments whose pubsub_delivery table was created from an earlier
+        revision of changeSet 011 that predated the (tenant_id, pubsub_message_id) unique constraint.
+        Liquibase marks 011 as RAN, so on those databases the constraint was never created and
+        PubSubIngestionService.insertPendingIfAbsent fails with "no unique or exclusion constraint
+        matching the ON CONFLICT specification". That aborts the INSERT, so the Gmail Pub/Sub delivery
+        is dropped and triage/labeling never runs for that environment. Idempotent and self-guarding:
+        a no-op where the constraint already exists (fresh DBs created after 011 gained it).
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: false
+            comment: >-
+              Only on databases missing the constraint: drop duplicate (tenant_id, pubsub_message_id)
+              rows (keep the earliest by created_at then id) so the constraint can be created, then add
+              it. Wrapped in a DO block because Postgres has no ADD CONSTRAINT IF NOT EXISTS.
+            sql: >-
+              DO $$
+              BEGIN
+                IF NOT EXISTS (
+                  SELECT 1 FROM pg_constraint WHERE conname = 'uq_pubsub_delivery_tenant_message'
+                ) THEN
+                  DELETE FROM pubsub_delivery
+                  WHERE id IN (
+                    SELECT id FROM (
+                      SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY tenant_id, pubsub_message_id
+                        ORDER BY created_at, id
+                      ) AS rn
+                      FROM pubsub_delivery
+                    ) ranked
+                    WHERE ranked.rn > 1
+                  );
+                  ALTER TABLE pubsub_delivery
+                    ADD CONSTRAINT uq_pubsub_delivery_tenant_message
+                    UNIQUE (tenant_id, pubsub_message_id);
+                END IF;
+              END $$;
+      rollback:
+        - sql:
+            sql: >-
+              ALTER TABLE pubsub_delivery DROP CONSTRAINT IF EXISTS uq_pubsub_delivery_tenant_message
