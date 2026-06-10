@@ -132,6 +132,48 @@ public class InboxProjectionWriteService {
         projectionRepository.markRead(tenantId, gmailMessageId);
     }
 
+    /**
+     * Mirror a Gmail label-add into the projection row. Called by {@code TriageGmailWriter} after
+     * the corresponding {@code users.messages.modify} add succeeds, so the next DB-backed inbox
+     * read returns the same label set the user already sees in Gmail (fixes the prod staleness
+     * where AI-triage labels applied after backfill never reached the projection). Returns silently
+     * when the projection has no row for the message yet; the next Pub/Sub UPSERT reconciles.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void addLabel(UUID tenantId, String gmailMessageId, String labelId) {
+        requireMessageIdentity(tenantId, gmailMessageId);
+        Objects.requireNonNull(labelId, "labelId must not be null");
+        if (labelId.isBlank()) {
+            throw new IllegalArgumentException("labelId must not be blank");
+        }
+        projectionRepository.addLabel(tenantId, gmailMessageId, labelId);
+    }
+
+    /**
+     * Mirror a Gmail label-remove into the projection row. Called by {@code TriageGmailWriter}
+     * after the corresponding {@code users.messages.modify} remove succeeds (archive, unstar,
+     * unmark spam, arbitrary label removal). Removing the {@code INBOX} label flips {@code
+     * inbox_state} to {@code OUT_OF_INBOX} so the message drops out of the DB-backed inbox list
+     * immediately. Returns silently when the projection has no row for the message yet.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void removeLabel(UUID tenantId, String gmailMessageId, String labelId) {
+        requireMessageIdentity(tenantId, gmailMessageId);
+        Objects.requireNonNull(labelId, "labelId must not be null");
+        if (labelId.isBlank()) {
+            throw new IllegalArgumentException("labelId must not be blank");
+        }
+        projectionRepository.removeLabel(tenantId, gmailMessageId, labelId);
+    }
+
+    private static void requireMessageIdentity(UUID tenantId, String gmailMessageId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+        if (gmailMessageId.isBlank()) {
+            throw new IllegalArgumentException("gmailMessageId must not be blank");
+        }
+    }
+
     private static InboxState deriveInboxState(List<String> labelIds) {
         return labelIds.contains(INBOX_LABEL) ? InboxState.INBOX : InboxState.OUT_OF_INBOX;
     }

@@ -55,6 +55,34 @@ export const inboxMessages = {
     vi: 'Chưa có nhãn nào',
     en: 'No labels yet',
   },
+  'inbox.category.trigger': {
+    vi: 'Lọc theo danh mục Gmail',
+    en: 'Filter by Gmail category',
+  },
+  'inbox.category.all': {
+    vi: 'Tất cả',
+    en: 'All',
+  },
+  'inbox.category.personal': {
+    vi: 'Cá nhân',
+    en: 'Personal',
+  },
+  'inbox.category.social': {
+    vi: 'Mạng xã hội',
+    en: 'Social',
+  },
+  'inbox.category.promotions': {
+    vi: 'Quảng cáo',
+    en: 'Promotions',
+  },
+  'inbox.category.updates': {
+    vi: 'Cập nhật',
+    en: 'Updates',
+  },
+  'inbox.category.forums': {
+    vi: 'Diễn đàn',
+    en: 'Forums',
+  },
   'inbox.action.openInGmail': {
     vi: 'Mở Gmail',
     en: 'Open Gmail',

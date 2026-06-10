@@ -61,22 +61,29 @@ public class TriageGmailWriter {
 
     public String applyLabel(UUID tenantId, String gmailMessageId, String labelName)
             throws IOException {
-        return executeGmailWrite(
-                tenantId,
-                "applyLabel",
-                gmail -> {
-                    String resolvedLabelId = resolveOrCreateLabelId(gmail, labelName);
-                    gmail.users()
-                            .messages()
-                            .modify(
-                                    USER_ID,
-                                    gmailMessageId,
-                                    new ModifyMessageRequest()
-                                            .setAddLabelIds(List.of(resolvedLabelId)))
-                            .execute();
-                    logMessageWrite(tenantId, gmailMessageId, "applyLabel");
-                    return resolvedLabelId;
-                });
+        String resolvedLabelId =
+                executeGmailWrite(
+                        tenantId,
+                        "applyLabel",
+                        gmail -> {
+                            String labelId = resolveOrCreateLabelId(gmail, labelName);
+                            gmail.users()
+                                    .messages()
+                                    .modify(
+                                            USER_ID,
+                                            gmailMessageId,
+                                            new ModifyMessageRequest()
+                                                    .setAddLabelIds(List.of(labelId)))
+                                    .execute();
+                            logMessageWrite(tenantId, gmailMessageId, "applyLabel");
+                            return labelId;
+                        });
+        // Gmail confirmed first; mirror the resolved label id (e.g. "Label_42") into the projection
+        // so the DB-backed inbox list shows the AI label immediately instead of waiting for the
+        // next
+        // Pub/Sub reconcile. The read path maps the id back to the display name via labels.list.
+        inboxProjectionWriteService.addLabel(tenantId, gmailMessageId, resolvedLabelId);
+        return resolvedLabelId;
     }
 
     public void archiveSkipInbox(UUID tenantId, String gmailMessageId) throws IOException {
@@ -95,6 +102,7 @@ public class TriageGmailWriter {
                     logMessageWrite(tenantId, gmailMessageId, "archiveSkipInbox");
                     return null;
                 });
+        inboxProjectionWriteService.removeLabel(tenantId, gmailMessageId, INBOX_LABEL_ID);
     }
 
     /**
@@ -110,14 +118,17 @@ public class TriageGmailWriter {
 
     public void markUnread(UUID tenantId, String gmailMessageId) throws IOException {
         addSystemLabel(tenantId, gmailMessageId, UNREAD_LABEL_ID, "markUnread");
+        inboxProjectionWriteService.addLabel(tenantId, gmailMessageId, UNREAD_LABEL_ID);
     }
 
     public void star(UUID tenantId, String gmailMessageId) throws IOException {
         addSystemLabel(tenantId, gmailMessageId, STARRED_LABEL_ID, "star");
+        inboxProjectionWriteService.addLabel(tenantId, gmailMessageId, STARRED_LABEL_ID);
     }
 
     public void unstar(UUID tenantId, String gmailMessageId) throws IOException {
         removeSystemLabel(tenantId, gmailMessageId, STARRED_LABEL_ID, "unstar");
+        inboxProjectionWriteService.removeLabel(tenantId, gmailMessageId, STARRED_LABEL_ID);
     }
 
     public String addToDigest(UUID tenantId, String gmailMessageId) throws IOException {
@@ -141,6 +152,8 @@ public class TriageGmailWriter {
                     logMessageWrite(tenantId, gmailMessageId, "markSpam");
                     return null;
                 });
+        inboxProjectionWriteService.removeLabel(tenantId, gmailMessageId, INBOX_LABEL_ID);
+        inboxProjectionWriteService.addLabel(tenantId, gmailMessageId, SPAM_LABEL_ID);
     }
 
     public void unmarkSpam(UUID tenantId, String gmailMessageId) throws IOException {
@@ -160,6 +173,8 @@ public class TriageGmailWriter {
                     logMessageWrite(tenantId, gmailMessageId, "unmarkSpam");
                     return null;
                 });
+        inboxProjectionWriteService.addLabel(tenantId, gmailMessageId, INBOX_LABEL_ID);
+        inboxProjectionWriteService.removeLabel(tenantId, gmailMessageId, SPAM_LABEL_ID);
     }
 
     public String saveDraft(
@@ -235,6 +250,7 @@ public class TriageGmailWriter {
                     logMessageWrite(tenantId, gmailMessageId, "removeLabel");
                     return null;
                 });
+        inboxProjectionWriteService.removeLabel(tenantId, gmailMessageId, labelId);
     }
 
     public void restoreToInbox(UUID tenantId, String gmailMessageId) throws IOException {
@@ -253,6 +269,7 @@ public class TriageGmailWriter {
                     logMessageWrite(tenantId, gmailMessageId, "restoreToInbox");
                     return null;
                 });
+        inboxProjectionWriteService.addLabel(tenantId, gmailMessageId, INBOX_LABEL_ID);
     }
 
     public void moveToTrash(UUID tenantId, String gmailMessageId) throws IOException {

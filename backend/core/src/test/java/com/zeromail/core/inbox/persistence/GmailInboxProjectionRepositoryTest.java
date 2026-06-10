@@ -134,6 +134,109 @@ class GmailInboxProjectionRepositoryTest extends PostgresContainerTest {
         assertThat(projection.getLabelIds()).containsExactly("INBOX", "Label_42");
     }
 
+    @Test
+    void add_label_appends_custom_label_and_bumps_version() {
+        UUID tenantId = seedTenant();
+        String gmailMessageId = "190000000000aa03";
+        seedInboxRow(tenantId, gmailMessageId, new String[] {"INBOX", "UNREAD"});
+
+        int affected =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        projectionRepository.addLabel(
+                                                tenantId, gmailMessageId, "Label_42"));
+
+        assertThat(affected).isEqualTo(1);
+        GmailInboxProjectionEntity projection = loadRow(tenantId, gmailMessageId);
+        assertThat(projection.getLabelIds()).contains("INBOX", "UNREAD", "Label_42");
+        assertThat(projection.getInboxState()).isEqualTo(InboxState.INBOX);
+        assertThat(projection.getVersion()).isEqualTo(1);
+    }
+
+    @Test
+    void add_label_is_idempotent_when_label_already_present() {
+        UUID tenantId = seedTenant();
+        String gmailMessageId = "190000000000aa04";
+        seedInboxRow(tenantId, gmailMessageId, new String[] {"INBOX", "Label_42"});
+
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> projectionRepository.addLabel(tenantId, gmailMessageId, "Label_42"));
+
+        GmailInboxProjectionEntity projection = loadRow(tenantId, gmailMessageId);
+        assertThat(projection.getLabelIds()).containsExactly("INBOX", "Label_42");
+    }
+
+    @Test
+    void remove_inbox_label_flips_state_to_out_of_inbox() {
+        UUID tenantId = seedTenant();
+        String gmailMessageId = "190000000000aa05";
+        seedInboxRow(tenantId, gmailMessageId, new String[] {"INBOX", "Label_42"});
+
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> projectionRepository.removeLabel(tenantId, gmailMessageId, "INBOX"));
+
+        GmailInboxProjectionEntity projection = loadRow(tenantId, gmailMessageId);
+        assertThat(projection.getLabelIds()).containsExactly("Label_42");
+        assertThat(projection.getInboxState()).isEqualTo(InboxState.OUT_OF_INBOX);
+    }
+
+    @Test
+    void label_mirrors_return_zero_when_no_projection_row_exists() {
+        UUID tenantId = seedTenant();
+
+        int added =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        projectionRepository.addLabel(
+                                                tenantId, "missing-message", "Label_42"));
+
+        assertThat(added).isZero();
+    }
+
+    private void seedInboxRow(UUID tenantId, String gmailMessageId, String[] labelIds) {
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        boolean unread = false;
+        for (String labelId : labelIds) {
+            if ("UNREAD".equals(labelId)) {
+                unread = true;
+            }
+        }
+        boolean unreadFlag = unread;
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () ->
+                                projectionRepository.upsertProjection(
+                                        tenantId,
+                                        gmailMessageId,
+                                        "thread-" + gmailMessageId,
+                                        new byte[32],
+                                        new byte[64],
+                                        null,
+                                        null,
+                                        null,
+                                        false,
+                                        now,
+                                        labelIds,
+                                        InboxState.INBOX.id(),
+                                        unreadFlag,
+                                        1L,
+                                        now,
+                                        now.plus(Duration.ofDays(90))));
+    }
+
+    private GmailInboxProjectionEntity loadRow(UUID tenantId, String gmailMessageId) {
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(
+                        () ->
+                                projectionRepository
+                                        .findById(
+                                                new GmailInboxProjectionId(
+                                                        tenantId, gmailMessageId))
+                                        .orElseThrow());
+    }
+
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(

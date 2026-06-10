@@ -430,7 +430,7 @@
       "supplementary": "{applied} of {observed} messages were handled by Zero Mail in this window.",
       "title": "Mail triage coverage",
       "tooltip": "Observed messages are mail Zero Mail saw. Triaged messages are mail Zero Mail labelled, archived, or drafted.",
-      "triageRate": "triaged",
+      "triageRate": "Mail triage coverage",
       "untouchedLabel": "Untouched"
     },
     "window": {
@@ -1263,6 +1263,15 @@
       "sent": "Sent",
       "unread": "Unread"
     },
+    "category": {
+      "all": "All",
+      "forums": "Forums",
+      "personal": "Personal",
+      "promotions": "Promotions",
+      "social": "Social",
+      "trigger": "Filter by Gmail category",
+      "updates": "Updates"
+    },
     "composer": {
       "attach": "Attach",
       "attachmentMeta": "{type} · {size}",
@@ -1379,8 +1388,8 @@
     }
   },
   "integrations": {
-    "heading": "Integrations",
-    "description": "Connect Zero Mail to the channels and tools you already use."
+    "description": "Connect Zero Mail to the channels and tools you already use.",
+    "heading": "Integrations"
   },
   "landing": {
     "continueSetupCta": "Continue setup",
@@ -1397,6 +1406,7 @@
       "link": "Read the walkthrough",
       "title": "Three steps to reach inbox zero — connect, describe, review."
     },
+    "playDemo": "Play the Zero Mail demo video",
     "primaryCta": "Sign in",
     "secondaryCta": "See features",
     "seo": {
@@ -1404,7 +1414,6 @@
       "title": "Zero Mail — AI inbox cleanup for Gmail, reach inbox zero"
     },
     "tagline": "Zero Mail reads, sorts, and drafts replies for your Gmail — by rules you write in plain English. No more 30-minute morning triage.",
-    "playDemo": "Play the Zero Mail demo video",
     "videoThumbnailAlt": "Zero Mail product demo video",
     "videoTitle": "Zero Mail product demo"
   },

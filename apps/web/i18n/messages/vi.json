@@ -430,7 +430,7 @@
       "supplementary": "{applied} trên {observed} email đã được Zero Mail xử lý trong kỳ này.",
       "title": "Tỷ lệ email đã xử lý",
       "tooltip": "Đã thấy là email Zero Mail nhận diện. Đã xử lý là email Zero Mail đã gắn nhãn, lưu trữ hoặc tạo bản nháp.",
-      "triageRate": "đã xử lý",
+      "triageRate": "Tỷ lệ email đã xử lý",
       "untouchedLabel": "Còn lại"
     },
     "window": {
@@ -1263,6 +1263,15 @@
       "sent": "Đã gửi",
       "unread": "Chưa đọc"
     },
+    "category": {
+      "all": "Tất cả",
+      "forums": "Diễn đàn",
+      "personal": "Cá nhân",
+      "promotions": "Quảng cáo",
+      "social": "Mạng xã hội",
+      "trigger": "Lọc theo danh mục Gmail",
+      "updates": "Cập nhật"
+    },
     "composer": {
       "attach": "Đính kèm",
       "attachmentMeta": "{type} · {size}",
@@ -1379,8 +1388,8 @@
     }
   },
   "integrations": {
-    "heading": "Tích hợp",
-    "description": "Kết nối Zero Mail với các kênh và công cụ bạn đang dùng."
+    "description": "Kết nối Zero Mail với các kênh và công cụ bạn đang dùng.",
+    "heading": "Tích hợp"
   },
   "landing": {
     "continueSetupCta": "Tiếp tục thiết lập",
@@ -1397,6 +1406,7 @@
       "link": "Đọc walkthrough",
       "title": "Ba bước để đạt inbox zero — kết nối, mô tả, xem lại."
     },
+    "playDemo": "Phát video demo Zero Mail",
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem tính năng",
     "seo": {
@@ -1404,7 +1414,6 @@
       "title": "Zero Mail — AI tự động dọn Gmail, đạt inbox zero"
     },
     "tagline": "Zero Mail tự động đọc, phân loại và soạn sẵn câu trả lời cho Gmail của bạn — theo quy tắc bạn viết bằng tiếng Việt. Không còn cảnh mỗi sáng mở hộp thư và ngồi lọc 30 phút.",
-    "playDemo": "Phát video demo Zero Mail",
     "videoThumbnailAlt": "Video demo sản phẩm Zero Mail",
     "videoTitle": "Video demo sản phẩm Zero Mail"
   },

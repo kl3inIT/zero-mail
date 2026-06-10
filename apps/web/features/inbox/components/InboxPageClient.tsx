@@ -102,6 +102,7 @@ export function InboxPageClient() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<string>>(() => new Set());
   const [readFilter, setReadFilter] = useState<InboxReadFilter>('all');
+  const [selectedCategory, setSelectedCategory] = useState<GmailCategoryId | null>(null);
   const [listPaneWidth, setListPaneWidth] = useState(INBOX_LIST_PANE_DEFAULT_WIDTH);
   const [splitPaneMaxWidth, setSplitPaneMaxWidth] = useState(INBOX_LIST_PANE_DEFAULT_WIDTH);
   const [isResizingSplit, setIsResizingSplit] = useState(false);
@@ -110,9 +111,18 @@ export function InboxPageClient() {
   const inboxQuery = useInboxMessages();
   const messages = useMemo(() => flattenInboxMessages(inboxQuery.data), [inboxQuery.data]);
   const availableLabels = useMemo(() => collectAvailableLabels(messages), [messages]);
+  const availableCategories = useMemo(() => collectAvailableCategories(messages), [messages]);
+  // Treat a selected category as inactive when it has no loaded mail (e.g. after
+  // a refetch dropped that tab) so the inbox never silently shows an empty list
+  // for a category that is no longer offered. Derived at render — no reset effect.
+  const effectiveCategory =
+    selectedCategory !== null && availableCategories.includes(selectedCategory)
+      ? selectedCategory
+      : null;
   const filteredMessages = useMemo(
-    () => filterInboxMessages(messages, searchQuery, selectedLabelIds, readFilter),
-    [messages, searchQuery, selectedLabelIds, readFilter],
+    () =>
+      filterInboxMessages(messages, searchQuery, selectedLabelIds, readFilter, effectiveCategory),
+    [messages, searchQuery, selectedLabelIds, readFilter, effectiveCategory],
   );
   const toggleLabelFilter = useCallback((labelId: string) => {
     setSelectedLabelIds((current) => {
@@ -125,7 +135,10 @@ export function InboxPageClient() {
   const clearLabelFilter = useCallback(() => setSelectedLabelIds(new Set()), []);
   const inboxDataSource = latestInboxDataSource(inboxQuery.data);
   const canWarmUpInboxInBackground =
-    searchQuery.trim() === '' && selectedLabelIds.size === 0 && readFilter === 'all';
+    searchQuery.trim() === '' &&
+    selectedLabelIds.size === 0 &&
+    readFilter === 'all' &&
+    effectiveCategory === null;
   const isInboxBackgroundWarmupActive =
     canWarmUpInboxInBackground &&
     inboxQuery.isFetchingNextPage &&
@@ -334,7 +347,16 @@ export function InboxPageClient() {
                 onClear={clearLabelFilter}
               />
             </div>
-            <InboxReadStateFilter locale={locale} value={readFilter} onChange={setReadFilter} />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <InboxReadStateFilter locale={locale} value={readFilter} onChange={setReadFilter} />
+              {availableCategories.length > 0 ? (
+                <InboxCategoryFilter
+                  availableCategories={availableCategories}
+                  value={effectiveCategory}
+                  onChange={setSelectedCategory}
+                />
+              ) : null}
+            </div>
           </div>
           <InboxMessageList
             isPending={inboxQuery.isPending}
@@ -2218,18 +2240,23 @@ function filterInboxMessages(
   query: string,
   selectedLabelIds: Set<string>,
   readFilter: InboxReadFilter,
+  selectedCategory: GmailCategoryId | null,
 ): InboxMessage[] {
   const normalizedTokens = normalizeSearchText(query).split(/\s+/).filter(Boolean);
   const hasSearch = normalizedTokens.length > 0;
   const hasLabelFilter = selectedLabelIds.size > 0;
   const hasReadFilter = readFilter !== 'all';
-  if (!hasSearch && !hasLabelFilter && !hasReadFilter) {
+  const hasCategoryFilter = selectedCategory !== null;
+  if (!hasSearch && !hasLabelFilter && !hasReadFilter && !hasCategoryFilter) {
     return messages;
   }
 
   return messages.filter((message) => {
     if (readFilter === 'unread' && !message.unread) return false;
     if (readFilter === 'read' && message.unread) return false;
+    if (hasCategoryFilter && !message.labelIds.includes(selectedCategory)) {
+      return false;
+    }
     if (hasLabelFilter) {
       // OR semantics: keep the message if it carries ANY of the selected
       // labels. Most users think of "show me Promotions or Updates" as an
@@ -2268,6 +2295,19 @@ function collectAvailableLabels(messages: InboxMessage[]): InboxLabel[] {
   return [...seen.values()].sort((leftLabel, rightLabel) =>
     inboxLabelName(leftLabel).localeCompare(inboxLabelName(rightLabel)),
   );
+}
+
+// Which Gmail categories actually appear in the loaded messages, in canonical
+// Gmail tab order. Gmail only shows a category tab when it has mail; we do the
+// same so accounts without (e.g.) Forums don't get an empty filter chip.
+function collectAvailableCategories(messages: InboxMessage[]): GmailCategoryId[] {
+  const present = new Set<string>();
+  for (const message of messages) {
+    for (const labelId of message.labelIds) {
+      if (isGmailCategoryLabelId(labelId)) present.add(labelId);
+    }
+  }
+  return GMAIL_CATEGORY_LABEL_IDS.filter((categoryId) => present.has(categoryId));
 }
 
 function normalizeSearchText(value: string): string {
@@ -2445,8 +2485,37 @@ const FALLBACK_LABEL_COLORS = [
 
 const HIDDEN_INBOX_LABEL_IDS = new Set(['INBOX', 'UNREAD']);
 
+// Gmail's native inbox categories. These are surfaced as a dedicated filter
+// (like Gmail's Primary/Social/Promotions tabs), not rendered as label chips —
+// otherwise every row would carry a redundant "Personal"/"Updates" pill.
+const GMAIL_CATEGORY_LABEL_IDS = [
+  'CATEGORY_PERSONAL',
+  'CATEGORY_SOCIAL',
+  'CATEGORY_PROMOTIONS',
+  'CATEGORY_UPDATES',
+  'CATEGORY_FORUMS',
+] as const;
+type GmailCategoryId = (typeof GMAIL_CATEGORY_LABEL_IDS)[number];
+const GMAIL_CATEGORY_LABEL_ID_SET = new Set<string>(GMAIL_CATEGORY_LABEL_IDS);
+// Map each Gmail category id to its full `inbox.category.*` message key. Kept as
+// `as const` so the value type stays a literal union that next-intl's typed `t`
+// accepts (a plain string would not satisfy the namespaced-key parameter).
+const GMAIL_CATEGORY_MESSAGE_KEY = {
+  CATEGORY_PERSONAL: 'inbox.category.personal',
+  CATEGORY_SOCIAL: 'inbox.category.social',
+  CATEGORY_PROMOTIONS: 'inbox.category.promotions',
+  CATEGORY_UPDATES: 'inbox.category.updates',
+  CATEGORY_FORUMS: 'inbox.category.forums',
+} as const;
+
+function isGmailCategoryLabelId(labelId: string): boolean {
+  return GMAIL_CATEGORY_LABEL_ID_SET.has(labelId);
+}
+
 function visibleInboxLabels(labels: InboxLabel[]): InboxLabel[] {
-  return labels.filter((label) => !HIDDEN_INBOX_LABEL_IDS.has(label.id)).sort(compareInboxLabels);
+  return labels
+    .filter((label) => !HIDDEN_INBOX_LABEL_IDS.has(label.id) && !isGmailCategoryLabelId(label.id))
+    .sort(compareInboxLabels);
 }
 
 function compareInboxLabels(leftLabel: InboxLabel, rightLabel: InboxLabel): number {
@@ -2532,7 +2601,7 @@ function InboxReadStateFilter({
 
   return (
     <div
-      className="border-border bg-background mt-2 inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
+      className="border-border bg-background inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
       role="group"
       aria-label={isVietnamese ? 'Lọc trạng thái đọc' : 'Filter read state'}
       data-testid="inbox-read-state-filter"
@@ -2554,6 +2623,55 @@ function InboxReadStateFilter({
             data-testid={`inbox-read-state-filter-${option.value}`}
           >
             {isVietnamese ? option.vi : option.en}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function InboxCategoryFilter({
+  availableCategories,
+  value,
+  onChange,
+}: {
+  availableCategories: GmailCategoryId[];
+  value: GmailCategoryId | null;
+  onChange: (value: GmailCategoryId | null) => void;
+}) {
+  const t = useTranslations();
+  const options: Array<{ value: GmailCategoryId | null; label: string }> = [
+    { value: null, label: t('inbox.category.all') },
+    ...availableCategories.map((categoryId) => ({
+      value: categoryId,
+      label: t(GMAIL_CATEGORY_MESSAGE_KEY[categoryId]),
+    })),
+  ];
+
+  return (
+    <div
+      className="border-border bg-background inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
+      role="group"
+      aria-label={t('inbox.category.trigger')}
+      data-testid="inbox-category-filter"
+    >
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <button
+            key={option.value ?? 'all'}
+            type="button"
+            className={cn(
+              'flex-1 rounded-sm px-3 text-xs font-semibold whitespace-nowrap transition-colors sm:flex-none',
+              selected
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-foreground hover:bg-muted',
+            )}
+            aria-pressed={selected}
+            onClick={() => onChange(option.value)}
+            data-testid={`inbox-category-filter-${option.value ?? 'all'}`}
+          >
+            {option.label}
           </button>
         );
       })}

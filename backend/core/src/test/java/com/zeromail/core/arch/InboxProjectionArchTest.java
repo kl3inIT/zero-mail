@@ -166,4 +166,46 @@ class InboxProjectionArchTest {
                             "TriageGmailWriter is the single Gmail-write boundary that mirrors mark-read"
                                     + " into the projection. Any other caller would skip the Gmail label modify"
                                     + " step, leaving Gmail and the projection in divergent states.");
+
+    /**
+     * Phase B Wave 2 follow-up — the generic label add/remove projection mirrors carry the same
+     * Gmail-first / DB-second ordering contract as mark-read. Restrict callers to the single triage
+     * write boundary so no other code mutates the projection's {@code label_ids} without first
+     * confirming the change in Gmail.
+     */
+    @ArchTest
+    static final ArchRule only_triage_gmail_writer_invokes_projection_add_label =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackages(
+                            "com.zeromail.core.inbox.usecases", "com.zeromail.core.triage.usecases")
+                    .should()
+                    .callMethod(
+                            "com.zeromail.core.inbox.usecases.InboxProjectionWriteService",
+                            "addLabel",
+                            "java.util.UUID",
+                            "java.lang.String",
+                            "java.lang.String")
+                    .because(
+                            "TriageGmailWriter is the single Gmail-write boundary that mirrors label adds"
+                                    + " into the projection after Gmail confirms; any other caller would let the"
+                                    + " projection diverge from the Gmail label set.");
+
+    @ArchTest
+    static final ArchRule only_triage_gmail_writer_invokes_projection_remove_label =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackages(
+                            "com.zeromail.core.inbox.usecases", "com.zeromail.core.triage.usecases")
+                    .should()
+                    .callMethod(
+                            "com.zeromail.core.inbox.usecases.InboxProjectionWriteService",
+                            "removeLabel",
+                            "java.util.UUID",
+                            "java.lang.String",
+                            "java.lang.String")
+                    .because(
+                            "TriageGmailWriter is the single Gmail-write boundary that mirrors label removes"
+                                    + " into the projection after Gmail confirms; any other caller would let the"
+                                    + " projection diverge from the Gmail label set.");
 }

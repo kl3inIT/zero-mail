@@ -150,4 +150,81 @@ public interface GmailInboxProjectionRepository
             nativeQuery = true)
     @Transactional
     int markRead(@Param("tenantId") UUID tenantId, @Param("gmailMessageId") String gmailMessageId);
+
+    /**
+     * Mirror a Gmail label-add into the projection row (Phase B Wave 2 follow-up). Appends {@code
+     * labelId} to {@code label_ids} only when absent (idempotent — Gmail's {@code messages.modify}
+     * is itself idempotent so the same add may arrive twice), recomputes the denormalized {@code
+     * unread} flag when the label is {@code UNREAD} and {@code inbox_state} when the label is
+     * {@code INBOX}, and bumps {@code refreshed_at} + {@code version}.
+     *
+     * <p>Returns the affected row count: {@code 0} when the projection has no row for the message
+     * yet (backfill has not reached it). The caller treats {@code 0} as a no-op — the next Pub/Sub
+     * UPSERT reconciles the row with the up-to-date Gmail state anyway.
+     *
+     * <p>Ciphertext columns and AAD are untouched; the {@code (tenantId, gmailMessageId,
+     * fieldName)} triple has not changed so the existing envelopes stay valid. The {@code
+     * label_ids} column is not encrypted (plain {@code text[]}) so the array mutation needs no
+     * cipher round-trip.
+     */
+    @Modifying
+    @Query(
+            value =
+                    """
+                    UPDATE gmail_inbox_projection
+                    SET label_ids = CASE
+                            WHEN :labelId = ANY(label_ids) THEN label_ids
+                            ELSE array_append(label_ids, CAST(:labelId AS text))
+                        END,
+                        inbox_state = CASE
+                            WHEN :labelId = 'INBOX' THEN 'INBOX' ELSE inbox_state
+                        END,
+                        unread = CASE
+                            WHEN :labelId = 'UNREAD' THEN true ELSE unread
+                        END,
+                        refreshed_at = NOW(),
+                        version = version + 1
+                    WHERE tenant_id = :tenantId
+                      AND gmail_message_id = :gmailMessageId
+                    """,
+            nativeQuery = true)
+    @Transactional
+    int addLabel(
+            @Param("tenantId") UUID tenantId,
+            @Param("gmailMessageId") String gmailMessageId,
+            @Param("labelId") String labelId);
+
+    /**
+     * Mirror a Gmail label-remove into the projection row (Phase B Wave 2 follow-up). Drops {@code
+     * labelId} from {@code label_ids} via {@code array_remove} (no-op when absent), recomputes the
+     * denormalized {@code unread} flag when the label is {@code UNREAD} and flips {@code
+     * inbox_state} to {@code OUT_OF_INBOX} when the label is {@code INBOX} (archive / move / spam),
+     * and bumps {@code refreshed_at} + {@code version}.
+     *
+     * <p>Returns the affected row count; {@code 0} means no projection row yet — treated as a
+     * no-op, reconciled by the next Pub/Sub UPSERT. Ciphertext columns and AAD are untouched.
+     */
+    @Modifying
+    @Query(
+            value =
+                    """
+                    UPDATE gmail_inbox_projection
+                    SET label_ids = array_remove(label_ids, CAST(:labelId AS text)),
+                        inbox_state = CASE
+                            WHEN :labelId = 'INBOX' THEN 'OUT_OF_INBOX' ELSE inbox_state
+                        END,
+                        unread = CASE
+                            WHEN :labelId = 'UNREAD' THEN false ELSE unread
+                        END,
+                        refreshed_at = NOW(),
+                        version = version + 1
+                    WHERE tenant_id = :tenantId
+                      AND gmail_message_id = :gmailMessageId
+                    """,
+            nativeQuery = true)
+    @Transactional
+    int removeLabel(
+            @Param("tenantId") UUID tenantId,
+            @Param("gmailMessageId") String gmailMessageId,
+            @Param("labelId") String labelId);
 }
