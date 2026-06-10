@@ -131,6 +131,14 @@ export const triageMessages = {
     vi: 'Không có lý do chi tiết',
     en: 'No detailed reason',
   },
+  'triage.audit.sourceMailbox': {
+    vi: 'Nguồn',
+    en: 'Source',
+  },
+  'triage.audit.executingMailbox': {
+    vi: 'Thực thi',
+    en: 'Executing',
+  },
   'triage.audit.message.untitled': {
     vi: 'Email không tiêu đề',
     en: 'Untitled message',

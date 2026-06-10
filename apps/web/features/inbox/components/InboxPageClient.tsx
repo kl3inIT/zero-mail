@@ -59,6 +59,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useChat } from '@/features/chat/hooks/use-chat';
+import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
 import { EmailHtmlFrame, PlainEmailContent } from '@/features/inbox/components/EmailHtmlFrame';
 import { PreviewCard } from '@/features/chat/components/preview-card/preview-card';
 import {
@@ -191,11 +192,12 @@ export function InboxPageClient() {
         >
           <div className="border-border shrink-0 border-b px-4 py-2.5">
             <div className="flex h-8 items-center justify-between">
-              <div className="flex items-center gap-2.5">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <span className="flex size-8 items-center justify-center">
                   <Inbox className="text-muted-foreground size-5" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-medium">{t('nav.inbox')}</span>
+                <ActiveMailboxBadge className="hidden max-w-56 sm:inline-flex" />
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-muted-foreground text-xs whitespace-nowrap">
@@ -1368,6 +1370,9 @@ function InboxReplyComposer({
     >
       {previewSubmitted ? null : (
         <div className="bg-card overflow-hidden">
+          <div className="border-border border-b px-3 py-2">
+            <ActiveMailboxBadge className="max-w-full" />
+          </div>
           <div className="flex items-center gap-2 px-3 py-2">
             <span className="text-muted-foreground w-12 shrink-0 text-sm">
               {t('inbox.composer.to')}

@@ -8,12 +8,14 @@ import { useTranslations } from 'next-intl';
 import {
   BarChart3,
   Bot,
+  Check,
   ChevronsUpDown,
   CreditCard,
   Crown,
   Inbox,
   ListChecks,
   LogOut,
+  MailPlus,
   MailX,
   PanelLeft,
   RefreshCw,
@@ -52,7 +54,14 @@ import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useLogout } from '@/features/account/hooks/useLogout';
 import { useBillingPlans } from '@/features/billing/hooks/useBillingPlans';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
-import { getApiUrl } from '@/lib/api/base-url';
+import {
+  getConnectMailboxUrl,
+  getReconnectMailboxUrl,
+  type MailboxSummary,
+} from '@/features/mailbox/api/mailbox-api';
+import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
+import { useMailboxList } from '@/features/mailbox/hooks/useMailboxList';
+import { useSetActiveMailbox } from '@/features/mailbox/hooks/useSetActiveMailbox';
 import { cn } from '@/lib/utils';
 
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
@@ -115,11 +124,30 @@ function planLabel(planCode: string): string {
   }
 }
 
+function mailboxDisplayName(mailbox: MailboxSummary): string {
+  return mailbox.displayPurpose?.trim() || mailbox.googleEmail;
+}
+
+function mailboxStatusLabel(status: string): string {
+  return status
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function isDisconnectedMailbox(mailbox: MailboxSummary): boolean {
+  return mailbox.status.toUpperCase() === 'DISCONNECTED';
+}
+
 function AccountMenu({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations();
   const router = useRouter();
   const currentUser = useCurrentUser();
   const billingPlans = useBillingPlans();
+  const mailboxList = useMailboxList();
+  const activeMailbox = useActiveMailbox();
+  const setActiveMailbox = useSetActiveMailbox();
   const logout = useLogout();
   const email =
     currentUser.data?.gmailConnectionStatus?.googleEmail ?? currentUser.data?.email ?? '';
@@ -133,6 +161,8 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
   const currentPlanLabel = billingPlans.data?.currentPlanCode
     ? planLabel(billingPlans.data.currentPlanCode)
     : t('shell.userMenu.planLoading');
+  const mailboxes = mailboxList.data ?? [];
+  const activeMailboxId = activeMailbox.data?.gmailConnectionId;
   const triggerClassName = cn(
     'group/account hover:bg-sidebar-accent/60 focus-visible:ring-ring flex w-full items-center gap-3 rounded-xl text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
     collapsed ? 'mx-auto size-10 justify-center p-0' : 'px-2 py-2',
@@ -192,6 +222,68 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-muted-foreground px-2 py-1.5 text-xs font-semibold">
+            {t('shell.accounts.title')}
+          </DropdownMenuLabel>
+          {mailboxes.length === 0 && (
+            <DropdownMenuItem disabled>
+              <MailPlus className="size-4" aria-hidden="true" />
+              {t('shell.accounts.noMailboxes')}
+            </DropdownMenuItem>
+          )}
+          {mailboxes.map((mailbox) => {
+            const isActive = mailbox.gmailConnectionId === activeMailboxId;
+            return (
+              <DropdownMenuItem
+                key={mailbox.gmailConnectionId}
+                disabled={isActive || setActiveMailbox.isPending}
+                data-testid={`mailbox-switch-${mailbox.gmailConnectionId}`}
+                onClick={() => setActiveMailbox.mutate(mailbox.gmailConnectionId)}
+                className="items-start gap-2"
+              >
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+                  {isActive ? (
+                    <Check
+                      className="text-primary size-4"
+                      aria-label={t('shell.accounts.active')}
+                      data-testid="mailbox-active-marker"
+                    />
+                  ) : null}
+                </span>
+                <span className="min-w-0 flex-1 space-y-1">
+                  <span className="block truncate text-sm font-medium">
+                    {mailboxDisplayName(mailbox)}
+                  </span>
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {mailbox.googleEmail}
+                  </span>
+                  <span className="text-muted-foreground flex flex-wrap gap-1 text-[11px] leading-4">
+                    {mailbox.isPrimary && (
+                      <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
+                        {t('shell.accounts.primary')}
+                      </span>
+                    )}
+                    <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-medium">
+                      {mailboxStatusLabel(mailbox.status)}
+                    </span>
+                    {!isActive && <span>{t('shell.accounts.switch')}</span>}
+                  </span>
+                </span>
+              </DropdownMenuItem>
+            );
+          })}
+          <DropdownMenuItem
+            data-testid="mailbox-add-gmail"
+            onClick={() => {
+              window.location.href = getConnectMailboxUrl();
+            }}
+          >
+            <MailPlus className="size-4" aria-hidden="true" />
+            {t('shell.accounts.addGmail')}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
           {ACCOUNT_NAV.map((accountNavItem) => {
             const Icon = accountNavItem.icon;
             return (
@@ -224,7 +316,15 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
 function ReconnectRow({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations();
   const statusQuery = useTenantStatus();
+  const mailboxList = useMailboxList();
+  const activeMailbox = useActiveMailbox();
   const status = (statusQuery.data?.connectionStatus ?? 'PENDING') as GmailConnectionStatus;
+  const disconnectedMailbox =
+    mailboxList.data?.find(
+      (mailbox) =>
+        mailbox.gmailConnectionId === activeMailbox.data?.gmailConnectionId &&
+        isDisconnectedMailbox(mailbox),
+    ) ?? mailboxList.data?.find(isDisconnectedMailbox);
   if (status !== 'DISCONNECTED' || collapsed) return null;
 
   return (
@@ -235,7 +335,9 @@ function ReconnectRow({ collapsed }: { collapsed: boolean }) {
         size="sm"
         className="border-destructive/40 text-destructive hover:bg-destructive/10 mx-3 h-8 justify-start rounded-lg text-xs"
         onClick={() => {
-          window.location.href = getApiUrl('/api/tenant/connect-gmail');
+          window.location.href = disconnectedMailbox
+            ? getReconnectMailboxUrl(disconnectedMailbox.gmailConnectionId)
+            : getConnectMailboxUrl();
         }}
         data-testid="reconnect-gmail-button"
       >

@@ -74,6 +74,7 @@ export function AuditRow({ entry, now }: AuditRowProps) {
             <Wand2 className="size-3 shrink-0" aria-hidden="true" />
             <span className="truncate">{entry.ruleName}</span>
           </div>
+          <AuditMailboxProvenance entry={entry} />
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
@@ -116,6 +117,31 @@ function splitSenderEmail(
   const atIndex = email.lastIndexOf('@');
   if (atIndex < 0) return { handle: email, domain: null };
   return { handle: email.slice(0, atIndex), domain: email.slice(atIndex + 1) };
+}
+
+function AuditMailboxProvenance({ entry }: { entry: AuditEntry }) {
+  const t = useTranslations();
+  const sourceMailbox = entry.sourceMailboxEmail ?? entry.sourceMailboxId;
+  const executingMailbox = entry.executingMailboxEmail ?? entry.executingMailboxId;
+  if (!sourceMailbox && !executingMailbox) return null;
+
+  return (
+    <div
+      className="text-muted-foreground mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px]"
+      data-testid="audit-mailbox-provenance"
+    >
+      {sourceMailbox ? (
+        <span className="bg-muted/40 rounded px-1.5 py-0.5">
+          {t('triage.audit.sourceMailbox')}: {sourceMailbox}
+        </span>
+      ) : null}
+      {executingMailbox ? (
+        <span className="bg-muted/40 rounded px-1.5 py-0.5">
+          {t('triage.audit.executingMailbox')}: {executingMailbox}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 function ActionIcon({ action }: { action: string }) {

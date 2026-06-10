@@ -15,10 +15,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
+import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
 import { cn } from '@/lib/utils';
 import { ErrorCode } from '@/lib/api/error-codes';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
+import { CopyRulesDialog } from '@/features/rules/components/CopyRulesDialog';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
 import { GmailRuleTester } from '@/features/rules/components/GmailRuleTester';
@@ -258,6 +261,8 @@ export function RulesWorkspace() {
   const t = useTranslations();
   const locale = useLocale();
   const localizeApiError = useLocalizedApiError();
+  const activeMailbox = useActiveMailbox();
+  const activeMailboxId = activeMailbox.data?.gmailConnectionId ?? null;
   const rulesQuery = useRules();
   const ruleExamplesQuery = useRuleExamples(locale);
   const ruleActionsQuery = useRuleActionsCatalog(locale);
@@ -380,16 +385,25 @@ export function RulesWorkspace() {
       return;
     }
 
+    if (!activeMailboxId) {
+      dispatch({ type: 'saveFailed', message: t('errors.rules.save.generic') });
+      return;
+    }
+
     try {
       const savedRule = selectedRule?.ruleId
         ? await updateRuleMutation.mutateAsync({
             ruleId: selectedRule.ruleId,
             payload: {
+              gmailConnectionId: activeMailboxId,
               ...basePayload,
               entityVersion: selectedRule.entityVersion ?? 0,
             },
           })
-        : await createRuleMutation.mutateAsync(basePayload);
+        : await createRuleMutation.mutateAsync({
+            gmailConnectionId: activeMailboxId,
+            ...basePayload,
+          });
 
       dispatch({ type: 'ruleSavedAfterCompose', savedRule });
     } catch (error) {
@@ -463,8 +477,11 @@ export function RulesWorkspace() {
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('rules.page.title')}</h1>
+      <header className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{t('rules.page.title')}</h1>
+          <ActiveMailboxBadge />
+        </div>
         <p className="text-muted-foreground text-sm">{t('rules.page.intro')}</p>
       </header>
 
@@ -502,15 +519,18 @@ export function RulesWorkspace() {
             onToggleEnabled={handleToggleRule}
             onDeleteRule={handleDeleteRule}
             action={
-              <Button
-                type="button"
-                size="sm"
-                className="gap-1.5 rounded-md"
-                onClick={() => dispatch({ type: 'newRuleStarted' })}
-              >
-                <Plus className="size-3.5" />
-                {t('rules.composer.newRuleCta')}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <CopyRulesDialog />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="gap-1.5 rounded-md"
+                  onClick={() => dispatch({ type: 'newRuleStarted' })}
+                >
+                  <Plus className="size-3.5" />
+                  {t('rules.composer.newRuleCta')}
+                </Button>
+              </div>
             }
           />
         </TabsContent>

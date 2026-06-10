@@ -1364,6 +1364,95 @@
         }
       }
     },
+    "/api/gmail/active-mailbox/{gmailConnectionId}": {
+      "put": {
+        "tags": ["active-mailbox-controller"],
+        "operationId": "setActiveMailbox",
+        "parameters": [
+          {
+            "name": "gmailConnectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveMailboxResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/composer/drafts": {
       "get": {
         "tags": ["composer-draft"],
@@ -3187,6 +3276,94 @@
         }
       }
     },
+    "/api/rules/copy": {
+      "post": {
+        "tags": ["rules"],
+        "operationId": "copyRules",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyRulesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopyRulesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/rules/compile": {
       "post": {
         "tags": ["rules"],
@@ -4044,6 +4221,414 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/mailboxes/{gmailConnectionId}/set-primary": {
+      "post": {
+        "tags": ["connected-mailboxes-controller"],
+        "operationId": "setPrimaryFromValidationRoute",
+        "parameters": [
+          {
+            "name": "gmailConnectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/mailboxes/{gmailConnectionId}/reconnect": {
+      "get": {
+        "tags": ["connect-mailbox-controller"],
+        "operationId": "reconnect",
+        "parameters": [
+          {
+            "name": "gmailConnectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["connect-mailbox-controller"],
+        "operationId": "reconnectFromValidationRoute",
+        "parameters": [
+          {
+            "name": "gmailConnectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/mailboxes/{gmailConnectionId}/primary": {
+      "post": {
+        "tags": ["connected-mailboxes-controller"],
+        "operationId": "setPrimary",
+        "parameters": [
+          {
+            "name": "gmailConnectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/mailboxes/{gmailConnectionId}/disconnect": {
+      "post": {
+        "tags": ["connected-mailboxes-controller"],
+        "operationId": "disconnect_1",
+        "parameters": [
+          {
+            "name": "gmailConnectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           },
           "400": {
             "description": "Bad Request",
@@ -7485,6 +8070,158 @@
         }
       }
     },
+    "/api/gmail/mailboxes": {
+      "get": {
+        "tags": ["connected-mailboxes-controller"],
+        "operationId": "listMailboxes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MailboxSummaryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/mailboxes/connect": {
+      "get": {
+        "tags": ["connect-mailbox-controller"],
+        "operationId": "connect_1",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/gmail/inbox": {
       "get": {
         "tags": ["gmail-inbox"],
@@ -7858,6 +8595,84 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/GmailConnectionStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gmail/active-mailbox": {
+      "get": {
+        "tags": ["active-mailbox-controller"],
+        "operationId": "activeMailbox",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveMailboxResponse"
                 }
               }
             }
@@ -8896,6 +9711,10 @@
       "RuleUpdateRequest": {
         "type": "object",
         "properties": {
+          "gmailConnectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "displayName": {
             "type": "string",
             "maxLength": 160,
@@ -8914,12 +9733,16 @@
             "format": "int32"
           }
         },
-        "required": ["compiled", "displayName", "entityVersion", "sourceText"]
+        "required": ["compiled", "displayName", "entityVersion", "gmailConnectionId", "sourceText"]
       },
       "RuleResponse": {
         "type": "object",
         "properties": {
           "ruleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gmailConnectionId": {
             "type": "string",
             "format": "uuid"
           },
@@ -8977,6 +9800,7 @@
           "displayName",
           "enabled",
           "entityVersion",
+          "gmailConnectionId",
           "lastPreviewedAt",
           "lastPreviewedEntityVersion",
           "matcherAst",
@@ -9042,6 +9866,28 @@
           }
         },
         "required": ["content", "id", "title", "updatedAt"]
+      },
+      "ActiveMailboxResponse": {
+        "type": "object",
+        "properties": {
+          "gmailConnectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayPurpose": {
+            "type": ["string", "null"]
+          },
+          "status": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "required": ["email", "gmailConnectionId", "isPrimary", "status"]
       },
       "ComposerDraftUpsertRequestDto": {
         "type": "object",
@@ -9396,6 +10242,10 @@
       "RuleCreateRequest": {
         "type": "object",
         "properties": {
+          "gmailConnectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "displayName": {
             "type": "string",
             "maxLength": 160,
@@ -9410,7 +10260,7 @@
             "$ref": "#/components/schemas/CompiledPayloadRequest"
           }
         },
-        "required": ["compiled", "displayName", "sourceText"]
+        "required": ["compiled", "displayName", "gmailConnectionId", "sourceText"]
       },
       "RulePreviewRequest": {
         "type": "object",
@@ -9685,6 +10535,10 @@
       "RuleDraftPreviewRequest": {
         "type": "object",
         "properties": {
+          "gmailConnectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "compiled": {
             "$ref": "#/components/schemas/CompiledPayloadRequest"
           },
@@ -9696,7 +10550,7 @@
             "type": "boolean"
           }
         },
-        "required": ["compiled"]
+        "required": ["compiled", "gmailConnectionId"]
       },
       "RuleEnabledPreviewRequest": {
         "type": "object",
@@ -9794,6 +10648,37 @@
           }
         },
         "required": ["entries"]
+      },
+      "CopyRulesRequest": {
+        "type": "object",
+        "properties": {
+          "sourceGmailConnectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetGmailConnectionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["sourceGmailConnectionId", "targetGmailConnectionId"]
+      },
+      "CopyRulesResponse": {
+        "type": "object",
+        "properties": {
+          "copiedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "copiedRuleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["copiedCount", "copiedRuleIds"]
       },
       "RuleCompileRequest": {
         "type": "object",
@@ -9925,10 +10810,10 @@
           "inline": {
             "type": "boolean"
           },
-          "formData": {
+          "attachment": {
             "type": "boolean"
           },
-          "attachment": {
+          "formData": {
             "type": "boolean"
           }
         }
@@ -10050,9 +10935,6 @@
               "$ref": "#/components/schemas/HttpRange"
             }
           },
-          "cacheControl": {
-            "type": "string"
-          },
           "contentDisposition": {
             "$ref": "#/components/schemas/ContentDisposition"
           },
@@ -10062,22 +10944,15 @@
               "type": "string"
             }
           },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
-          "etag": {
-            "type": "string"
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
           "ifNoneMatch": {
             "type": "array",
             "items": {
               "type": "string"
             }
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
           },
           "allow": {
             "type": "array",
@@ -10085,6 +10960,13 @@
               "$ref": "#/components/schemas/HttpMethod"
             },
             "uniqueItems": true
+          },
+          "cacheControl": {
+            "type": "string"
+          },
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
           },
           "contentLanguage": {
             "type": "string"
@@ -10095,43 +10977,8 @@
               "type": "string"
             }
           },
-          "accept": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
-          },
-          "pragma": {
+          "etag": {
             "type": "string"
-          },
-          "upgrade": {
-            "type": "string"
-          },
-          "vary": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "expires": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "acceptPatch": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
-          },
-          "acceptLanguageAsLocales": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "basicAuth": {
-            "type": "string",
-            "writeOnly": true
           },
           "acceptLanguage": {
             "type": "array",
@@ -10148,14 +10995,61 @@
               }
             }
           },
+          "acceptPatch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "basicAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "acceptLanguageAsLocales": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "accessControlMaxAge": {
             "type": "integer",
             "format": "int64"
           },
+          "accept": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pragma": {
+            "type": "string"
+          },
+          "upgrade": {
+            "type": "string"
+          },
+          "vary": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessControlAllowMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            }
+          },
+          "accessControlAllowCredentials": {
+            "type": "boolean"
+          },
           "accessControlAllowOrigin": {
             "type": "string"
           },
-          "accessControlRequestHeaders": {
+          "accessControlExposeHeaders": {
             "type": "array",
             "items": {
               "type": "string"
@@ -10164,13 +11058,7 @@
           "accessControlRequestMethod": {
             "$ref": "#/components/schemas/HttpMethod"
           },
-          "accessControlAllowMethods": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpMethod"
-            }
-          },
-          "accessControlExposeHeaders": {
+          "accessControlRequestHeaders": {
             "type": "array",
             "items": {
               "type": "string"
@@ -10181,9 +11069,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "accessControlAllowCredentials": {
-            "type": "boolean"
           }
         }
       },
@@ -10214,14 +11099,14 @@
           "concrete": {
             "type": "boolean"
           },
-          "wildcardType": {
-            "type": "boolean"
-          },
           "wildcardSubtype": {
             "type": "boolean"
           },
           "subtypeSuffix": {
             "type": "string"
+          },
+          "wildcardType": {
+            "type": "boolean"
           }
         }
       },
@@ -11298,6 +12183,43 @@
           }
         },
         "required": ["items"]
+      },
+      "MailboxSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "gmailConnectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "googleEmail": {
+            "type": "string"
+          },
+          "displayPurpose": {
+            "type": ["string", "null"]
+          },
+          "status": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "watchExpiresAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "ingestionHealth": {
+            "type": "string"
+          },
+          "lastSyncedHistoryId": {
+            "type": ["integer", "null"],
+            "format": "int64"
+          },
+          "connectedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "required": ["gmailConnectionId", "googleEmail", "ingestionHealth", "isPrimary", "status"]
       },
       "GmailInboxLabelResponse": {
         "type": "object",

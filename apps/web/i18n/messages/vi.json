@@ -959,7 +959,11 @@
     "fallback": "Không thể hoàn tất thao tác. Hãy làm mới trang rồi thử lại.",
     "fieldFallback": "Giá trị này không hợp lệ. Hãy kiểm tra lại.",
     "gmail": {
-      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
+      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail.",
+      "mailbox": {
+        "duplicate_active": "Hộp thư Gmail này đã là hộp thư đang dùng.",
+        "not_found": "Không tìm thấy hộp thư Gmail này trong workspace."
+      }
     },
     "knowledge": {
       "not_found": "Không tìm thấy đoạn kiến thức này. Hãy tải lại danh sách.",
@@ -997,6 +1001,9 @@
       "compile": {
         "clarification_required": "Quy tắc này cần một câu trả lời làm rõ trước khi có thể lưu.",
         "invalid": "Zero Mail chưa kiểm tra được quy tắc này. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ rồi kiểm tra lại."
+      },
+      "copy": {
+        "generic": "Không thể sao chép quy tắc lúc này. Hãy tải lại rồi thử lại."
       },
       "duplicate": "Quy tắc giống hệt đã tồn tại trong danh sách. Hãy sửa quy tắc cũ hoặc thay đổi điều kiện/hành động.",
       "gmail": {
@@ -2073,6 +2080,19 @@
       "tabsLabel": "Cách tạo quy tắc",
       "title": "Tạo quy tắc xử lý email"
     },
+    "copy": {
+      "activeMailbox": "Hộp thư đích đang dùng",
+      "body": "Quy tắc được sao chép vào hộp thư đang dùng và luôn ở trạng thái tắt để bạn kiểm tra trước.",
+      "button": "Sao chép quy tắc",
+      "cancel": "Hủy",
+      "confirm": "Sao chép",
+      "copied": "Đã sao chép {count} quy tắc",
+      "empty": "Kết nối thêm một Gmail để sao chép quy tắc giữa các hộp thư.",
+      "sourceLabel": "Hộp thư nguồn",
+      "sourcePlaceholder": "Chọn hộp thư",
+      "success": "Đã sao chép quy tắc",
+      "title": "Sao chép quy tắc từ hộp thư khác"
+    },
     "delete": {
       "body": "Thao tác này xóa định nghĩa quy tắc. Gmail sẽ không thay đổi, nhưng quy tắc này sẽ không còn xuất hiện trong các lượt chạy thử.",
       "confirm": "Xóa quy tắc",
@@ -2438,7 +2458,12 @@
   },
   "shell": {
     "accounts": {
+      "active": "Đang dùng",
+      "addGmail": "Thêm Gmail",
       "addManage": "Thêm hoặc quản lý tài khoản",
+      "noMailboxes": "Chưa có hộp thư Gmail",
+      "primary": "Chính",
+      "switch": "Chuyển",
       "title": "Tài khoản Gmail"
     },
     "balance": {
@@ -2609,6 +2634,7 @@
         "retry": "Tải lại",
         "title": "Không tải được nhật ký triage"
       },
+      "executingMailbox": "Thực thi",
       "loadingMore": "Đang tải...",
       "loadingOlder": "Đang tải...",
       "loadMore": "Tải thêm",
@@ -2619,6 +2645,7 @@
       },
       "noReason": "Không có lý do chi tiết",
       "regenerateDraftAction": "Tạo lại bản nháp",
+      "sourceMailbox": "Nguồn",
       "thenLabel": "Thì",
       "unavailable": {
         "body": "Backend hiện chỉ có endpoint hoàn tác từng bản ghi, chưa có endpoint danh sách nhật ký. Zero Mail sẽ hiển thị lịch sử tại đây khi endpoint đó được bổ sung.",

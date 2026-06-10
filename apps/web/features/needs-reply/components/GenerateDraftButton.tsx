@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
 import {
   isDraftGenerationInFlight,
   type DraftStatus,
@@ -103,6 +104,8 @@ export function GenerateDraftButton({
         <Icon className={pending ? 'size-4 animate-spin' : 'size-4'} aria-hidden="true" />
         {compact ? <span className="sr-only">{label}</span> : <span>{label}</span>}
       </Button>
+
+      {!compact ? <ActiveMailboxBadge className="max-w-64" /> : null}
 
       {showInFlightNotice ? (
         <Alert variant="warning" className="max-w-64 py-1.5 text-xs">

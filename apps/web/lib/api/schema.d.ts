@@ -132,6 +132,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/gmail/active-mailbox/{gmailConnectionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["setActiveMailbox"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/composer/drafts": {
         parameters: {
             query?: never;
@@ -436,6 +452,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rules/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["copyRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rules/compile": {
         parameters: {
             query?: never;
@@ -574,6 +606,70 @@ export interface paths {
         get: operations["list_1"];
         put?: never;
         post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gmail/mailboxes/{gmailConnectionId}/set-primary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setPrimaryFromValidationRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gmail/mailboxes/{gmailConnectionId}/reconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reconnect"];
+        put?: never;
+        post: operations["reconnectFromValidationRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gmail/mailboxes/{gmailConnectionId}/primary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setPrimary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gmail/mailboxes/{gmailConnectionId}/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disconnect_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1092,6 +1188,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/gmail/mailboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMailboxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gmail/mailboxes/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["connect_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/gmail/inbox": {
         parameters: {
             query?: never;
@@ -1164,6 +1292,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gmail/active-mailbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["activeMailbox"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1360,6 +1504,8 @@ export interface components {
             actionIntents: string;
         };
         RuleUpdateRequest: {
+            /** Format: uuid */
+            gmailConnectionId: string;
             displayName: string;
             sourceText: string;
             compiled: components["schemas"]["CompiledPayloadRequest"];
@@ -1369,6 +1515,8 @@ export interface components {
         RuleResponse: {
             /** Format: uuid */
             ruleId: string;
+            /** Format: uuid */
+            gmailConnectionId: string;
             displayName: string;
             sourceText: string;
             enabled: boolean;
@@ -1406,6 +1554,14 @@ export interface components {
             content: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        ActiveMailboxResponse: {
+            /** Format: uuid */
+            gmailConnectionId: string;
+            email: string;
+            displayPurpose?: string | null;
+            status: string;
+            isPrimary: boolean;
         };
         ComposerDraftUpsertRequestDto: {
             gmailThreadId: string;
@@ -1517,6 +1673,8 @@ export interface components {
             generatedStyle: string;
         };
         RuleCreateRequest: {
+            /** Format: uuid */
+            gmailConnectionId: string;
             displayName: string;
             sourceText: string;
             compiled: components["schemas"]["CompiledPayloadRequest"];
@@ -1599,6 +1757,8 @@ export interface components {
             reason: string;
         };
         RuleDraftPreviewRequest: {
+            /** Format: uuid */
+            gmailConnectionId: string;
             compiled: components["schemas"]["CompiledPayloadRequest"];
             /** Format: int32 */
             sampleSize?: number;
@@ -1627,6 +1787,17 @@ export interface components {
         };
         RuleCustomPreviewResponse: {
             entries: components["schemas"]["Entry"][];
+        };
+        CopyRulesRequest: {
+            /** Format: uuid */
+            sourceGmailConnectionId: string;
+            /** Format: uuid */
+            targetGmailConnectionId: string;
+        };
+        CopyRulesResponse: {
+            /** Format: int32 */
+            copiedCount: number;
+            copiedRuleIds: string[];
         };
         RuleCompileRequest: {
             sourceText: string;
@@ -1667,8 +1838,8 @@ export interface components {
             filename?: string;
             charset?: string;
             inline?: boolean;
-            formData?: boolean;
             attachment?: boolean;
+            formData?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -1713,40 +1884,40 @@ export interface components {
             contentType?: components["schemas"]["MediaType"];
             origin?: string;
             range?: components["schemas"]["HttpRange"][];
-            cacheControl?: string;
             contentDisposition?: components["schemas"]["ContentDisposition"];
             acceptCharset?: string[];
-            bearerAuth?: string;
-            etag?: string;
+            ifNoneMatch?: string[];
             /** Format: int64 */
             ifUnmodifiedSince?: number;
-            ifNoneMatch?: string[];
             allow?: components["schemas"]["HttpMethod"][];
+            cacheControl?: string;
+            bearerAuth?: string;
             contentLanguage?: string;
             ifMatch?: string[];
-            accept?: components["schemas"]["MediaType"][];
-            pragma?: string;
-            upgrade?: string;
-            vary?: string[];
-            /** Format: int64 */
-            expires?: number;
-            acceptPatch?: components["schemas"]["MediaType"][];
-            acceptLanguageAsLocales?: string[];
-            basicAuth?: string;
+            etag?: string;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
+            acceptPatch?: components["schemas"]["MediaType"][];
+            basicAuth?: string;
+            acceptLanguageAsLocales?: string[];
             /** Format: int64 */
             accessControlMaxAge?: number;
-            accessControlAllowOrigin?: string;
-            accessControlRequestHeaders?: string[];
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
+            accept?: components["schemas"]["MediaType"][];
+            /** Format: int64 */
+            expires?: number;
+            pragma?: string;
+            upgrade?: string;
+            vary?: string[];
             accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
-            accessControlExposeHeaders?: string[];
-            accessControlAllowHeaders?: string[];
             accessControlAllowCredentials?: boolean;
+            accessControlAllowOrigin?: string;
+            accessControlExposeHeaders?: string[];
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
+            accessControlRequestHeaders?: string[];
+            accessControlAllowHeaders?: string[];
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -1760,9 +1931,9 @@ export interface components {
             qualityValue?: number;
             charset?: string;
             concrete?: boolean;
-            wildcardType?: boolean;
             wildcardSubtype?: boolean;
             subtypeSuffix?: string;
+            wildcardType?: boolean;
         };
         BankTransferIntentResponse: {
             /** Format: uuid */
@@ -2140,6 +2311,21 @@ export interface components {
         };
         KnowledgeSnippetListResponse: {
             items: components["schemas"]["KnowledgeSnippetResponse"][];
+        };
+        MailboxSummaryResponse: {
+            /** Format: uuid */
+            gmailConnectionId: string;
+            googleEmail: string;
+            displayPurpose?: string | null;
+            status: string;
+            isPrimary: boolean;
+            /** Format: date-time */
+            watchExpiresAt?: string | null;
+            ingestionHealth: string;
+            /** Format: int64 */
+            lastSyncedHistoryId?: number | null;
+            /** Format: date-time */
+            connectedAt?: string | null;
         };
         GmailInboxLabelResponse: {
             id: string;
@@ -3580,6 +3766,82 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    setActiveMailbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gmailConnectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActiveMailboxResponse"];
+                };
             };
             /** @description Bad Request */
             400: {
@@ -5251,6 +5513,84 @@ export interface operations {
             };
         };
     };
+    copyRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CopyRulesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CopyRulesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     compile: {
         parameters: {
             query?: never;
@@ -6034,6 +6374,376 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["KnowledgeSnippetResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    setPrimaryFromValidationRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gmailConnectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    reconnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gmailConnectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    reconnectFromValidationRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gmailConnectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    setPrimary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gmailConnectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    disconnect_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gmailConnectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {
@@ -8985,6 +9695,152 @@ export interface operations {
             };
         };
     };
+    listMailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MailboxSummaryResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    connect_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     list_5: {
         parameters: {
             query?: {
@@ -9306,6 +10162,80 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["GmailConnectionStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    activeMailbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActiveMailboxResponse"];
                 };
             };
             /** @description Bad Request */
