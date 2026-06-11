@@ -16,22 +16,57 @@ import { siteUrl } from '@/lib/site';
  * route rather than per (route × locale).
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const lastModified = new Date();
+  // Stable `lastmod` for the static marketing routes. Using `new Date()` here
+  // stamped EVERY page with the deploy timestamp on every build, so a code-only
+  // redeploy looked like all content changed — a noisy freshness signal Google
+  // learns to distrust. Bump this constant only when the static pages' actual
+  // content changes; blog/doc entries below keep their own real per-file dates.
+  const staticLastModified = new Date('2026-06-09');
 
   const staticEntries: MetadataRoute.Sitemap = [
-    { url: siteUrl('/'), lastModified, changeFrequency: 'weekly', priority: 1 },
-    { url: siteUrl('/features'), lastModified, changeFrequency: 'monthly', priority: 0.8 },
-    { url: siteUrl('/about'), lastModified, changeFrequency: 'monthly', priority: 0.6 },
-    { url: siteUrl('/blog'), lastModified, changeFrequency: 'weekly', priority: 0.7 },
-    { url: siteUrl('/docs'), lastModified, changeFrequency: 'monthly', priority: 0.6 },
-    { url: siteUrl('/privacy'), lastModified, changeFrequency: 'yearly', priority: 0.4 },
-    { url: siteUrl('/terms'), lastModified, changeFrequency: 'yearly', priority: 0.4 },
+    { url: siteUrl('/'), lastModified: staticLastModified, changeFrequency: 'weekly', priority: 1 },
+    {
+      url: siteUrl('/features'),
+      lastModified: staticLastModified,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: siteUrl('/about'),
+      lastModified: staticLastModified,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: siteUrl('/blog'),
+      lastModified: staticLastModified,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: siteUrl('/docs'),
+      lastModified: staticLastModified,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: siteUrl('/privacy'),
+      lastModified: staticLastModified,
+      changeFrequency: 'yearly',
+      priority: 0.4,
+    },
+    {
+      url: siteUrl('/terms'),
+      lastModified: staticLastModified,
+      changeFrequency: 'yearly',
+      priority: 0.4,
+    },
   ];
 
   const docEntries = await listPublicDocSlugs().then((slugs) =>
     slugs.map<MetadataRoute.Sitemap[number]>((slug) => ({
       url: siteUrl(`/docs/${slug}`),
-      lastModified,
+      lastModified: staticLastModified,
       changeFrequency: 'monthly',
       priority: 0.5,
     })),

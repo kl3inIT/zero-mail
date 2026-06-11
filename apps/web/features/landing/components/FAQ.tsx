@@ -11,8 +11,30 @@ export default async function FAQ() {
     { q: t('items.q5'), a: t('items.a5') },
   ];
 
+  // FAQPage structured data — derived from the SAME `faqs` array that renders
+  // below, so the schema text always matches the visible content (a Google rich-
+  // result requirement). Makes the homepage Q&A eligible for FAQ rich results and
+  // gives AI search engines clean, citable question/answer passages. The cookie
+  // chooses vi/en for both the rendered text and this schema, so they stay in sync.
+  const faqStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.a,
+      },
+    })),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+      />
       <section className="zm-section bg-(--bg) py-12" id="faq">
         <div className="zm-container max-w-5xl">
           <div className="mb-16 text-center">
