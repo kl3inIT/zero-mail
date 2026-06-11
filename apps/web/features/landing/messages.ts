@@ -17,3 +17,20 @@ export const landingSeoMessages = {
     en: 'Zero Mail uses AI to auto-triage, label, archive and draft replies in Gmail from rules you write in plain language. Reach inbox zero while staying in control.',
   },
 } as const;
+
+/**
+ * Legal links surfaced in the public landing header (`TopBar`). The terms page is
+ * labelled "Chính sách" and the privacy page "Bảo mật" per product wording. Kept
+ * separate from `nav.privacy` (owned by `shell/messages.ts`, different copy) so the
+ * header has its own dedicated labels.
+ */
+export const landingNavMessages = {
+  'nav.terms': {
+    vi: 'Chính sách',
+    en: 'Terms',
+  },
+  'nav.privacyPolicy': {
+    vi: 'Bảo mật',
+    en: 'Privacy',
+  },
+} as const;
