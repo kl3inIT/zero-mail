@@ -55,6 +55,8 @@ export default async function TopBar() {
           <Link href="/features">{t('nav.features')}</Link>
           <Link href="/blog">{t('nav.blog')}</Link>
           <Link href="/about">{t('nav.about')}</Link>
+          <Link href="/terms">{t('nav.terms')}</Link>
+          <Link href="/privacy">{t('nav.privacyPolicy')}</Link>
         </div>
         <div className="zm-nav-cta">
           <SegmentedLanguageToggle currentLocale={locale} />

@@ -29,15 +29,20 @@ export function useInboxMessages() {
     queryFn: ({ pageParam }) => getInboxPage({ cursor: pageParam, limit: 20 }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    staleTime: 15_000,
+    // Re-entering the inbox should feel instant: serve the cached pages and only refetch when the
+    // data has actually gone stale (> staleTime), instead of `refetchOnMount: 'always'` which
+    // refetched EVERY loaded page on every mount and flashed the "loading" caption each visit.
+    staleTime: 60_000,
     gcTime: 30 * 60_000,
-    refetchOnMount: 'always',
+    refetchOnMount: true,
     refetchOnWindowFocus: true,
     // Poll so mail that Pub/Sub has already written to the projection appears without a manual
     // refresh. TanStack pauses this while the tab is unfocused (refetchIntervalInBackground defaults
     // to false), so idle tabs don't poll; refetchOnWindowFocus catches up the moment the user
-    // returns. Note: refetching an infinite query refetches every loaded page, so keep the interval
-    // generous rather than chasing real-time — true push would be SSE, not a tighter poll.
+    // returns. The poll runs in the background (no Suspense fallback / no full-list spinner), so it
+    // refreshes content without the jarring reload. Note: refetching an infinite query refetches
+    // every loaded page, so keep the interval generous rather than chasing real-time — true push
+    // would be SSE, not a tighter poll.
     refetchInterval: 60_000,
   });
 }
