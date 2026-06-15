@@ -21,8 +21,7 @@ public record MailboxSummaryProjection(
         // Internal sync/watch pointers are only meaningful for a CONNECTED mailbox. For a
         // DISCONNECTED row the watch is stopped and the history pointer is a stale internal
         // detail, so null them out rather than leaking them through the account-management API.
-        boolean isConnected =
-                gmailConnection.getStatus() == GmailConnectionStatus.CONNECTED;
+        boolean isConnected = gmailConnection.getStatus() == GmailConnectionStatus.CONNECTED;
         return new MailboxSummaryProjection(
                 gmailConnection.getId(),
                 gmailConnection.getGoogleEmail(),

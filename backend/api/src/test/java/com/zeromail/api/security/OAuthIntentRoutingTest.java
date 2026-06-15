@@ -82,6 +82,10 @@ class OAuthIntentRoutingTest {
                 .setAttribute(
                         IntentCarryingAuthorizationRequestRepository.INTENT_SESSION_ATTRIBUTE,
                         new OAuthIntentSnapshot("add_mailbox", null, UUID.randomUUID()));
+        request.getSession()
+                .setAttribute(
+                        OAuthIntentSnapshot.INITIATING_SECURITY_CONTEXT_SESSION_ATTRIBUTE,
+                        "stale-context");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         failureHandler.onAuthenticationFailure(
@@ -95,6 +99,13 @@ class OAuthIntentRoutingTest {
                                         IntentCarryingAuthorizationRequestRepository
                                                 .INTENT_SESSION_ATTRIBUTE))
                 .as("stale-intent-after-failure must not survive to a later callback")
+                .isNull();
+        assertThat(
+                        request.getSession()
+                                .getAttribute(
+                                        OAuthIntentSnapshot
+                                                .INITIATING_SECURITY_CONTEXT_SESSION_ATTRIBUTE))
+                .as("stale initiating context after failure must not survive")
                 .isNull();
     }
 

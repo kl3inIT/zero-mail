@@ -10,6 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,16 +68,28 @@ public class ConnectMailboxController {
 
     private void storePendingIntent(
             HttpServletRequest request, OAuthIntentSnapshot pendingIntentSnapshot) {
-        request.getSession(true)
-                .setAttribute(
-                        OAuthIntentSnapshot.PENDING_INTENT_SESSION_ATTRIBUTE,
-                        new OAuthIntentSnapshot(
-                                pendingIntentSnapshot.intent(),
-                                pendingIntentSnapshot.targetMailboxId(),
-                                pendingIntentSnapshot.initiatingTenantId()));
+        var session = request.getSession(true);
+        session.setAttribute(
+                OAuthIntentSnapshot.PENDING_INTENT_SESSION_ATTRIBUTE,
+                new OAuthIntentSnapshot(
+                        pendingIntentSnapshot.intent(),
+                        pendingIntentSnapshot.targetMailboxId(),
+                        pendingIntentSnapshot.initiatingTenantId()));
+        storeInitiatingSecurityContext(session);
         log.info(
                 "event=oauth_pending_intent_stored tenantId={}",
                 pendingIntentSnapshot.initiatingTenantId());
+    }
+
+    private static void storeInitiatingSecurityContext(jakarta.servlet.http.HttpSession session) {
+        SecurityContext currentSecurityContext = SecurityContextHolder.getContext();
+        Authentication currentAuthentication = currentSecurityContext.getAuthentication();
+        if (currentAuthentication == null) {
+            return;
+        }
+        session.setAttribute(
+                OAuthIntentSnapshot.INITIATING_SECURITY_CONTEXT_SESSION_ATTRIBUTE,
+                new SecurityContextImpl(currentAuthentication));
     }
 
     private static ResponseEntity<Void> oauthRedirect() {

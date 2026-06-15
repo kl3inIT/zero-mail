@@ -14,6 +14,8 @@ public record OAuthIntentSnapshot(String intent, UUID targetMailboxId, UUID init
 
     public static final String PENDING_INTENT_SESSION_ATTRIBUTE = "ZEROMAIL_OAUTH_PENDING_INTENT";
     public static final String CALLBACK_INTENT_SESSION_ATTRIBUTE = "ZEROMAIL_OAUTH_INTENT";
+    public static final String INITIATING_SECURITY_CONTEXT_SESSION_ATTRIBUTE =
+            "ZEROMAIL_OAUTH_INITIATING_SECURITY_CONTEXT";
 
     public static final String PENDING_SESSION_ATTRIBUTE = PENDING_INTENT_SESSION_ATTRIBUTE;
 }

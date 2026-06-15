@@ -75,8 +75,8 @@ public class GmailApiClientFactory {
      * Evicts any cached access token for the given connection. Called by {@code
      * GmailConnectionService} whenever a connection's grant changes (disconnect, reconnect) so a
      * cached, still-valid access token can never outlive the grant it was minted from. CASA V13.1.5
-     * disconnect intent requires that a disconnected/revoked mailbox stops being usable immediately,
-     * not after the access-token TTL (~59 min) elapses.
+     * disconnect intent requires that a disconnected/revoked mailbox stops being usable
+     * immediately, not after the access-token TTL (~59 min) elapses.
      */
     public void evictAccessToken(UUID gmailConnectionId) {
         accessTokenCache.remove(gmailConnectionId);
