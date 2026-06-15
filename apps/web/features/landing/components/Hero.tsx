@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentUserCached } from '@/features/account/api/account-api';
 import { ArrowRightIcon } from '@/features/landing/components/PrototypeIcons';
+import { HeroVideoPlayer } from '@/features/landing/components/HeroVideoPlayer';
 import { ONBOARDING_BYPASS_ROUTE, shouldShowBetaOnboarding } from '@/features/onboarding/config';
 import type { AppLocale } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
@@ -77,10 +78,7 @@ export default async function Hero() {
             className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl border border-(--line-strong) bg-(--bg-subtle) shadow-[0_24px_80px_-12px_rgba(0,0,0,0.1)]"
             data-slot="hero-video"
           >
-            {/* Intro video placeholder — wire the real embed in later. */}
-            <span className="text-sm font-medium text-(--text-faint)">
-              {t('landing.videoPlaceholder')}
-            </span>
+            <HeroVideoPlayer videoId="rwxtm24taYY" />
           </div>
         </div>
       </div>

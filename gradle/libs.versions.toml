@@ -1,13 +1,13 @@
 [versions]
 springBoot = "4.0.6"
-springAi = "2.0.0-M8"
+springAi = "2.0.0-RC1"
 # Spring Modulith 2.0.x is the Spring Boot 4-compatible line. Keep this GA pin in
 # sync with buildSrc/src/main/kotlin/zeromail.modulith-conventions.gradle.kts.
 springModulith = "2.0.6"
 liquibase = "5.0.3"
 archunit = "1.4.2"
 logstashLogback = "9.0"
-googleAuthLibrary = "1.47.0"
+googleAuthLibrary = "1.48.0"
 gmailApi = "v1-rev20250331-2.0.0"
 testcontainers = "1.21.3"
 springdoc = "3.0.3"

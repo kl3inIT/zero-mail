@@ -7,6 +7,7 @@ import {
     ClipboardListIcon,
     DollarSignIcon,
     GaugeIcon,
+    InboxIcon,
     KeyRoundIcon,
     Loader2Icon,
     LogOutIcon,
@@ -42,6 +43,7 @@ const navigationItems: ReadonlyArray<NavigationItem> = [
     {to: '/billing-packages', label: 'Gói thanh toán', icon: PackageIcon},
     {to: '/queue', label: 'Hàng đợi', icon: ActivityIcon},
     {to: '/spend', label: 'Chi phí', icon: DollarSignIcon},
+    {to: '/feedback', label: 'Phản hồi người dùng', icon: InboxIcon},
 ];
 
 export function AdminLayout({admin: _admin}: AdminLayoutProps) {

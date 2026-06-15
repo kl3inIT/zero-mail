@@ -95,6 +95,18 @@ public class ConfirmActionService {
         }
     }
 
+    public ConfirmActionResult confirmByChatMessageId(
+            UUID chatMessageId, boolean vipAcknowledged, Map<String, Object> contentOverride) {
+        UUID tenantId = TenantContext.currentTenantUuid();
+        PendingAction pendingAction =
+                confirmationStateMachine.loadPendingActionByChatMessageId(tenantId, chatMessageId);
+        return confirm(
+                pendingAction.chatId(),
+                pendingAction.toolCallId(),
+                vipAcknowledged,
+                contentOverride);
+    }
+
     public ConfirmActionResult cancel(UUID chatId, String toolCallId) {
         UUID tenantId = TenantContext.currentTenantUuid();
         PendingAction pendingAction =
@@ -108,6 +120,13 @@ public class ConfirmActionService {
         } finally {
             confirmationLeaseService.release(chatId, toolCallId, processInstanceId);
         }
+    }
+
+    public ConfirmActionResult cancelByChatMessageId(UUID chatMessageId) {
+        UUID tenantId = TenantContext.currentTenantUuid();
+        PendingAction pendingAction =
+                confirmationStateMachine.loadPendingActionByChatMessageId(tenantId, chatMessageId);
+        return cancel(pendingAction.chatId(), pendingAction.toolCallId());
     }
 
     private void requirePendingConfirmable(PendingAction pendingAction) {

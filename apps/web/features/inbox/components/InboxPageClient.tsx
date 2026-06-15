@@ -5,7 +5,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import {
   useCallback,
   type ChangeEvent,
+  type CSSProperties,
   type FormEvent,
+  type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
   useRef,
@@ -72,7 +74,6 @@ import type { InboxLabel, InboxMessage, InboxMessageDetail } from '@/features/in
 import {
   flattenInboxMessages,
   latestInboxDataSource,
-  latestInboxMaxMessages,
   useInboxMessageDetail,
   useInboxMessages,
   useInboxThreadDetail,
@@ -88,12 +89,25 @@ import { inboxKeys } from '@/features/inbox/query-keys';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
+const INBOX_LIST_PANE_MIN_WIDTH = 360;
+const INBOX_LIST_PANE_DEFAULT_WIDTH = 500;
+const INBOX_DETAIL_PANE_MIN_WIDTH = 420;
+const INBOX_ROW_VISIBLE_LABEL_LIMIT = 4;
+const INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT = 500;
+
+type InboxReadFilter = 'all' | 'unread' | 'read';
+
 export function InboxPageClient() {
   const t = useTranslations();
   const locale = useLocale();
   const [requestedSelectedMessageId, setRequestedSelectedMessageId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<string>>(() => new Set());
+  const [readFilter, setReadFilter] = useState<InboxReadFilter>('all');
+  const [listPaneWidth, setListPaneWidth] = useState(INBOX_LIST_PANE_DEFAULT_WIDTH);
+  const [splitPaneMaxWidth, setSplitPaneMaxWidth] = useState(INBOX_LIST_PANE_DEFAULT_WIDTH);
+  const [isResizingSplit, setIsResizingSplit] = useState(false);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
   const currentUser = useCurrentUser();
   // Reset the open message when the active mailbox changes: the selected id belongs to the
   // PREVIOUS mailbox, and fetching its detail under the new mailbox 404s. Clearing it here in
@@ -111,8 +125,8 @@ export function InboxPageClient() {
   const messages = useMemo(() => flattenInboxMessages(inboxQuery.data), [inboxQuery.data]);
   const availableLabels = useMemo(() => collectAvailableLabels(messages), [messages]);
   const filteredMessages = useMemo(
-    () => filterInboxMessages(messages, searchQuery, selectedLabelIds),
-    [messages, searchQuery, selectedLabelIds],
+    () => filterInboxMessages(messages, searchQuery, selectedLabelIds, readFilter),
+    [messages, searchQuery, selectedLabelIds, readFilter],
   );
   const toggleLabelFilter = useCallback((labelId: string) => {
     setSelectedLabelIds((current) => {
@@ -123,8 +137,20 @@ export function InboxPageClient() {
     });
   }, []);
   const clearLabelFilter = useCallback(() => setSelectedLabelIds(new Set()), []);
-  const maxMessages = latestInboxMaxMessages(inboxQuery.data);
   const inboxDataSource = latestInboxDataSource(inboxQuery.data);
+  const canWarmUpInboxInBackground =
+    searchQuery.trim() === '' && selectedLabelIds.size === 0 && readFilter === 'all';
+  const isInboxBackgroundWarmupActive =
+    canWarmUpInboxInBackground &&
+    inboxQuery.isFetchingNextPage &&
+    messages.length < INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT;
+  const inboxCountCaption = locale.startsWith('vi')
+    ? isInboxBackgroundWarmupActive
+      ? `\u0110ang t\u1ea3i... \u0110\u00e3 t\u1ea3i ${messages.length} email`
+      : `\u0110\u00e3 t\u1ea3i ${messages.length} email`
+    : isInboxBackgroundWarmupActive
+      ? `Loading... ${messages.length} loaded`
+      : `${messages.length} loaded`;
   const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
   // Wave 1 fallback observability — quietly log when the projection couldn't satisfy the page so
   // ops can correlate FE behaviour with the backend `event=inbox_read_fallback` log line.
@@ -163,6 +189,24 @@ export function InboxPageClient() {
     }
   }, [inboxQuery]);
 
+  useEffect(() => {
+    if (!canWarmUpInboxInBackground) return;
+    if (messages.length === 0 || messages.length >= INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT) return;
+    if (
+      !inboxQuery.hasNextPage ||
+      inboxQuery.isFetching ||
+      inboxQuery.isFetchingNextPage ||
+      inboxQuery.isPending
+    ) {
+      return;
+    }
+
+    const warmupTimer = window.setTimeout(() => {
+      void inboxQuery.fetchNextPage();
+    }, 250);
+    return () => window.clearTimeout(warmupTimer);
+  }, [canWarmUpInboxInBackground, inboxQuery, messages.length]);
+
   const handleListScroll = useCallback(
     (event: UIEvent<HTMLDivElement>) => {
       const listElement = event.currentTarget;
@@ -174,6 +218,40 @@ export function InboxPageClient() {
     },
     [loadNextPage],
   );
+
+  const handleSplitPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const container = splitContainerRef.current;
+    if (!container) return;
+
+    event.preventDefault();
+    setIsResizingSplit(true);
+
+    const updateWidth = (clientX: number) => {
+      const rect = container.getBoundingClientRect();
+      const maxListWidth = Math.max(
+        INBOX_LIST_PANE_MIN_WIDTH,
+        rect.width - INBOX_DETAIL_PANE_MIN_WIDTH,
+      );
+      setSplitPaneMaxWidth(maxListWidth);
+      const nextWidth = Math.min(
+        Math.max(clientX - rect.left, INBOX_LIST_PANE_MIN_WIDTH),
+        maxListWidth,
+      );
+      setListPaneWidth(nextWidth);
+    };
+
+    updateWidth(event.clientX);
+
+    const handlePointerMove = (moveEvent: PointerEvent) => updateWidth(moveEvent.clientX);
+    const handlePointerUp = () => {
+      setIsResizingSplit(false);
+      window.removeEventListener('pointermove', handlePointerMove);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+  }, []);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -196,10 +274,17 @@ export function InboxPageClient() {
         </div>
       ) : null}
 
-      <div className="bg-background grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(430px,42vw)_minmax(0,1fr)] xl:grid-cols-[500px_minmax(0,1fr)]">
+      <div
+        ref={splitContainerRef}
+        className={cn(
+          'bg-background flex min-h-0 flex-1 overflow-hidden',
+          isResizingSplit && 'cursor-col-resize select-none',
+        )}
+        style={{ '--inbox-list-width': `${listPaneWidth}px` } as CSSProperties}
+      >
         <section
           className={cn(
-            'border-border lg:border-r-border min-h-0 flex-col lg:flex lg:border-r lg:border-b-0',
+            'border-border min-h-0 w-full flex-col lg:flex lg:w-[var(--inbox-list-width)] lg:shrink-0 lg:border-b-0',
             selectedMessageId ? 'hidden lg:flex' : 'flex',
           )}
         >
@@ -214,7 +299,7 @@ export function InboxPageClient() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  {t('inbox.limit.caption', { max: maxMessages })}
+                  {inboxCountCaption}
                 </span>
                 <Button
                   type="button"
@@ -264,6 +349,7 @@ export function InboxPageClient() {
                 onClear={clearLabelFilter}
               />
             </div>
+            <InboxReadStateFilter locale={locale} value={readFilter} onChange={setReadFilter} />
           </div>
           <InboxMessageList
             isPending={inboxQuery.isPending}
@@ -280,9 +366,28 @@ export function InboxPageClient() {
           />
         </section>
 
+        <button
+          type="button"
+          role="separator"
+          aria-orientation="vertical"
+          aria-valuemin={INBOX_LIST_PANE_MIN_WIDTH}
+          aria-valuemax={Math.round(splitPaneMaxWidth)}
+          aria-valuenow={Math.round(listPaneWidth)}
+          aria-label={
+            locale.startsWith('vi')
+              ? 'K\u00e9o \u0111\u1ec3 \u0111\u1ed5i \u0111\u1ed9 r\u1ed9ng h\u1ed9p th\u01b0'
+              : 'Resize inbox split'
+          }
+          className="group bg-background hover:bg-muted/50 focus-visible:bg-muted/60 hidden w-2 shrink-0 cursor-col-resize items-stretch justify-center transition-colors outline-none lg:flex"
+          onPointerDown={handleSplitPointerDown}
+          data-testid="inbox-split-resizer"
+        >
+          <span className="bg-border group-hover:bg-primary group-focus-visible:bg-primary block h-full w-px transition-colors" />
+        </button>
+
         <section
           className={cn(
-            'min-h-0 min-w-0 overflow-hidden lg:block',
+            'min-h-0 min-w-0 flex-1 overflow-hidden lg:block',
             selectedMessageId ? 'block' : 'hidden lg:block',
           )}
         >
@@ -338,7 +443,7 @@ function InboxMessageList({
   const rowVirtualizer = useVirtualizer({
     count: filteredMessages.length,
     getScrollElement: () => listScrollRef.current,
-    estimateSize: () => 76,
+    estimateSize: () => 86,
     overscan: 8,
     getItemKey: (index) => filteredMessages[index]?.gmailMessageId ?? index,
   });
@@ -430,12 +535,14 @@ function InboxMessageRow({
   const t = useTranslations();
   const senderName = inboxSenderDisplayName(message.from) || t('inbox.message.unknownSender');
   const visibleLabels = visibleInboxLabels(message.labels);
+  const rowLabels = visibleLabels.slice(0, INBOX_ROW_VISIBLE_LABEL_LIMIT);
+  const hiddenLabelCount = visibleLabels.length - rowLabels.length;
   return (
     <button
       type="button"
       aria-current={active ? 'true' : undefined}
       className={cn(
-        'group relative flex min-h-[76px] w-full items-start gap-2.5 px-4 py-3 text-left transition-colors',
+        'group relative flex min-h-[84px] w-full items-start gap-2.5 px-4 py-3 text-left transition-colors',
         message.unread ? 'bg-background' : 'bg-muted/20',
         'hover:bg-muted/60',
         active &&
@@ -494,9 +601,10 @@ function InboxMessageRow({
         </div>
         {visibleLabels.length > 0 ? (
           <div className="flex min-w-0 flex-wrap gap-1">
-            {visibleLabels.slice(0, 3).map((label) => (
+            {rowLabels.map((label) => (
               <InboxLabelChip key={label.id} label={label} />
             ))}
+            {hiddenLabelCount > 0 ? <InboxLabelOverflowChip count={hiddenLabelCount} /> : null}
           </div>
         ) : null}
       </div>
@@ -2127,15 +2235,19 @@ function filterInboxMessages(
   messages: InboxMessage[],
   query: string,
   selectedLabelIds: Set<string>,
+  readFilter: InboxReadFilter,
 ): InboxMessage[] {
   const normalizedTokens = normalizeSearchText(query).split(/\s+/).filter(Boolean);
   const hasSearch = normalizedTokens.length > 0;
   const hasLabelFilter = selectedLabelIds.size > 0;
-  if (!hasSearch && !hasLabelFilter) {
+  const hasReadFilter = readFilter !== 'all';
+  if (!hasSearch && !hasLabelFilter && !hasReadFilter) {
     return messages;
   }
 
   return messages.filter((message) => {
+    if (readFilter === 'unread' && !message.unread) return false;
+    if (readFilter === 'read' && message.unread) return false;
     if (hasLabelFilter) {
       // OR semantics: keep the message if it carries ANY of the selected
       // labels. Most users think of "show me Promotions or Updates" as an
@@ -2349,8 +2461,29 @@ const FALLBACK_LABEL_COLORS = [
   'bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-300',
 ] as const;
 
+const HIDDEN_INBOX_LABEL_IDS = new Set(['INBOX', 'UNREAD']);
+
 function visibleInboxLabels(labels: InboxLabel[]): InboxLabel[] {
-  return labels.filter((label) => !['INBOX', 'UNREAD'].includes(label.id));
+  return labels.filter((label) => !HIDDEN_INBOX_LABEL_IDS.has(label.id)).sort(compareInboxLabels);
+}
+
+function compareInboxLabels(leftLabel: InboxLabel, rightLabel: InboxLabel): number {
+  const leftRank = isCustomInboxLabel(leftLabel) ? 0 : 1;
+  const rightRank = isCustomInboxLabel(rightLabel) ? 0 : 1;
+  if (leftRank !== rightRank) return leftRank - rightRank;
+  return inboxLabelName(leftLabel).localeCompare(inboxLabelName(rightLabel));
+}
+
+function isCustomInboxLabel(label: InboxLabel): boolean {
+  return !(
+    label.id === 'IMPORTANT' ||
+    label.id === 'STARRED' ||
+    label.id === 'SENT' ||
+    label.id === 'DRAFT' ||
+    label.id === 'SPAM' ||
+    label.id === 'TRASH' ||
+    label.id.startsWith('CATEGORY_')
+  );
 }
 
 function inboxLabelColorClass(label: InboxLabel): string {
@@ -2364,11 +2497,17 @@ function inboxLabelColorClass(label: InboxLabel): string {
 }
 
 function inboxLabelName(label: InboxLabel): string {
-  return label.name
+  const normalizedName = label.name
     .replace(/^CATEGORY_/, '')
     .replace(/_/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  return titleCaseSystemLabel(normalizedName);
+}
+
+function titleCaseSystemLabel(labelName: string): string {
+  if (!labelName || /[a-z]/.test(labelName)) return labelName;
+  return labelName.toLowerCase().replace(/(^|\s)(\S)/g, (match) => match.toUpperCase());
 }
 
 function InboxLabelChip({ label }: { label: InboxLabel }) {
@@ -2382,6 +2521,61 @@ function InboxLabelChip({ label }: { label: InboxLabel }) {
     >
       {inboxLabelName(label)}
     </span>
+  );
+}
+
+function InboxLabelOverflowChip({ count }: { count: number }) {
+  return (
+    <span className="bg-muted text-muted-foreground inline-flex h-4 shrink-0 items-center rounded-sm px-1.5 text-[10px] leading-none font-medium">
+      +{count}
+    </span>
+  );
+}
+
+function InboxReadStateFilter({
+  locale,
+  value,
+  onChange,
+}: {
+  locale: string;
+  value: InboxReadFilter;
+  onChange: (value: InboxReadFilter) => void;
+}) {
+  const options: Array<{ value: InboxReadFilter; vi: string; en: string }> = [
+    { value: 'all', vi: 'Tất cả', en: 'All' },
+    { value: 'unread', vi: 'Chưa đọc', en: 'Unread' },
+    { value: 'read', vi: 'Đã đọc', en: 'Read' },
+  ];
+  const isVietnamese = locale.startsWith('vi');
+
+  return (
+    <div
+      className="border-border bg-background mt-2 inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
+      role="group"
+      aria-label={isVietnamese ? 'Lọc trạng thái đọc' : 'Filter read state'}
+      data-testid="inbox-read-state-filter"
+    >
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            className={cn(
+              'flex-1 rounded-sm px-3 text-xs font-semibold whitespace-nowrap transition-colors sm:flex-none',
+              selected
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-foreground hover:bg-muted',
+            )}
+            aria-pressed={selected}
+            onClick={() => onChange(option.value)}
+            data-testid={`inbox-read-state-filter-${option.value}`}
+          >
+            {isVietnamese ? option.vi : option.en}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

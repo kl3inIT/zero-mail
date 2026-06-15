@@ -10,6 +10,7 @@ import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
 import com.zeromail.core.inbox.usecases.InboxProjectionUpsertCommand;
 import com.zeromail.core.inbox.usecases.InboxProjectionWriteService;
+import com.zeromail.core.mailbox.MailboxContext;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
@@ -40,6 +41,7 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
 
         RecentInboxPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .where(MailboxContext.MAILBOX, gmailConnectionId)
                         .call(() -> recentInboxReadService.fetchPage(tenantId, null, 20));
 
         assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.PROJECTION);
@@ -82,6 +84,7 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
         assertThatThrownBy(
                         () ->
                                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                                        .where(MailboxContext.MAILBOX, gmailConnectionId)
                                         .call(
                                                 () ->
                                                         recentInboxReadService.fetchPage(
@@ -90,8 +93,9 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
                 .matches(
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
-                                        == RecentInboxUnavailableReason.NO_READ_GRANT,
-                        "projection-empty + sync_state ready must trigger the live Gmail fallback");
+                                        == RecentInboxUnavailableReason.DISCONNECTED,
+                        "projection-empty + sync_state ready must trigger the live Gmail fallback;"
+                                + " the tokenless seeded mailbox then signals DISCONNECTED");
     }
 
     @Test
@@ -104,6 +108,7 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
         assertThatThrownBy(
                         () ->
                                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                                        .where(MailboxContext.MAILBOX, gmailConnectionId)
                                         .call(
                                                 () ->
                                                         recentInboxReadService.fetchPage(
@@ -112,8 +117,9 @@ class RecentInboxReadServiceFallbackTest extends PostgresContainerTest {
                 .matches(
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
-                                        == RecentInboxUnavailableReason.NO_READ_GRANT,
-                        "short projection page must NOT be returned as PROJECTION; the live fallback then signals NO_READ_GRANT here");
+                                        == RecentInboxUnavailableReason.DISCONNECTED,
+                        "short projection page must NOT be returned as PROJECTION; the live fallback"
+                                + " then signals DISCONNECTED for the tokenless mailbox");
     }
 
     private void markSyncReady(UUID tenantId, UUID gmailConnectionId) {

@@ -12,6 +12,7 @@ vi.mock('@/features/landing/components/Footer', () => ({
 vi.mock('next-intl/server', () => ({
   getTranslations: vi.fn(async () => (k: string) => k),
   getLocale: vi.fn(async () => 'en'),
+  getMessages: vi.fn(async () => ({})),
 }));
 vi.mock('next/headers', () => ({
   headers: vi.fn(async () => ({ get: vi.fn(() => null) })),

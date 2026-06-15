@@ -44,7 +44,6 @@ class OpenRouterStreamingProbeTest {
                         "openai/gpt-5.4-nano",
                         OpenAiChatOptions.builder()
                                 .toolCallbacks(toolCallbackTranslator.translate(chatToolCatalog))
-                                .internalToolExecutionEnabled(false)
                                 .build());
 
         assertThat(responses).isNotEmpty();
@@ -61,7 +60,6 @@ class OpenRouterStreamingProbeTest {
                         "openai/gpt-5.4-nano",
                         OpenAiChatOptions.builder()
                                 .toolCallbacks(List.of(toolCallback(toolDefinition)))
-                                .internalToolExecutionEnabled(false)
                                 .build());
             } catch (RuntimeException runtimeException) {
                 failingToolNames.add(
@@ -103,7 +101,6 @@ class OpenRouterStreamingProbeTest {
                                         .temperature(0.2)
                                         .maxTokens(32)
                                         .streamUsage(false)
-                                        .internalToolExecutionEnabled(false)
                                         .build())
                         .build();
 
@@ -115,7 +112,6 @@ class OpenRouterStreamingProbeTest {
                                 .temperature(0.2)
                                 .maxTokens(32)
                                 .streamUsage(false)
-                                .internalToolExecutionEnabled(false)
                                 .toolCallbacks(additionalOptions.getToolCallbacks())
                                 .build());
 

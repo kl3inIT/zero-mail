@@ -14,9 +14,9 @@ import com.zeromail.core.shared.exception.ErrorClass;
  * payload.
  *
  * <p><b>Defense-in-depth pairing.</b> Layer 1 enforcement (Spring AI {@code toolChoice="required"}
- * + {@code internalToolExecutionEnabled(false)}) is at the wire level; this exception is the Layer
- * 2 fail-closed signal that the validator caught a function name outside the allow-list. Both
- * layers must independently fail open for an unsafe action to leak.
+ * with external-only tool execution) is at the wire level; this exception is the Layer 2
+ * fail-closed signal that the validator caught a function name outside the allow-list. Both layers
+ * must independently fail open for an unsafe action to leak.
  */
 public class SafetyViolationException extends BusinessException {
 

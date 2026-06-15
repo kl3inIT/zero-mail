@@ -120,8 +120,8 @@ export const analyticsMessages = {
     en: 'Mail triage coverage',
   },
   'analytics.volume.triageRate': {
-    vi: 'đã xử lý',
-    en: 'triaged',
+    vi: 'Tỷ lệ email đã xử lý',
+    en: 'Mail triage coverage',
   },
   'analytics.volume.appliedLabel': {
     vi: 'Đã xử lý',

@@ -353,3 +353,15 @@ databaseChangeLog:
   - include:
       file: changes/127-gmail-conn-global-active-email-unique.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/119-messaging-conversation-binding.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/120-telegram-mvp.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/119-feedback-submission.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/120-llm-call-audit-call-site-add-needs-reply-digest.yaml
+      relativeToChangelogFile: true

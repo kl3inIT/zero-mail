@@ -1,0 +1,97 @@
+databaseChangeLog:
+  - changeSet:
+      id: 119-feedback-submission
+      author: zeromail
+      comment: >
+        User feedback and support submissions. Tenants can submit bug reports, feature requests,
+        and general inquiries from the in-app support page or the public landing page. Submissions
+        are visible in the admin panel. No raw email body or LLM content is stored here.
+      changes:
+        - createTable:
+            tableName: feedback_submission
+            remarks: >
+              Feedback submitted by users or landing page visitors. tenant_id is nullable to support
+              unauthenticated submissions from the landing page. contact_email is always stored for
+              admin follow-up. Raw email body and LLM content are never stored here.
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_feedback_submission
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  remarks: >
+                    Nullable — null for unauthenticated landing page submissions. Not a foreign key
+                    because the tenant may be deleted after submission.
+              - column:
+                  name: type
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subject
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: contact_email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: OPEN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: admin_notes
+                  type: text
+              - column:
+                  name: resolved_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Admin list — newest first, filtered by status.
+            sql: >
+              CREATE INDEX idx_feedback_submission_status_created
+                ON feedback_submission (status, created_at DESC)
+        - sql:
+            comment: Admin lookup by tenant.
+            sql: >
+              CREATE INDEX idx_feedback_submission_tenant
+                ON feedback_submission (tenant_id)
+                WHERE tenant_id IS NOT NULL
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_feedback_submission_tenant
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_feedback_submission_status_created
+        - dropTable:
+            tableName: feedback_submission

@@ -7,7 +7,7 @@ import { FeatureOrganized } from '@/features/landing/components/FeatureOrganized
 
 export default function Features() {
   return (
-    <div className="flex flex-col gap-32 bg-(--bg) py-24" id="features">
+    <div className="flex flex-col gap-24 bg-(--bg) py-24" id="features">
       {/* 1. Automatically Organized */}
       <FeatureOrganized />
 

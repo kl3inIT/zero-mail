@@ -7,11 +7,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   BarChart3,
+  Blocks,
   Bot,
   Check,
   ChevronsUpDown,
   CreditCard,
   Crown,
+  HelpCircle,
   Inbox,
   ListChecks,
   LogOut,
@@ -75,7 +77,9 @@ type NavItem = {
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.rules'
-    | 'nav.cleanupUnsubscribe';
+    | 'nav.cleanupUnsubscribe'
+    | 'nav.integrations'
+    | 'nav.support';
   icon: typeof Inbox;
 };
 
@@ -99,6 +103,8 @@ const AUTOMATION_NAV: NavItem[] = [
 const TOOLS_NAV: NavItem[] = [
   { href: '/cleanup/bulk-unsubscribe' as Route, labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+  { href: '/integrations' as Route, labelKey: 'nav.integrations', icon: Blocks },
+  { href: '/support' as Route, labelKey: 'nav.support', icon: HelpCircle },
 ];
 
 const ACCOUNT_NAV: AccountNavItem[] = [
@@ -448,7 +454,7 @@ export function AppSidebar() {
           )}
         >
           {!isCollapsed && (
-            <span className="text-sidebar-foreground text-lg font-bold tracking-normal">
+            <span className="text-sidebar-foreground pl-2 text-lg font-bold tracking-normal">
               ZERO MAIL
             </span>
           )}

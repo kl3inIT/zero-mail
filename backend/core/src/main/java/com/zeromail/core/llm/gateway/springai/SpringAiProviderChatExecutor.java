@@ -6,6 +6,7 @@ import com.zeromail.core.llm.usecases.LlmProviderChatExecutor;
 import com.zeromail.core.llm.usecases.LlmProviderCredential;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -33,9 +34,10 @@ public class SpringAiProviderChatExecutor implements LlmProviderChatExecutor {
             if (!request.tools().isEmpty()) {
                 requestSpecification =
                         requestSpecification.tools(
-                                toolSpec ->
-                                        toolSpec.callbacks(
-                                                chatSupport.translateTools(request.tools())));
+                                (Object[])
+                                        chatSupport
+                                                .translateTools(request.tools())
+                                                .toArray(ToolCallback[]::new));
             }
             ChatResponse chatResponse =
                     requestSpecification

@@ -62,6 +62,42 @@ public class ConfirmationStateRepository {
         return rows.stream().findFirst();
     }
 
+    public Optional<PendingActionRow> findPendingActionRowByChatMessageId(
+            UUID tenantId, UUID chatMessageId) {
+        List<PendingActionRow> rows =
+                jdbcTemplate.query(
+                        """
+                        SELECT pending_action.id,
+                               pending_action.tenant_id,
+                               pending_action.chat_id,
+                               pending_action.chat_message_id,
+                               pending_action.tool_call_id,
+                               pending_action.state,
+                               pending_action.parts_updated_at,
+                               pending_action.draft_body,
+                               chat_message.parts::text AS parts_json
+                          FROM assistant_pending_action pending_action
+                          JOIN chat_message chat_message
+                            ON chat_message.id = pending_action.chat_message_id
+                         WHERE pending_action.tenant_id = ?
+                           AND pending_action.chat_message_id = ?
+                        """,
+                        (resultSet, _) ->
+                                new PendingActionRow(
+                                        resultSet.getObject("id", UUID.class),
+                                        resultSet.getObject("tenant_id", UUID.class),
+                                        resultSet.getObject("chat_id", UUID.class),
+                                        resultSet.getObject("chat_message_id", UUID.class),
+                                        resultSet.getString("tool_call_id"),
+                                        resultSet.getString("state"),
+                                        resultSet.getTimestamp("parts_updated_at").toInstant(),
+                                        resultSet.getString("draft_body"),
+                                        resultSet.getString("parts_json")),
+                        tenantId,
+                        chatMessageId);
+        return rows.stream().findFirst();
+    }
+
     public int reservePendingAction(
             UUID chatId,
             UUID tenantId,

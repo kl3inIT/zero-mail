@@ -8,6 +8,7 @@ public record AnalyticsSummaryProjection(
         long volumeApplied,
         long timeSavedSeconds,
         List<TopSenderProjection> topSenders,
+        List<EmailAddressLoadProjection> topRecipients,
         List<RuleHitProjection> ruleHits,
         List<DailyLoadProjection> dailyLoad,
         List<ActionMixProjection> actionMix,
@@ -27,6 +28,7 @@ public record AnalyticsSummaryProjection(
                 volumeApplied,
                 timeSavedSeconds,
                 topSenders,
+                List.of(),
                 ruleHits,
                 List.of(),
                 List.of(),
@@ -38,6 +40,7 @@ public record AnalyticsSummaryProjection(
 
     public AnalyticsSummaryProjection {
         topSenders = List.copyOf(topSenders);
+        topRecipients = List.copyOf(topRecipients);
         ruleHits = List.copyOf(ruleHits);
         dailyLoad = List.copyOf(dailyLoad);
         actionMix = List.copyOf(actionMix);

@@ -40,6 +40,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        generate_statistics: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 100
   thymeleaf:
     # Email templates use a dedicated ClassLoaderTemplateResolver in
     # DigestRendererConfig, not Spring Boot's default classpath:/templates/.
@@ -55,6 +60,15 @@ zero-mail:
     gmail:
       pubsub:
         topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
+  messaging:
+    telegram:
+      enabled: ${ZERO_MAIL_MESSAGING_TELEGRAM_ENABLED:false}
+      bot-token: ${ZERO_MAIL_MESSAGING_TELEGRAM_BOT_TOKEN:${TELEGRAM_BOT_TOKEN:}}
+      bot-username: ${ZERO_MAIL_MESSAGING_TELEGRAM_BOT_USERNAME:}
+      bot-account-id: ${ZERO_MAIL_MESSAGING_TELEGRAM_BOT_ACCOUNT_ID:}
+      webhook-secret-token: ${ZERO_MAIL_MESSAGING_TELEGRAM_WEBHOOK_SECRET_TOKEN:${TELEGRAM_WEBHOOK_SECRET:}}
+      messaging-link-secret: ${ZERO_MAIL_MESSAGING_TELEGRAM_MESSAGING_LINK_SECRET:${TELEGRAM_MESSAGING_LINK_SECRET:}}
+      api-base-url: ${ZERO_MAIL_MESSAGING_TELEGRAM_API_BASE_URL:https://api.telegram.org}
   crypto:
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
     # AES-256 KEK for the Gmail inbox projection field cipher (Phase A). Separate from the
@@ -83,6 +97,8 @@ server:
 management:
   observations:
     enabled: true
+    annotations:
+      enabled: true
   # See backend/api/application.yml: disable the redundant OTLP metrics push (localhost:4318) on
   # every profile; metrics go via Prometheus scrape, traces via OTLP→Alloy in prod.
   otlp:

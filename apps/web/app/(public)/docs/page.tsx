@@ -19,6 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('docs.indexHeading'),
     description: t('docs.empty.body'),
+    alternates: { canonical: '/docs' },
   };
 }
 

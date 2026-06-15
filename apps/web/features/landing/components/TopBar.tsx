@@ -52,11 +52,11 @@ export default async function TopBar() {
           </span>
         </Link>
         <div className="zm-nav-links">
-          <Link href="/#features">{t('nav.features')}</Link>
-          <Link href="/#testimonials">{t('nav.testimonials')}</Link>
-          <Link href="/#faq">{t('nav.faq')}</Link>
-          <Link href="/privacy">{t('footer.privacy')}</Link>
-          <Link href="/terms">{t('footer.terms')}</Link>
+          <Link href="/features">{t('nav.features')}</Link>
+          <Link href="/blog">{t('nav.blog')}</Link>
+          <Link href="/about">{t('nav.about')}</Link>
+          <Link href="/terms">{t('nav.terms')}</Link>
+          <Link href="/privacy">{t('nav.privacyPolicy')}</Link>
         </div>
         <div className="zm-nav-cta">
           <SegmentedLanguageToggle currentLocale={locale} />
