@@ -18,7 +18,11 @@ export function useSetActiveMailbox() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: mailboxQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: inboxKeys.all }),
+        // Only refetch the inbox LIST, never the currently-open message detail/thread. The
+        // selected message belongs to the PREVIOUS mailbox; invalidating inboxKeys.all would
+        // force its detail query to refetch under the NEW active mailbox and 404. Once the list
+        // refetches, the stale selection resolves to null and the detail query disables itself.
+        queryClient.invalidateQueries({ queryKey: inboxKeys.pages() }),
         queryClient.invalidateQueries({ queryKey: needsReplyKeys.all }),
         queryClient.invalidateQueries({ queryKey: rulesKeys.all }),
         queryClient.invalidateQueries({ queryKey: triageKeys.all }),

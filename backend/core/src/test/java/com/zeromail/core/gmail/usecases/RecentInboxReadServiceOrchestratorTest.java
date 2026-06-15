@@ -109,7 +109,8 @@ class RecentInboxReadServiceOrchestratorTest {
                 .thenReturn(Optional.of(connectedMailbox()));
         when(inboxSyncStateRepository.findById(syncStateId())).thenReturn(Optional.of(syncState));
         List<InboxProjectionMessage> rows = projectionRows(20);
-        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
+        when(inboxProjectionReadService.fetchInboxPage(
+                        eq(TENANT_ID), eq(GMAIL_CONNECTION_ID), eq(null), eq(20)))
                 .thenReturn(
                         new InboxProjectionPage(
                                 rows,
@@ -131,7 +132,8 @@ class RecentInboxReadServiceOrchestratorTest {
         when(gmailConnectionRepository.findByTenantId(TENANT_ID))
                 .thenReturn(Optional.of(connectedMailbox()));
         when(inboxSyncStateRepository.findById(syncStateId())).thenReturn(Optional.of(syncState));
-        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq(null), eq(20)))
+        when(inboxProjectionReadService.fetchInboxPage(
+                        eq(TENANT_ID), eq(GMAIL_CONNECTION_ID), eq(null), eq(20)))
                 .thenReturn(
                         new InboxProjectionPage(
                                 projectionRows(5), null, InboxProjectionDataSource.PROJECTION));
@@ -148,7 +150,10 @@ class RecentInboxReadServiceOrchestratorTest {
     @Test
     void cursorWithPPrefix_routesToProjectionWithStrippedInnerCursor() {
         when(inboxProjectionReadService.fetchInboxPage(
-                        eq(TENANT_ID), eq("inner-keyset-cursor"), anyInt()))
+                        eq(TENANT_ID),
+                        eq(GMAIL_CONNECTION_ID),
+                        eq("inner-keyset-cursor"),
+                        anyInt()))
                 .thenReturn(
                         new InboxProjectionPage(
                                 projectionRows(3), null, InboxProjectionDataSource.PROJECTION));
@@ -161,7 +166,11 @@ class RecentInboxReadServiceOrchestratorTest {
         assertThat(page.nextCursor()).isNull();
         ArgumentCaptor<String> innerCursorCaptor = ArgumentCaptor.forClass(String.class);
         verify(inboxProjectionReadService)
-                .fetchInboxPage(eq(TENANT_ID), innerCursorCaptor.capture(), anyInt());
+                .fetchInboxPage(
+                        eq(TENANT_ID),
+                        eq(GMAIL_CONNECTION_ID),
+                        innerCursorCaptor.capture(),
+                        anyInt());
         assertThat(innerCursorCaptor.getValue()).isEqualTo("inner-keyset-cursor");
         verifyNoInteractions(gmailConnectionRepository, gmailApiClientFactory);
     }
@@ -198,7 +207,8 @@ class RecentInboxReadServiceOrchestratorTest {
 
     @Test
     void projectionInvalidCursor_isWrappedAsInvalidCursor() {
-        when(inboxProjectionReadService.fetchInboxPage(eq(TENANT_ID), eq("bad-inner"), anyInt()))
+        when(inboxProjectionReadService.fetchInboxPage(
+                        eq(TENANT_ID), eq(GMAIL_CONNECTION_ID), eq("bad-inner"), anyInt()))
                 .thenThrow(new InvalidProjectionCursorException("Cursor HMAC signature mismatch"));
 
         assertThatThrownBy(() -> recentInboxReadService.fetchPage(TENANT_ID, "Pbad-inner", 20))

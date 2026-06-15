@@ -35,9 +35,12 @@ test.describe('mailbox switcher', () => {
     expect(state.inboxRequests).toContain(MAILBOX_B_ID);
 
     await openAccountMenu(page);
-    await expect(
-      page.getByTestId(`mailbox-switch-${MAILBOX_B_ID}`).getByTestId('mailbox-active-marker'),
-    ).toBeVisible();
+    // Gmail-style: the now-active mailbox moves to the header (current account) and leaves the
+    // switch list, so it is no longer rendered as a mailbox-switch row.
+    const activeHeader = page.getByTestId('active-mailbox-header');
+    await expect(activeHeader).toContainText('Support Gmail');
+    await expect(activeHeader.getByTestId('mailbox-active-marker')).toBeVisible();
+    await expect(page.getByTestId(`mailbox-switch-${MAILBOX_B_ID}`)).toHaveCount(0);
   });
 
   test('keeps the switcher reachable at 320px and refetches needs-reply scope', async ({

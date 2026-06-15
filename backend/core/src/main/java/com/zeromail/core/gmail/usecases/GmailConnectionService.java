@@ -594,14 +594,20 @@ public class GmailConnectionService {
                                                         .getGoogleEmail()
                                                         .equalsIgnoreCase(googleEmail));
         if (duplicateActiveMailboxExists) {
-            throw new DuplicateActiveMailboxException(tenantId);
+            // Same-tenant hit: the address is already a CONNECTED mailbox of THIS tenant.
+            throw new DuplicateActiveMailboxException(
+                    tenantId, DuplicateActiveMailboxException.Scope.SAME_WORKSPACE);
         }
     }
 
     private void rethrowDuplicateActiveMailboxIfMatched(
             UUID tenantId, DataIntegrityViolationException dataIntegrityViolation) {
         if (matchesDuplicateActiveEmailConstraint(dataIntegrityViolation)) {
-            throw new DuplicateActiveMailboxException(tenantId);
+            // The same-tenant duplicate was already excluded before the insert, so a global
+            // active-email constraint violation here means the address is CONNECTED under a
+            // DIFFERENT tenant.
+            throw new DuplicateActiveMailboxException(
+                    tenantId, DuplicateActiveMailboxException.Scope.OTHER_WORKSPACE);
         }
         throw dataIntegrityViolation;
     }

@@ -428,6 +428,14 @@
         "body": "Đăng nhập thành công nhưng quyền Gmail chưa được cấp. Nhấn Đăng nhập với Google và cấp quyền Gmail để tiếp tục.",
         "title": "Thiếu quyền Gmail"
       },
+      "mailbox_already_connected": {
+        "body": "Tài khoản Gmail này đã được kết nối với workspace hiện tại của bạn rồi. Hãy chọn một tài khoản Google khác để thêm hộp thư mới.",
+        "title": "Hộp thư đã được kết nối"
+      },
+      "mailbox_in_other_workspace": {
+        "body": "Tài khoản Gmail này đang thuộc về một workspace Zero Mail khác. Mỗi địa chỉ Gmail chỉ thuộc một workspace — hãy đăng nhập vào workspace đó và xóa nó trước khi thêm Gmail này vào đây, hoặc chọn một tài khoản Google khác.",
+        "title": "Gmail thuộc workspace khác"
+      },
       "signin_failed": {
         "body": "Quá trình đăng nhập bị gián đoạn trước khi hoàn tất. Nhấn Đăng nhập với Google để thử lại.",
         "title": "Đăng nhập chưa hoàn tất"

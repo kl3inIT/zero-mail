@@ -26,6 +26,8 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
     private static final UUID GMAIL_CONNECTION_ID =
             UUID.fromString("00000000-0000-0000-0000-00000000aa11");
+    private static final UUID OTHER_GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-00000000bb22");
 
     @Autowired InboxProjectionReadService inboxProjectionReadService;
     @Autowired InboxProjectionWriteService inboxProjectionWriteService;
@@ -37,7 +39,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantId, null, 20));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
 
         assertThat(page.items()).isEmpty();
         assertThat(page.nextCursor()).isNull();
@@ -69,7 +74,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantId, null, 20));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
 
         assertThat(page.items()).hasSize(1);
         InboxProjectionMessage item = page.items().get(0);
@@ -111,7 +119,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantId, null, 20));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
 
         assertThat(page.items()).hasSize(1);
         assertThat(page.items().get(0).from()).isEqualTo("bob@example.com");
@@ -140,7 +151,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantId, null, 20));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
 
         assertThat(page.items().get(0).from()).isEqualTo("\"Acme, Inc.\" <team@example.com>");
     }
@@ -160,7 +174,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantId, null, 20));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
 
         assertThat(page.items())
                 .extracting(InboxProjectionMessage::gmailMessageId)
@@ -184,7 +201,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage firstPage =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantId, null, 2));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 2));
 
         assertThat(firstPage.items()).hasSize(2);
         assertThat(firstPage.items().get(0).gmailMessageId()).isEqualTo("19000000000ab000");
@@ -196,7 +216,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
                         .call(
                                 () ->
                                         inboxProjectionReadService.fetchInboxPage(
-                                                tenantId, firstPage.nextCursor(), 2));
+                                                tenantId,
+                                                GMAIL_CONNECTION_ID,
+                                                firstPage.nextCursor(),
+                                                2));
 
         assertThat(secondPage.items()).hasSize(2);
         assertThat(secondPage.items().get(0).gmailMessageId()).isEqualTo("19000000000ab002");
@@ -208,7 +231,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
                         .call(
                                 () ->
                                         inboxProjectionReadService.fetchInboxPage(
-                                                tenantId, secondPage.nextCursor(), 2));
+                                                tenantId,
+                                                GMAIL_CONNECTION_ID,
+                                                secondPage.nextCursor(),
+                                                2));
 
         assertThat(thirdPage.items()).hasSize(1);
         assertThat(thirdPage.items().get(0).gmailMessageId()).isEqualTo("19000000000ab004");
@@ -254,7 +280,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantId, null, 20));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
 
         assertThat(page.items())
                 .extracting(InboxProjectionMessage::gmailMessageId)
@@ -279,7 +308,10 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage page =
                 ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantId, null, 20));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
 
         assertThat(page.items())
                 .extracting(InboxProjectionMessage::gmailMessageId)
@@ -298,18 +330,67 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
         InboxProjectionPage pageForA =
                 ScopedValue.where(TenantContext.TENANT, tenantA.toString())
-                        .call(() -> inboxProjectionReadService.fetchInboxPage(tenantA, null, 20));
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantA, GMAIL_CONNECTION_ID, null, 20));
 
         assertThat(pageForA.items())
                 .extracting(InboxProjectionMessage::gmailMessageId)
                 .containsExactly("190000000000aa30");
     }
 
+    @Test
+    void mailbox_isolation_other_mailboxes_rows_are_not_returned() {
+        UUID tenantId = seedTenant();
+        Instant receivedAt = Instant.parse("2026-06-01T10:00:00Z");
+        // Same tenant, two connected mailboxes — the read must only return the queried mailbox's
+        // rows. Without the gmail_connection_id filter, switching mailbox leaked the other inbox.
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            seedRowForMailbox(
+                                    tenantId, GMAIL_CONNECTION_ID, "190000000000ac01", receivedAt);
+                            seedRowForMailbox(
+                                    tenantId,
+                                    OTHER_GMAIL_CONNECTION_ID,
+                                    "190000000000ac02",
+                                    receivedAt);
+                        });
+
+        InboxProjectionPage pageForFirstMailbox =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
+
+        assertThat(pageForFirstMailbox.items())
+                .extracting(InboxProjectionMessage::gmailMessageId)
+                .containsExactly("190000000000ac01");
+
+        InboxProjectionPage pageForOtherMailbox =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, OTHER_GMAIL_CONNECTION_ID, null, 20));
+
+        assertThat(pageForOtherMailbox.items())
+                .extracting(InboxProjectionMessage::gmailMessageId)
+                .containsExactly("190000000000ac02");
+    }
+
     private void seedRow(UUID tenantId, String gmailMessageId, Instant receivedAt) {
+        seedRowForMailbox(tenantId, GMAIL_CONNECTION_ID, gmailMessageId, receivedAt);
+    }
+
+    private void seedRowForMailbox(
+            UUID tenantId, UUID gmailConnectionId, String gmailMessageId, Instant receivedAt) {
         inboxProjectionWriteService.upsert(
                 new InboxProjectionUpsertCommand(
                         tenantId,
-                        GMAIL_CONNECTION_ID,
+                        gmailConnectionId,
                         gmailMessageId,
                         "thread-" + gmailMessageId,
                         gmailMessageId + "@example.com",

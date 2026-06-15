@@ -428,6 +428,14 @@
         "body": "Sign in worked, but Gmail access wasn't granted. Click Sign in with Google and approve the Gmail permission to continue.",
         "title": "Gmail permission missing"
       },
+      "mailbox_already_connected": {
+        "body": "This Gmail account is already connected to your current workspace. Choose a different Google account to add another mailbox.",
+        "title": "Mailbox already connected"
+      },
+      "mailbox_in_other_workspace": {
+        "body": "This Gmail account belongs to a different Zero Mail workspace. Each Gmail address can belong to only one workspace — sign in to that workspace and delete it before adding this Gmail here, or choose a different Google account.",
+        "title": "Gmail belongs to another workspace"
+      },
       "signin_failed": {
         "body": "Something interrupted sign-in before it finished. Click Sign in with Google to try again.",
         "title": "Sign-in didn't complete"

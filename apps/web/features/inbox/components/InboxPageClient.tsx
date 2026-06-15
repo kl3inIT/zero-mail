@@ -60,6 +60,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useChat } from '@/features/chat/hooks/use-chat';
 import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
+import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
 import { EmailHtmlFrame, PlainEmailContent } from '@/features/inbox/components/EmailHtmlFrame';
 import { PreviewCard } from '@/features/chat/components/preview-card/preview-card';
 import {
@@ -94,6 +95,18 @@ export function InboxPageClient() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<string>>(() => new Set());
   const currentUser = useCurrentUser();
+  // Reset the open message when the active mailbox changes: the selected id belongs to the
+  // PREVIOUS mailbox, and fetching its detail under the new mailbox 404s. Clearing it here in
+  // render (mirroring the detailsExpanded reset pattern in the detail panel) disables the detail
+  // query immediately, before any refetch can fire it against the wrong mailbox.
+  const activeMailboxId = useActiveMailbox().data?.gmailConnectionId ?? null;
+  const trackedActiveMailboxIdRef = useRef(activeMailboxId);
+  if (trackedActiveMailboxIdRef.current !== activeMailboxId) {
+    trackedActiveMailboxIdRef.current = activeMailboxId;
+    if (requestedSelectedMessageId !== null) {
+      setRequestedSelectedMessageId(null);
+    }
+  }
   const inboxQuery = useInboxMessages();
   const messages = useMemo(() => flattenInboxMessages(inboxQuery.data), [inboxQuery.data]);
   const availableLabels = useMemo(() => collectAvailableLabels(messages), [messages]);

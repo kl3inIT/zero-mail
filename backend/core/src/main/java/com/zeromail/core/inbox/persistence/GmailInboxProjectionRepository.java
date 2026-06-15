@@ -104,6 +104,7 @@ public interface GmailInboxProjectionRepository
                     """
                     SELECT * FROM gmail_inbox_projection
                     WHERE tenant_id = :tenantId
+                      AND gmail_connection_id = :gmailConnectionId
                       AND inbox_state = 'INBOX'
                       AND expires_at > NOW()
                       AND (
@@ -120,6 +121,7 @@ public interface GmailInboxProjectionRepository
             nativeQuery = true)
     List<GmailInboxProjectionEntity> findInboxPage(
             @Param("tenantId") UUID tenantId,
+            @Param("gmailConnectionId") UUID gmailConnectionId,
             @Param("beforeReceivedAt") Instant beforeReceivedAt,
             @Param("beforeMessageId") String beforeMessageId,
             @Param("pageLimit") int pageLimit);

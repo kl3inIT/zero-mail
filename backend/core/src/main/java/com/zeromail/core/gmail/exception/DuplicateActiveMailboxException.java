@@ -7,8 +7,31 @@ import java.util.UUID;
 
 public final class DuplicateActiveMailboxException extends BusinessException {
 
-    public DuplicateActiveMailboxException(UUID tenantId) {
+    /**
+     * Which side of the global active-email uniqueness the duplicate landed on.
+     *
+     * <ul>
+     *   <li>{@code SAME_WORKSPACE} — the address is already a CONNECTED mailbox of the SAME tenant
+     *       (re-adding your own primary).
+     *   <li>{@code OTHER_WORKSPACE} — the address is CONNECTED under a DIFFERENT tenant. By design
+     *       a CONNECTED Gmail maps to exactly one tenant (Pub/Sub routing), so it cannot also be
+     *       added here until it is freed from its own workspace.
+     * </ul>
+     */
+    public enum Scope {
+        SAME_WORKSPACE,
+        OTHER_WORKSPACE
+    }
+
+    private final transient Scope scope;
+
+    public DuplicateActiveMailboxException(UUID tenantId, Scope scope) {
         super("Duplicate active Gmail mailbox for tenant " + tenantId);
+        this.scope = scope;
+    }
+
+    public Scope scope() {
+        return scope;
     }
 
     @Override

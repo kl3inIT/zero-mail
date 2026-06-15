@@ -205,11 +205,21 @@ public class RecentInboxReadService {
 
     private RecentInboxPage fetchPageFromProjection(
             UUID tenantId, String innerCursor, int requestedLimit) {
+        // Scope the projection read to the ACTIVE mailbox. Without this the query returns every
+        // mailbox's projection rows for the tenant, leaking one mailbox's inbox into another after
+        // a switch. The live-Gmail fallback was already mailbox-scoped via gmailForActiveMailbox.
+        UUID gmailConnectionId =
+                activeMailboxRef(tenantId)
+                        .map(MailboxRef::gmailConnectionId)
+                        .orElseThrow(
+                                () ->
+                                        new RecentInboxUnavailableException(
+                                                RecentInboxUnavailableReason.NOT_CONNECTED));
         InboxProjectionPage projectionPage;
         try {
             projectionPage =
                     inboxProjectionReadService.fetchInboxPage(
-                            tenantId, innerCursor, requestedLimit);
+                            tenantId, gmailConnectionId, innerCursor, requestedLimit);
         } catch (InvalidProjectionCursorException invalidProjectionCursorException) {
             throw new RecentInboxUnavailableException(
                     RecentInboxUnavailableReason.INVALID_CURSOR, invalidProjectionCursorException);
