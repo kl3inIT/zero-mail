@@ -104,7 +104,9 @@ describe('mailbox hooks', () => {
 
     expect(mocks.setActiveMailbox).toHaveBeenCalledWith('mailbox-b');
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: mailboxQueryKeys.all });
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: inboxKeys.all });
+    // Switching mailbox refetches the inbox LIST only, never the open message detail/thread (which
+    // belongs to the previous mailbox and would 404 under the new scope). See useSetActiveMailbox.
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: inboxKeys.pages() });
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: needsReplyKeys.all });
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: rulesKeys.all });
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: triageKeys.all });

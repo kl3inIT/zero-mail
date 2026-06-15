@@ -20,3 +20,4 @@ peerDependencyRules:
 overrides:
   postcss: '>=8.5.10' # GHSA-qx2v-qp2m-jg93 (medium 6.1)
   ip-address: '>=10.1.1' # GHSA-v2v4-37r5-5v8g (medium 5.3)
+  esbuild: '>=0.28.1' # GHSA-gv7w-rqvm-qjhr (high 8.1) + GHSA-g7r4-m6w7-qqqr (low 2.5)

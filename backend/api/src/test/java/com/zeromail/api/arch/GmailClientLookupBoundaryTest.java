@@ -27,13 +27,7 @@ class GmailClientLookupBoundaryTest {
                             "com.zeromail.core.chat.usecases.tools.GetMessageToolHandler",
                             "com.zeromail.core.chat.usecases.tools.GetThreadToolHandler",
                             "com.zeromail.core.chat.usecases.tools.ListLabelsToolHandler",
-                            "com.zeromail.core.chat.usecases.tools.SearchInboxToolHandler",
-                            "com.zeromail.core.draft.usecases.DraftReplySourceLoader",
-                            "com.zeromail.core.draft.usecases.ToneContextBuilder$GmailSentMailSource",
-                            "com.zeromail.core.gmail.usecases.GmailPreviewReadService",
-                            "com.zeromail.core.outbound.usecases.ForwardMessageAssembler",
-                            "com.zeromail.core.outbound.usecases.GmailOutboundSendGateway",
-                            "com.zeromail.core.triage.usecases.TriageGmailWriter"));
+                            "com.zeromail.core.chat.usecases.tools.SearchInboxToolHandler"));
 
     private static final String GMAIL_CLIENT_FACTORY_OWNER =
             "com.zeromail.core.gmail.gateway.GmailApiClientFactory";
