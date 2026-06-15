@@ -91,13 +91,15 @@ class TriageAuditPurgeJobContractTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
         INSERT INTO triage_audit (
-          audit_id, tenant_id, gmail_message_id, gmail_thread_id, rule_id, rule_name_snapshot,
+          audit_id, tenant_id, source_mailbox_id, executing_mailbox_id,
+          gmail_message_id, gmail_thread_id, rule_id, rule_name_snapshot,
           action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
           external_ref, failure_reason, decided_at, applied_at, reverted_at, attempt_count,
           last_attempt_at, lease_owner, created_at, updated_at, version
         )
         VALUES (
-          ?, ?, ?, ?, ?, ?, 'ARCHIVE', ?, CAST(? AS jsonb), NULL, ?, ?,
+          ?, ?, '00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000c1',
+          ?, ?, ?, ?, 'ARCHIVE', ?, CAST(? AS jsonb), NULL, ?, ?,
           NULL, NULL, ?, ?, NULL, 0, NULL, NULL, ?, ?, 0
         )
         """,

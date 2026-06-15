@@ -96,10 +96,12 @@ class AnalyticsPrivacySweepTest extends PostgresContainerTest {
                             connection.prepareStatement(
                                     """
                                     insert into mail_message_observed(
-                                        tenant_id, gmail_message_id, gmail_thread_id, history_id,
-                                        label_ids, internal_date, sender_email, observed_at
+                                        tenant_id, gmail_connection_id, gmail_message_id,
+                                        gmail_thread_id, history_id, label_ids, internal_date,
+                                        sender_email, observed_at
                                     )
-                                    values (?, ?, ?, ?, ?, ?, ?, ?)
+                                    values (?, '00000000-0000-4000-8000-0000000000c1',
+                                        ?, ?, ?, ?, ?, ?, ?)
                                     """);
                     preparedStatement.setObject(1, tenantId);
                     preparedStatement.setString(2, "analytics-privacy-message-" + tenantId);

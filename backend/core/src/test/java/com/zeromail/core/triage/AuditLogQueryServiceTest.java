@@ -196,11 +196,14 @@ class AuditLogQueryServiceTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                 insert into triage_audit(
-                    audit_id, tenant_id, gmail_message_id, gmail_thread_id, rule_name_snapshot,
+                    audit_id, tenant_id, source_mailbox_id, executing_mailbox_id,
+                    gmail_message_id, gmail_thread_id, rule_name_snapshot,
                     action_type, args_hash, action_args_json, reason, decision, external_ref,
                     decided_at, applied_at, created_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?)
+                values (?, ?, '00000000-0000-4000-8000-0000000000c1',
+                    '00000000-0000-4000-8000-0000000000c1',
+                    ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?)
                 """,
                 auditId,
                 tenantId,
@@ -231,12 +234,15 @@ class AuditLogQueryServiceTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                 insert into triage_audit(
-                    audit_id, tenant_id, gmail_message_id, gmail_thread_id,
+                    audit_id, tenant_id, source_mailbox_id, executing_mailbox_id,
+                    gmail_message_id, gmail_thread_id,
                     sanitized_subject, sanitized_sender_email, rule_id, rule_name_snapshot,
                     action_type, args_hash, action_args_json, reason, decision,
                     decided_at, applied_at, reverted_at, created_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?)
+                values (?, ?, '00000000-0000-4000-8000-0000000000c1',
+                    '00000000-0000-4000-8000-0000000000c1',
+                    ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?)
                 """,
                 UUID.randomUUID(),
                 tenantId,

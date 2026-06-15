@@ -31,63 +31,75 @@ class Migration119Test extends PostgresContainerTest {
             throws Exception {
         try (Connection connection = dataSource.getConnection()) {
             String schemaName = "migration_119_" + UUID.randomUUID().toString().replace('-', '_');
-            try (Statement statement = connection.createStatement()) {
-                statement.execute("create schema " + schemaName);
-                statement.execute("set search_path to " + schemaName);
-                statement.execute(
-                        "create table tenants(id uuid primary key, display_name varchar(255))");
-                statement.execute(
-                        """
-                        create table gmail_connections(
-                          id uuid primary key,
-                          tenant_id uuid not null,
-                          google_email varchar(320) not null,
-                          status varchar(32) not null,
-                          refresh_token_encrypted bytea,
-                          scopes_granted text,
-                          connected_at timestamptz,
-                          disconnected_at timestamptz
-                        )
-                        """);
-                statement.execute(
-                        "alter table gmail_connections add constraint uq_gmail_connections_tenant_id unique (tenant_id)");
+            // This connection comes from the shared HikariCP pool against the singleton container.
+            // The scratch-schema rewrite below runs `set search_path`, which is a SESSION setting
+            // that HikariCP does NOT reset on return. Leaking it would route every later pooled
+            // query to the scratch schema (where only these two tables exist), so reset the
+            // search_path and drop the scratch schema in a finally before the connection returns.
+            try {
+                try (Statement statement = connection.createStatement()) {
+                    statement.execute("create schema " + schemaName);
+                    statement.execute("set search_path to " + schemaName);
+                    statement.execute(
+                            "create table tenants(id uuid primary key, display_name varchar(255))");
+                    statement.execute(
+                            """
+                            create table gmail_connections(
+                              id uuid primary key,
+                              tenant_id uuid not null,
+                              google_email varchar(320) not null,
+                              status varchar(32) not null,
+                              refresh_token_encrypted bytea,
+                              scopes_granted text,
+                              connected_at timestamptz,
+                              disconnected_at timestamptz
+                            )
+                            """);
+                    statement.execute(
+                            "alter table gmail_connections add constraint uq_gmail_connections_tenant_id unique (tenant_id)");
+                }
+
+                JdbcTemplate scratchJdbcTemplate =
+                        new JdbcTemplate(new SingleConnectionDataSource(connection, true));
+                OldSingleAccountFixture.SeededSingleAccount seededSingleAccount =
+                        OldSingleAccountFixture.seed(scratchJdbcTemplate);
+
+                try (Statement statement = connection.createStatement()) {
+                    statement.execute(forwardSqlFromChangeset());
+                }
+
+                Boolean primary =
+                        scratchJdbcTemplate.queryForObject(
+                                "select is_primary from gmail_connections where id = ?",
+                                Boolean.class,
+                                seededSingleAccount.gmailConnectionId());
+                byte[] encryptedRefreshTokenAfterMigration =
+                        scratchJdbcTemplate.queryForObject(
+                                "select refresh_token_encrypted from gmail_connections where id = ?",
+                                byte[].class,
+                                seededSingleAccount.gmailConnectionId());
+                String scopesGranted =
+                        scratchJdbcTemplate.queryForObject(
+                                "select scopes_granted from gmail_connections where id = ?",
+                                String.class,
+                                seededSingleAccount.gmailConnectionId());
+                String status =
+                        scratchJdbcTemplate.queryForObject(
+                                "select status from gmail_connections where id = ?",
+                                String.class,
+                                seededSingleAccount.gmailConnectionId());
+
+                assertThat(primary).isTrue();
+                assertThat(encryptedRefreshTokenAfterMigration)
+                        .containsExactly(seededSingleAccount.encryptedRefreshToken());
+                assertThat(scopesGranted).isEqualTo(OldSingleAccountFixture.SCOPES_GRANTED);
+                assertThat(status).isEqualTo("CONNECTED");
+            } finally {
+                try (Statement cleanup = connection.createStatement()) {
+                    cleanup.execute("reset search_path");
+                    cleanup.execute("drop schema if exists " + schemaName + " cascade");
+                }
             }
-
-            JdbcTemplate scratchJdbcTemplate =
-                    new JdbcTemplate(new SingleConnectionDataSource(connection, true));
-            OldSingleAccountFixture.SeededSingleAccount seededSingleAccount =
-                    OldSingleAccountFixture.seed(scratchJdbcTemplate);
-
-            try (Statement statement = connection.createStatement()) {
-                statement.execute(forwardSqlFromChangeset());
-            }
-
-            Boolean primary =
-                    scratchJdbcTemplate.queryForObject(
-                            "select is_primary from gmail_connections where id = ?",
-                            Boolean.class,
-                            seededSingleAccount.gmailConnectionId());
-            byte[] encryptedRefreshTokenAfterMigration =
-                    scratchJdbcTemplate.queryForObject(
-                            "select refresh_token_encrypted from gmail_connections where id = ?",
-                            byte[].class,
-                            seededSingleAccount.gmailConnectionId());
-            String scopesGranted =
-                    scratchJdbcTemplate.queryForObject(
-                            "select scopes_granted from gmail_connections where id = ?",
-                            String.class,
-                            seededSingleAccount.gmailConnectionId());
-            String status =
-                    scratchJdbcTemplate.queryForObject(
-                            "select status from gmail_connections where id = ?",
-                            String.class,
-                            seededSingleAccount.gmailConnectionId());
-
-            assertThat(primary).isTrue();
-            assertThat(encryptedRefreshTokenAfterMigration)
-                    .containsExactly(seededSingleAccount.encryptedRefreshToken());
-            assertThat(scopesGranted).isEqualTo(OldSingleAccountFixture.SCOPES_GRANTED);
-            assertThat(status).isEqualTo("CONNECTED");
         }
     }
 

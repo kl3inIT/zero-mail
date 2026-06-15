@@ -192,10 +192,12 @@ class CandidateQueryServiceTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                         insert into mail_message_observed(
-                            tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids,
+                            tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id,
+                            history_id, label_ids,
                             sender_email, sender_name, list_unsubscribe_url, list_unsubscribe_mailto,
                             list_unsubscribe_one_click, observed_at)
-                        values (?, ?, ?, ?, ARRAY[]::text[], ?, ?, ?, ?, ?, ?)
+                        values (?, '00000000-0000-4000-8000-0000000000c1', ?, ?, ?,
+                            ARRAY[]::text[], ?, ?, ?, ?, ?, ?)
                         """,
                 tenantId,
                 "gmail-msg-" + UUID.randomUUID(),
@@ -213,11 +215,13 @@ class CandidateQueryServiceTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                         insert into gmail_inbox_projection(
-                            tenant_id, gmail_message_id, gmail_thread_id, sender_email_hash,
+                            tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id,
+                            sender_email_hash,
                             sender_email_ciphertext, sender_display_name_ciphertext,
                             has_attachment, received_at, label_ids, inbox_state, unread,
                             source_history_id, refreshed_at, expires_at, version)
-                        values (?, ?, ?, ?, ?, NULL, false, ?, ARRAY['INBOX']::text[], 'INBOX',
+                        values (?, '00000000-0000-4000-8000-0000000000c1', ?, ?, ?, ?, NULL, false,
+                            ?, ARRAY['INBOX']::text[], 'INBOX',
                             false, ?, NOW(), NOW() + INTERVAL '1 day', 0)
                         """,
                 tenantId,

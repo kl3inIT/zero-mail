@@ -141,8 +141,8 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
             UUID tenantId, String messageId, String status, int attempts, Instant lockedUntil) {
         jdbc.update(
                 """
-                INSERT INTO pubsub_delivery(id, tenant_id, pubsub_message_id, history_id, payload, status, attempts, locked_until)
-                VALUES (?, ?, ?, ?, '{}'::jsonb, ?, ?, ?)
+                INSERT INTO pubsub_delivery(id, tenant_id, gmail_connection_id, pubsub_message_id, history_id, payload, status, attempts, locked_until)
+                VALUES (?, ?, '00000000-0000-4000-8000-0000000000c1', ?, ?, '{}'::jsonb, ?, ?, ?)
                 """,
                 UUID.randomUUID(),
                 tenantId,
