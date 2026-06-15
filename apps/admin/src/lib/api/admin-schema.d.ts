@@ -1276,10 +1276,17 @@ export interface components {
             gmailAccountEmail?: string;
             /** @enum {string} */
             status: "ACTIVE" | "PAUSED" | "DISCONNECTED";
+            /** @enum {string} */
+            gmailConnectionStatus: "CONNECTED" | "DISCONNECTED";
+            /** @enum {string} */
+            telegramStatus: "CONNECTED" | "BLOCKED" | "DISCONNECTED" | "NO_CONNECTION";
             /** Format: date-time */
             lastActivityAt?: string;
             /** Format: int32 */
             rulesCount: number;
+            /** Format: int32 */
+            enabledRulesCount: number;
+            enabledRuleNames: string[];
         };
         TenantHealthResponse: {
             tokenRefreshStatus: string;
@@ -1312,6 +1319,21 @@ export interface components {
             /** Format: date-time */
             lastTopUpAt?: string;
         };
+        TenantActivityEventResponse: {
+            /** Format: uuid */
+            eventId: string;
+            /** Format: date-time */
+            occurredAt: string;
+            eventType: string;
+            actionLabel: string;
+            detail?: string;
+            /** @enum {string} */
+            status: "SUCCESS" | "FAILED" | "BLOCKED" | "PENDING" | "UNKNOWN";
+            /** Format: int32 */
+            durationSeconds?: number;
+            source: string;
+            legacyDataMissing: boolean;
+        };
         TenantActivityResponse: {
             /** Format: int32 */
             last30dRuleFireCount: number;
@@ -1320,11 +1342,19 @@ export interface components {
             /** Format: date-time */
             lastChatSessionAt?: string;
             lastChatModelSelection?: string;
+            /** Format: int32 */
+            totalActivity7dCount: number;
+            /** Format: date-time */
+            lastLoginAt?: string;
+            /** Format: int32 */
+            totalAppDurationSeconds?: number;
+            events: components["schemas"]["TenantActivityEventResponse"][];
         };
         TenantListResponse: {
             rows: components["schemas"]["TenantListRowResponse"][];
             nextCursor?: string;
             hasNextPage: boolean;
+            summary: components["schemas"]["TenantListSummaryResponse"];
         };
         TenantListRowResponse: {
             /** Format: uuid */
@@ -1335,7 +1365,73 @@ export interface components {
             /** @enum {string} */
             status: "ACTIVE" | "PAUSED" | "DISCONNECTED";
             /** @enum {string} */
+            gmailConnectionStatus: "CONNECTED" | "DISCONNECTED";
+            /** @enum {string} */
             spendBucket7d: "LOW" | "MEDIUM" | "HIGH";
+            /** Format: date-time */
+            lastActivityAt: string;
+            /** @enum {string} */
+            lastActivityKind: "TENANT_CREATED" | "GMAIL_CONNECTION" | "RULE" | "GMAIL_OBSERVED" | "TRIAGE" | "CHAT" | "TELEGRAM" | "ASSISTANT_ACTION" | "LLM";
+            /** Format: int32 */
+            totalRulesCount: number;
+            /** Format: int32 */
+            enabledRulesCount: number;
+            enabledRuleNames: string[];
+            /** Format: int32 */
+            observedEmail30dCount: number;
+            /** Format: int32 */
+            triageAction30dCount: number;
+            /** Format: int32 */
+            failedTriageAction30dCount: number;
+            /** Format: int32 */
+            outboundAction30dCount: number;
+            /** Format: int32 */
+            blockedOutboundAction30dCount: number;
+            /** Format: int32 */
+            chatSessionCount: number;
+            /** Format: date-time */
+            lastChatSessionAt?: string;
+            /** Format: int32 */
+            assistantAction30dCount: number;
+            /** Format: int32 */
+            llmCall30dCount: number;
+            /** Format: int32 */
+            creditBalance: number;
+            /** Format: int32 */
+            pubsubBacklogCount: number;
+            /** @enum {string} */
+            gmailWatchStatus: "WATCHING" | "EXPIRED" | "NOT_WATCHING" | "NO_CONNECTION";
+            /** @enum {string} */
+            telegramStatus: "CONNECTED" | "BLOCKED" | "DISCONNECTED" | "NO_CONNECTION";
+            /** Format: date-time */
+            telegramLastActiveAt?: string;
+            autoSendRulesEnabled: boolean;
+        };
+        TenantListSummaryResponse: {
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            activeCount: number;
+            /** Format: int32 */
+            pausedCount: number;
+            /** Format: int32 */
+            disconnectedCount: number;
+            /** Format: int32 */
+            gmailConnectedCount: number;
+            /** Format: int32 */
+            telegramConnectedCount: number;
+            /** Format: int32 */
+            activeLast24hCount: number;
+            /** Format: int32 */
+            activeLast7dCount: number;
+            /** Format: int32 */
+            gmailUnhealthyCount: number;
+            /** Format: int32 */
+            automationFailure30dCount: number;
+            /** Format: int32 */
+            outboundBlocked30dCount: number;
+            /** Format: int32 */
+            lowCreditCount: number;
         };
         FeatureDonutSliceResponse: {
             feature: string;
@@ -5779,6 +5875,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: string;
+                email?: string;
                 from?: string;
                 to?: string;
                 cursor?: string;
@@ -5859,6 +5956,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: string;
+                email?: string;
                 from?: string;
                 to?: string;
                 cursor?: string;

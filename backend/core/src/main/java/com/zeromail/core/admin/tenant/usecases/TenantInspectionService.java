@@ -9,6 +9,7 @@ import com.zeromail.core.admin.tenant.projection.TenantHealthSnapshot;
 import com.zeromail.core.admin.tenant.projection.TenantListPage;
 import com.zeromail.core.admin.tenant.projection.TenantListQuery;
 import com.zeromail.core.admin.tenant.projection.TenantListRow;
+import com.zeromail.core.admin.tenant.projection.TenantListSummary;
 import com.zeromail.core.admin.tenant.projection.TenantSpendSnapshot;
 import java.time.Duration;
 import java.time.Instant;
@@ -52,7 +53,9 @@ public class TenantInspectionService {
                 hasNextPage
                         ? String.valueOf(tenantListQuery.offset() + tenantListQuery.limit())
                         : null;
-        return new TenantListPage(visibleRows, nextCursor, hasNextPage);
+        TenantListSummary summary =
+                tenantInspectionReadRepository.findTenantListSummary(tenantListQuery);
+        return new TenantListPage(visibleRows, nextCursor, hasNextPage, summary);
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +80,8 @@ public class TenantInspectionService {
         requireTenantExists(targetTenantId);
         int creditsBalance = tenantInspectionReadRepository.findCreditsBalance(targetTenantId);
         Instant lastTopUpAt = tenantInspectionReadRepository.findLastTopUpAt(targetTenantId);
-        return new TenantBillingSnapshot(creditsBalance, "PAY_AS_YOU_GO", lastTopUpAt);
+        String currentPlanCode = tenantInspectionReadRepository.findCurrentPlanCode(targetTenantId);
+        return new TenantBillingSnapshot(creditsBalance, currentPlanCode, lastTopUpAt);
     }
 
     @Transactional(readOnly = true)

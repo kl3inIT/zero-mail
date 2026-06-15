@@ -168,6 +168,7 @@ public class SecurityConfig {
             HttpSecurity http,
             TenantBindingFilter tenantFilter,
             GoogleOAuthSuccessHandler successHandler,
+            TenantActivityLogoutSuccessHandler tenantActivityLogoutSuccessHandler,
             LoginRedirectAuthenticationFailureHandler failureHandler,
             GoogleAuthorizationRequestResolver authRequestResolver) {
         // Default catch-all for user-session traffic. Explicit securityMatcher excluding
@@ -241,9 +242,8 @@ public class SecurityConfig {
                                 logout.logoutRequestMatcher(
                                                 PathPatternRequestMatcher.withDefaults()
                                                         .matcher(HttpMethod.POST, "/api/logout"))
-                                        .logoutSuccessHandler(
-                                                new HttpStatusReturningLogoutSuccessHandler())
-                                        .invalidateHttpSession(true)
+                                        .logoutSuccessHandler(tenantActivityLogoutSuccessHandler)
+                                        .invalidateHttpSession(false)
                                         .deleteCookies("ZEROMAIL_SESSION", "JSESSIONID"))
                 .sessionManagement(Customizer.withDefaults())
                 .addFilterAfter(tenantFilter, AuthorizationFilter.class);

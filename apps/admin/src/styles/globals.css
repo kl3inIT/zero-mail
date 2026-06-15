@@ -161,7 +161,6 @@
 
   body {
     @apply bg-background text-foreground;
-    min-width: 1024px;
     font-feature-settings: 'rlig' 1, 'calt' 1, 'cv11' 1, 'ss01' 1;
   }
 }

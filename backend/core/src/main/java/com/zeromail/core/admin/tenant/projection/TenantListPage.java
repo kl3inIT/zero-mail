@@ -2,7 +2,11 @@ package com.zeromail.core.admin.tenant.projection;
 
 import java.util.List;
 
-public record TenantListPage(List<TenantListRow> rows, String nextCursor, boolean hasNextPage) {
+public record TenantListPage(
+        List<TenantListRow> rows,
+        String nextCursor,
+        boolean hasNextPage,
+        TenantListSummary summary) {
 
     public TenantListPage {
         rows = List.copyOf(rows);

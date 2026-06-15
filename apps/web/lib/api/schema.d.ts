@@ -1742,8 +1742,8 @@ export interface components {
             name?: string;
             filename?: string;
             charset?: string;
-            attachment?: boolean;
             inline?: boolean;
+            attachment?: boolean;
             formData?: boolean;
         };
         HttpHeaders: {
@@ -1789,40 +1789,40 @@ export interface components {
             contentType?: components["schemas"]["MediaType"];
             origin?: string;
             range?: components["schemas"]["HttpRange"][];
-            bearerAuth?: string;
             contentDisposition?: components["schemas"]["ContentDisposition"];
             acceptCharset?: string[];
+            cacheControl?: string;
+            bearerAuth?: string;
+            etag?: string;
+            contentLanguage?: string;
+            allow?: components["schemas"]["HttpMethod"][];
+            /** Format: int64 */
+            ifUnmodifiedSince?: number;
+            ifNoneMatch?: string[];
+            accessControlAllowCredentials?: boolean;
+            accessControlAllowOrigin?: string;
+            accessControlAllowHeaders?: string[];
+            accessControlExposeHeaders?: string[];
+            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
+            accessControlRequestHeaders?: string[];
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
             ifMatch?: string[];
+            accept?: components["schemas"]["MediaType"][];
+            upgrade?: string;
+            pragma?: string;
+            vary?: string[];
+            /** Format: int64 */
+            expires?: number;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
-            basicAuth?: string;
             acceptPatch?: components["schemas"]["MediaType"][];
-            contentLanguage?: string;
-            /** Format: int64 */
-            ifUnmodifiedSince?: number;
-            acceptLanguageAsLocales?: string[];
+            basicAuth?: string;
             /** Format: int64 */
             accessControlMaxAge?: number;
-            ifNoneMatch?: string[];
-            allow?: components["schemas"]["HttpMethod"][];
-            cacheControl?: string;
-            accept?: components["schemas"]["MediaType"][];
-            /** Format: int64 */
-            expires?: number;
-            etag?: string;
-            upgrade?: string;
-            pragma?: string;
-            vary?: string[];
-            accessControlAllowCredentials?: boolean;
-            accessControlAllowHeaders?: string[];
-            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
-            accessControlAllowOrigin?: string;
-            accessControlRequestHeaders?: string[];
-            accessControlExposeHeaders?: string[];
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
+            acceptLanguageAsLocales?: string[];
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -1835,9 +1835,9 @@ export interface components {
             /** Format: double */
             qualityValue?: number;
             charset?: string;
+            wildcardType?: boolean;
             wildcardSubtype?: boolean;
             subtypeSuffix?: string;
-            wildcardType?: boolean;
             concrete?: boolean;
         };
         BankTransferIntentResponse: {

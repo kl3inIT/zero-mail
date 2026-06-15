@@ -338,3 +338,12 @@ databaseChangeLog:
   - include:
       file: changes/120-llm-call-audit-call-site-add-needs-reply-digest.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/121-tenant-activity-event.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/122-drop-tenant-activity-ip-location.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/123-drop-tenant-activity-device.yaml
+      relativeToChangelogFile: true

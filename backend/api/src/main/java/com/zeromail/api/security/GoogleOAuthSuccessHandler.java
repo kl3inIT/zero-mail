@@ -4,11 +4,15 @@ import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import com.zeromail.core.account.usecases.OAuthProvisioningService.BundledProvisioningResult;
+import com.zeromail.core.admin.tenant.usecases.TenantActivityRecorder;
+import com.zeromail.core.admin.tenant.usecases.TenantActivityRequestContext;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.NonNull;
@@ -64,17 +68,25 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final UserRepository userRepository;
     private final RuleTemplateMaterializationService ruleTemplateMaterializationService;
+    private final TenantActivityRecorder tenantActivityRecorder;
+    private final Clock clock;
 
     public GoogleOAuthSuccessHandler(
             OAuthProvisioningService provisioningService,
             OAuth2AuthorizedClientService authorizedClientService,
             UserRepository userRepository,
             RuleTemplateMaterializationService ruleTemplateMaterializationService,
+            TenantActivityRecorder tenantActivityRecorder,
+            Clock clock,
             ApiProperties properties) {
         this.provisioningService = provisioningService;
         this.authorizedClientService = authorizedClientService;
         this.userRepository = userRepository;
         this.ruleTemplateMaterializationService = ruleTemplateMaterializationService;
+        this.tenantActivityRecorder =
+                Objects.requireNonNull(
+                        tenantActivityRecorder, "tenantActivityRecorder must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
 
         // Validate baseUrl scheme/host at construction time so a misconfigured
         // ZEROMAIL_WEB_BASE_URL fails fast instead of silently becoming an open-redirect on
@@ -186,6 +198,12 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 provisioningService.provisionBundledOAuth(
                         googleSubject, email, refreshToken, gmailScopes);
 
+        Instant loginAt = clock.instant();
+        TenantActivityRequestContext requestContext = TenantActivityRequestMetadata.from(request);
+        recordLoginActivity(provisioningResult, requestContext, loginAt);
+        TenantActivitySessionAttributes.storeLogin(
+                request.getSession(true), provisioningResult.tenantId(), loginAt);
+
         // (f) First-login only: seed the Inbox-Zero-style default rules (enabled) so the new tenant
         // lands on a populated Rules page. Best-effort and post-commit — the materialization
         // service
@@ -204,6 +222,21 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         super.onAuthenticationSuccess(request, response, authentication);
+    }
+
+    private void recordLoginActivity(
+            BundledProvisioningResult provisioningResult,
+            TenantActivityRequestContext requestContext,
+            Instant loginAt) {
+        try {
+            tenantActivityRecorder.recordLogin(
+                    provisioningResult.tenantId(), requestContext, loginAt);
+        } catch (RuntimeException activityRecordingFailure) {
+            log.warn(
+                    "event=tenant_activity_login_record_failed tenantId={} failureClass={}",
+                    provisioningResult.tenantId(),
+                    activityRecordingFailure.getClass().getSimpleName());
+        }
     }
 
     /**

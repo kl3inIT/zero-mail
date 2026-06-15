@@ -1,0 +1,115 @@
+databaseChangeLog:
+  - changeSet:
+      id: 121-tenant-activity-event
+      author: zeromail
+      comment: >
+        Append-only tenant activity events for admin customer detail screens. Historical tenants
+        are intentionally not backfilled; older operational activity is derived from existing
+        metadata tables and marked as legacy-missing for device/IP/session-duration fields.
+      changes:
+        - createTable:
+            tableName: tenant_activity_event
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_tenant_activity_event_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: event_type
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_status
+                  type: varchar(32)
+                  defaultValue: SUCCESS
+                  constraints:
+                    nullable: false
+              - column:
+                  name: detail
+                  type: text
+              - column:
+                  name: device_family
+                  type: varchar(128)
+              - column:
+                  name: ip_address
+                  type: inet
+              - column:
+                  name: location_label
+                  type: varchar(160)
+              - column:
+                  name: user_agent
+                  type: varchar(512)
+              - column:
+                  name: occurred_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: duration_seconds
+                  type: int
+              - column:
+                  name: source
+                  type: varchar(32)
+                  defaultValue: APPLICATION
+                  constraints:
+                    nullable: false
+              - column:
+                  name: metadata_json
+                  type: jsonb
+                  defaultValueComputed: '''{}''::jsonb'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Event status values used by the admin activity detail screen.
+            sql: >
+              ALTER TABLE tenant_activity_event
+              ADD CONSTRAINT ck_tenant_activity_event_status
+              CHECK (event_status IN ('SUCCESS', 'FAILED', 'BLOCKED', 'PENDING', 'UNKNOWN'))
+        - sql:
+            comment: Session duration is optional but cannot be negative when captured.
+            sql: >
+              ALTER TABLE tenant_activity_event
+              ADD CONSTRAINT ck_tenant_activity_event_duration_nonnegative
+              CHECK (duration_seconds IS NULL OR duration_seconds >= 0)
+        - createIndex:
+            tableName: tenant_activity_event
+            indexName: idx_tenant_activity_event_tenant_occurred
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: occurred_at
+                  descending: true
+        - createIndex:
+            tableName: tenant_activity_event
+            indexName: idx_tenant_activity_event_tenant_type_occurred
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: event_type
+              - column:
+                  name: occurred_at
+                  descending: true
+      rollback:
+        - dropTable:
+            tableName: tenant_activity_event

@@ -4,9 +4,12 @@ import com.zeromail.core.admin.tenant.projection.TenantListPage;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
-@Schema(requiredProperties = {"rows", "hasNextPage"})
+@Schema(requiredProperties = {"rows", "hasNextPage", "summary"})
 public record TenantListResponse(
-        List<TenantListRowResponse> rows, String nextCursor, boolean hasNextPage) {
+        List<TenantListRowResponse> rows,
+        String nextCursor,
+        boolean hasNextPage,
+        TenantListSummaryResponse summary) {
 
     public TenantListResponse {
         rows = List.copyOf(rows);
@@ -16,6 +19,7 @@ public record TenantListResponse(
         return new TenantListResponse(
                 tenantListPage.rows().stream().map(TenantListRowResponse::from).toList(),
                 tenantListPage.nextCursor(),
-                tenantListPage.hasNextPage());
+                tenantListPage.hasNextPage(),
+                TenantListSummaryResponse.from(tenantListPage.summary()));
     }
 }

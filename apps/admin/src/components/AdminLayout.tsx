@@ -17,7 +17,6 @@ import {
 
 import {logoutAdmin, type AdminMe} from '@/lib/admin-session';
 
-import {AdminBreadcrumb} from './AdminBreadcrumb';
 import {ThemeToggle} from './ThemeToggle';
 import {Button} from './ui/button';
 
@@ -63,8 +62,54 @@ export function AdminLayout({admin: _admin}: AdminLayoutProps) {
 
     return (
         <div className="bg-background text-foreground min-h-screen">
-            <div className="grid min-h-screen grid-cols-[240px_1fr]">
-                <aside className="border-border bg-secondary border-r p-4">
+            <div className="border-border bg-secondary border-b px-4 py-3 lg:hidden">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                        <div
+                            className="bg-ink text-background grid size-8 place-items-center rounded-md text-sm font-semibold">
+                            Z
+                        </div>
+                        <div>
+                            <div className="text-ink font-semibold">Zero Mail</div>
+                            <div className="text-muted-foreground font-mono text-[10px] tracking-wider uppercase">
+                                admin
+                            </div>
+                        </div>
+                    </div>
+                    <ThemeToggle/>
+                </div>
+                <nav className="mt-3 flex gap-1 overflow-x-auto pb-1">
+                    {navigationItems.map((navigationItem) => {
+                        const Icon = navigationItem.icon;
+                        const className =
+                            'flex h-9 shrink-0 items-center gap-2 rounded-md px-2 text-sm font-medium text-ink-2 hover:bg-card';
+                        if (navigationItem.disabled) {
+                            return (
+                                <span key={navigationItem.to} className={`${className} opacity-45`}>
+                    <Icon className="size-4"/>
+                                    {navigationItem.label}
+                  </span>
+                            );
+                        }
+                        return (
+                            <Link
+                                key={navigationItem.to}
+                                to={navigationItem.to}
+                                className={className}
+                                activeProps={{
+                                    className:
+                                        'flex h-9 shrink-0 items-center gap-2 rounded-md border-l-2 border-primary bg-violet-soft px-2 text-sm font-semibold text-primary',
+                                }}
+                            >
+                                <Icon className="size-4"/>
+                                {navigationItem.label}
+                            </Link>
+                        );
+                    })}
+                </nav>
+            </div>
+            <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[240px_1fr]">
+                <aside className="border-border bg-secondary hidden border-r p-4 lg:block">
                     <div className="border-border mb-4 flex items-center gap-2 border-b pb-4">
                         <div
                             className="bg-ink text-background grid size-8 place-items-center rounded-md text-sm font-semibold">
@@ -121,11 +166,10 @@ export function AdminLayout({admin: _admin}: AdminLayoutProps) {
                     </Button>
                 </aside>
                 <main className="min-w-0">
-                    <div className="border-border flex items-center justify-between gap-3 border-b px-8 py-3">
-                        <AdminBreadcrumb/>
+                    <div className="hidden justify-end px-8 pt-4 lg:flex">
                         <ThemeToggle/>
                     </div>
-                    <div className="w-full p-8">
+                    <div className="w-full px-4 pb-8 pt-4 sm:px-6 lg:px-8 lg:pt-2">
                         <Outlet/>
                     </div>
                 </main>
