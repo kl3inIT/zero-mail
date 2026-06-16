@@ -20,4 +20,8 @@ peerDependencyRules:
 overrides:
   postcss: '>=8.5.10' # GHSA-qx2v-qp2m-jg93 (medium 6.1)
   ip-address: '>=10.1.1' # GHSA-v2v4-37r5-5v8g (medium 5.3)
+  '@babel/core': '>=7.29.6'
+  '@opentelemetry/core': '>=2.8.0'
+  dompurify: '>=3.4.9'
   esbuild: '>=0.28.1' # GHSA-gv7w-rqvm-qjhr (high 8.1) + GHSA-g7r4-m6w7-qqqr (low 2.5)
+  js-yaml: '>=4.2.0'

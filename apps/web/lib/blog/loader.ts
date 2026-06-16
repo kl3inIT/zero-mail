@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
+import { parseFrontmatter } from '@/lib/content/frontmatter';
+
 /**
  * Blog content loader — mirrors lib/docs/loader.ts (same cwd-probing strategy,
  * same `<slug>.<locale>.mdx` filename contract, same fail-closed zod parsing) so
@@ -108,7 +110,6 @@ export function buildBlogPath(slug: string, locale: 'vi' | 'en'): string {
  * never takes down the index or sitemap.
  */
 export async function listPublishedPosts(locale: 'vi' | 'en'): Promise<BlogFrontmatter[]> {
-  const matter = (await import('gray-matter')).default;
   const filenames = await listBlogFilenames();
   const posts: BlogFrontmatter[] = [];
 
@@ -117,7 +118,7 @@ export async function listPublishedPosts(locale: 'vi' | 'en'): Promise<BlogFront
     if (!match || match[2] !== locale) continue;
     try {
       const source = await fs.readFile(path.join(BLOG_DIR, filename), 'utf8');
-      const parsed = BlogFrontmatterSchema.safeParse(matter(source).data);
+      const parsed = BlogFrontmatterSchema.safeParse(parseFrontmatter(source).data);
       if (parsed.success && parsed.data.draft !== true) {
         posts.push({
           ...parsed.data,

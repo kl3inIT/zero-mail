@@ -1,11 +1,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import matter from 'gray-matter';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { parseFrontmatter } from '@/lib/content/frontmatter';
 import {
   DOCS_DIR,
   FILENAME_RE,
@@ -42,7 +42,7 @@ export default async function DocsIndexPage() {
   const parsed = await Promise.all(
     matchedEntries.map(async ({ name }) => {
       const raw = await fs.readFile(path.join(DOCS_DIR, name), 'utf8');
-      const { data } = matter(raw);
+      const { data } = parseFrontmatter(raw);
       return FrontmatterSchema.safeParse(data);
     }),
   );

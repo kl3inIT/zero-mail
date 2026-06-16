@@ -1,8 +1,8 @@
 import { promises as fs } from 'node:fs';
 import type { Metadata } from 'next';
-import matter from 'gray-matter';
 import { getLocale } from 'next-intl/server';
 
+import { parseFrontmatter } from '@/lib/content/frontmatter';
 import { FrontmatterSchema, buildDocPath } from '@/lib/docs/loader';
 
 export type LegalDocSlug = 'privacy' | 'terms';
@@ -31,7 +31,7 @@ export function slugifyHeading(text: string): string {
 }
 
 export function extractLevelTwoHeadings(source: string): LegalHeading[] {
-  const contentWithoutFrontmatter = source.replace(/^---[\s\S]*?---\s*/, '');
+  const contentWithoutFrontmatter = parseFrontmatter(source).content;
 
   return contentWithoutFrontmatter
     .split(/\r?\n/)
@@ -53,7 +53,7 @@ export async function readLegalDocSource(slug: LegalDocSlug) {
 
   try {
     const source = await fs.readFile(filePath, 'utf8');
-    const parsedFrontmatter = FrontmatterSchema.safeParse(matter(source).data);
+    const parsedFrontmatter = FrontmatterSchema.safeParse(parseFrontmatter(source).data);
     if (!parsedFrontmatter.success) return null;
     if (parsedFrontmatter.data.slug !== slug || parsedFrontmatter.data.locale !== locale)
       return null;
