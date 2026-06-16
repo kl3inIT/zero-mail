@@ -31,6 +31,14 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     enabled: true
+  modulith:
+    events:
+      jdbc:
+        # Liquibase (changeset 024) owns the event_publication table. Spring Modulith
+        # 2.1 enables JDBC EPR schema auto-creation by default; disable it so Liquibase
+        # stays the single source of truth and no DDL ordering race can occur.
+        schema-initialization:
+          enabled: false
   jpa:
     hibernate:
       ddl-auto: validate
