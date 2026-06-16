@@ -2,6 +2,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
+import { parseFrontmatter } from '@/lib/content/frontmatter';
+
 const APP_WEB = resolve(__dirname, '../..');
 const DOCS_DIR = resolve(APP_WEB, 'docs');
 const DOCS_INDEX = resolve(APP_WEB, 'app/(public)/docs/page.tsx');
@@ -9,18 +11,6 @@ const DOCS_SLUG = resolve(APP_WEB, 'app/(public)/docs/[slug]/page.tsx');
 const DOCS_LOADING = resolve(APP_WEB, 'app/(public)/docs/[slug]/loading.tsx');
 const DOCS_LOADER = resolve(APP_WEB, 'lib/docs/loader.ts');
 const FILENAME_RE = /^([a-z0-9-]+)\.(vi|en)\.mdx$/;
-
-// REVIEWS Revision 4 (Codex MEDIUM): replace beforeAll + dynamic-import-with-skipIf
-// pattern (which evaluates skipIf BEFORE beforeAll runs, so `matter` is always undefined
-// at gate time) with a STATIC existsSync predicate evaluated at MODULE LOAD time. This
-// means skipIf is decided correctly at test-define time. The dynamic import inside the
-// it body is fine — it only runs when not skipped, and only after gray-matter is
-// installed by Plan 06.
-// pnpm hoist may place gray-matter under apps/web/node_modules/ OR the workspace
-// root node_modules/. Check both so the gate flips correctly under either layout.
-const grayMatterInstalled =
-  existsSync(resolve(process.cwd(), 'node_modules/gray-matter/package.json')) ||
-  existsSync(resolve(process.cwd(), '../../node_modules/gray-matter/package.json'));
 
 describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
   it('docs/ exists with at least 4 MDX files (2 slugs x 2 locales)', () => {
@@ -36,40 +26,28 @@ describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
     }
   });
 
-  // Frontmatter-shape: GATE on grayMatterInstalled (static existsSync at module-load).
-  // SKIP until Plan 06 installs gray-matter; PASS once installed + sample MDX files land.
-  describe('frontmatter shape (D-D3) — gated on gray-matter availability', () => {
-    it.skipIf(!grayMatterInstalled)(
-      'all sample MDX files have valid gray-matter frontmatter',
-      async () => {
-        // Defer module resolution to runtime by hopping the spec through a
-        // non-literal expression — Vite's import-analysis only pre-resolves
-        // dynamic imports whose spec is a literal string. The static
-        // existsSync gate above (REVIEWS Revision 4) already guarantees this
-        // body only runs when the dependency is present (Plan 06 installs it).
-        const moduleId = ['gray', 'matter'].join('-');
-        const matter = (await import(moduleId)).default;
-        const entries = readdirSync(DOCS_DIR).filter((n) => n.endsWith('.mdx'));
-        for (const name of entries) {
-          const raw = readFileSync(resolve(DOCS_DIR, name), 'utf8');
-          const { data } = matter(raw);
-          expect(typeof data.title).toBe('string');
-          expect(typeof data.slug).toBe('string');
-          expect(typeof data.order).toBe('number');
-          expect(['vi', 'en']).toContain(data.locale);
-          const m = name.match(FILENAME_RE);
-          expect(m).not.toBeNull();
-          expect(data.slug).toBe(m![1]);
-          expect(data.locale).toBe(m![2]);
-        }
-      },
-    );
+  describe('frontmatter shape (D-D3)', () => {
+    it('all sample MDX files have valid YAML frontmatter', () => {
+      const entries = readdirSync(DOCS_DIR).filter((n) => n.endsWith('.mdx'));
+      for (const name of entries) {
+        const raw = readFileSync(resolve(DOCS_DIR, name), 'utf8');
+        const { data } = parseFrontmatter(raw);
+        expect(typeof data.title).toBe('string');
+        expect(typeof data.slug).toBe('string');
+        expect(typeof data.order).toBe('number');
+        expect(['vi', 'en']).toContain(data.locale);
+        const m = name.match(FILENAME_RE);
+        expect(m).not.toBeNull();
+        expect(data.slug).toBe(m![1]);
+        expect(data.locale).toBe(m![2]);
+      }
+    });
   });
 
-  it('docs index page reads filesystem with gray-matter', () => {
+  it('docs index page reads filesystem with the shared frontmatter parser', () => {
     expect(existsSync(DOCS_INDEX)).toBe(true);
     const src = readFileSync(DOCS_INDEX, 'utf8');
-    expect(src).toMatch(/gray-matter|from\s+['"]gray-matter['"]/);
+    expect(src).toMatch(/parseFrontmatter/);
     // Phase 01.5 Plan 02 deflation: readdir is now abstracted behind
     // listDocFilenames() from @/lib/docs/loader. Check for either pattern.
     expect(src).toMatch(/readdir|listDocFilenames/);

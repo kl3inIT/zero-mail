@@ -1,7 +1,7 @@
-import matter from 'gray-matter';
 import { promises as fs } from 'node:fs';
 import type { MetadataRoute } from 'next';
 
+import { parseFrontmatter } from '@/lib/content/frontmatter';
 import { listPublishedPosts } from '@/lib/blog/loader';
 import { buildDocPath, FILENAME_RE, listDocFilenames } from '@/lib/docs/loader';
 import { siteUrl } from '@/lib/site';
@@ -105,7 +105,7 @@ async function listPublicDocSlugs(): Promise<string[]> {
   for (const slug of viSlugs) {
     try {
       const source = await fs.readFile(buildDocPath(slug, 'vi'), 'utf8');
-      const { data } = matter(source);
+      const { data } = parseFrontmatter(source);
       if (data?.hideFromIndex !== true) {
         visible.push(slug);
       }
