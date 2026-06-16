@@ -1,7 +1,7 @@
 package com.zeromail.worker.inbox;
 
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.usecases.InboxBackfillService;
+import com.zeromail.core.mailbox.MailboxRef;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Component;

@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
-import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;

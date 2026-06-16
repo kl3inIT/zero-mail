@@ -1,8 +1,8 @@
 package com.zeromail.core.cleanup.usecases;
 
 import com.zeromail.core.cleanup.domain.CleanupSenderStatus;
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.usecases.RuleCompileResult;

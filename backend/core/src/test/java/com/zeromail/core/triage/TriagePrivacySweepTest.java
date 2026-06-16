@@ -22,6 +22,7 @@ import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
 import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.persistence.RuleEntity;
@@ -126,7 +127,8 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
                                         GMAIL_THREAD_ID,
                                         Instant.parse("2026-05-11T00:00:00Z"))));
 
-        verify(triageGmailWriter).archiveSkipInbox(tenantId, GMAIL_MESSAGE_ID);
+        verify(triageGmailWriter)
+                .archiveSkipInbox(new MailboxRef(tenantId, GMAIL_CONNECTION_ID), GMAIL_MESSAGE_ID);
         assertAuditRowsAreContentFree(tenantId);
         assertCapturedTriageLogsAreContentFree();
         assertTriageMetricTagsAreContentFree(tenantId);

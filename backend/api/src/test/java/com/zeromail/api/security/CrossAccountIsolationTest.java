@@ -13,7 +13,7 @@ import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
-import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;

@@ -22,7 +22,7 @@ class OutboundMailboxRoutingTest extends PostgresContainerTest {
 
     private static final String OUTBOUND_SEND_COMMAND_FQN =
             "com.zeromail.core.outbound.usecases.OutboundSendCommand";
-    private static final String MAILBOX_REF_FQN = "com.zeromail.core.gmail.gateway.MailboxRef";
+    private static final String MAILBOX_REF_FQN = "com.zeromail.core.mailbox.MailboxRef";
 
     @Autowired JdbcTemplate jdbcTemplate;
 

@@ -8,7 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.outbound.usecases.OutboundSendGateway;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.domain.ReplyHeaders;

@@ -1,6 +1,4 @@
-@ApplicationModule(
-        displayName = "Mailbox",
-        allowedDependencies = {"gmail :: gateway"})
+@ApplicationModule(displayName = "Mailbox")
 package com.zeromail.core.mailbox;
 
 import org.springframework.modulith.ApplicationModule;

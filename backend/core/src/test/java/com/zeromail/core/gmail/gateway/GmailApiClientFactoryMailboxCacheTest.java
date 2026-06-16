@@ -10,6 +10,7 @@ import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.shared.privacy.Sensitive;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -1,7 +1,7 @@
 package com.zeromail.core.rules.usecases;
 
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.domain.RuleTemplateStatus;
 import com.zeromail.core.rules.persistence.RuleEntity;

@@ -1,11 +1,11 @@
 package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.gmail.event.MailMessageObserved;
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxMessage;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxPage;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
 import java.util.LinkedHashMap;

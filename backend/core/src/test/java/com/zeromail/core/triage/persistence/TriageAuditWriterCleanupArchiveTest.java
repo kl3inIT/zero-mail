@@ -212,6 +212,16 @@ class TriageAuditWriterCleanupArchiveTest extends PostgresContainerTest {
                 "insert into tenants(id, display_name) values (?, ?)",
                 tenantId,
                 "cleanup-archive-" + tenantId);
+        // recordCleanupArchive resolves source/executing_mailbox_id via a primary-connection
+        // sub-select; the column is NOT NULL, so a CONNECTED primary mailbox must exist first.
+        jdbcTemplate.update(
+                """
+                insert into gmail_connections(id, tenant_id, google_email, status, is_primary)
+                values (?, ?, ?, 'CONNECTED', true)
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                "cleanup-archive-" + tenantId + "@example.test");
         return tenantId;
     }
 

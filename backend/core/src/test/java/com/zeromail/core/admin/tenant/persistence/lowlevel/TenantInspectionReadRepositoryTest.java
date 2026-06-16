@@ -89,7 +89,12 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
         TenantListPage emailFilteredTenantListPage =
                 tenantInspectionService.listTenants(
                         new TenantListQuery(
-                                25, 0, null, FILTER_FROM, FILTER_TO, "active-ops@example.com"));
+                                25,
+                                0,
+                                null,
+                                FILTER_FROM,
+                                FILTER_TO,
+                                "active-ops-" + activeTenantId + "@example.com"));
         assertThat(emailFilteredTenantListPage.rows())
                 .extracting(TenantListRow::tenantId)
                 .containsExactly(activeTenantId);
@@ -169,6 +174,9 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
                 tenantId,
                 "active-operations-tenant",
                 Timestamp.from(Instant.parse("2042-01-01T10:00:00Z")));
+        // google_email is globally unique among active connections (changeset 127); vary it per
+        // tenant so multiple seeded active tenants in the shared container do not collide.
+        UUID gmailConnectionId = UUID.randomUUID();
         jdbcTemplate.update(
                 """
                         INSERT INTO gmail_connections(
@@ -178,9 +186,9 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
                         VALUES (?, ?, ?, 'CONNECTED', NULL, 'gmail.modify',
                                 ?, ?, ?, ?)
                         """,
-                UUID.randomUUID(),
+                gmailConnectionId,
                 tenantId,
-                "active-ops@example.com",
+                "active-ops-" + tenantId + "@example.com",
                 Timestamp.from(Instant.parse("2042-01-01T10:01:00Z")),
                 Timestamp.from(Instant.parse("2042-01-01T10:01:00Z")),
                 Timestamp.from(Instant.parse("2042-01-01T10:02:00Z")),
@@ -188,39 +196,45 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                         INSERT INTO rules(
-                            id, tenant_id, display_name, source_text, source_language, schema_version,
+                            id, tenant_id, gmail_connection_id, display_name, source_text,
+                            source_language, schema_version,
                             matcher_ast, action_intents, enabled, order_index, created_at, updated_at
                         )
                         VALUES
-                            (?, ?, 'Receipts', 'Archive receipts', 'en', 'rules.v1',
+                            (?, ?, ?, 'Receipts', 'Archive receipts', 'en', 'rules.v1',
                              '{}'::jsonb, '[]'::jsonb, true, 0, ?, ?),
-                            (?, ?, 'Newsletters', 'Label newsletters', 'en', 'rules.v1',
+                            (?, ?, ?, 'Newsletters', 'Label newsletters', 'en', 'rules.v1',
                              '{}'::jsonb, '[]'::jsonb, false, 1, ?, ?)
                         """,
                 UUID.randomUUID(),
                 tenantId,
+                gmailConnectionId,
                 Timestamp.from(Instant.parse("2042-01-01T10:03:00Z")),
                 Timestamp.from(Instant.parse("2042-01-01T10:03:00Z")),
                 UUID.randomUUID(),
                 tenantId,
+                gmailConnectionId,
                 Timestamp.from(Instant.parse("2042-01-01T10:04:00Z")),
                 Timestamp.from(Instant.parse("2042-01-01T10:04:00Z")));
         jdbcTemplate.update(
                 """
                         INSERT INTO mail_message_observed(
-                            tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids,
-                            observed_at
+                            tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id,
+                            history_id, label_ids, observed_at
                         )
                         VALUES
-                            (?, 'msg-1', 'thread-1', 101, ARRAY['INBOX']::text[], ?),
-                            (?, 'msg-2', 'thread-2', 102, ARRAY['INBOX']::text[], ?)
+                            (?, ?, 'msg-1', 'thread-1', 101, ARRAY['INBOX']::text[], ?),
+                            (?, ?, 'msg-2', 'thread-2', 102, ARRAY['INBOX']::text[], ?)
                         """,
                 tenantId,
+                gmailConnectionId,
                 Timestamp.from(Instant.parse("2042-01-01T10:05:00Z")),
                 tenantId,
+                gmailConnectionId,
                 Timestamp.from(Instant.parse("2042-01-01T10:06:00Z")));
         seedTriageAudit(
                 tenantId,
+                gmailConnectionId,
                 "msg-1",
                 "label",
                 "APPLIED",
@@ -228,6 +242,7 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
                 hashBytes(1));
         seedTriageAudit(
                 tenantId,
+                gmailConnectionId,
                 "msg-2",
                 "send_reply",
                 "FAILED",
@@ -235,6 +250,7 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
                 hashBytes(2));
         seedTriageAudit(
                 tenantId,
+                gmailConnectionId,
                 "msg-3",
                 "forward_email",
                 "REJECTED_BY_SAFETY_NET",
@@ -270,19 +286,21 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                         INSERT INTO pubsub_delivery(
-                            id, tenant_id, pubsub_message_id, history_id, payload, status,
-                            attempts, created_at, updated_at
+                            id, tenant_id, gmail_connection_id, pubsub_message_id, history_id,
+                            payload, status, attempts, created_at, updated_at
                         )
                         VALUES
-                            (?, ?, 'pubsub-1', 1001, '{}'::jsonb, 'PENDING', 0, ?, ?),
-                            (?, ?, 'pubsub-2', 1002, '{}'::jsonb, 'PENDING', 1, ?, ?)
+                            (?, ?, ?, 'pubsub-1', 1001, '{}'::jsonb, 'PENDING', 0, ?, ?),
+                            (?, ?, ?, 'pubsub-2', 1002, '{}'::jsonb, 'PENDING', 1, ?, ?)
                         """,
                 UUID.randomUUID(),
                 tenantId,
+                gmailConnectionId,
                 Timestamp.from(Instant.parse("2042-01-01T10:16:00Z")),
                 Timestamp.from(Instant.parse("2042-01-01T10:16:00Z")),
                 UUID.randomUUID(),
                 tenantId,
+                gmailConnectionId,
                 Timestamp.from(Instant.parse("2042-01-01T10:17:00Z")),
                 Timestamp.from(Instant.parse("2042-01-01T10:17:00Z")));
         jdbcTemplate.update(
@@ -344,6 +362,7 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
 
     private void seedTriageAudit(
             UUID tenantId,
+            UUID gmailConnectionId,
             String gmailMessageId,
             String actionType,
             String decision,
@@ -352,12 +371,15 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                         INSERT INTO triage_audit(
-                            tenant_id, gmail_message_id, gmail_thread_id, action_type, args_hash,
+                            tenant_id, source_mailbox_id, executing_mailbox_id, gmail_message_id,
+                            gmail_thread_id, action_type, args_hash,
                             action_args_json, reason, decision, created_at, updated_at
                         )
-                        VALUES (?, ?, ?, ?, ?, '{}'::jsonb, 'test action', ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, '{}'::jsonb, 'test action', ?, ?, ?)
                         """,
                 tenantId,
+                gmailConnectionId,
+                gmailConnectionId,
                 gmailMessageId,
                 "thread-" + gmailMessageId,
                 actionType,

@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 
-import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;

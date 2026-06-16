@@ -13,6 +13,7 @@ import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.outbound.usecases.OutboundSendThrottle;
 import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.projection.EnabledRuleSnapshot;
@@ -89,7 +90,8 @@ class TriageOutboundRuntimeGateTest {
     void protected_sender_fails_audit_for_outbound_actions() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, true, senderDomainMatcher(), sendReplyAction());
-        when(draftBodyGenerator.generate(eq(TENANT_ID), eq(GMAIL_THREAD_ID), any(), any()))
+        when(draftBodyGenerator.generate(
+                        eq(TENANT_ID), any(MailboxRef.class), eq(GMAIL_THREAD_ID), any(), any()))
                 .thenReturn("Generated safe reply");
         verifyOutboundFailsWithReason(orchestratorService, "SENDER_SAFETY_NET");
     }

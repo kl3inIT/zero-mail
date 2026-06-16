@@ -42,7 +42,7 @@ class QueueJobActionServiceTest extends PostgresContainerTest {
         jdbcTemplate.update("DELETE FROM admin_audit_event WHERE actor_user_id = ?", ADMIN_USER_ID);
         jdbcTemplate.execute(
                 "ALTER TABLE admin_audit_event ENABLE TRIGGER admin_audit_event_append_only");
-        jdbcTemplate.execute("DELETE FROM processing_job");
+        jdbcTemplate.execute("TRUNCATE TABLE processing_job CASCADE");
         adminUserRepository.save(
                 new AdminUserEntity(
                         ADMIN_USER_ID,

@@ -9,12 +9,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.zeromail.core.gmail.event.MailMessageObserved;
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxMessage;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxPage;
 import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.triage.usecases.BackfillNeedsReplyService;
 import com.zeromail.core.triage.usecases.TriageOrchestratorService;
 import java.time.Instant;

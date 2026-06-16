@@ -2,7 +2,7 @@ package com.zeromail.core.outbound.usecases;
 
 import com.google.api.services.gmail.Gmail;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
-import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.mailbox.MailboxRef;
 import jakarta.activation.DataHandler;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;

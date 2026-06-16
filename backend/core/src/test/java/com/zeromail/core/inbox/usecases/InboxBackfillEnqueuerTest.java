@@ -2,10 +2,10 @@ package com.zeromail.core.inbox.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.inbox.domain.InboxSyncStatus;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateId;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.UUID;

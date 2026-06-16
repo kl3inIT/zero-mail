@@ -10,6 +10,8 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.chat.usecases.ConfirmActionService;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.mailbox.MailboxContext;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
@@ -40,20 +42,23 @@ class ConfirmationRaceIT extends PostgresContainerTest {
     @Test
     void double_click_race_commits_exactly_one_send() throws Exception {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         UUID chatId = UUID.randomUUID();
         String toolCallId = "tool-send-race";
         seedTenantAndChat(tenantId, chatId, "confirmation-race");
         seedPendingSend(tenantId, chatId, toolCallId, "founder@example.test");
         AtomicInteger gmailSendCount = new AtomicInteger();
-        configureGmail(tenantId, gmailSendCount);
+        configureGmail(tenantId, gmailConnectionId, gmailSendCount);
         when(confirmationLeaseService.tryAcquire(eq(chatId), eq(toolCallId), anyString()))
                 .thenReturn(true);
         when(senderSafetyNetService.isProtected(any(UUID.class), anyString())).thenReturn(false);
 
         CompletableFuture<Boolean> firstConfirm =
-                CompletableFuture.supplyAsync(() -> confirm(tenantId, chatId, toolCallId));
+                CompletableFuture.supplyAsync(
+                        () -> confirm(tenantId, gmailConnectionId, chatId, toolCallId));
         CompletableFuture<Boolean> secondConfirm =
-                CompletableFuture.supplyAsync(() -> confirm(tenantId, chatId, toolCallId));
+                CompletableFuture.supplyAsync(
+                        () -> confirm(tenantId, gmailConnectionId, chatId, toolCallId));
         CompletableFuture.allOf(firstConfirm, secondConfirm).join();
 
         assertThat(List.of(firstConfirm.get(), secondConfirm.get()))
@@ -90,23 +95,35 @@ class ConfirmationRaceIT extends PostgresContainerTest {
                 .isEqualTo("CONFIRMED");
     }
 
-    private boolean confirm(UUID tenantId, UUID chatId, String toolCallId) {
+    private boolean confirm(UUID tenantId, UUID gmailConnectionId, UUID chatId, String toolCallId) {
         try {
             ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                    .run(() -> confirmActionService.confirm(chatId, toolCallId, true, Map.of()));
+                    .run(
+                            () ->
+                                    ScopedValue.where(MailboxContext.MAILBOX, gmailConnectionId)
+                                            .run(
+                                                    () ->
+                                                            confirmActionService.confirm(
+                                                                    chatId,
+                                                                    toolCallId,
+                                                                    true,
+                                                                    Map.of())));
             return true;
         } catch (RuntimeException confirmationFailure) {
             return false;
         }
     }
 
-    private void configureGmail(UUID tenantId, AtomicInteger gmailSendCount) throws Exception {
+    private void configureGmail(UUID tenantId, UUID gmailConnectionId, AtomicInteger gmailSendCount)
+            throws Exception {
         Gmail gmail = org.mockito.Mockito.mock(Gmail.class);
         Gmail.Users users = org.mockito.Mockito.mock(Gmail.Users.class);
         Gmail.Users.Messages messages = org.mockito.Mockito.mock(Gmail.Users.Messages.class);
         Gmail.Users.Messages.Send sendRequest =
                 org.mockito.Mockito.mock(Gmail.Users.Messages.Send.class);
-        when(gmailApiClientFactory.buildClientForTenant(tenantId)).thenReturn(gmail);
+        when(gmailApiClientFactory.buildClientForMailbox(
+                        new MailboxRef(tenantId, gmailConnectionId)))
+                .thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.messages()).thenReturn(messages);
         when(messages.send(eq("me"), any(Message.class))).thenReturn(sendRequest);

@@ -1,7 +1,7 @@
 package com.zeromail.core.triage.usecases;
 
 import com.google.api.services.gmail.model.Message;
-import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;

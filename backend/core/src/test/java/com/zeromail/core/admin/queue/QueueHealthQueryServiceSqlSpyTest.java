@@ -42,7 +42,7 @@ class QueueHealthQueryServiceSqlSpyTest extends PostgresContainerTest {
 
     @BeforeEach
     void cleanProcessingJob() {
-        jdbcTemplate.execute("DELETE FROM processing_job");
+        jdbcTemplate.execute("TRUNCATE TABLE processing_job CASCADE");
         jdbcTemplate.update(
                 "INSERT INTO processing_job(job_type, status, attempts, gmail_connection_id) VALUES "
                         + "('SPY_FIXTURE_JOB', 'DEAD_LETTER', 3,"

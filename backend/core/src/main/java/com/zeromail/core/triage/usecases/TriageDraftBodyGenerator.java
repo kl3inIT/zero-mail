@@ -1,6 +1,6 @@
 package com.zeromail.core.triage.usecases;
 
-import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.mailbox.MailboxRef;
 import java.util.UUID;
 
 public interface TriageDraftBodyGenerator {

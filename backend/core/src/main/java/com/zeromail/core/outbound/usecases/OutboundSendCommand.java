@@ -1,7 +1,7 @@
 package com.zeromail.core.outbound.usecases;
 
 import com.google.api.services.gmail.model.Message;
-import com.zeromail.core.gmail.gateway.MailboxRef;
+import com.zeromail.core.mailbox.MailboxRef;
 import java.util.Objects;
 import java.util.UUID;
 

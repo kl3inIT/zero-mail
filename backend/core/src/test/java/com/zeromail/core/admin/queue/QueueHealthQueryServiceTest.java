@@ -21,7 +21,7 @@ class QueueHealthQueryServiceTest extends PostgresContainerTest {
 
     @BeforeEach
     void truncateProcessingJob() {
-        jdbcTemplate.execute("DELETE FROM processing_job");
+        jdbcTemplate.execute("TRUNCATE TABLE processing_job CASCADE");
     }
 
     @Test

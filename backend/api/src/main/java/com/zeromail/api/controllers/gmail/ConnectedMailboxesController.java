@@ -1,8 +1,8 @@
 package com.zeromail.api.controllers.gmail;
 
 import com.zeromail.api.dto.gmail.MailboxSummaryResponse;
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.List;
 import java.util.UUID;

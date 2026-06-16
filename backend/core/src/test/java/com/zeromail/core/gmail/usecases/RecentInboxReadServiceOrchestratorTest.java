@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxPage;
@@ -27,6 +26,7 @@ import com.zeromail.core.inbox.usecases.InboxProjectionPage;
 import com.zeromail.core.inbox.usecases.InboxProjectionReadService;
 import com.zeromail.core.inbox.usecases.InvalidProjectionCursorException;
 import com.zeromail.core.llm.gateway.sanitization.JsoupSafeHtmlSanitizer;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.shared.crypto.CryptoProperties;
 import java.time.Instant;
 import java.util.ArrayList;

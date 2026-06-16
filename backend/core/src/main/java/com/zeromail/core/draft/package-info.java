@@ -2,6 +2,7 @@
 @ApplicationModule(
         displayName = "Draft",
         allowedDependencies = {
+            "mailbox",
             "llm",
             "llm :: domain",
             "llm :: exception",

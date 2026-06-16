@@ -6,8 +6,8 @@ import com.zeromail.core.chat.confirm.send.AssistantWriteExecutor.WriteToolResul
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.usecases.AssistantKnowledgeService;
 import com.zeromail.core.chat.usecases.AssistantPersonalInstructionsService;
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
 import com.zeromail.core.rules.usecases.RuleCompileCommand;
 import com.zeromail.core.rules.usecases.RuleCompileResult;

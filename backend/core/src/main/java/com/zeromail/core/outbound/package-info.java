@@ -8,6 +8,7 @@
 @ApplicationModule(
         displayName = "Outbound",
         allowedDependencies = {
+            "mailbox",
             "gmail",
             "gmail :: gateway",
             "tenant",

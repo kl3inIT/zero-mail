@@ -8,8 +8,10 @@ import static org.mockito.Mockito.mock;
 import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
+import com.zeromail.core.admin.tenant.usecases.TenantActivityRecorder;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
@@ -120,6 +122,8 @@ class OAuthIntentRoutingTest {
                         mock(UserRepository.class),
                         mock(GmailConnectionService.class),
                         mock(RuleTemplateMaterializationService.class),
+                        mock(TenantActivityRecorder.class),
+                        Clock.systemUTC(),
                         new ApiProperties(null, null, null));
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setSession(new MockHttpSession());

@@ -7,8 +7,8 @@ import com.zeromail.core.chat.confirm.ConfirmationStateMachine.SendInFlightComma
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.exception.GmailSendFailedException;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.mailbox.MailboxContext;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import com.zeromail.core.outbound.usecases.OutboundSendCommand;
 import com.zeromail.core.outbound.usecases.OutboundSendException;
