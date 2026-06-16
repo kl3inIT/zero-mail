@@ -131,20 +131,37 @@ jobs:
             sleep 2
           done
           echo "::endgroup::"
+          echo "::group::Reload edge proxy so it re-resolves the new api container IP"
+          # nginx-proxy-manager (the host :443 edge proxy) pins the api upstream IP at config
+          # load for its literal `proxy_pass http://zeromail-api:8080` locations (/api, /oauth2,
+          # /login/oauth2, /internal/pubsub). Recreating api above gives it a NEW docker IP, so
+          # without this reload every /api + Google-login + Pub/Sub request 502s while / (frontend)
+          # stays 200 — exactly the 2026-06-16 login outage. Best-effort here; the /api smoke
+          # check below is the real gate.
+          docker exec nginx-proxy-manager nginx -s reload \
+            && echo "edge proxy reloaded" \
+            || echo "::warning::nginx-proxy-manager reload failed — /api may 502 until reloaded manually"
+          echo "::endgroup::"
 
       - name: Post-deploy smoke check
         run: |
-          # /api/actuator/health is Spring-Security-protected publicly (401).
-          # Frontend root is the only public anonymous probe — covers SSL,
-          # NPM proxy, frontend container, and (indirectly) Next.js boot.
+          # Two probes: the public frontend root (SSL + NPM + Next.js boot) AND an /api path —
+          # because /api is proxied to the api container by a literal upstream that 502s when the
+          # edge proxy holds a stale api IP, and a frontend-only probe misses that (/ stays 200).
+          # /api/actuator/health is Spring-Security-protected, so 401 = the proxy reached a healthy
+          # api; 502/000 = the edge proxy cannot reach api.
+          smoke_ok() {
+            local root api
+            root=$(curl -o /dev/null -s -w '%{http_code}' https://zeromail.vn/ || echo 000)
+            api=$(curl -o /dev/null -s -w '%{http_code}' https://zeromail.vn/api/actuator/health || echo 000)
+            echo "root=${root} api=${api}"
+            [[ "$root" == "200" && "$api" != "502" && "$api" != "000" ]]
+          }
           for attempt in {1..20}; do
-            code=$(curl -o /dev/null -s -w '%{http_code}' https://zeromail.vn/ || echo 000)
-            if [[ "$code" == "200" ]]; then
-              echo "prod smoke OK"; exit 0
-            fi
+            if smoke_ok; then echo "prod smoke OK"; exit 0; fi
             sleep 5
           done
-          echo "::error::prod smoke check did not return 200 within 100s"
+          echo "::error::prod smoke check failed (frontend not 200, or /api still 502) within 100s"
           exit 1
 
       - name: Roll back to previous images on failure
@@ -186,6 +203,11 @@ jobs:
           ZEROMAIL_FRONTEND_IMAGE="${previous_frontend}" \
           ZEROMAIL_ADMIN_IMAGE="${previous_admin}" \
             docker compose -f docker/docker-compose.yml up -d --no-build api worker frontend admin
+          # Rolled-back api is a freshly recreated container with a new IP — reload the edge proxy
+          # too, or /api + login would 502 even though the rollback itself succeeded.
+          docker exec nginx-proxy-manager nginx -s reload >/dev/null 2>&1 \
+            && echo "edge proxy reloaded for the rolled-back api IP" \
+            || echo "::warning::nginx reload after rollback failed — /api may 502 until reloaded"
           for attempt in {1..60}; do
             if docker exec zeromail-api curl -fsS http://localhost:8080/actuator/health/readiness >/dev/null 2>&1; then
               echo "✓ rollback healthy — prod restored to the previous release (this run stays RED so the failed deploy is investigated)"
