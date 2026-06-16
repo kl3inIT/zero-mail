@@ -1,5 +1,6 @@
 package com.zeromail.worker;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.WatchRequest;
 import com.google.api.services.gmail.model.WatchResponse;
@@ -94,19 +95,77 @@ public class GmailWatchScheduler {
                     gmailConnectionId);
         } catch (Exception watchRenewalException) {
             int failures = connectionService.incrementWatchFailure(mailboxRef);
+            String failureType = watchFailureClassName(watchRenewalException);
+            GoogleFailureDetail googleDetail = extractGoogleFailureDetail(watchRenewalException);
             if (failures >= FAILURE_THRESHOLD) {
                 connectionService.markWatchUnhealthy(mailboxRef);
                 log.warn(
-                        "event=gmail_watch_unhealthy_threshold tenantId={} gmailConnectionId={}",
-                        tenantId,
-                        gmailConnectionId);
-            } else {
-                log.warn(
-                        "event=gmail_watch_renewal_failed tenantId={} gmailConnectionId={} attempt={}",
+                        "event=gmail_watch_unhealthy_threshold tenantId={} gmailConnectionId={}"
+                                + " failures={} failureType={} httpStatus={} googleReason={}",
                         tenantId,
                         gmailConnectionId,
-                        failures);
+                        failures,
+                        failureType,
+                        googleDetail.statusCode(),
+                        googleDetail.reason());
+            } else {
+                log.warn(
+                        "event=gmail_watch_renewal_failed tenantId={} gmailConnectionId={} attempt={}"
+                                + " failureType={} httpStatus={} googleReason={}",
+                        tenantId,
+                        gmailConnectionId,
+                        failures,
+                        failureType,
+                        googleDetail.statusCode(),
+                        googleDetail.reason());
             }
         }
+    }
+
+    private static String watchFailureClassName(Exception watchRenewalException) {
+        Throwable cause = watchRenewalException.getCause();
+        Throwable failureToLog = cause == null ? watchRenewalException : cause;
+        return failureToLog.getClass().getSimpleName();
+    }
+
+    /**
+     * Surfaces the Gmail API HTTP status and Google error reason (e.g. {@code
+     * insufficientPermissions}, {@code rateLimitExceeded}) for a failed {@code users.watch} renewal
+     * so a persistently unhealthy mailbox is diagnosable from logs. Status code and reason are
+     * technical metadata, not email content, so logging them honours the privacy convention; the
+     * Google error message (which can echo request input) is deliberately not logged.
+     */
+    private record GoogleFailureDetail(int statusCode, String reason) {}
+
+    private static GoogleFailureDetail extractGoogleFailureDetail(Throwable failure) {
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth < 5) {
+            if (current instanceof GoogleJsonResponseException googleResponseException) {
+                return new GoogleFailureDetail(
+                        googleResponseException.getStatusCode(),
+                        extractGoogleReason(googleResponseException));
+            }
+            current = current.getCause();
+            depth++;
+        }
+        return new GoogleFailureDetail(-1, "none");
+    }
+
+    private static String extractGoogleReason(GoogleJsonResponseException googleResponseException) {
+        try {
+            var errorDetails = googleResponseException.getDetails();
+            if (errorDetails != null
+                    && errorDetails.getErrors() != null
+                    && !errorDetails.getErrors().isEmpty()) {
+                String firstReason = errorDetails.getErrors().get(0).getReason();
+                if (firstReason != null && !firstReason.isBlank()) {
+                    return firstReason;
+                }
+            }
+        } catch (RuntimeException reasonExtractionFailure) {
+            return "unparseable";
+        }
+        return "unknown";
     }
 }
