@@ -247,8 +247,22 @@ public class GmailApiClientFactory {
                     Sensitive.of(refreshedAccessToken),
                     Instant.now().plusSeconds(expiresInSeconds - 60L));
         }
-        if (response.statusCode() == 400 && response.body().contains("invalid_grant")) {
-            throw new InvalidGrantException("OAuth token revoked");
+        if (response.statusCode() == 400 || response.statusCode() == 401) {
+            String responseBody = response.body();
+            if (responseBody.contains("invalid_grant")) {
+                throw new InvalidGrantException("OAuth token revoked");
+            }
+            if (responseBody.contains("invalid_client")
+                    || responseBody.contains("unauthorized_client")) {
+                // Refresh tokens are bound to the OAuth client that issued them. After a GCP
+                // project / OAuth-client switch, tokens minted by the old client can never be
+                // refreshed by the new client — a permanent failure only re-consent fixes. Treat
+                // it like a revoked grant so the mailbox is marked disconnected (and dropped from
+                // the watch-renewal loop) instead of being retried every minute forever.
+                throw new InvalidGrantException(
+                        "OAuth client mismatch — refresh token was issued by a different OAuth"
+                                + " client; user must reconnect Gmail");
+            }
         }
         throw new IOException("Token refresh failed with status: " + response.statusCode());
     }
