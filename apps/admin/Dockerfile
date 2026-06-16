@@ -58,11 +58,12 @@ RUN pnpm --filter @zeromail/admin run build
 # ============================================================================
 FROM nginx:1.30-alpine AS runner
 
-# Upgrade libxml2 to patch CVE-2026-6732 (DoS via crafted XSD); the base
-# Alpine still ships the vulnerable 2.13.9-r0. Patches the scan surface even
-# though the static SPA never parses XSD.
+# Upgrade libxml2 (CVE-2026-6732, DoS via crafted XSD; base Alpine ships the
+# vulnerable 2.13.9-r0) and OpenSSL libssl3/libcrypto3 (CVE-2026-45447 high + a
+# batch of medium/low; base Alpine ships 3.5.6-r0, fixed in 3.5.7-r0). Patches the
+# scan surface even though the static SPA never parses XSD or terminates TLS.
 RUN apk add --no-cache tini curl && \
-    apk upgrade --no-cache libxml2 && \
+    apk upgrade --no-cache libxml2 libssl3 libcrypto3 && \
     rm -rf /var/cache/apk/*
 
 # Create non-root user. nginx:alpine already creates the "nginx" user (uid 101);
