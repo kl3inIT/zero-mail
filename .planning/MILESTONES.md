@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.3 Gmail Workspace Foundation (Shipped: 2026-06-16)
+
+**Phases completed:** 2 phases (10, 11), 12 plans, ~40 tasks
+**Requirements:** 43/43 v1.3 requirements complete
+**Verification:** `11-UAT.md` — 10/10 PASS, live-verified 2026-06-15 with two real Gmail mailboxes (`dathip04` + `zeromail.platfom`)
+
+**Key accomplishments:**
+
+- **Phase 10 — Gmail mailbox foundation:** migrated the single-Gmail-per-tenant invariant (`gmail_connections.tenant_id` unique) into a workspace-owned multi-Gmail mailbox model (Liquibase 119) with backfill-to-primary preserving encrypted tokens/watch/history; a mailbox-aware `GmailApiClientFactory.buildClientForMailbox` (cache re-keyed to `gmailConnectionId`, tenant adapter `@Deprecated`); an ownership seam (`resolveOwnedConnectionOrThrow` 404/409); an OAuth intent split (first-login vs add-mailbox vs reconnect); and the connected-accounts REST surface (list / set-primary / disconnect / add / reconnect).
+- **Phase 11 — Mailbox-scoped ingestion, automation, UI:** threaded `gmail_connection_id` through Pub/Sub routing, observed/projection/event keys, per-connection history cursors, mailbox-owned rules + copy-rules, triage dispatch, the outbound send gateway, and `triage_audit` source/executing provenance (Liquibase 120-127, incl. global active-email uniqueness); introduced `MailboxContext` ScopedValue + `MailboxBindingFilter` + active-mailbox endpoint with cross-account isolation tests + an ArchUnit `findByTenantId` ban; and surfaced it all in the web app — AccountMenu mailbox switcher (separate from workspace identity), `ActiveMailboxBadge`, copy-rules dialog, and regenerated OpenAPI/feature-API types.
+- **Workspace-shared vs mailbox-isolated boundary** locked: credits/billing/provider/BYOK/global safety/templates stay workspace-shared; Gmail OAuth/watch/history/inbox/rules/actions/outbound/audit/display identity are mailbox-isolated.
+- **Live UAT (10/10)** with two real Gmail mailboxes proved end-to-end isolation: switch refetch, inbox isolation, copy-rules 0→8 disabled, confirmed-send COMMITTED to the correct Gmail Sent (real thread `19eca1aec7af9ef1`), audit provenance, and privacy log hygiene (0 emails in 908 log lines). Two bugs found & fixed in-session: a duplicate-add OAuth 500 (→ friendly redirect) and a projection-read cross-mailbox leak (blocker).
+
+**Known Deferred Items at close:** OPS-FUT-01..03 (shadow-mode toggle, paste-import, protect/escalate per-entry); OPS-FUT-04 (hostile-corpus eval, Grafana dashboards, CASA refresh, LAUNCH-GO-NOGO, **formal GA tag** — v1.3 ships without one); team collaboration (TEAM-01..06); Zalo OA / CRM (CHAN-01..03); Microsoft/Outlook. Plus carry-forward UAT caveats (T8 visual From-check, source==executing audit labels) noted in `milestones/v1.3-ROADMAP.md`.
+
+---
+
 ## v1.2 Admin Console + User Settings UI (Shipped: 2026-06-01)
 
 **Phases completed:** 4 phases (8, 08.1, 9, + 08-bulk-unsubscribe-campaign), 28 plans, 62 tasks

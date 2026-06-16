@@ -2,46 +2,46 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Gmail Workspace Foundation
-status: executing
-stopped_at: Completed 11-05-PLAN.md
-last_updated: "2026-06-09T19:47:43.000Z"
-last_activity: 2026-06-09 -- Phase 11 Plan 11-05 active mailbox scope complete
+status: milestone-complete
+stopped_at: v1.3 milestone shipped (Phases 10-11 complete, 43/43 requirements)
+last_updated: "2026-06-16T05:00:00.000Z"
+last_activity: 2026-06-16 -- v1.3 Gmail Workspace Foundation milestone archived and tagged
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-11)
+See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** Phase 11 — mailbox-scoped-ingestion-automation-ui-and-verification
+**Current focus:** Planning next milestone (v1.3 shipped 2026-06-16; start via `/gsd-new-milestone`).
 
 ## Current Position
 
-Phase: 11
-Plan: 11-06
-Status: Ready to execute next plan
-Last activity: 2026-06-09 -- Phase 11 Plan 11-05 active mailbox scope complete
+Milestone: v1.3 Gmail Workspace Foundation — SHIPPED 2026-06-16
+Phase: 11 complete (final phase of v1.3)
+Status: Milestone complete; awaiting next-milestone planning
+Last activity: 2026-06-16 -- v1.3 archived (milestones/v1.3-ROADMAP.md + v1.3-REQUIREMENTS.md), tagged v1.3
 
 ## Current Milestone Roadmap
 
-**v1.3 — Gmail Workspace Foundation** is active and roadmapped.
+**v1.3 — Gmail Workspace Foundation** shipped 2026-06-16. Phases 10-11 complete, 43/43 requirements complete, live-verified via 11-UAT (10/10, two real Gmail mailboxes).
 
-Scope: production multi-Gmail connection management, workspace-shared credits/provider/safety settings, mailbox-isolated inbox/rules/triage/audit/outbound execution, and workspace-ready foundations from SEED-005 without full team collaboration. Requirements and roadmap are now written.
+Scope delivered: production multi-Gmail connection management, workspace-shared credits/provider/safety settings, mailbox-isolated inbox/rules/triage/audit/outbound execution, and workspace-ready foundations from SEED-005 without full team collaboration.
 
-See `.planning/PROJECT.md` for approved milestone framing, `.planning/REQUIREMENTS.md` for 43 mapped requirements, `.planning/research/V1.3-CODE-RESEARCH.md` for code research, and `.planning/ROADMAP.md` for the 2-phase milestone plan.
+Archived: `.planning/milestones/v1.3-ROADMAP.md` + `.planning/milestones/v1.3-REQUIREMENTS.md`. Full framing in `.planning/PROJECT.md`. Next milestone scope is defined via `/gsd-new-milestone`.
 
 | Phase | Status | Goal |
 |-------|--------|------|
 | 10. Gmail Mailbox Foundation and Account Management | Complete | Convert one-Gmail-per-tenant into workspace-owned multi-Gmail mailbox model with shared workspace settings and isolated mailbox state. |
-| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | In Progress | Route ingestion/projection/rules/outbound/audit through active mailbox scope and surface fast mailbox switching in the app. |
+| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | Complete | Route ingestion/projection/rules/outbound/audit through active mailbox scope and surface fast mailbox switching in the app. |
 
 ## Performance Metrics
 

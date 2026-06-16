@@ -157,6 +157,48 @@
 
 ---
 
+## Milestone: v1.3 — Gmail Workspace Foundation
+
+**Shipped:** 2026-06-16
+**Phases:** 2 (10, 11) | **Plans:** 12 | **Tasks:** ~40
+**Requirements:** 43/43 complete
+**Verification:** 11-UAT 10/10 PASS, live with two real Gmail mailboxes (2026-06-15)
+
+### What Was Built
+
+- **Phase 10 — Gmail mailbox foundation:** Liquibase 119 migration off the single-Gmail-per-tenant invariant (drop tenant-unique, add duplicate-active + primary partial indexes, backfill-to-primary preserving encrypted tokens/watch/history); mailbox-aware `GmailApiClientFactory.buildClientForMailbox` (cache re-keyed to `gmailConnectionId`, tenant adapter `@Deprecated` + ArchUnit allow-list); ownership seam `resolveOwnedConnectionOrThrow` (404/409); OAuth intent split (first-login vs add vs reconnect); connected-accounts REST (list / set-primary / disconnect / add / reconnect).
+- **Phase 11 — Mailbox-scoped operation:** Liquibase 120-127 threading `gmail_connection_id` through Pub/Sub routing, observed/projection/event keys, per-connection history cursors, idempotency/template keys, `triage_audit` source/executing provenance, and global active-email uniqueness; mailbox-owned rules + copy-rules (clones disabled); `MailboxContext` ScopedValue + `MailboxBindingFilter` + active-mailbox endpoint + cross-account isolation tests + ArchUnit `findByTenantId` ban; web AccountMenu switcher (separate from workspace identity), `ActiveMailboxBadge`, copy-rules dialog, regenerated OpenAPI/feature-API types.
+
+### What Worked
+
+- **Wave 0 RED scaffolding + the two-CONNECTED-mailbox fixture** turned cross-account isolation into an executable contract drained incrementally across Waves 1-5.
+- **`MailboxContext` ScopedValue mirrored the proven `TenantContext` pattern** — the ownership boundary (shared workspace vs isolated mailbox) became an ArchUnit-enforced compile-time invariant, not a convention.
+- **Live UAT with two real Gmail mailboxes was the decisive gate.** It found two bugs that green CI missed and confirmed end-to-end isolation, confirmed-send-from-correct-mailbox, and clean privacy logs.
+
+### What Was Inefficient
+
+- **Tracking-doc drift again (same failure mode as v1.2).** STATE/ROADMAP/REQUIREMENTS froze at 2026-06-09 (Plan 11-05) while Plan 11-06 shipped 2026-06-10 and UAT live-verified 2026-06-15. Milestone close had to reconcile 9 "pending" requirements that were actually complete — the close was a reconciliation pass, not a checkpoint.
+- **The 11-05 cross-account isolation test mocked the live Gmail path, so it missed the projection-read leak (T5, a blocker).** A unit/integration test that mocks the exact branch the bug lives in gives false confidence; the real-DB regression test added during UAT is what actually pins it.
+
+### Patterns Established
+
+- **Mirror `TenantContext` for any new request-scoped isolation axis** (ScopedValue + binding filter after tenant/before Hibernate + ownership-revalidating resolver + ArchUnit ban on the unscoped lookup).
+- **Cross-cutting isolation needs a real-DB regression test, not a mock of the isolated path** — mocking the branch under test hides leaks.
+- **Live multi-account UAT is mandatory before closing an isolation milestone** — CI green is necessary but not sufficient.
+
+### Key Lessons
+
+- **Update tracking docs at plan/UAT close, not at milestone close.** Two milestones running (v1.2, v1.3) ended in a reconciliation pass because docs lagged execution. Couple REQUIREMENTS flip + STATE update to plan completion and UAT sign-off.
+- **GA tag has now slipped three milestones (v1.1 → v1.2 → v1.3).** Hostile-corpus eval, Grafana, CASA refresh, and LAUNCH-GO-NOGO keep deferring. OPS-FUT-04 should be scoped as its own milestone, not a perpetual carry-forward.
+- **A test that mocks the path it's meant to protect is a liability.** Prefer real-DB / real-path regression tests for isolation invariants.
+
+### Cost Observations
+
+- **Sessions:** multi-session across Phases 10-11 + a multi-day live UAT (2026-06-13 → 2026-06-15); model mix not instrumented.
+- **Notable:** the highest-value verification cost was manual live UAT with two real Gmail grants, which caught the projection leak and duplicate-add 500 that automated suites missed.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -165,6 +207,8 @@
 |-----------|----------|--------|------------|
 | v1.0 | ~30+ | 17 | Established Wave 0 RED test scaffolding, Spring Modulith JDBC event spine, ArchUnit safety floor, single-VPS deployment baseline, Vietnamese-default i18n. |
 | v1.1 | ~5 | 1 (Phase 7 of 2) | Single-phase end-to-end coherent capability (backend + frontend + executor + arch + UI in one phase). Discovered spec-phase as proper scope-defer gate. Brand palette shift PR #40 surfaced as cross-cutting impact mid-milestone. |
+| v1.2 | multi | 4 (8, 08.1, 9, +bonus) | Admin console on a second SecurityFilterChain + separate `apps/admin` SPA; privacy-by-ArchUnit extended to admin surface. Severe planning drift (388-commit / 2-minor tag inflation) made close an archaeology exercise. |
+| v1.3 | multi | 2 (10, 11) | Second request-scoped isolation axis (`MailboxContext`) mirroring `TenantContext`; multi-Gmail workspace-shared / mailbox-isolated boundary. Live two-mailbox UAT caught a projection-read leak CI missed. Tracking-doc drift recurred. |
 
 ### Cumulative Quality
 
@@ -174,7 +218,9 @@
 
 ### Top Lessons (Verified Across Milestones)
 
-*(Need v1.1 to cross-validate. Track these as candidates:)*
-1. Wave 0 RED scaffolding catches contract drift early.
-2. Trust story must be CI-gated, not document-only.
-3. Phase verifier + REQUIREMENTS.md flip should be coupled to avoid orphan requirements.
+1. **Wave 0 RED scaffolding catches contract drift early.** (v1.0, v1.3 — confirmed across phases.)
+2. **Trust story must be CI-gated, not document-only** — ArchUnit + grep + privacy sweeps. (v1.0–v1.3, extended to admin and mailbox isolation axes.)
+3. **Phase verifier + REQUIREMENTS.md flip should be coupled to avoid orphan requirements.** Still uncoupled — drift caused a reconciliation close in **both v1.2 and v1.3** (verified recurring failure mode, now top remediation candidate).
+4. **Mirror the proven request-scoped isolation pattern (`TenantContext`) for new isolation axes** rather than inventing one. (v1.3 `MailboxContext`.)
+5. **Isolation invariants need real-DB / real-path regression tests; mocking the protected path hides leaks.** (v1.3 projection-read leak.)
+6. **GA tag discipline keeps slipping (v1.1 → v1.2 → v1.3).** Scope OPS-FUT-04 (eval + Grafana + CASA + LAUNCH-GO-NOGO + GA tag) as its own milestone, not a perpetual carry-forward.

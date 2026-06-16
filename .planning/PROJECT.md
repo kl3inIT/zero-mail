@@ -10,6 +10,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - v1.0 MVP — `v1.0.0-rc1` tagged 2026-05-15.
 - v1.1 Email assistant chat — `v1.1` tagged 2026-05-19 (Phase 7 only).
 - v1.2 Admin Console + User Settings UI — `v1.2` tagged 2026-06-01 (Phases 8, 08.1, 9, + bonus 08-bulk-unsubscribe campaign; 70/73 requirements complete, 3 deferred to v1.3; no GA tag this milestone).
+- v1.3 Gmail Workspace Foundation — `v1.3` tagged 2026-06-16 (Phases 10-11; 43/43 requirements complete; multi-Gmail workspace-shared, mailbox-isolated foundation; live-verified via 11-UAT 10/10 with two real Gmail mailboxes; no GA tag this milestone).
 
 - **Backend:** ~21 phases (v1.0 + Phase 7 + v1.2's 8/08.1/9/08-bulk-unsubscribe), Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
 - **Admin:** NEW separate `apps/admin` Vite + React 19 SPA on `admin.zeromail.com` — WebAuthn passkey auth (dedicated `@Order(1)` SecurityFilterChain), HMAC-chained append-only audit, master-key management for 6 LLM providers, curated catalog with Sync-from-`/models`, and metadata-only tenant/queue/spend dashboards.
@@ -18,11 +19,11 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Trust posture:** v1.2 Phase 08.1 replaced the v1.0/v1.1 hard ban on rule-triggered outbound sends with one default-ON global `Auto-send rules` setting, safety/rate/idempotency gates, draft fallback, audit, and a single ArchUnit-locked outbound gateway boundary (chat + rules runtime both route through it). No long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer; admin surfaces guarded by ArchUnit + `AdminResponseBodyBanFilter`.
 - **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012). v1.2 ships **without** a GA tag — hostile-corpus eval, Grafana dashboards, CASA refresh, visual refresh, and LAUNCH-GO-NOGO all deferred to v1.3+.
 
-## Last Shipped Milestone: v1.2 — Admin Console + User Settings UI ✅ (2026-06-01)
+## Last Shipped Milestone: v1.3 — Gmail Workspace Foundation ✅ (2026-06-16)
 
-**Delivered:** Admin console foundation (Phase 8), Inbox Zero-style examples/actions with user-enabled outbound automation (Phase 08.1), the user Settings UI on the admin-curated catalog (Phase 9), and a bonus bulk-unsubscribe campaign phase. 70/73 requirements complete. No GA tag this milestone — visual refresh, hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, and the formal GA tag deferred to v1.3+.
+**Delivered:** Multi-Gmail workspace foundation (Phase 10 — Liquibase migration off the single-Gmail-per-tenant invariant, mailbox-aware Gmail client + ownership seam + OAuth intent split + connected-accounts REST) and mailbox-scoped operation (Phase 11 — ingestion/projection/rules/triage/outbound/audit all threaded through `gmail_connection_id`, `MailboxContext` ScopedValue + binding filter + cross-account isolation tests, and the web AccountMenu switcher + copy-rules + active-mailbox badges). 43/43 requirements complete; live-verified via 11-UAT (10/10, two real Gmail mailboxes). No GA tag this milestone.
 
-**Current milestone:** v1.3 Gmail Workspace Foundation. Phase 10 completed on 2026-06-09, delivering the backend multi-Gmail mailbox foundation and account-management API surface. Phase 11 is next: mailbox-scoped ingestion, automation, UI switching, and end-to-end verification.
+**Next milestone:** planning. Open carry-forward candidates: OPS-FUT-01..03 (shadow-mode toggle, paste-import, protect/escalate), OPS-FUT-04 (hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, formal GA tag), team collaboration (TEAM-01..06), and the Zalo OA / CRM channel expansion (CHAN-01..03).
 
 <details>
 <summary>v1.2 target features (shipped)</summary>
@@ -160,11 +161,19 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 **Bulk unsubscribe** *(v1.2 bonus)*
 - ✓ RFC 8058 one-click + RFC 6068 mailto send-as-self gateways, throttled SKIP LOCKED dispatch, full REST surface (UNS-01..07, v1.2)
 
+**Gmail Workspace Foundation** *(v1.3)*
+- ✓ Workspace-owned multi-Gmail mailbox model — migration off single-Gmail-per-tenant, backfill-to-primary, stable mailbox id, workspace-shared vs mailbox-isolated ownership boundary (WSP-01..07, v1.3)
+- ✓ Connect/view/label/reconnect/disconnect/set-primary multiple Gmail accounts; duplicate-active prevention; OAuth intent split (GMA-01..07, v1.3)
+- ✓ Mailbox-scoped ingestion — Pub/Sub (tenant,mailbox) routing, per-connection cursors, mailbox-keyed observed/projection/idempotency, active-mailbox-default reads (ING-01..06, v1.3)
+- ✓ Mailbox-owned rules + copy-rules, mailbox-aware triage/writes/outbound send, source/executing audit provenance (AUTO-01..06, AUD-01..03, v1.3)
+- ✓ `MailboxContext` ScopedValue + binding filter, cross-account isolation tests, ArchUnit `findByTenantId` ban, AUD-07-clean logs (AUD-04..07, v1.3)
+- ✓ Web AccountMenu mailbox switcher, active-mailbox badges, copy-rules dialog, regenerated OpenAPI/feature-API types, live 11-UAT 10/10 (UX-01..06, VER-01..04, v1.3)
+
 ### Active
 
-**v1.3 Gmail Workspace Foundation** (started 2026-06-07). Scope: multi-Gmail production support inside one workspace, mailbox-isolated Gmail automation with fast active-mailbox switching, workspace-shared credits/provider/safety settings, and workspace-ready foundations from SEED-005 without full team collaboration. Requirements and 2-phase roadmap are defined in `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md`.
+*Next milestone: planning (start via `/gsd-new-milestone`).*
 
-Carry-forward candidates not automatically included unless roadmaped: SET-BEHV-05 (shadow-mode toggle), SET-SAFE-02 (paste-import), SET-SAFE-03 (protect/escalate mode), VISUAL-REFRESH-01..06 (purple palette alignment), EVAL-01..05 (hostile-corpus aiEval), OPS-DASH-01..04 (Grafana), CASA-01, and formal GA tag discipline. Live outbound-send UAT (08.1 test #6) still needs a controlled Gmail tenant.
+Carry-forward candidates not automatically included unless roadmapped: OPS-FUT-01 / SET-BEHV-05 (shadow-mode toggle), OPS-FUT-02 / SET-SAFE-02 (paste-import), OPS-FUT-03 / SET-SAFE-03 (protect/escalate per-entry mode); OPS-FUT-04 — hostile-corpus aiEval, Grafana ops dashboards, CASA evidence refresh, LAUNCH-GO-NOGO, and the **formal GA tag** (still outstanding after three milestones); VISUAL-REFRESH-01..06 (purple palette alignment of user pages); team collaboration (TEAM-01..06); and the Zalo OA / CRM channel expansion (CHAN-01..03).
 
 <details>
 <summary>Prior Active note (pre-v1.2-close)</summary>
@@ -235,7 +244,11 @@ Carry-forward candidates not automatically included unless roadmaped: SET-BEHV-0
 | WebAuthn passkey admin auth, not Google OAuth (v1.2 pivot) | Decouple admin identity from Google IdP; hardware-bound passkey + separate `admin_users` table; user-side RBAC removed entirely | ✓ Good — ADMIN-01..10 shipped; two-chain isolation ArchUnit-enforced |
 | Separate `apps/admin` Vite SPA on `admin.zeromail.com`, not a Next.js route group | Admin needs no SEO/SSR; DNS subdomain is the cognitive cue; admin schema types stay out of the public bundle | ✓ Good — shipped v1.2; `zeromail.com/admin` returns 404 |
 | Admin-curated LLM catalog with manual-confirm Sync-from-`/models` | Auto-apply is an anti-feature (providers ship preview/deprecated models); admin reviews diff before confirm | ✓ Good — CAT-01..07 shipped v1.2 |
-| No GA tag at v1.2 close | Hostile-corpus eval, visual refresh, Grafana, CASA refresh, LAUNCH-GO-NOGO not yet done; ship the capability, defer the GA gate | — Pending — v1.3 owns the GA tag |
+| No GA tag at v1.2 close | Hostile-corpus eval, visual refresh, Grafana, CASA refresh, LAUNCH-GO-NOGO not yet done; ship the capability, defer the GA gate | ⚠️ Revisit — GA still deferred at v1.3 close; OPS-FUT-04 now owns the GA gate |
+| Copy Inbox Zero mailbox-id isolation, not its account model (v1.3) | Stable `gmail_connections.id` scopes tokens/watch/rules/actions/audit/UI; reject IZ's user-owned account model, Next/Prisma arch, all-account UX, and raw-email logging | ✓ Good — WSP/GMA/ING/AUTO shipped v1.3, live-verified 11-UAT 10/10 |
+| Workspace-shared vs mailbox-isolated ownership boundary (v1.3) | Credits/billing/provider/safety/templates shared; OAuth/watch/inbox/rules/actions/audit isolated; enforced by `MailboxContext` ScopedValue + binding filter + ArchUnit `findByTenantId` ban | ✓ Good — WSP-07 + AUD-05/06 ArchUnit + cross-account isolation green |
+| Global active-email uniqueness: one CONNECTED Gmail → one tenant (v1.3) | Unambiguous Pub/Sub routing; cross-tenant duplicate surfaced via `DuplicateActiveMailboxException.Scope` + friendly login codes (changeset 127) | ✓ Good — GMA-06 shipped; UAT T3 duplicate-add 500 fixed to friendly redirect |
+| Mailbox-owned rules; cross-mailbox reuse = explicit copy-rules (clones disabled) (v1.3) | Never a silent all-mailbox runtime rule; copy clones When/Then disabled-for-review into the active mailbox | ✓ Good — AUTO-01 shipped; UAT T7 copy 0→8 disabled |
 | Prepaid credits, pay-as-you-go | Aligns revenue with LLM cost; avoids freemium abuse | ✓ Good — BILL-01..07 shipped |
 | No long-term body/prompt/completion/embedding storage | Privacy is #1 install blocker | ✓ Good — repo-wide privacy sweeps green |
 | Next.js frontend separate module | Open frontend talent pool; clean API boundary | ✓ Good — WEB-01..04 shipped |
@@ -270,4 +283,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-09 after Phase 10 completion (backend multi-Gmail mailbox foundation complete; Phase 11 mailbox-scoped ingestion/automation/UI next)*
+*Last updated: 2026-06-16 after v1.3 Gmail Workspace Foundation milestone (Phases 10-11 shipped; 43/43 requirements complete; multi-Gmail workspace-shared, mailbox-isolated foundation live-verified via 11-UAT 10/10; next milestone in planning)*
