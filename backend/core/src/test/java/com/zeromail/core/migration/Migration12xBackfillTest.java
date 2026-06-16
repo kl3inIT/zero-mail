@@ -50,10 +50,11 @@ class Migration12xBackfillTest extends PostgresContainerTest {
                         new ColumnExpectation("mail_message_observed", "gmail_connection_id"),
                         new ColumnExpectation("gmail_inbox_projection", "gmail_connection_id"),
                         new ColumnExpectation("gmail_inbox_sync_state", "gmail_connection_id"),
-                        new ColumnExpectation("processing_job", "gmail_connection_id"),
-                        new ColumnExpectation("rules", "gmail_connection_id"),
+                        // processing_job.gmail_connection_id is intentionally NULLABLE (changeset
+                        // 128): it also holds tenant-scoped and admin-global jobs with no mailbox.
                         new ColumnExpectation("triage_audit", "source_mailbox_id"),
-                        new ColumnExpectation("triage_audit", "executing_mailbox_id"));
+                        new ColumnExpectation("triage_audit", "executing_mailbox_id"),
+                        new ColumnExpectation("rules", "gmail_connection_id"));
 
         for (ColumnExpectation requiredColumn : requiredColumns) {
             assertThat(columnNullability(requiredColumn.tableName(), requiredColumn.columnName()))

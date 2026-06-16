@@ -232,6 +232,16 @@ class RuleTemplateMaterializationServiceTest extends PostgresContainerTest {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(
                 "insert into tenants(id, display_name) values (?, ?)", tenantId, displayName);
+        // Phase 11: template materialization resolves the tenant's primary mailbox, so a CONNECTED
+        // primary gmail_connections row must exist before materialize* is called.
+        jdbcTemplate.update(
+                """
+                insert into gmail_connections(id, tenant_id, google_email, status, is_primary)
+                values (?, ?, ?, 'CONNECTED', true)
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                "rules-template-" + tenantId + "@example.test");
         return tenantId;
     }
 

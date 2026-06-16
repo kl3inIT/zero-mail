@@ -189,7 +189,8 @@ class TriageOutboundRuntimeGateTest {
                                 List.of("INBOX", "CATEGORY_PROMOTIONS"),
                                 List.of("promotions"),
                                 false));
-        when(ruleManagementService.listEnabledForExecution(TENANT_ID)).thenReturn(List.of());
+        when(ruleManagementService.listEnabledForExecution(eq(TENANT_ID), any(UUID.class)))
+                .thenReturn(List.of());
 
         withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
 
@@ -212,7 +213,8 @@ class TriageOutboundRuntimeGateTest {
                         labelAction(),
                         triageInput(
                                 "sender@example.com", List.of("INBOX"), List.of("personal"), true));
-        when(ruleManagementService.listEnabledForExecution(TENANT_ID)).thenReturn(List.of());
+        when(ruleManagementService.listEnabledForExecution(eq(TENANT_ID), any(UUID.class)))
+                .thenReturn(List.of());
 
         withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
 
@@ -324,7 +326,7 @@ class TriageOutboundRuntimeGateTest {
                 .thenReturn(TenantService.TenantTriageSettings.defaults());
         when(triageRuleEvaluationInputFactory.fetch(any(MailMessageObserved.class)))
                 .thenReturn(Optional.of(triageRuleEvaluationInput));
-        when(ruleManagementService.listEnabledForExecution(TENANT_ID))
+        when(ruleManagementService.listEnabledForExecution(eq(TENANT_ID), any(UUID.class)))
                 .thenReturn(
                         List.of(
                                 new EnabledRuleSnapshot(

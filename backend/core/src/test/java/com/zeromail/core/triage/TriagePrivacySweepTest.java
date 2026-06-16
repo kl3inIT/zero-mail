@@ -1,6 +1,7 @@
 package com.zeromail.core.triage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -212,7 +213,9 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
         Gmail.Users.Messages messages = mock(Gmail.Users.Messages.class);
         Gmail.Users.Messages.Get messageGetRequest = mock(Gmail.Users.Messages.Get.class);
 
-        when(gmailApiClientFactory.buildClientForTenant(tenantId)).thenReturn(gmail);
+        // Phase 11: triage input is fetched through the mailbox-scoped client, not the legacy
+        // tenant-only lookup.
+        when(gmailApiClientFactory.buildClientForMailbox(any(), any())).thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.messages()).thenReturn(messages);
         when(messages.get("me", GMAIL_MESSAGE_ID)).thenReturn(messageGetRequest);

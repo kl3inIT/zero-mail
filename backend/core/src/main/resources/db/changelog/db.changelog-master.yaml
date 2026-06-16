@@ -365,3 +365,6 @@ databaseChangeLog:
   - include:
       file: changes/120-llm-call-audit-call-site-add-needs-reply-digest.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/128-processing-job-mailbox-nullable.yaml
+      relativeToChangelogFile: true

@@ -20,7 +20,9 @@ class AiCostQueryService7DayTest extends PostgresContainerTest {
 
     @BeforeEach
     void cleanTables() {
-        jdbcTemplate.execute("TRUNCATE TABLE tenants RESTART IDENTITY CASCADE");
+        // gmail_connections has no FK to tenants, so CASCADE does not reach it; truncate it
+        // explicitly or the global active-email unique (changeset 127) collides on re-seed.
+        jdbcTemplate.execute("TRUNCATE TABLE tenants, gmail_connections RESTART IDENTITY CASCADE");
     }
 
     @Test

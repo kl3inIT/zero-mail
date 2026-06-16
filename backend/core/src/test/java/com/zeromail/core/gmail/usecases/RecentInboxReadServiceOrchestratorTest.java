@@ -97,7 +97,8 @@ class RecentInboxReadServiceOrchestratorTest {
                         exception ->
                                 ((RecentInboxUnavailableException) exception).reason()
                                         == RecentInboxUnavailableReason.NO_READ_GRANT);
-        verify(inboxBackfillEnqueuer).enqueueIfNotPending(MAILBOX_REF);
+        verify(inboxBackfillEnqueuer)
+                .enqueueIfNotPending(MAILBOX_REF.tenantId(), MAILBOX_REF.gmailConnectionId());
         verifyNoInteractions(inboxProjectionReadService);
     }
 

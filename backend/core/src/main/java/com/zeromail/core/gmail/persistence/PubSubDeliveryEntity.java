@@ -51,11 +51,6 @@ public class PubSubDeliveryEntity extends AbstractTenantOwnedEntity {
         this.payload = payload;
     }
 
-    public PubSubDeliveryEntity(
-            UUID id, UUID tenantId, String pubsubMessageId, Long historyId, String payload) {
-        this(id, tenantId, null, pubsubMessageId, historyId, payload);
-    }
-
     public UUID getGmailConnectionId() {
         return gmailConnectionId;
     }

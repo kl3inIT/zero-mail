@@ -16,6 +16,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 class PubSubDeliveryEntityTest extends PostgresContainerTest {
 
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-4000-8000-0000000000c1");
+
     @Autowired JdbcTemplate jdbc;
     @Autowired PubSubDeliveryRepository deliveries;
 
@@ -31,6 +34,7 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
                                         new PubSubDeliveryEntity(
                                                 id,
                                                 tenantId,
+                                                GMAIL_CONNECTION_ID,
                                                 "pubsub-1",
                                                 123L,
                                                 "{\"messageId\":\"pubsub-1\"}")));
@@ -54,6 +58,7 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
                                     new PubSubDeliveryEntity(
                                             UUID.randomUUID(),
                                             tenantId,
+                                            GMAIL_CONNECTION_ID,
                                             "pubsub-unique",
                                             1L,
                                             "{}"));
@@ -63,6 +68,7 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
                                                             new PubSubDeliveryEntity(
                                                                     UUID.randomUUID(),
                                                                     tenantId,
+                                                                    GMAIL_CONNECTION_ID,
                                                                     "pubsub-unique",
                                                                     2L,
                                                                     "{}")))

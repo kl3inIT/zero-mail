@@ -1293,7 +1293,8 @@ public class RecentInboxReadService {
      */
     private void enqueueBackfillIfFirstFetch(Optional<MailboxRef> mailboxRef) {
         if (mailboxRef.isPresent() && needsFullSyncFirst(mailboxRef.get())) {
-            inboxBackfillEnqueuer.enqueueIfNotPending(mailboxRef.get());
+            inboxBackfillEnqueuer.enqueueIfNotPending(
+                    mailboxRef.get().tenantId(), mailboxRef.get().gmailConnectionId());
         }
     }
 }

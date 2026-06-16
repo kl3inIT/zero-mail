@@ -1,6 +1,5 @@
 package com.zeromail.core.inbox.usecases;
 
-import com.zeromail.core.gmail.gateway.MailboxRef;
 import com.zeromail.core.inbox.domain.InboxSyncStatus;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
 import java.util.Objects;
@@ -43,10 +42,9 @@ public class InboxBackfillEnqueuer {
      * true if a new job was inserted, false if dedup short-circuited.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public boolean enqueueIfNotPending(MailboxRef mailboxRef) {
-        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
-        UUID tenantId = mailboxRef.tenantId();
-        UUID gmailConnectionId = mailboxRef.gmailConnectionId();
+    public boolean enqueueIfNotPending(UUID tenantId, UUID gmailConnectionId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
 
         Integer openJobCount =
                 jdbcTemplate.queryForObject(
@@ -84,7 +82,7 @@ public class InboxBackfillEnqueuer {
                 tenantId,
                 gmailConnectionId,
                 JOB_TYPE,
-                backfillPayload(mailboxRef));
+                backfillPayload(gmailConnectionId));
         syncStateRepository.upsertStatus(
                 tenantId, gmailConnectionId, InboxSyncStatus.BACKFILLING.id());
         log.info(
@@ -95,7 +93,7 @@ public class InboxBackfillEnqueuer {
         return true;
     }
 
-    private static String backfillPayload(MailboxRef mailboxRef) {
-        return "{\"gmailConnectionId\":\"" + mailboxRef.gmailConnectionId() + "\"}";
+    private static String backfillPayload(UUID gmailConnectionId) {
+        return "{\"gmailConnectionId\":\"" + gmailConnectionId + "\"}";
     }
 }

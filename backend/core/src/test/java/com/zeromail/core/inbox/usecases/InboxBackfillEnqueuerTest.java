@@ -30,7 +30,11 @@ class InboxBackfillEnqueuerTest extends PostgresContainerTest {
 
         boolean enqueued =
                 ScopedValue.where(TenantContext.TENANT, mailboxRef.tenantId().toString())
-                        .call(() -> inboxBackfillEnqueuer.enqueueIfNotPending(mailboxRef));
+                        .call(
+                                () ->
+                                        inboxBackfillEnqueuer.enqueueIfNotPending(
+                                                mailboxRef.tenantId(),
+                                                mailboxRef.gmailConnectionId()));
 
         assertThat(enqueued).isTrue();
         assertOpenJobCount(mailboxRef).isEqualTo(1);
@@ -58,9 +62,12 @@ class InboxBackfillEnqueuerTest extends PostgresContainerTest {
         ScopedValue.where(TenantContext.TENANT, mailboxRef.tenantId().toString())
                 .run(
                         () -> {
-                            inboxBackfillEnqueuer.enqueueIfNotPending(mailboxRef);
-                            inboxBackfillEnqueuer.enqueueIfNotPending(mailboxRef);
-                            inboxBackfillEnqueuer.enqueueIfNotPending(mailboxRef);
+                            inboxBackfillEnqueuer.enqueueIfNotPending(
+                                    mailboxRef.tenantId(), mailboxRef.gmailConnectionId());
+                            inboxBackfillEnqueuer.enqueueIfNotPending(
+                                    mailboxRef.tenantId(), mailboxRef.gmailConnectionId());
+                            inboxBackfillEnqueuer.enqueueIfNotPending(
+                                    mailboxRef.tenantId(), mailboxRef.gmailConnectionId());
                         });
 
         assertOpenJobCount(mailboxRef).isEqualTo(1);
@@ -75,8 +82,12 @@ class InboxBackfillEnqueuerTest extends PostgresContainerTest {
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(
                         () -> {
-                            inboxBackfillEnqueuer.enqueueIfNotPending(firstMailboxRef);
-                            inboxBackfillEnqueuer.enqueueIfNotPending(secondMailboxRef);
+                            inboxBackfillEnqueuer.enqueueIfNotPending(
+                                    firstMailboxRef.tenantId(),
+                                    firstMailboxRef.gmailConnectionId());
+                            inboxBackfillEnqueuer.enqueueIfNotPending(
+                                    secondMailboxRef.tenantId(),
+                                    secondMailboxRef.gmailConnectionId());
                         });
 
         assertOpenJobCount(firstMailboxRef).isEqualTo(1);
@@ -89,7 +100,10 @@ class InboxBackfillEnqueuerTest extends PostgresContainerTest {
         MailboxRef mailboxRef = new MailboxRef(seedTenant(), UUID.randomUUID());
 
         ScopedValue.where(TenantContext.TENANT, mailboxRef.tenantId().toString())
-                .run(() -> inboxBackfillEnqueuer.enqueueIfNotPending(mailboxRef));
+                .run(
+                        () ->
+                                inboxBackfillEnqueuer.enqueueIfNotPending(
+                                        mailboxRef.tenantId(), mailboxRef.gmailConnectionId()));
         // Simulate worker completion.
         jdbcTemplate.update(
                 "UPDATE processing_job SET status = 'COMPLETED', completed_at = NOW() "
@@ -100,7 +114,11 @@ class InboxBackfillEnqueuerTest extends PostgresContainerTest {
 
         boolean reEnqueued =
                 ScopedValue.where(TenantContext.TENANT, mailboxRef.tenantId().toString())
-                        .call(() -> inboxBackfillEnqueuer.enqueueIfNotPending(mailboxRef));
+                        .call(
+                                () ->
+                                        inboxBackfillEnqueuer.enqueueIfNotPending(
+                                                mailboxRef.tenantId(),
+                                                mailboxRef.gmailConnectionId()));
 
         assertThat(reEnqueued).isTrue();
         assertOpenJobCount(mailboxRef).isEqualTo(1);

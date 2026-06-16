@@ -157,7 +157,7 @@ public class OAuthProvisioningService {
             // Enqueue an inbox-projection backfill so reconnect refreshes any stale projection
             // rows that accumulated during the offline period. Idempotent via processing_job
             // dedup so concurrent reconnects do not stack jobs.
-            inboxBackfillEnqueuer.enqueueIfNotPending(new MailboxRef(tenantId, gmailConnectionId));
+            inboxBackfillEnqueuer.enqueueIfNotPending(tenantId, gmailConnectionId);
             return new BundledProvisioningResult(tenantId, userId, gmailConnectionId, false);
         }
 
@@ -223,7 +223,7 @@ public class OAuthProvisioningService {
                     gmailConnectionId);
             // First-login eager backfill: prepare the projection so the deferred Phase B read swap
             // does not block on a cold first-fetch from Gmail.
-            inboxBackfillEnqueuer.enqueueIfNotPending(new MailboxRef(tenantId, gmailConnectionId));
+            inboxBackfillEnqueuer.enqueueIfNotPending(tenantId, gmailConnectionId);
             return new BundledProvisioningResult(tenantId, userId, gmailConnectionId, true);
         } catch (DataIntegrityViolationException dataIntegrityViolation) {
             // Concurrent first-login from same Google subject: first transaction rolled back (no

@@ -71,23 +71,26 @@ class QueueHealthQueryServiceTest extends PostgresContainerTest {
         // We approximate "SUCCEEDED" as COMPLETED, which is the CHECK-allowed terminal.
         for (int rowIndex = 0; rowIndex < 100; rowIndex++) {
             jdbcTemplate.update(
-                    "INSERT INTO processing_job(job_type, status, attempts, created_at)"
-                            + " VALUES (?, 'PENDING', 0, NOW() - INTERVAL '30 days')",
+                    "INSERT INTO processing_job(job_type, status, attempts, gmail_connection_id,"
+                            + " created_at)"
+                            + " VALUES (?, 'PENDING', 0, '00000000-0000-4000-8000-0000000000c1',"
+                            + " NOW() - INTERVAL '30 days')",
                     "OLD_PENDING_JOB");
         }
         for (int rowIndex = 0; rowIndex < 5; rowIndex++) {
             jdbcTemplate.update(
-                    "INSERT INTO processing_job(job_type, status, attempts, created_at,"
-                            + " last_failed_at)"
-                            + " VALUES (?, 'FAILED', 5, NOW() - INTERVAL '2 hours',"
-                            + " NOW() - INTERVAL '1 hour')",
+                    "INSERT INTO processing_job(job_type, status, attempts, gmail_connection_id,"
+                            + " created_at, last_failed_at)"
+                            + " VALUES (?, 'FAILED', 5, '00000000-0000-4000-8000-0000000000c1',"
+                            + " NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour')",
                     "RECENT_FAILED_JOB");
         }
         for (int rowIndex = 0; rowIndex < 95; rowIndex++) {
             jdbcTemplate.update(
-                    "INSERT INTO processing_job(job_type, status, attempts, created_at,"
-                            + " completed_at)"
-                            + " VALUES (?, 'COMPLETED', 1, NOW() - INTERVAL '3 hours', NOW())",
+                    "INSERT INTO processing_job(job_type, status, attempts, gmail_connection_id,"
+                            + " created_at, completed_at)"
+                            + " VALUES (?, 'COMPLETED', 1, '00000000-0000-4000-8000-0000000000c1',"
+                            + " NOW() - INTERVAL '3 hours', NOW())",
                     "RECENT_OK_JOB");
         }
 
@@ -107,8 +110,8 @@ class QueueHealthQueryServiceTest extends PostgresContainerTest {
         for (int rowIndex = 0; rowIndex < count; rowIndex++) {
             UUID id = UUID.randomUUID();
             jdbcTemplate.update(
-                    "INSERT INTO processing_job(id, job_type, status, attempts)"
-                            + " VALUES (?, ?, ?, ?)",
+                    "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id)"
+                            + " VALUES (?, ?, ?, ?, '00000000-0000-4000-8000-0000000000c1')",
                     id,
                     jobType,
                     status,
