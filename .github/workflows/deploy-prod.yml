@@ -95,6 +95,8 @@ jobs:
           cd /apps/zero-mail
           git fetch --quiet --force origin "refs/tags/${DEPLOY_TAG}":"refs/tags/${DEPLOY_TAG}"
           git checkout --quiet "${DEPLOY_TAG}" -- docker/docker-compose.yml
+          # Snapshot the CURRENTLY-running image IDs before recreate. This is the source
+          # of truth for the "Roll back to previous images on failure" step below.
           echo "::group::Snapshot previous image digests for rollback"
           docker inspect --format='zeromail-api {{index .Image}}' zeromail-api 2>/dev/null | tee /apps/zero-mail/.last-deploy.txt || true
           docker inspect --format='zeromail-worker {{index .Image}}' zeromail-worker 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
@@ -144,3 +146,55 @@ jobs:
           done
           echo "::error::prod smoke check did not return 200 within 100s"
           exit 1
+
+      - name: Roll back to previous images on failure
+        # Fires when EITHER the deploy step or the smoke check above failed, so a bad
+        # release auto-reverts to the previous images instead of leaving prod down
+        # half-deployed (the 2026-06-16 v1.3.0 incident: a Liquibase migration HALT left
+        # the worker crash-looping and api stuck "Created", prod API down for >1h).
+        #
+        # Source of truth = .last-deploy.txt, written by the deploy step BEFORE recreate,
+        # holding the previous local image IDs (sha256:...) per service. Those image layers
+        # are still present on the box (deploy never prunes), so compose can recreate from
+        # them without a registry pull.
+        #
+        # CAVEAT (intentionally surfaced, not hidden): if the failed deploy PARTIALLY applied
+        # a forward-only schema migration, the previous app images may not satisfy the new
+        # schema and readiness will not come back — this step then exits non-zero with a loud
+        # "manual intervention required" so a human fixes the DB. For the common case (migration
+        # fails on its first changeset, nothing applied; or app boot/smoke failure) the rollback
+        # restores service cleanly.
+        if: failure()
+        run: |
+          set -uo pipefail
+          cd /apps/zero-mail
+          if [[ ! -s .last-deploy.txt ]]; then
+            echo "::error::No .last-deploy.txt snapshot of the previous release — cannot auto-roll back. Manual intervention required."
+            exit 1
+          fi
+          previous_api=$(awk '/^zeromail-api /{print $2}' .last-deploy.txt)
+          previous_worker=$(awk '/^zeromail-worker /{print $2}' .last-deploy.txt)
+          previous_frontend=$(awk '/^zeromail-frontend /{print $2}' .last-deploy.txt)
+          previous_admin=$(awk '/^zeromail-admin /{print $2}' .last-deploy.txt)
+          if [[ -z "${previous_api}${previous_worker}${previous_frontend}${previous_admin}" ]]; then
+            echo "::error::.last-deploy.txt present but holds no image IDs — manual intervention required."
+            exit 1
+          fi
+          echo "::warning::Deploy failed — rolling back to previous images (api=${previous_api} worker=${previous_worker} frontend=${previous_frontend} admin=${previous_admin})"
+          ZEROMAIL_API_IMAGE="${previous_api}" \
+          ZEROMAIL_WORKER_IMAGE="${previous_worker}" \
+          ZEROMAIL_FRONTEND_IMAGE="${previous_frontend}" \
+          ZEROMAIL_ADMIN_IMAGE="${previous_admin}" \
+            docker compose -f docker/docker-compose.yml up -d --no-build api worker frontend admin
+          for attempt in {1..60}; do
+            if docker exec zeromail-api curl -fsS http://localhost:8080/actuator/health/readiness >/dev/null 2>&1; then
+              echo "✓ rollback healthy — prod restored to the previous release (this run stays RED so the failed deploy is investigated)"
+              exit 0
+            fi
+            if [[ $attempt -eq 60 ]]; then
+              echo "::error::rollback did not reach api readiness within 120s — manual intervention required (possible partially-applied migration)."
+              docker compose -f docker/docker-compose.yml logs --tail=200 api worker
+              exit 1
+            fi
+            sleep 2
+          done

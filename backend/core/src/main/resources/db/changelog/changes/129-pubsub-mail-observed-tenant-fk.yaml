@@ -1,0 +1,83 @@
+databaseChangeLog:
+  # Root-cause hardening for the v1.3 mailbox migration HALT (changeset 120/121).
+  #
+  # pubsub_delivery and mail_message_observed were the only two tenant-scoped tables
+  # in the Phase 11 backfill set (120-126) WITHOUT a foreign key to tenants. Their five
+  # siblings (gmail_inbox_projection, gmail_inbox_sync_state, processing_job, triage_audit,
+  # rules) all carry `tenant_id -> tenants(id) ON DELETE CASCADE`, so a deleted tenant
+  # cascades and they never accumulate orphans. Lacking that FK, pubsub_delivery relied
+  # solely on TenantDataDeletionService's explicit DELETE; any deletion that predated or
+  # bypassed that service left orphan rows, which changeset 120's precondition then HALTed
+  # on (observed in prod 2026-06-16: 6 orphan rows for 2 already-deleted tenants).
+  #
+  # This closes the gap structurally: clean any remaining orphans (rows whose tenant no
+  # longer exists are unambiguous garbage — exactly what ON DELETE CASCADE would remove),
+  # then add the missing FKs so orphans become impossible going forward.
+
+  - changeSet:
+      id: 129-cleanup-orphan-tenant-rows-pubsub-mail-observed
+      author: zeromail
+      comment: >
+        Delete pubsub_delivery / mail_message_observed rows that reference a tenant no longer
+        present in tenants. Prerequisite for the ON DELETE CASCADE foreign keys added below.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              DELETE FROM pubsub_delivery pd
+              WHERE NOT EXISTS (SELECT 1 FROM tenants t WHERE t.id = pd.tenant_id);
+        - sql:
+            splitStatements: false
+            sql: |
+              DELETE FROM mail_message_observed mmo
+              WHERE NOT EXISTS (SELECT 1 FROM tenants t WHERE t.id = mmo.tenant_id);
+      rollback:
+        - empty
+
+  - changeSet:
+      id: 129-pubsub-delivery-tenant-fk
+      author: zeromail
+      comment: >
+        Add tenant_id -> tenants(id) ON DELETE CASCADE on pubsub_delivery so deleting a tenant
+        cascades, matching its Phase 11 sibling tables and preventing orphan accumulation.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - foreignKeyConstraintExists:
+                foreignKeyName: fk_pubsub_delivery_tenant
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: pubsub_delivery
+            baseColumnNames: tenant_id
+            constraintName: fk_pubsub_delivery_tenant
+            referencedTableName: tenants
+            referencedColumnNames: id
+            onDelete: CASCADE
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: pubsub_delivery
+            constraintName: fk_pubsub_delivery_tenant
+
+  - changeSet:
+      id: 129-mail-message-observed-tenant-fk
+      author: zeromail
+      comment: >
+        Add tenant_id -> tenants(id) ON DELETE CASCADE on mail_message_observed for the same
+        reason: it was the other Phase 11 table lacking the tenant foreign key.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - foreignKeyConstraintExists:
+                foreignKeyName: fk_mail_message_observed_tenant
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: mail_message_observed
+            baseColumnNames: tenant_id
+            constraintName: fk_mail_message_observed_tenant
+            referencedTableName: tenants
+            referencedColumnNames: id
+            onDelete: CASCADE
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: mail_message_observed
+            constraintName: fk_mail_message_observed_tenant
