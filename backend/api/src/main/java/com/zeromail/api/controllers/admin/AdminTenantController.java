@@ -72,13 +72,14 @@ public class AdminTenantController {
     @GetMapping({"", "/"})
     public TenantListResponse list(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String email,
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "25") int limit) {
         AdminContext.currentOrThrow();
         TenantListQuery tenantListQuery =
-                new TenantListQuery(limit, parseOffset(cursor), status, from, to);
+                new TenantListQuery(limit, parseOffset(cursor), status, from, to, email);
         return TenantListResponse.from(
                 adminTenantAccess.crossTenantList(
                         () -> tenantInspectionService.listTenants(tenantListQuery)));

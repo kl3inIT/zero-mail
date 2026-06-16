@@ -1,4 +1,4 @@
-import type { TenantDetailTab, TenantListFilters } from './tenants-api';
+import type { TenantListFilters } from './tenants-api';
 
 export const tenantQueryKeys = {
   all: ['tenants'] as const,
@@ -6,6 +6,6 @@ export const tenantQueryKeys = {
   list: (filters: TenantListFilters) => [...tenantQueryKeys.lists(), filters] as const,
   details: () => [...tenantQueryKeys.all, 'detail'] as const,
   detail: (tenantId: string) => [...tenantQueryKeys.details(), tenantId] as const,
-  tab: (tenantId: string, tab: TenantDetailTab) => [...tenantQueryKeys.detail(tenantId), tab] as const,
+  tab: (tenantId: string, tab: string) => [...tenantQueryKeys.detail(tenantId), tab] as const,
   deletionPreview: (tenantId: string) => [...tenantQueryKeys.detail(tenantId), 'deletion-preview'] as const,
 };

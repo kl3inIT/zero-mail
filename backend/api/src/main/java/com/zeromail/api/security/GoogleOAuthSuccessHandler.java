@@ -5,6 +5,8 @@ import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import com.zeromail.core.account.usecases.OAuthProvisioningService.BundledProvisioningResult;
+import com.zeromail.core.admin.tenant.usecases.TenantActivityRecorder;
+import com.zeromail.core.admin.tenant.usecases.TenantActivityRequestContext;
 import com.zeromail.core.gmail.exception.DuplicateActiveMailboxException;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
@@ -14,6 +16,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -75,6 +79,8 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final UserRepository userRepository;
     private final GmailConnectionService gmailConnectionService;
     private final RuleTemplateMaterializationService ruleTemplateMaterializationService;
+    private final TenantActivityRecorder tenantActivityRecorder;
+    private final Clock clock;
 
     public GoogleOAuthSuccessHandler(
             OAuthProvisioningService provisioningService,
@@ -82,12 +88,18 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             UserRepository userRepository,
             GmailConnectionService gmailConnectionService,
             RuleTemplateMaterializationService ruleTemplateMaterializationService,
+            TenantActivityRecorder tenantActivityRecorder,
+            Clock clock,
             ApiProperties properties) {
         this.provisioningService = provisioningService;
         this.authorizedClientService = authorizedClientService;
         this.userRepository = userRepository;
         this.gmailConnectionService = gmailConnectionService;
         this.ruleTemplateMaterializationService = ruleTemplateMaterializationService;
+        this.tenantActivityRecorder =
+                Objects.requireNonNull(
+                        tenantActivityRecorder, "tenantActivityRecorder must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
 
         // Validate baseUrl scheme/host at construction time so a misconfigured
         // ZEROMAIL_WEB_BASE_URL fails fast instead of silently becoming an open-redirect on
@@ -294,6 +306,12 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 provisioningService.provisionBundledOAuth(
                         googleSubject, email, refreshToken, gmailScopes);
 
+        Instant loginAt = clock.instant();
+        TenantActivityRequestContext requestContext = TenantActivityRequestMetadata.from(request);
+        recordLoginActivity(provisioningResult, requestContext, loginAt);
+        TenantActivitySessionAttributes.storeLogin(
+                request.getSession(true), provisioningResult.tenantId(), loginAt);
+
         // (f) First-login only: seed the Inbox-Zero-style default rules (enabled) so the new tenant
         // lands on a populated Rules page. Best-effort and post-commit — the materialization
         // service
@@ -444,6 +462,21 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                         == DuplicateActiveMailboxException.Scope.OTHER_WORKSPACE
                 ? "mailbox_in_other_workspace"
                 : "mailbox_already_connected";
+    }
+
+    private void recordLoginActivity(
+            BundledProvisioningResult provisioningResult,
+            TenantActivityRequestContext requestContext,
+            Instant loginAt) {
+        try {
+            tenantActivityRecorder.recordLogin(
+                    provisioningResult.tenantId(), requestContext, loginAt);
+        } catch (RuntimeException activityRecordingFailure) {
+            log.warn(
+                    "event=tenant_activity_login_record_failed tenantId={} failureClass={}",
+                    provisioningResult.tenantId(),
+                    activityRecordingFailure.getClass().getSimpleName());
+        }
     }
 
     /**

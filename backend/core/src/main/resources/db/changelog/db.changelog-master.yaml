@@ -368,3 +368,12 @@ databaseChangeLog:
   - include:
       file: changes/128-processing-job-mailbox-nullable.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/121-tenant-activity-event.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/122-drop-tenant-activity-ip-location.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/123-drop-tenant-activity-device.yaml
+      relativeToChangelogFile: true

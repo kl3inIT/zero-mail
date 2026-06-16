@@ -1,5 +1,5 @@
-import { api } from '@/lib/api/admin-client';
-import type { components, paths } from '@/lib/api/admin-schema';
+import {api} from '@/lib/api/admin-client';
+import type {components, paths} from '@/lib/api/admin-schema';
 
 export type TenantListResponse = components['schemas']['TenantListResponse'];
 export type TenantListRow = components['schemas']['TenantListRowResponse'];
@@ -11,12 +11,13 @@ export type TenantActivityResponse = components['schemas']['TenantActivityRespon
 export type TenantDeletionPreviewResponse = components['schemas']['TenantDeletionPreviewResponse'];
 export type TenantActionRequest = components['schemas']['TenantActionRequest'];
 export type TenantStatusFilter = TenantListRow['status'] | 'ALL';
-export type TenantDetailTab = 'overview' | 'health' | 'billing' | 'spend' | 'activity';
+export type TenantDetailTab = 'overview' | 'activity' | 'email' | 'settings' | 'billing';
 
-type TenantListQuery = NonNullable<paths['/api/admin/tenants/']['get']['parameters']['query']>;
+type TenantListQuery = NonNullable<paths['/api/admin/tenants']['get']['parameters']['query']>;
 
 export type TenantListFilters = {
   status?: TenantStatusFilter;
+  email?: string;
   from?: string;
   to?: string;
   cursor?: string;
@@ -41,6 +42,9 @@ function toTenantListQuery(filters: TenantListFilters): TenantListQuery {
   if (filters.status && filters.status !== 'ALL') {
     query.status = filters.status;
   }
+  if (filters.email) {
+    query.email = filters.email;
+  }
   if (filters.from) {
     query.from = `${filters.from}T00:00:00Z`;
   }
@@ -57,7 +61,7 @@ function toTenantListQuery(filters: TenantListFilters): TenantListQuery {
 }
 
 export async function fetchTenantList(filters: TenantListFilters): Promise<TenantListResponse> {
-  const { data, error } = await api.GET('/api/admin/tenants/', {
+  const {data, error} = await api.GET('/api/admin/tenants', {
     params: {
       query: toTenantListQuery(filters),
     },
@@ -69,9 +73,9 @@ export async function fetchTenantList(filters: TenantListFilters): Promise<Tenan
 }
 
 export async function fetchTenantOverview(tenantId: string): Promise<TenantDetailResponse> {
-  const { data, error } = await api.GET('/api/admin/tenants/{tenantId}/overview', {
+  const {data, error} = await api.GET('/api/admin/tenants/{tenantId}/overview', {
     params: {
-      path: { tenantId },
+      path: {tenantId},
     },
   });
   if (error || !data) {
@@ -81,9 +85,9 @@ export async function fetchTenantOverview(tenantId: string): Promise<TenantDetai
 }
 
 export async function fetchTenantHealth(tenantId: string): Promise<TenantHealthResponse> {
-  const { data, error } = await api.GET('/api/admin/tenants/{tenantId}/health', {
+  const {data, error} = await api.GET('/api/admin/tenants/{tenantId}/health', {
     params: {
-      path: { tenantId },
+      path: {tenantId},
     },
   });
   if (error || !data) {
@@ -93,9 +97,9 @@ export async function fetchTenantHealth(tenantId: string): Promise<TenantHealthR
 }
 
 export async function fetchTenantBilling(tenantId: string): Promise<TenantBillingResponse> {
-  const { data, error } = await api.GET('/api/admin/tenants/{tenantId}/billing', {
+  const {data, error} = await api.GET('/api/admin/tenants/{tenantId}/billing', {
     params: {
-      path: { tenantId },
+      path: {tenantId},
     },
   });
   if (error || !data) {
@@ -105,9 +109,9 @@ export async function fetchTenantBilling(tenantId: string): Promise<TenantBillin
 }
 
 export async function fetchTenantSpend(tenantId: string): Promise<TenantSpendResponse> {
-  const { data, error } = await api.GET('/api/admin/tenants/{tenantId}/spend', {
+  const {data, error} = await api.GET('/api/admin/tenants/{tenantId}/spend', {
     params: {
-      path: { tenantId },
+      path: {tenantId},
     },
   });
   if (error || !data) {
@@ -117,9 +121,9 @@ export async function fetchTenantSpend(tenantId: string): Promise<TenantSpendRes
 }
 
 export async function fetchTenantActivity(tenantId: string): Promise<TenantActivityResponse> {
-  const { data, error } = await api.GET('/api/admin/tenants/{tenantId}/activity', {
+  const {data, error} = await api.GET('/api/admin/tenants/{tenantId}/activity', {
     params: {
-      path: { tenantId },
+      path: {tenantId},
     },
   });
   if (error || !data) {
@@ -129,9 +133,9 @@ export async function fetchTenantActivity(tenantId: string): Promise<TenantActiv
 }
 
 export async function fetchTenantDeletionPreview(tenantId: string): Promise<TenantDeletionPreviewResponse> {
-  const { data, error } = await api.GET('/api/admin/tenants/{tenantId}/deletion-preview', {
+  const {data, error} = await api.GET('/api/admin/tenants/{tenantId}/deletion-preview', {
     params: {
-      path: { tenantId },
+      path: {tenantId},
     },
   });
   if (error || !data) {
@@ -141,11 +145,11 @@ export async function fetchTenantDeletionPreview(tenantId: string): Promise<Tena
 }
 
 export async function pauseTenant(input: TenantActionInput): Promise<void> {
-  const { error } = await api.POST('/api/admin/tenants/{tenantId}/pause', {
+  const {error} = await api.POST('/api/admin/tenants/{tenantId}/pause', {
     params: {
-      path: { tenantId: input.tenantId },
+      path: {tenantId: input.tenantId},
     },
-    body: { reason: input.reason },
+    body: {reason: input.reason},
   });
   if (error) {
     throw errorFor('tạm dừng khách hàng');
@@ -153,11 +157,11 @@ export async function pauseTenant(input: TenantActionInput): Promise<void> {
 }
 
 export async function disconnectTenant(input: TenantActionInput): Promise<void> {
-  const { error } = await api.POST('/api/admin/tenants/{tenantId}/disconnect', {
+  const {error} = await api.POST('/api/admin/tenants/{tenantId}/disconnect', {
     params: {
-      path: { tenantId: input.tenantId },
+      path: {tenantId: input.tenantId},
     },
-    body: { reason: input.reason },
+    body: {reason: input.reason},
   });
   if (error) {
     throw errorFor('ngắt kết nối khách hàng');
@@ -169,9 +173,9 @@ export async function deleteTenant(input: TenantDeleteInput): Promise<void> {
     reason: input.reason,
     confirmEmail: input.confirmEmail,
   };
-  const { error } = await api.POST('/api/admin/tenants/{tenantId}/delete', {
+  const {error} = await api.POST('/api/admin/tenants/{tenantId}/delete', {
     params: {
-      path: { tenantId: input.tenantId },
+      path: {tenantId: input.tenantId},
     },
     body: request,
   });

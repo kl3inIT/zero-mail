@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: 123-drop-tenant-activity-device
+      author: zeromail
+      comment: >
+        Remove device and user-agent audit fields from tenant activity events. Product no longer
+        requires device auditing in the admin customer activity surface.
+      preConditions:
+        - onFail: MARK_RAN
+        - or:
+            - columnExists:
+                tableName: tenant_activity_event
+                columnName: device_family
+            - columnExists:
+                tableName: tenant_activity_event
+                columnName: user_agent
+      changes:
+        - dropColumn:
+            tableName: tenant_activity_event
+            columns:
+              - column:
+                  name: device_family
+              - column:
+                  name: user_agent
+      rollback:
+        - addColumn:
+            tableName: tenant_activity_event
+            columns:
+              - column:
+                  name: device_family
+                  type: varchar(128)
+              - column:
+                  name: user_agent
+                  type: varchar(512)

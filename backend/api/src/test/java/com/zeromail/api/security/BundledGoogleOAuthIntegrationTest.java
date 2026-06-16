@@ -97,6 +97,7 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
     void cleanUp() {
         // Use JDBC to bypass tenant filter on delete — JPA deleteAll() on filtered entities
         // would also return 0 rows under a missing tenant context.
+        jdbc.execute("DELETE FROM tenant_activity_event");
         jdbc.execute("DELETE FROM gmail_connections");
         jdbc.execute("DELETE FROM users");
         jdbc.execute("DELETE FROM tenants");

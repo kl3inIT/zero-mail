@@ -169,6 +169,7 @@ public class SecurityConfig {
             TenantBindingFilter tenantFilter,
             MailboxBindingFilter mailboxFilter,
             GoogleOAuthSuccessHandler successHandler,
+            TenantActivityLogoutSuccessHandler tenantActivityLogoutSuccessHandler,
             LoginRedirectAuthenticationFailureHandler failureHandler,
             GoogleAuthorizationRequestResolver authRequestResolver,
             IntentCarryingAuthorizationRequestRepository intentCarryingRepository) {
@@ -245,9 +246,8 @@ public class SecurityConfig {
                                 logout.logoutRequestMatcher(
                                                 PathPatternRequestMatcher.withDefaults()
                                                         .matcher(HttpMethod.POST, "/api/logout"))
-                                        .logoutSuccessHandler(
-                                                new HttpStatusReturningLogoutSuccessHandler())
-                                        .invalidateHttpSession(true)
+                                        .logoutSuccessHandler(tenantActivityLogoutSuccessHandler)
+                                        .invalidateHttpSession(false)
                                         .deleteCookies("ZEROMAIL_SESSION", "JSESSIONID"))
                 .sessionManagement(Customizer.withDefaults())
                 .addFilterAfter(tenantFilter, AuthorizationFilter.class)

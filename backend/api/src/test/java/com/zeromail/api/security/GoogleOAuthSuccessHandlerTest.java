@@ -11,10 +11,15 @@ import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
+import com.zeromail.core.admin.tenant.usecases.TenantActivityRecorder;
+import com.zeromail.core.admin.tenant.usecases.TenantActivityRequestContext;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
+import java.lang.reflect.RecordComponent;
 import java.net.URI;
+import java.time.Clock;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,6 +27,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
@@ -63,6 +69,7 @@ class GoogleOAuthSuccessHandlerTest {
         var authorizedClients = mock(OAuth2AuthorizedClientService.class);
         var userRepo = mock(UserRepository.class);
         var ruleTemplateMaterialization = mock(RuleTemplateMaterializationService.class);
+        var tenantActivityRecorder = mock(TenantActivityRecorder.class);
 
         var handler =
                 new GoogleOAuthSuccessHandler(
@@ -71,6 +78,8 @@ class GoogleOAuthSuccessHandlerTest {
                         userRepo,
                         mock(GmailConnectionService.class),
                         ruleTemplateMaterialization,
+                        tenantActivityRecorder,
+                        Clock.systemUTC(),
                         PROPS);
 
         String subject = "google-subject-bundled-test";
@@ -117,6 +126,9 @@ class GoogleOAuthSuccessHandlerTest {
                                 provisionedTenantId, UUID.randomUUID(), UUID.randomUUID(), true));
 
         var request = new MockHttpServletRequest();
+        request.addHeader("X-Forwarded-For", "203.0.113.17, 10.0.0.12");
+        request.addHeader("CF-IPCity", "Ha Noi");
+        request.addHeader("CF-IPCountry", "VN");
         var response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(request, response, token);
@@ -127,6 +139,25 @@ class GoogleOAuthSuccessHandlerTest {
         // test OidcUser has no `locale` claim, so seeding falls back to Vietnamese (VN-first).
         verify(ruleTemplateMaterialization)
                 .materializeDefaultRulesEnabled(provisionedTenantId, "vi");
+        ArgumentCaptor<TenantActivityRequestContext> requestContextCaptor =
+                ArgumentCaptor.forClass(TenantActivityRequestContext.class);
+        ArgumentCaptor<Instant> occurredAtCaptor = ArgumentCaptor.forClass(Instant.class);
+        verify(tenantActivityRecorder)
+                .recordLogin(
+                        eq(provisionedTenantId),
+                        requestContextCaptor.capture(),
+                        occurredAtCaptor.capture());
+        assertThat(
+                        Arrays.stream(TenantActivityRequestContext.class.getRecordComponents())
+                                .map(RecordComponent::getName))
+                .doesNotContain("ipAddress", "locationLabel", "deviceFamily", "userAgent");
+        assertThat(occurredAtCaptor.getValue()).isNotNull();
+        assertThat(
+                        request.getSession(false)
+                                .getAttribute(TenantActivitySessionAttributes.TENANT_ID))
+                .isEqualTo(provisionedTenantId.toString());
+        assertThat(request.getSession(false).getAttribute(TenantActivitySessionAttributes.LOGIN_AT))
+                .isNotNull();
         assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/onboarding");
     }
 
@@ -137,6 +168,7 @@ class GoogleOAuthSuccessHandlerTest {
         var userRepository = mock(UserRepository.class);
         var gmailConnectionService = mock(GmailConnectionService.class);
         var ruleTemplateMaterialization = mock(RuleTemplateMaterializationService.class);
+        var tenantActivityRecorder = mock(TenantActivityRecorder.class);
         var handler =
                 new GoogleOAuthSuccessHandler(
                         provisioning,
@@ -144,6 +176,8 @@ class GoogleOAuthSuccessHandlerTest {
                         userRepository,
                         gmailConnectionService,
                         ruleTemplateMaterialization,
+                        tenantActivityRecorder,
+                        Clock.systemUTC(),
                         PROPS);
 
         UUID initiatingTenantId = UUID.randomUUID();

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import {useQuery} from '@tanstack/react-query';
 
 import {
   fetchTenantActivity,
@@ -9,7 +9,7 @@ import {
   fetchTenantSpend,
   type TenantDetailTab,
 } from './tenants-api';
-import { tenantQueryKeys } from './query-keys';
+import {tenantQueryKeys} from './query-keys';
 
 type TenantTabQueryOptions = {
   enabled: boolean;
@@ -74,4 +74,4 @@ export function useTenantDeletionPreview(tenantId: string, enabled: boolean) {
   });
 }
 
-export const tenantDetailTabs: TenantDetailTab[] = ['overview', 'health', 'billing', 'spend', 'activity'];
+export const tenantDetailTabs: TenantDetailTab[] = ['overview', 'activity', 'email', 'settings', 'billing'];
