@@ -4,7 +4,13 @@ import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.worker.test.MockGmailHistoryServer;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
@@ -13,9 +19,12 @@ import org.springframework.boot.context.TypeExcludeFilter;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.Trigger;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -123,5 +132,91 @@ public abstract class PostgresContainerTest {
     @ConfigurationPropertiesScan(basePackages = "com.zeromail")
     @EntityScan(basePackages = "com.zeromail.core")
     @EnableJpaRepositories(basePackages = "com.zeromail.core")
-    static class WorkerTestApplication {}
+    static class WorkerTestApplication {
+
+        @Bean(name = "taskScheduler")
+        TaskScheduler taskScheduler() {
+            return new NoopTaskScheduler();
+        }
+    }
+
+    private static final class NoopTaskScheduler implements TaskScheduler {
+
+        @Override
+        public @NonNull ScheduledFuture<?> schedule(
+                @NonNull Runnable task, @NonNull Trigger trigger) {
+            return NoopScheduledFuture.INSTANCE;
+        }
+
+        @Override
+        public @NonNull ScheduledFuture<?> schedule(
+                @NonNull Runnable task, @NonNull Instant startTime) {
+            return NoopScheduledFuture.INSTANCE;
+        }
+
+        @Override
+        public @NonNull ScheduledFuture<?> scheduleAtFixedRate(
+                @NonNull Runnable task, @NonNull Instant startTime, @NonNull Duration period) {
+            return NoopScheduledFuture.INSTANCE;
+        }
+
+        @Override
+        public @NonNull ScheduledFuture<?> scheduleAtFixedRate(
+                @NonNull Runnable task, @NonNull Duration period) {
+            return NoopScheduledFuture.INSTANCE;
+        }
+
+        @Override
+        public @NonNull ScheduledFuture<?> scheduleWithFixedDelay(
+                @NonNull Runnable task, @NonNull Instant startTime, @NonNull Duration delay) {
+            return NoopScheduledFuture.INSTANCE;
+        }
+
+        @Override
+        public @NonNull ScheduledFuture<?> scheduleWithFixedDelay(
+                @NonNull Runnable task, @NonNull Duration delay) {
+            return NoopScheduledFuture.INSTANCE;
+        }
+    }
+
+    private static final class NoopScheduledFuture implements ScheduledFuture<Object> {
+
+        private static final NoopScheduledFuture INSTANCE = new NoopScheduledFuture();
+
+        @Override
+        public long getDelay(@NonNull TimeUnit unit) {
+            return Long.MAX_VALUE;
+        }
+
+        @Override
+        public int compareTo(@NonNull Delayed other) {
+            return Long.compare(
+                    getDelay(TimeUnit.NANOSECONDS), other.getDelay(TimeUnit.NANOSECONDS));
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return true;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return true;
+        }
+
+        @Override
+        public boolean isDone() {
+            return false;
+        }
+
+        @Override
+        public Object get() {
+            return null;
+        }
+
+        @Override
+        public Object get(long timeout, @NonNull TimeUnit unit) {
+            return null;
+        }
+    }
 }
