@@ -23,7 +23,7 @@
     "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
-    "@ai-sdk/react": "^3.0.200",
+    "@ai-sdk/react": "^3.0.208",
     "@base-ui/react": "^1.5.0",
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
@@ -36,16 +36,16 @@
     "@tanstack/query-sync-storage-persister": "5.101.0",
     "@tanstack/react-query": "5.101.0",
     "@tanstack/react-query-persist-client": "5.101.0",
-    "@tanstack/react-virtual": "^3.14.2",
-    "ai": "^6.0.198",
+    "@tanstack/react-virtual": "^3.14.3",
+    "ai": "^6.0.206",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
-    "lucide-react": "^1.17.0",
+    "lucide-react": "^1.18.0",
     "motion": "^12.40.0",
     "nanoid": "^5.1.11",
-    "next": "16.2.7",
+    "next": "16.2.9",
     "next-intl": "^4.13.0",
     "next-mdx-remote": "6.0.0",
     "next-themes": "^0.4.6",
@@ -53,7 +53,7 @@
     "react": "19.2.7",
     "react-day-picker": "^10.0.1",
     "react-dom": "19.2.7",
-    "react-qr-code": "^2.0.21",
+    "react-qr-code": "^2.2.0",
     "recharts": "3.8.1",
     "shadcn": "^4.11.0",
     "shiki": "^4.2.0",
@@ -75,9 +75,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "6.0.2",
-    "@vitest/coverage-v8": "4.1.8",
+    "@vitest/coverage-v8": "4.1.9",
     "eslint": "^9.39.4",
-    "eslint-config-next": "16.2.7",
+    "eslint-config-next": "16.2.9",
     "eslint-config-prettier": "10.1.8",
     "jsdom": "29.1.1",
     "msw": "^2.14.6",
@@ -85,6 +85,6 @@
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^6",
-    "vitest": "4.1.8"
+    "vitest": "4.1.9"
   }
 }
