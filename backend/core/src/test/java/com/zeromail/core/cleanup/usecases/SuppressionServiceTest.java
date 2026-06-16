@@ -191,10 +191,13 @@ class SuppressionServiceTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                 insert into triage_audit(
-                    audit_id, tenant_id, gmail_message_id, gmail_thread_id, sanitized_subject,
+                    audit_id, tenant_id, source_mailbox_id, executing_mailbox_id,
+                    gmail_message_id, gmail_thread_id, sanitized_subject,
                     sanitized_sender_email, rule_id, reason, action_type, args_hash,
                     action_args_json, decision, created_at, decided_at, attempt_count)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?)
+                values (?, ?, '00000000-0000-4000-8000-0000000000c1',
+                    '00000000-0000-4000-8000-0000000000c1',
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?)
                 """,
                 UUID.randomUUID(),
                 tenantId,

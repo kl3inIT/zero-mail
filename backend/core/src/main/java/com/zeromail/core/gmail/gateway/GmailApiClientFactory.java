@@ -8,10 +8,14 @@ import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.zeromail.core.gmail.config.GmailProperties;
+import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
+import com.zeromail.core.gmail.exception.MailboxDisconnectedException;
+import com.zeromail.core.gmail.exception.MailboxNotOwnedException;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.shared.privacy.Sensitive;
 import java.io.IOException;
 import java.net.URI;
@@ -24,6 +28,7 @@ import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,8 +47,12 @@ public class GmailApiClientFactory {
     private final URI tokenEndpoint;
     private final GmailConnectionRepository gmailConnectionRepository;
     private final RefreshTokenCipher refreshTokenCipher;
-    // Caches the access token result for back-to-back deliveries so we skip the AES-GCM
-    // refresh-token decrypt + Google HTTPS refresh round trip when a still-valid token exists.
+    // Shared across token refreshes: both are thread-safe and reusable, so allocating a fresh
+    // instance per call (a hot OAuth path) is wasteful and inconsistent with Boot-managed Jackson.
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    // Caches the access token result by gmailConnectionId so two mailboxes in one tenant never
+    // share access tokens while still skipping repeated AES-GCM decrypt + Google refresh calls.
     private final ConcurrentMap<UUID, TokenRefreshResult> accessTokenCache =
             new ConcurrentHashMap<>();
 
@@ -61,6 +70,17 @@ public class GmailApiClientFactory {
         this.tokenEndpoint = gmailProperties.oauthTokenUrl();
         this.gmailConnectionRepository = gmailConnectionRepository;
         this.refreshTokenCipher = refreshTokenCipher;
+    }
+
+    /**
+     * Evicts any cached access token for the given connection. Called by {@code
+     * GmailConnectionService} whenever a connection's grant changes (disconnect, reconnect) so a
+     * cached, still-valid access token can never outlive the grant it was minted from. CASA V13.1.5
+     * disconnect intent requires that a disconnected/revoked mailbox stops being usable
+     * immediately, not after the access-token TTL (~59 min) elapses.
+     */
+    public void evictAccessToken(UUID gmailConnectionId) {
+        accessTokenCache.remove(gmailConnectionId);
     }
 
     public Gmail buildGmailClient(String accessToken) throws IOException {
@@ -85,18 +105,56 @@ public class GmailApiClientFactory {
         }
     }
 
-    public Gmail buildClientForTenant(UUID tenantId) throws IOException {
-        return buildClientForTenant(tenantId, null);
+    public Gmail buildClientForMailbox(MailboxRef mailboxRef) throws IOException {
+        return buildClientForMailbox(mailboxRef, null);
     }
 
-    public Gmail buildClientForTenant(UUID tenantId, Duration requestTimeout) throws IOException {
+    public Gmail buildClientForMailbox(MailboxRef mailboxRef, Duration requestTimeout)
+            throws IOException {
+        MailboxRef resolvedMailboxRef =
+                Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
         GmailConnectionEntity gmailConnection =
                 gmailConnectionRepository
-                        .findByTenantId(tenantId)
+                        .findByIdAndTenantId(
+                                resolvedMailboxRef.gmailConnectionId(),
+                                resolvedMailboxRef.tenantId())
                         .orElseThrow(
                                 () ->
-                                        new IllegalStateException(
-                                                "No connection for tenantId: " + tenantId));
+                                        new MailboxNotOwnedException(
+                                                resolvedMailboxRef.tenantId(),
+                                                resolvedMailboxRef.gmailConnectionId()));
+        requireConnectedGrant(gmailConnection, resolvedMailboxRef.tenantId());
+        return buildClientForConnection(
+                gmailConnection, resolvedMailboxRef.tenantId(), requestTimeout);
+    }
+
+    @Deprecated(forRemoval = true)
+    public Gmail buildClientForTenant(UUID tenantId) throws IOException {
+        return buildClientForSingleConnectedTenant(tenantId, null);
+    }
+
+    @Deprecated(forRemoval = true)
+    public Gmail buildClientForTenant(UUID tenantId, Duration requestTimeout) throws IOException {
+        return buildClientForSingleConnectedTenant(tenantId, requestTimeout);
+    }
+
+    private Gmail buildClientForSingleConnectedTenant(UUID tenantId, Duration requestTimeout)
+            throws IOException {
+        List<GmailConnectionEntity> connectedMailboxes =
+                gmailConnectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                        .filter(
+                                gmailConnection ->
+                                        gmailConnection.getStatus()
+                                                == GmailConnectionStatus.CONNECTED)
+                        .toList();
+        if (connectedMailboxes.isEmpty()) {
+            throw new IllegalStateException("No connected Gmail mailbox for tenantId: " + tenantId);
+        }
+        if (connectedMailboxes.size() > 1) {
+            throw new IllegalStateException(
+                    "Tenant has more than one connected Gmail mailbox; use buildClientForMailbox");
+        }
+        GmailConnectionEntity gmailConnection = connectedMailboxes.getFirst();
         return buildClientForConnection(gmailConnection, tenantId, requestTimeout);
     }
 
@@ -108,7 +166,16 @@ public class GmailApiClientFactory {
     public Gmail buildClientForConnection(
             GmailConnectionEntity gmailConnection, UUID tenantId, Duration requestTimeout)
             throws IOException {
-        TokenRefreshResult cachedToken = accessTokenCache.get(tenantId);
+        UUID gmailConnectionId = gmailConnection.getId();
+        // Re-verify the grant before serving a cached token: a stale cache entry (e.g. from a
+        // race with a concurrent disconnect that has not yet called evictAccessToken) must never
+        // outlive the CONNECTED status of the row it was minted from.
+        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            accessTokenCache.remove(gmailConnectionId);
+            throw new MailboxDisconnectedException(
+                    tenantId, gmailConnectionId, gmailConnection.getStatus());
+        }
+        TokenRefreshResult cachedToken = accessTokenCache.get(gmailConnectionId);
         if (cachedToken != null && cachedToken.expiresAt().isAfter(Instant.now())) {
             return buildGmailClient(cachedToken.accessToken().value(), requestTimeout);
         }
@@ -122,20 +189,34 @@ public class GmailApiClientFactory {
             try {
                 tokenResult = refreshAccessToken(decryptedRefreshToken);
             } catch (InvalidGrantException invalidGrant) {
-                accessTokenCache.remove(tenantId);
+                accessTokenCache.remove(gmailConnectionId);
                 throw invalidGrant;
             }
-            accessTokenCache.put(tenantId, tokenResult);
+            accessTokenCache.put(gmailConnectionId, tokenResult);
             return buildGmailClient(tokenResult.accessToken().value(), requestTimeout);
         } finally {
             Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
         }
     }
 
+    private static void requireConnectedGrant(
+            GmailConnectionEntity gmailConnection, UUID tenantId) {
+        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            throw new MailboxDisconnectedException(
+                    tenantId, gmailConnection.getId(), gmailConnection.getStatus());
+        }
+        byte[] refreshTokenEncrypted = gmailConnection.getRefreshTokenEncrypted();
+        if (refreshTokenEncrypted == null || refreshTokenEncrypted.length == 0) {
+            // CONNECTED status but no usable grant: surface as the same domain "not connected"
+            // conflict so callers get a mapped 409 instead of an uncontrolled 500.
+            throw new MailboxDisconnectedException(
+                    tenantId, gmailConnection.getId(), gmailConnection.getStatus());
+        }
+    }
+
     public record TokenRefreshResult(Sensitive<String> accessToken, Instant expiresAt) {}
 
     public TokenRefreshResult refreshAccessToken(String decryptedRefreshToken) throws IOException {
-        HttpClient httpClient = HttpClient.newHttpClient();
         String requestBody =
                 "grant_type=refresh_token"
                         + "&client_id="
@@ -159,7 +240,6 @@ public class GmailApiClientFactory {
         }
 
         if (response.statusCode() == 200) {
-            ObjectMapper objectMapper = new ObjectMapper();
             JsonNode responseBody = objectMapper.readTree(response.body());
             String refreshedAccessToken = responseBody.path("access_token").asString();
             int expiresInSeconds = responseBody.path("expires_in").asInt(3600);

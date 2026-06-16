@@ -198,10 +198,13 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                 insert into triage_audit(
-                  tenant_id, gmail_message_id, rule_id, action_type, args_hash,
+                  tenant_id, source_mailbox_id, executing_mailbox_id, gmail_message_id, rule_id,
+                  action_type, args_hash,
                   action_args_json, decision, reason
                 )
-                values (?, 'gmail-message-1', null, 'archive', ?, '{"type":"archive"}'::jsonb,
+                values (?, '00000000-0000-4000-8000-0000000000c1',
+                  '00000000-0000-4000-8000-0000000000c1',
+                  'gmail-message-1', null, 'archive', ?, '{"type":"archive"}'::jsonb,
                   'PENDING', 'matcher-node-1')
                 """,
                 tenantId,

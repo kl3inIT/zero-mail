@@ -103,7 +103,6 @@ class RecentInboxReadServiceTest {
             GmailConnectionRepository gmailConnectionRepository,
             GmailApiClientFactory gmailApiClientFactory) {
         return new RecentInboxReadService(
-                gmailConnectionRepository,
                 gmailApiClientFactory,
                 cryptoProperties(),
                 new JsoupSafeHtmlSanitizer(),

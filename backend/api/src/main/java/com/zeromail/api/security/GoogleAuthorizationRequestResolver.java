@@ -1,8 +1,11 @@
 package com.zeromail.api.security;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
@@ -14,10 +17,11 @@ import org.springframework.stereotype.Component;
  * (Phase 01.5 D-A1, D-A5). Replaces the two-registration {@code GmailScopeRequestResolver} (deleted
  * in Phase 01.5 D-A3).
  *
- * <p>Runtime signal: when the request carries a {@code ?reconnect=true} query parameter (set by
- * {@code ConnectGmailController}'s redirect), {@code prompt=consent} is added to force Google to
- * re-show the consent screen and re-issue a refresh token. All other requests (first-time login
- * from {@code /login}) omit {@code prompt} entirely for smooth UX (D-A5 decision).
+ * <p>Runtime signal: when the request carries a {@code ?reconnect=true} query parameter, {@code
+ * prompt=consent} is added to force Google to re-show the consent screen and re-issue a refresh
+ * token. This query parameter carries no branch authority; add/reconnect routing is read only from
+ * {@link OAuthIntentSnapshot#PENDING_INTENT_SESSION_ATTRIBUTE}, which is written server-side by the
+ * authenticated mailbox-management endpoint and re-checked on callback.
  *
  * <p>{@code access_type=offline} and {@code include_granted_scopes=true} are always set: {@code
  * offline} guarantees refresh-token issuance; {@code include_granted_scopes} ensures the bundled
@@ -34,6 +38,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(GoogleAuthorizationRequestResolver.class);
 
     private static final String RECONNECT_PARAMETER = "reconnect";
 
@@ -63,6 +70,7 @@ public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRe
     private OAuth2AuthorizationRequest customizeAuthorizationRequest(
             OAuth2AuthorizationRequest authorizationRequest, HttpServletRequest servletRequest) {
         if (authorizationRequest == null) return null;
+        OAuthIntentSnapshot pendingIntentSnapshot = consumePendingIntentSnapshot(servletRequest);
         var additionalParameters = new HashMap<>(authorizationRequest.getAdditionalParameters());
         additionalParameters.put("access_type", "offline");
         additionalParameters.put("include_granted_scopes", "true");
@@ -72,8 +80,58 @@ public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRe
         if ("true".equals(servletRequest.getParameter(RECONNECT_PARAMETER))) {
             additionalParameters.put("prompt", "consent");
         }
-        return OAuth2AuthorizationRequest.from(authorizationRequest)
-                .additionalParameters(Map.copyOf(additionalParameters))
-                .build();
+        var authorizationRequestBuilder =
+                OAuth2AuthorizationRequest.from(authorizationRequest)
+                        .additionalParameters(Map.copyOf(additionalParameters))
+                        .attributes(
+                                attributes -> {
+                                    if (pendingIntentSnapshot == null) {
+                                        return;
+                                    }
+                                    attributes.put(
+                                            OAuthIntentSnapshot.ATTRIBUTE_INTENT,
+                                            pendingIntentSnapshot.intent());
+                                    attributes.put(
+                                            OAuthIntentSnapshot.ATTRIBUTE_TARGET_MAILBOX_ID,
+                                            pendingIntentSnapshot.targetMailboxId());
+                                    attributes.put(
+                                            OAuthIntentSnapshot.ATTRIBUTE_INITIATING_TENANT_ID,
+                                            pendingIntentSnapshot.initiatingTenantId());
+                                });
+        return authorizationRequestBuilder.build();
+    }
+
+    private OAuthIntentSnapshot consumePendingIntentSnapshot(HttpServletRequest servletRequest) {
+        HttpSession session = servletRequest.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object pendingIntentValue =
+                session.getAttribute(OAuthIntentSnapshot.PENDING_INTENT_SESSION_ATTRIBUTE);
+        if (pendingIntentValue == null) {
+            return null;
+        }
+        session.removeAttribute(OAuthIntentSnapshot.PENDING_INTENT_SESSION_ATTRIBUTE);
+        if (!(pendingIntentValue instanceof OAuthIntentSnapshot pendingIntentSnapshot)) {
+            log.warn("event=oauth_pending_intent_invalid");
+            return null;
+        }
+        if (!validManagementIntent(pendingIntentSnapshot)) {
+            log.warn("event=oauth_pending_intent_invalid");
+            return null;
+        }
+        return pendingIntentSnapshot;
+    }
+
+    private static boolean validManagementIntent(OAuthIntentSnapshot pendingIntentSnapshot) {
+        if (pendingIntentSnapshot.initiatingTenantId() == null) {
+            return false;
+        }
+        return switch (pendingIntentSnapshot.intent()) {
+            case OAuthIntentSnapshot.INTENT_ADD_MAILBOX -> true;
+            case OAuthIntentSnapshot.INTENT_RECONNECT_MAILBOX ->
+                    pendingIntentSnapshot.targetMailboxId() != null;
+            default -> false;
+        };
     }
 }

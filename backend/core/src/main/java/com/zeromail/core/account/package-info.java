@@ -1,6 +1,7 @@
 @ApplicationModule(
         displayName = "Account",
         allowedDependencies = {
+            "mailbox",
             "tenant",
             "tenant :: usecases",
             "gmail",

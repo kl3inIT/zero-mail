@@ -68,6 +68,7 @@ describe('RulesWorkspace Wave 0 contract', () => {
         rules={[
           {
             ruleId: 'rule-html',
+            gmailConnectionId: 'mailbox-a',
             displayName: '<img src=x onerror=alert(1)>',
             sourceText: 'Archive receipts',
             enabled: false,
@@ -107,6 +108,7 @@ describe('RulesWorkspace Wave 0 contract', () => {
         rules={[
           {
             ruleId: 'rule-template',
+            gmailConnectionId: 'mailbox-a',
             displayName: 'Archive receipts',
             sourceText: 'Archive receipts',
             enabled: true,

@@ -55,11 +55,7 @@ export function HeroVideoPlayer({ videoId }: { videoId: string }) {
       />
       <span className="absolute inset-0 flex items-center justify-center bg-(--ink)/10 transition group-hover:bg-(--ink)/20">
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--ink)/85 shadow-lg transition group-hover:scale-105">
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            className="h-7 w-7 fill-(--bg-elevated)"
-          >
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7 fill-(--bg-elevated)">
             <path d="M8 5v14l11-7z" />
           </svg>
         </span>

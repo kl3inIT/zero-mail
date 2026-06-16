@@ -22,6 +22,10 @@ public class MailMessageObservedEntity {
     private UUID tenantId;
 
     @Id
+    @Column(name = "gmail_connection_id", nullable = false)
+    private UUID gmailConnectionId;
+
+    @Id
     @Column(name = "gmail_message_id", nullable = false)
     private String gmailMessageId;
 
@@ -51,6 +55,7 @@ public class MailMessageObservedEntity {
 
     public MailMessageObservedEntity(
             UUID tenantId,
+            UUID gmailConnectionId,
             String gmailMessageId,
             String gmailThreadId,
             Long historyId,
@@ -58,6 +63,7 @@ public class MailMessageObservedEntity {
             Long internalDate) {
         this(
                 tenantId,
+                gmailConnectionId,
                 gmailMessageId,
                 gmailThreadId,
                 historyId,
@@ -69,6 +75,7 @@ public class MailMessageObservedEntity {
 
     public MailMessageObservedEntity(
             UUID tenantId,
+            UUID gmailConnectionId,
             String gmailMessageId,
             String gmailThreadId,
             Long historyId,
@@ -77,6 +84,7 @@ public class MailMessageObservedEntity {
             Instant observedAt) {
         this(
                 tenantId,
+                gmailConnectionId,
                 gmailMessageId,
                 gmailThreadId,
                 historyId,
@@ -88,6 +96,7 @@ public class MailMessageObservedEntity {
 
     public MailMessageObservedEntity(
             UUID tenantId,
+            UUID gmailConnectionId,
             String gmailMessageId,
             String gmailThreadId,
             Long historyId,
@@ -97,6 +106,7 @@ public class MailMessageObservedEntity {
             Instant observedAt) {
         this(
                 tenantId,
+                gmailConnectionId,
                 gmailMessageId,
                 gmailThreadId,
                 historyId,
@@ -109,6 +119,7 @@ public class MailMessageObservedEntity {
 
     public MailMessageObservedEntity(
             UUID tenantId,
+            UUID gmailConnectionId,
             String gmailMessageId,
             String gmailThreadId,
             Long historyId,
@@ -118,6 +129,7 @@ public class MailMessageObservedEntity {
             String senderName,
             Instant observedAt) {
         this.tenantId = tenantId;
+        this.gmailConnectionId = gmailConnectionId;
         this.gmailMessageId = gmailMessageId;
         this.gmailThreadId = gmailThreadId;
         this.historyId = historyId;
@@ -129,11 +141,15 @@ public class MailMessageObservedEntity {
     }
 
     public MailMessageObservedId getId() {
-        return new MailMessageObservedId(tenantId, gmailMessageId);
+        return new MailMessageObservedId(tenantId, gmailConnectionId, gmailMessageId);
     }
 
     public UUID getTenantId() {
         return tenantId;
+    }
+
+    public UUID getGmailConnectionId() {
+        return gmailConnectionId;
     }
 
     public String getGmailMessageId() {

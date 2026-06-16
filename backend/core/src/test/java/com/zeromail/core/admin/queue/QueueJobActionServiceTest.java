@@ -42,7 +42,7 @@ class QueueJobActionServiceTest extends PostgresContainerTest {
         jdbcTemplate.update("DELETE FROM admin_audit_event WHERE actor_user_id = ?", ADMIN_USER_ID);
         jdbcTemplate.execute(
                 "ALTER TABLE admin_audit_event ENABLE TRIGGER admin_audit_event_append_only");
-        jdbcTemplate.execute("DELETE FROM processing_job");
+        jdbcTemplate.execute("TRUNCATE TABLE processing_job CASCADE");
         adminUserRepository.save(
                 new AdminUserEntity(
                         ADMIN_USER_ID,
@@ -58,9 +58,10 @@ class QueueJobActionServiceTest extends PostgresContainerTest {
     void force_retry_resets_failed_job_to_pending_and_audits() {
         UUID jobId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO processing_job(id, job_type, status, attempts, last_failure_reason,"
-                        + " last_failed_at)"
-                        + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'FAILED', 3, 'UNKNOWN',"
+                "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id,"
+                        + " last_failure_reason, last_failed_at)"
+                        + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'FAILED', 3,"
+                        + " '00000000-0000-4000-8000-0000000000c1', 'UNKNOWN',"
                         + " NOW() - INTERVAL '5 minutes')",
                 jobId);
 
@@ -92,8 +93,9 @@ class QueueJobActionServiceTest extends PostgresContainerTest {
     void force_retry_is_idempotent_when_job_not_failed() {
         UUID jobId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO processing_job(id, job_type, status, attempts)"
-                        + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'COMPLETED', 1)",
+                "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id)"
+                        + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'COMPLETED', 1,"
+                        + " '00000000-0000-4000-8000-0000000000c1')",
                 jobId);
 
         int updatedRows =
@@ -110,8 +112,9 @@ class QueueJobActionServiceTest extends PostgresContainerTest {
     void cancel_transitions_pending_job_to_cancelled_and_audits() {
         UUID jobId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO processing_job(id, job_type, status, attempts)"
-                        + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'PENDING', 0)",
+                "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id)"
+                        + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'PENDING', 0,"
+                        + " '00000000-0000-4000-8000-0000000000c1')",
                 jobId);
 
         int updatedRows =
@@ -134,8 +137,10 @@ class QueueJobActionServiceTest extends PostgresContainerTest {
     void cancel_refuses_active_processing_job_with_fresh_heartbeat() {
         UUID jobId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO processing_job(id, job_type, status, attempts, heartbeat_at)"
-                        + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'PROCESSING', 1, NOW())",
+                "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id,"
+                        + " heartbeat_at)"
+                        + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'PROCESSING', 1,"
+                        + " '00000000-0000-4000-8000-0000000000c1', NOW())",
                 jobId);
 
         int updatedRows =
@@ -161,9 +166,10 @@ class QueueJobActionServiceTest extends PostgresContainerTest {
     void cancel_allows_stuck_processing_job_with_stale_heartbeat() {
         UUID jobId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO processing_job(id, job_type, status, attempts, heartbeat_at)"
+                "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id,"
+                        + " heartbeat_at)"
                         + " VALUES (?, 'UNSUBSCRIBE_CAMPAIGN', 'PROCESSING', 2,"
-                        + " NOW() - INTERVAL '15 minutes')",
+                        + " '00000000-0000-4000-8000-0000000000c1', NOW() - INTERVAL '15 minutes')",
                 jobId);
 
         int updatedRows =

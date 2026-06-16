@@ -131,11 +131,14 @@ class TriageAuditWriterCleanupArchiveTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                 insert into triage_audit(
-                    audit_id, tenant_id, gmail_message_id, gmail_thread_id, sanitized_subject,
+                    audit_id, tenant_id, source_mailbox_id, executing_mailbox_id,
+                    gmail_message_id, gmail_thread_id, sanitized_subject,
                     sanitized_sender_email, rule_id, reason, action_type, args_hash,
                     action_args_json, decision, created_at, decided_at,
                     attempt_count, source, updated_at, version)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, NOW(), NOW(), 1, 'TRIAGE', NOW(), 0)
+                values (?, ?, '00000000-0000-4000-8000-0000000000c1',
+                    '00000000-0000-4000-8000-0000000000c1',
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, NOW(), NOW(), 1, 'TRIAGE', NOW(), 0)
                 """,
                 triageAuditId,
                 tenantId,
@@ -209,6 +212,16 @@ class TriageAuditWriterCleanupArchiveTest extends PostgresContainerTest {
                 "insert into tenants(id, display_name) values (?, ?)",
                 tenantId,
                 "cleanup-archive-" + tenantId);
+        // recordCleanupArchive resolves source/executing_mailbox_id via a primary-connection
+        // sub-select; the column is NOT NULL, so a CONNECTED primary mailbox must exist first.
+        jdbcTemplate.update(
+                """
+                insert into gmail_connections(id, tenant_id, google_email, status, is_primary)
+                values (?, ?, ?, 'CONNECTED', true)
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                "cleanup-archive-" + tenantId + "@example.test");
         return tenantId;
     }
 

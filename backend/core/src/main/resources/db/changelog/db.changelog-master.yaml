@@ -327,6 +327,33 @@ databaseChangeLog:
       file: changes/118-cleanup-sender-projection.yaml
       relativeToChangelogFile: true
   - include:
+      file: changes/119-gmail-connections-multi-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/120-pubsub-delivery-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/121-mail-message-observed-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/122-gmail-inbox-projection-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/123-gmail-inbox-sync-state-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/124-processing-job-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/125-triage-audit-mailbox.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/126-rules-mailbox-ownership.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/127-gmail-conn-global-active-email-unique.yaml
+      relativeToChangelogFile: true
+  - include:
       file: changes/119-messaging-conversation-binding.yaml
       relativeToChangelogFile: true
   - include:
@@ -337,6 +364,9 @@ databaseChangeLog:
       relativeToChangelogFile: true
   - include:
       file: changes/120-llm-call-audit-call-site-add-needs-reply-digest.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/128-processing-job-mailbox-nullable.yaml
       relativeToChangelogFile: true
   - include:
       file: changes/121-tenant-activity-event.yaml

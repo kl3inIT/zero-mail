@@ -5,7 +5,9 @@ import com.zeromail.core.draft.exception.DraftGenerationFailedException;
 import com.zeromail.core.draft.exception.DraftGenerationInFlightException;
 import com.zeromail.core.draft.exception.DraftGenerationUnavailableException;
 import com.zeromail.core.draft.usecases.DraftReplySourceLoader.DraftReplySource;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.lock.LockBackendUnavailableException;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
@@ -50,6 +52,7 @@ public class GenerateThreadDraftService {
     private final DraftReplySourceLoader draftReplySourceLoader;
     private final DraftBodyGenerator draftBodyGenerator;
     private final TriageGmailWriter triageGmailWriter;
+    private final GmailConnectionService gmailConnectionService;
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
     private final TriageDraftAuditService triageDraftAuditService;
     private final ApplicationEventPublisher eventPublisher;
@@ -62,6 +65,7 @@ public class GenerateThreadDraftService {
             DraftReplySourceLoader draftReplySourceLoader,
             DraftBodyGenerator draftBodyGenerator,
             TriageGmailWriter triageGmailWriter,
+            GmailConnectionService gmailConnectionService,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
             TriageDraftAuditService triageDraftAuditService,
             ApplicationEventPublisher eventPublisher,
@@ -71,6 +75,7 @@ public class GenerateThreadDraftService {
                 draftReplySourceLoader,
                 draftBodyGenerator,
                 triageGmailWriter,
+                gmailConnectionService,
                 classifyThreadReplyStatusService,
                 triageDraftAuditService,
                 eventPublisher,
@@ -83,6 +88,7 @@ public class GenerateThreadDraftService {
             DraftReplySourceLoader draftReplySourceLoader,
             DraftBodyGenerator draftBodyGenerator,
             TriageGmailWriter triageGmailWriter,
+            GmailConnectionService gmailConnectionService,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
             TriageDraftAuditService triageDraftAuditService,
             ApplicationEventPublisher eventPublisher,
@@ -98,6 +104,9 @@ public class GenerateThreadDraftService {
                 Objects.requireNonNull(draftBodyGenerator, "draftBodyGenerator must not be null");
         this.triageGmailWriter =
                 Objects.requireNonNull(triageGmailWriter, "triageGmailWriter must not be null");
+        this.gmailConnectionService =
+                Objects.requireNonNull(
+                        gmailConnectionService, "gmailConnectionService must not be null");
         this.classifyThreadReplyStatusService =
                 Objects.requireNonNull(
                         classifyThreadReplyStatusService,
@@ -125,11 +134,13 @@ public class GenerateThreadDraftService {
         LockHandle lockHandle = acquireLock(lockKey);
         try {
             String oldDraftId = currentDraftId(command.gmailThreadId()).orElse(null);
+            MailboxRef mailboxRef = primaryMailboxRef(command.tenantId());
             DraftReplySource draftReplySource =
-                    draftReplySourceLoader.load(command.tenantId(), command.gmailThreadId());
+                    draftReplySourceLoader.load(mailboxRef, command.gmailThreadId());
             String body =
                     draftBodyGenerator.generate(
                             command.tenantId(),
+                            mailboxRef,
                             command.gmailThreadId(),
                             draftReplySource.inboundRawHtml(),
                             draftReplySource.inboundSubject());
@@ -137,15 +148,14 @@ public class GenerateThreadDraftService {
                     preWriteIntent(command.gmailThreadId(), oldDraftId);
             UUID auditId =
                     reserveAuditBeforeGmailWrite(
-                            command.tenantId(), draftReplySource, preWriteIntent);
+                            command.tenantId(), mailboxRef, draftReplySource, preWriteIntent);
             String newDraftId =
                     triageGmailWriter.saveDraft(
-                            command.tenantId(),
+                            mailboxRef,
                             draftReplySource.replyHeaders(),
                             body,
                             command.gmailThreadId());
-            deleteOldDraftIfNeeded(
-                    command.tenantId(), command.gmailThreadId(), oldDraftId, newDraftId);
+            deleteOldDraftIfNeeded(mailboxRef, command.gmailThreadId(), oldDraftId, newDraftId);
             persistAuditAndClassify(
                     command.tenantId(), draftReplySource, newDraftId, auditId, preWriteIntent);
             eventPublisher.publishEvent(
@@ -190,6 +200,7 @@ public class GenerateThreadDraftService {
 
     private UUID reserveAuditBeforeGmailWrite(
             UUID tenantId,
+            MailboxRef mailboxRef,
             DraftReplySource draftReplySource,
             TriageActionResult.SaveDraft preWriteIntent) {
         String leaseOwner = "on-demand-draft-" + UUID.randomUUID();
@@ -198,6 +209,8 @@ public class GenerateThreadDraftService {
                     TriageDraftAuditReservation reservation =
                             triageDraftAuditService.reservePendingAudit(
                                     tenantId,
+                                    mailboxRef.gmailConnectionId(),
+                                    mailboxRef.gmailConnectionId(),
                                     draftReplySource.gmailMessageId(),
                                     draftReplySource.gmailThreadId(),
                                     draftReplySource.inboundSubject(),
@@ -233,18 +246,29 @@ public class GenerateThreadDraftService {
     }
 
     private void deleteOldDraftIfNeeded(
-            UUID tenantId, String gmailThreadId, String oldDraftId, String newDraftId) {
+            MailboxRef mailboxRef, String gmailThreadId, String oldDraftId, String newDraftId) {
         if (oldDraftId == null || oldDraftId.equals(newDraftId)) {
             return;
         }
         try {
-            triageGmailWriter.deleteDraft(tenantId, oldDraftId);
+            triageGmailWriter.deleteDraft(mailboxRef, oldDraftId);
         } catch (IOException staleDraftDeleteFailure) {
             log.warn(
                     "event=stale_draft_delete_failed tenantId={} gmailThreadId={}",
-                    tenantId,
+                    mailboxRef.tenantId(),
                     logSafeIdentifier(gmailThreadId));
         }
+    }
+
+    private MailboxRef primaryMailboxRef(UUID tenantId) {
+        // TODO(Plan 05): replace primary-shim MailboxRef with MailboxContext.currentOrThrow()
+        // once the active-mailbox filter binds on-demand draft actions.
+        return gmailConnectionService
+                .primaryMailboxRef(tenantId)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "Primary Gmail mailbox is required for draft generation"));
     }
 
     private void persistAuditAndClassify(

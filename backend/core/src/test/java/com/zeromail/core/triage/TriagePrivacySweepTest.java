@@ -1,6 +1,7 @@
 package com.zeromail.core.triage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -21,6 +22,7 @@ import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
 import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.persistence.RuleEntity;
@@ -50,6 +52,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SuppressWarnings("SqlResolve")
 class TriagePrivacySweepTest extends PostgresContainerTest {
 
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-0000000004a8");
     private static final String GMAIL_MESSAGE_ID = "gmail-message-privacy-sweep";
     private static final String GMAIL_THREAD_ID = "gmail-thread-privacy-sweep";
     private static final String RAW_SENDER_EMAIL = "sweep.sender@example.test";
@@ -118,11 +122,13 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
                         triageOrchestratorService.processObservedEvent(
                                 new MailMessageObserved(
                                         tenantId,
+                                        GMAIL_CONNECTION_ID,
                                         GMAIL_MESSAGE_ID,
                                         GMAIL_THREAD_ID,
                                         Instant.parse("2026-05-11T00:00:00Z"))));
 
-        verify(triageGmailWriter).archiveSkipInbox(tenantId, GMAIL_MESSAGE_ID);
+        verify(triageGmailWriter)
+                .archiveSkipInbox(new MailboxRef(tenantId, GMAIL_CONNECTION_ID), GMAIL_MESSAGE_ID);
         assertAuditRowsAreContentFree(tenantId);
         assertCapturedTriageLogsAreContentFree();
         assertTriageMetricTagsAreContentFree(tenantId);
@@ -130,10 +136,14 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
 
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
+        String displayName = "triage-privacy-sweep-" + tenantId;
         jdbcTemplate.update(
-                "insert into tenants(id, display_name) values (?, ?)",
+                "insert into tenants(id, display_name) values (?, ?)", tenantId, displayName);
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                GMAIL_CONNECTION_ID,
                 tenantId,
-                "triage-privacy-sweep-" + tenantId);
+                displayName + "@example.test");
         return tenantId;
     }
 
@@ -156,6 +166,7 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
                             new RuleEntity(
                                     deterministicRuleId,
                                     tenantId,
+                                    GMAIL_CONNECTION_ID,
                                     "Archive opted-in sender",
                                     "Archive opted-in sender",
                                     RuleLanguage.EN,
@@ -175,6 +186,7 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
                             new RuleEntity(
                                     semanticRuleId,
                                     tenantId,
+                                    GMAIL_CONNECTION_ID,
                                     "Semantic draft probe",
                                     "Semantic draft probe",
                                     RuleLanguage.EN,
@@ -203,7 +215,9 @@ class TriagePrivacySweepTest extends PostgresContainerTest {
         Gmail.Users.Messages messages = mock(Gmail.Users.Messages.class);
         Gmail.Users.Messages.Get messageGetRequest = mock(Gmail.Users.Messages.Get.class);
 
-        when(gmailApiClientFactory.buildClientForTenant(tenantId)).thenReturn(gmail);
+        // Phase 11: triage input is fetched through the mailbox-scoped client, not the legacy
+        // tenant-only lookup.
+        when(gmailApiClientFactory.buildClientForMailbox(any(), any())).thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.messages()).thenReturn(messages);
         when(messages.get("me", GMAIL_MESSAGE_ID)).thenReturn(messageGetRequest);

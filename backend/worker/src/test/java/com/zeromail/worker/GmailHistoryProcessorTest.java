@@ -189,10 +189,14 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
     private void seedDelivery(UUID tenantId, String messageId, long historyId) {
         jdbc.update(
                 """
-                INSERT INTO pubsub_delivery(id, tenant_id, pubsub_message_id, history_id, payload, status)
-                VALUES (?, ?, ?, ?, '{}'::jsonb, 'PENDING')
+                INSERT INTO pubsub_delivery(
+                    id, tenant_id, gmail_connection_id, pubsub_message_id, history_id, payload, status)
+                VALUES (
+                    ?, ?, (SELECT id FROM gmail_connections WHERE tenant_id = ? LIMIT 1),
+                    ?, ?, '{}'::jsonb, 'PENDING')
                 """,
                 UUID.randomUUID(),
+                tenantId,
                 tenantId,
                 messageId,
                 historyId);

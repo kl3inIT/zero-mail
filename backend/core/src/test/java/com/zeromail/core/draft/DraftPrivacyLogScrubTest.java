@@ -14,10 +14,14 @@ import com.zeromail.core.draft.usecases.DraftReplySourceLoader;
 import com.zeromail.core.draft.usecases.DraftReplySourceLoader.DraftReplySource;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftCommand;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftService;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.mailbox.MailboxRef;
+import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
 import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
 import com.zeromail.core.triage.domain.ReplyHeaders;
+import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
 import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
@@ -38,6 +42,8 @@ import org.springframework.transaction.support.TransactionOperations;
 class DraftPrivacyLogScrubTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-0000000005b3");
+    private static final UUID MAILBOX_ID = UUID.fromString("00000000-0000-0000-0000-0000000005b4");
+    private static final MailboxRef MAILBOX_REF = new MailboxRef(TENANT_ID, MAILBOX_ID);
 
     @Test
     void draft_generation_logs_never_include_mail_body_prompt_or_completion_content()
@@ -46,6 +52,7 @@ class DraftPrivacyLogScrubTest {
         DraftReplySourceLoader draftReplySourceLoader = mock(DraftReplySourceLoader.class);
         DraftBodyGenerator draftBodyGenerator = mock(DraftBodyGenerator.class);
         TriageGmailWriter triageGmailWriter = mock(TriageGmailWriter.class);
+        GmailConnectionService gmailConnectionService = mock(GmailConnectionService.class);
         ClassifyThreadReplyStatusService classifyThreadReplyStatusService =
                 mock(ClassifyThreadReplyStatusService.class);
         TriageAuditWriter triageAuditWriter = mock(TriageAuditWriter.class);
@@ -61,7 +68,9 @@ class DraftPrivacyLogScrubTest {
                 .thenReturn(Optional.of(lockHandle));
         when(classifyThreadReplyStatusService.currentDraftId("thread-1"))
                 .thenReturn(Optional.empty());
-        when(draftReplySourceLoader.load(TENANT_ID, "thread-1"))
+        when(gmailConnectionService.primaryMailboxRef(TENANT_ID))
+                .thenReturn(Optional.of(MAILBOX_REF));
+        when(draftReplySourceLoader.load(MAILBOX_REF, "thread-1"))
                 .thenReturn(
                         new DraftReplySource(
                                 "message-1",
@@ -78,24 +87,30 @@ class DraftPrivacyLogScrubTest {
                                 false,
                                 false));
         when(draftBodyGenerator.generate(
-                        TENANT_ID, "thread-1", "sent-mail-body-sentinel", "prompt-sentinel"))
+                        TENANT_ID,
+                        MAILBOX_REF,
+                        "thread-1",
+                        "sent-mail-body-sentinel",
+                        "prompt-sentinel"))
                 .thenReturn("draft-body-sentinel completion-sentinel");
         when(triageGmailWriter.saveDraft(
-                        eq(TENANT_ID),
+                        eq(MAILBOX_REF),
                         any(ReplyHeaders.class),
                         eq("draft-body-sentinel completion-sentinel"),
                         eq("thread-1")))
                 .thenReturn("draft-1");
         when(triageAuditWriter.insertPending(
-                        any(),
+                        any(UUID.class),
+                        any(UUID.class),
+                        any(UUID.class),
                         anyString(),
                         anyString(),
-                        any(),
-                        any(),
-                        any(),
                         anyString(),
-                        any(),
-                        any(),
+                        anyString(),
+                        any(UUID.class),
+                        anyString(),
+                        any(RuleActionType.class),
+                        any(TriageActionResult.class),
                         anyString()))
                 .thenReturn(Optional.of(UUID.randomUUID()));
         when(triageAuditRepository.reclaimStalePending(any(UUID.class), eq(TENANT_ID), anyString()))
@@ -106,6 +121,7 @@ class DraftPrivacyLogScrubTest {
                         draftReplySourceLoader,
                         draftBodyGenerator,
                         triageGmailWriter,
+                        gmailConnectionService,
                         classifyThreadReplyStatusService,
                         triageDraftAuditService,
                         eventPublisher,

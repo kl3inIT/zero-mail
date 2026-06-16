@@ -55,6 +55,8 @@ public class TriageAuditWriter {
 
     public Optional<UUID> insertPending(
             UUID tenantId,
+            UUID sourceMailboxId,
+            UUID executingMailboxId,
             String gmailMessageId,
             String gmailThreadId,
             String sanitizedSubject,
@@ -66,6 +68,8 @@ public class TriageAuditWriter {
             String reasonEvidence) {
         return triageAuditRepository.insertAuditPendingIfAbsent(
                 tenantId,
+                sourceMailboxId,
+                executingMailboxId,
                 gmailMessageId,
                 gmailThreadId,
                 sanitizedSubject,
@@ -81,6 +85,8 @@ public class TriageAuditWriter {
 
     public Optional<UUID> insertPending(
             UUID tenantId,
+            UUID sourceMailboxId,
+            UUID executingMailboxId,
             String gmailMessageId,
             String gmailThreadId,
             String sanitizedSubject,
@@ -93,6 +99,8 @@ public class TriageAuditWriter {
             String blockedBySafetyNetPattern) {
         return triageAuditRepository.insertAuditPendingIfAbsent(
                 tenantId,
+                sourceMailboxId,
+                executingMailboxId,
                 gmailMessageId,
                 gmailThreadId,
                 sanitizedSubject,
@@ -108,6 +116,8 @@ public class TriageAuditWriter {
 
     public Optional<UUID> insertTerminal(
             UUID tenantId,
+            UUID sourceMailboxId,
+            UUID executingMailboxId,
             String gmailMessageId,
             String gmailThreadId,
             String sanitizedSubject,
@@ -124,6 +134,8 @@ public class TriageAuditWriter {
         }
         return triageAuditRepository.insertAuditTerminalIfAbsent(
                 tenantId,
+                sourceMailboxId,
+                executingMailboxId,
                 gmailMessageId,
                 gmailThreadId,
                 sanitizedSubject,
@@ -140,6 +152,8 @@ public class TriageAuditWriter {
 
     public Optional<UUID> insertTerminal(
             UUID tenantId,
+            UUID sourceMailboxId,
+            UUID executingMailboxId,
             String gmailMessageId,
             String gmailThreadId,
             String sanitizedSubject,
@@ -157,6 +171,8 @@ public class TriageAuditWriter {
         }
         return triageAuditRepository.insertAuditTerminalIfAbsent(
                 tenantId,
+                sourceMailboxId,
+                executingMailboxId,
                 gmailMessageId,
                 gmailThreadId,
                 sanitizedSubject,
@@ -173,12 +189,14 @@ public class TriageAuditWriter {
 
     public Optional<UUID> findPendingAuditId(
             UUID tenantId,
+            UUID executingMailboxId,
             String gmailMessageId,
             UUID ruleId,
             RuleActionType actionType,
             TriageActionResult preWriteIntent) {
         return triageAuditRepository.findPendingAuditIdByKey(
                 tenantId,
+                executingMailboxId,
                 gmailMessageId,
                 ruleId,
                 actionType.id(),

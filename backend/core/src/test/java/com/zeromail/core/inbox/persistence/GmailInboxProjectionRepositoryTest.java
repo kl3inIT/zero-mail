@@ -21,6 +21,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 class GmailInboxProjectionRepositoryTest extends PostgresContainerTest {
 
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-00000000cc11");
+
     @Autowired GmailInboxProjectionRepository projectionRepository;
     @Autowired JdbcTemplate jdbcTemplate;
 
@@ -37,6 +40,7 @@ class GmailInboxProjectionRepositoryTest extends PostgresContainerTest {
                         () ->
                                 projectionRepository.upsertProjection(
                                         tenantId,
+                                        GMAIL_CONNECTION_ID,
                                         gmailMessageId,
                                         "thread-abc",
                                         new byte[32],
@@ -59,7 +63,9 @@ class GmailInboxProjectionRepositoryTest extends PostgresContainerTest {
                                 () ->
                                         projectionRepository.findById(
                                                 new GmailInboxProjectionId(
-                                                        tenantId, gmailMessageId)));
+                                                        tenantId,
+                                                        GMAIL_CONNECTION_ID,
+                                                        gmailMessageId)));
 
         assertThat(loaded).isPresent();
         GmailInboxProjectionEntity projection = loaded.orElseThrow();
@@ -82,6 +88,7 @@ class GmailInboxProjectionRepositoryTest extends PostgresContainerTest {
                         () -> {
                             projectionRepository.upsertProjection(
                                     tenantId,
+                                    GMAIL_CONNECTION_ID,
                                     gmailMessageId,
                                     "thread-original",
                                     new byte[32],
@@ -99,6 +106,7 @@ class GmailInboxProjectionRepositoryTest extends PostgresContainerTest {
                                     initialRefreshedAt.plus(Duration.ofDays(90)));
                             projectionRepository.upsertProjection(
                                     tenantId,
+                                    GMAIL_CONNECTION_ID,
                                     gmailMessageId,
                                     "thread-still-the-same",
                                     new byte[32],
@@ -123,7 +131,9 @@ class GmailInboxProjectionRepositoryTest extends PostgresContainerTest {
                                         projectionRepository
                                                 .findById(
                                                         new GmailInboxProjectionId(
-                                                                tenantId, gmailMessageId))
+                                                                tenantId,
+                                                                GMAIL_CONNECTION_ID,
+                                                                gmailMessageId))
                                                 .orElseThrow());
 
         assertThat(projection.getVersion()).isEqualTo(1);

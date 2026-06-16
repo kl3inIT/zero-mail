@@ -13,6 +13,8 @@ export type RuleEnabledRequest = components['schemas']['RuleEnabledRequest'];
 export type RulePreviewRequest = components['schemas']['RulePreviewRequest'];
 export type RuleDraftPreviewRequest = components['schemas']['RuleDraftPreviewRequest'];
 export type RulePreviewResponse = components['schemas']['RulePreviewResponse'];
+export type CopyRulesRequest = components['schemas']['CopyRulesRequest'];
+export type CopyRulesResponse = components['schemas']['CopyRulesResponse'];
 export type RuleTestApplyLabelsRequest = {
   sampleSize?: number;
   evaluateSemanticIntents?: boolean;
@@ -105,6 +107,11 @@ export function compiledResponseToRequest(
 export async function listRules(): Promise<RuleListResponse> {
   const result = await api.GET('/api/rules', {});
   return unwrap(result, `/api/rules list failed: ${result.response.status}`);
+}
+
+export async function copyRules(payload: CopyRulesRequest): Promise<CopyRulesResponse> {
+  const result = await api.POST('/api/rules/copy', { body: payload });
+  return unwrap(result, `/api/rules/copy failed: ${result.response.status}`);
 }
 
 export async function getRule(ruleId: string): Promise<RuleResponse> {

@@ -7,6 +7,7 @@ import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.GmailDeliveryProcessingService;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Duration;
 import java.time.Instant;
@@ -102,10 +103,11 @@ public class E2eStubResetController {
                 oauthProvisioningService.provisionBundledOAuth(
                         GOOGLE_SUBJECT, EMAIL, REFRESH_TOKEN, GRANTED_GMAIL_SCOPES);
         UUID tenantId = provisioningResult.tenantId();
+        UUID gmailConnectionId = provisioningResult.gmailConnectionId();
         TenantContext.runWith(
                 tenantId,
                 () -> {
-                    ensureLaunchSmokeWatchState(tenantId);
+                    ensureLaunchSmokeWatchState(tenantId, gmailConnectionId);
                     ensureLaunchSmokeCredits(tenantId);
                 });
         log.info("event=e2e_stub_seed_session tenantId={}", tenantId);
@@ -129,10 +131,11 @@ public class E2eStubResetController {
                 seededDraft.draftId(), seededDraft.messageId(), seededDraft.body());
     }
 
-    private void ensureLaunchSmokeWatchState(UUID tenantId) {
-        gmailConnectionService.clearForReconnect(tenantId);
+    private void ensureLaunchSmokeWatchState(UUID tenantId, UUID gmailConnectionId) {
+        MailboxRef mailboxRef = new MailboxRef(tenantId, gmailConnectionId);
+        gmailConnectionService.clearForReconnect(mailboxRef);
         gmailConnectionService.recordWatchSuccess(
-                tenantId, E2E_STUB_INITIAL_HISTORY_ID, Instant.now().plus(Duration.ofDays(7)));
+                mailboxRef, E2E_STUB_INITIAL_HISTORY_ID, Instant.now().plus(Duration.ofDays(7)));
     }
 
     private void ensureLaunchSmokeCredits(UUID tenantId) {

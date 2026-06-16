@@ -9,28 +9,37 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.zeromail.core.gmail.event.MailMessageObserved;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxMessage;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxPage;
 import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.triage.usecases.BackfillNeedsReplyService;
 import com.zeromail.core.triage.usecases.TriageOrchestratorService;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class BackfillNeedsReplyServiceTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-0000000006b1");
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-0000000006b2");
 
     @Test
     void backfill_caps_requested_limit_to_twenty_recent_threads() {
         RecentInboxReadService recentInboxReadService = mock(RecentInboxReadService.class);
         TriageOrchestratorService triageOrchestratorService = mock(TriageOrchestratorService.class);
+        GmailConnectionService gmailConnectionService = mock(GmailConnectionService.class);
         BackfillNeedsReplyService backfillNeedsReplyService =
-                new BackfillNeedsReplyService(recentInboxReadService, triageOrchestratorService);
+                new BackfillNeedsReplyService(
+                        recentInboxReadService, triageOrchestratorService, gmailConnectionService);
+        when(gmailConnectionService.primaryMailboxRef(TENANT_ID))
+                .thenReturn(Optional.of(new MailboxRef(TENANT_ID, GMAIL_CONNECTION_ID)));
         when(recentInboxReadService.fetchPage(
                         eq(TENANT_ID), eq(null), eq(RecentInboxReadService.DEFAULT_PAGE_SIZE)))
                 .thenReturn(

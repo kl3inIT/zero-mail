@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 127-gmail-conn-global-active-email-unique
+      author: zeromail
+      comment: >
+        HIGH-2: a Gmail account may be CONNECTED in at most one tenant so Pub/Sub
+        email-to-tenant resolution is unambiguous. Reconnecting from a second tenant must first
+        disconnect the active grant elsewhere; this migration HALTs on existing cross-tenant
+        duplicates instead of deleting another tenant's grant.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 11 migration halted: a lowercased Gmail address is CONNECTED in more than one
+            tenant. Disconnect or dedupe the cross-tenant duplicate grant, then rerun.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT lower(google_email)
+                FROM gmail_connections
+                WHERE status = 'CONNECTED'
+                GROUP BY lower(google_email)
+                HAVING count(DISTINCT tenant_id) > 1
+              ) duplicates;
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE UNIQUE INDEX uq_gmail_conn_active_email_global
+                ON gmail_connections (lower(google_email))
+                WHERE status = 'CONNECTED';
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS uq_gmail_conn_active_email_global;

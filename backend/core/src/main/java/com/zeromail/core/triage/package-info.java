@@ -5,6 +5,7 @@
 @ApplicationModule(
         displayName = "Triage",
         allowedDependencies = {
+            "mailbox",
             "rules",
             "rules :: domain",
             "rules :: projection",

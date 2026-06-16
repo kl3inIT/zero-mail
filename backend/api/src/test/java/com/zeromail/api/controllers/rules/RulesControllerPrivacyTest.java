@@ -31,6 +31,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.RestClient;
@@ -58,6 +59,8 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
 
     @Autowired ObjectMapper objectMapper;
 
+    @Autowired JdbcTemplate jdbcTemplate;
+
     @MockitoBean RulePreviewDataService rulePreviewDataService;
 
     @Test
@@ -67,7 +70,10 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
         JsonNode ruleJson = createRule(seedData, "Archive Stripe");
         UUID ruleId = UUID.fromString(ruleJson.path("ruleId").asString());
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(10))))
+                        eq(seedData.tenantId()),
+                        eq(seedData.gmailConnectionId()),
+                        eq(false),
+                        eq(new PreviewSampleSize(10))))
                 .thenReturn(List.of(previewInputWithInternalSentinels()));
 
         JsonNode previewJson =
@@ -100,7 +106,10 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
         JsonNode ruleJson = createRule(seedData, "Archive Stripe");
         UUID ruleId = UUID.fromString(ruleJson.path("ruleId").asString());
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(10))))
+                        eq(seedData.tenantId()),
+                        eq(seedData.gmailConnectionId()),
+                        eq(false),
+                        eq(new PreviewSampleSize(10))))
                 .thenThrow(
                         new GmailPreviewUnavailableException(
                                 GmailPreviewUnavailableException.Reason.NO_READ_GRANT));
@@ -122,6 +131,8 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
                 authenticatedClient(seedData),
                 "/api/rules",
                 Map.of(
+                        "gmailConnectionId",
+                        seedData.gmailConnectionId(),
                         "displayName",
                         displayName,
                         "sourceText",
@@ -177,6 +188,7 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
 
     private SeedData seedUser(String label) {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         tenantRepository.save(new TenantEntity(tenantId, label));
         String googleSubject = "sub-" + label;
         String email = label + "@example.test";
@@ -189,8 +201,13 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
                                                 tenantId,
                                                 googleSubject,
                                                 email)));
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                gmailConnectionId,
+                tenantId,
+                email);
         testSessionMinter.mint(googleSubject, email);
-        return new SeedData(tenantId, googleSubject, email);
+        return new SeedData(tenantId, gmailConnectionId, googleSubject, email);
     }
 
     private static RulePreviewDataService.PreviewInput previewInputWithInternalSentinels() {
@@ -226,5 +243,6 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
                                 COMPLETION_SENTINEL)));
     }
 
-    private record SeedData(UUID tenantId, String googleSubject, String email) {}
+    private record SeedData(
+            UUID tenantId, UUID gmailConnectionId, String googleSubject, String email) {}
 }

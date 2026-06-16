@@ -46,16 +46,17 @@ class AccountDeletionE2ETest extends ApiPostgresTestBase {
                             onboarding.save(
                                     new OnboardingSelectionEntity(
                                             UUID.randomUUID(), tenantId, "archive-receipts"));
+                            UUID gmailConnectionId = UUID.randomUUID();
                             var gc =
                                     new GmailConnectionEntity(
-                                            UUID.randomUUID(),
+                                            gmailConnectionId,
                                             tenantId,
                                             "a@example.com",
                                             GmailConnectionStatus.CONNECTED);
                             gc.setConnectedAt(Instant.now());
                             gc.setRefreshTokenEncrypted(new byte[] {1, 2, 3});
                             conns.save(gc);
-                            seedTenantRuntimeRows(tenantId);
+                            seedTenantRuntimeRows(tenantId, gmailConnectionId);
 
                             deletion.deleteAccount(new MockHttpServletRequest());
 
@@ -67,32 +68,37 @@ class AccountDeletionE2ETest extends ApiPostgresTestBase {
         assertThat(tenants.findById(tenantId)).isEmpty();
     }
 
-    private void seedTenantRuntimeRows(UUID tenantId) {
+    private void seedTenantRuntimeRows(UUID tenantId, UUID gmailConnectionId) {
         jdbcTemplate.update(
                 """
                 INSERT INTO rules(
-                    id, tenant_id, display_name, source_text, source_language, schema_version,
-                    matcher_ast, action_intents, enabled, order_index)
-                VALUES (?, ?, 'Delete test rule', 'archive receipts', 'en', 'rules.v1',
+                    id, tenant_id, gmail_connection_id, display_name, source_text, source_language,
+                    schema_version, matcher_ast, action_intents, enabled, order_index)
+                VALUES (?, ?, ?, 'Delete test rule', 'archive receipts', 'en', 'rules.v1',
                         '{}'::jsonb, '[]'::jsonb, true, 0)
                 """,
                 UUID.randomUUID(),
-                tenantId);
+                tenantId,
+                gmailConnectionId);
         jdbcTemplate.update(
                 """
                 INSERT INTO mail_message_observed(
-                    tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids)
-                VALUES (?, 'message-1', 'thread-1', 100, ARRAY['INBOX']::text[])
+                    tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id, history_id,
+                    label_ids)
+                VALUES (?, ?, 'message-1', 'thread-1', 100, ARRAY['INBOX']::text[])
                 """,
-                tenantId);
+                tenantId,
+                gmailConnectionId);
         jdbcTemplate.update(
                 """
                 INSERT INTO gmail_inbox_projection(
-                    tenant_id, gmail_message_id, gmail_thread_id, sender_email_hash,
-                    sender_email_ciphertext, received_at, source_history_id, expires_at)
-                VALUES (?, 'message-1', 'thread-1', ?, ?, now(), 100, now() + INTERVAL '7 days')
+                    tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id,
+                    sender_email_hash, sender_email_ciphertext, received_at, source_history_id,
+                    expires_at)
+                VALUES (?, ?, 'message-1', 'thread-1', ?, ?, now(), 100, now() + INTERVAL '7 days')
                 """,
                 tenantId,
+                gmailConnectionId,
                 new byte[] {1},
                 new byte[] {2});
         jdbcTemplate.update(

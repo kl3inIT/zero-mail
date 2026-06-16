@@ -58,14 +58,17 @@ public class InboxProjectionReadService {
      * @throws InvalidProjectionCursorException when the cursor fails decode or signature checks.
      */
     @Transactional(readOnly = true)
-    public InboxProjectionPage fetchInboxPage(UUID tenantId, String cursor, int requestedLimit) {
+    public InboxProjectionPage fetchInboxPage(
+            UUID tenantId, UUID gmailConnectionId, String cursor, int requestedLimit) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
         InboxProjectionCursor decodedCursor = cursorCodec.decode(cursor);
         int pageLimit = effectiveLimit(requestedLimit);
 
         List<GmailInboxProjectionEntity> rows =
                 projectionRepository.findInboxPage(
                         tenantId,
+                        gmailConnectionId,
                         decodedCursor.receivedAt(),
                         decodedCursor.gmailMessageId(),
                         pageLimit);

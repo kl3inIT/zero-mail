@@ -1,5 +1,6 @@
 package com.zeromail.core.triage.usecases;
 
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.outbound.usecases.OutboundSendCommand;
 import com.zeromail.core.outbound.usecases.OutboundSendGateway;
 import com.zeromail.core.outbound.usecases.OutboundSendResult;
@@ -61,6 +62,8 @@ public class TriageAuditSaga {
                 triageAuditWriter
                         .insertPending(
                                 command.tenantId(),
+                                command.sourceMailboxId(),
+                                command.executingMailboxId(),
                                 command.gmailMessageId(),
                                 command.gmailThreadId(),
                                 command.sanitizedSubject(),
@@ -75,6 +78,7 @@ public class TriageAuditSaga {
                                 () ->
                                         triageAuditWriter.findPendingAuditId(
                                                 command.tenantId(),
+                                                command.executingMailboxId(),
                                                 command.gmailMessageId(),
                                                 command.ruleId(),
                                                 command.actionType(),
@@ -116,7 +120,9 @@ public class TriageAuditSaga {
             case TriageActionResult.Label label -> {
                 String resolvedLabelId =
                         triageGmailWriter.applyLabel(
-                                command.tenantId(), command.gmailMessageId(), label.labelName());
+                                command.executingMailboxRef(),
+                                command.gmailMessageId(),
+                                label.labelName());
                 TriageActionResult.Label resolvedLabel =
                         new TriageActionResult.Label(resolvedLabelId, label.labelName());
                 yield GmailWriteResult.applied(
@@ -125,7 +131,8 @@ public class TriageAuditSaga {
                         actionArgsJson(resolvedLabel));
             }
             case TriageActionResult.Archive _ -> {
-                triageGmailWriter.archiveSkipInbox(command.tenantId(), command.gmailMessageId());
+                triageGmailWriter.archiveSkipInbox(
+                        command.executingMailboxRef(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         ARCHIVE_EXTERNAL_REF,
                         changeToken(Map.of("removedLabelIds", List.of("INBOX"))),
@@ -135,7 +142,7 @@ public class TriageAuditSaga {
                 try {
                     String draftId =
                             triageGmailWriter.saveDraft(
-                                    command.tenantId(),
+                                    command.executingMailboxRef(),
                                     command.replyHeaders(),
                                     saveDraft.instruction(),
                                     command.gmailThreadId());
@@ -153,14 +160,14 @@ public class TriageAuditSaga {
                 }
             }
             case TriageActionResult.MarkRead _ -> {
-                triageGmailWriter.markRead(command.tenantId(), command.gmailMessageId());
+                triageGmailWriter.markRead(command.executingMailboxRef(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         command.gmailMessageId(),
                         changeToken(Map.of("removedLabelIds", List.of("UNREAD"))),
                         null);
             }
             case TriageActionResult.Star _ -> {
-                triageGmailWriter.star(command.tenantId(), command.gmailMessageId());
+                triageGmailWriter.star(command.executingMailboxRef(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         command.gmailMessageId(),
                         changeToken(Map.of("addedLabelIds", List.of("STARRED"))),
@@ -168,14 +175,15 @@ public class TriageAuditSaga {
             }
             case TriageActionResult.AddToDigest _ -> {
                 String digestLabelId =
-                        triageGmailWriter.addToDigest(command.tenantId(), command.gmailMessageId());
+                        triageGmailWriter.addToDigest(
+                                command.executingMailboxRef(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         command.gmailMessageId(),
                         changeToken(Map.of("addedLabelId", digestLabelId)),
                         null);
             }
             case TriageActionResult.MarkSpam _ -> {
-                triageGmailWriter.markSpam(command.tenantId(), command.gmailMessageId());
+                triageGmailWriter.markSpam(command.executingMailboxRef(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         command.gmailMessageId(),
                         changeToken(
@@ -207,10 +215,13 @@ public class TriageAuditSaga {
                         command.replyHeaders(),
                         command.sanitizedSubject(),
                         command.gmailMessageId(),
+                        command.executingMailboxRef(),
                         command.tenantId(),
                         auditId.toString());
         OutboundSendResult sendResult =
-                outboundSendGateway.send(new OutboundSendCommand(command.tenantId(), gmailMessage));
+                outboundSendGateway.send(
+                        new OutboundSendCommand(
+                                command.tenantId(), command.executingMailboxRef(), gmailMessage));
         String sentMessageId = sendResult == null ? "" : nullToEmpty(sendResult.gmailMessageId());
         String sentThreadId = sendResult == null ? "" : nullToEmpty(sendResult.gmailThreadId());
         return GmailWriteResult.applied(
@@ -248,6 +259,8 @@ public class TriageAuditSaga {
         Optional<UUID> auditId =
                 triageAuditWriter.insertTerminal(
                         command.tenantId(),
+                        command.sourceMailboxId(),
+                        command.executingMailboxId(),
                         command.gmailMessageId(),
                         command.gmailThreadId(),
                         command.sanitizedSubject(),
@@ -291,6 +304,8 @@ public class TriageAuditSaga {
 
     public record TriageAuditCommand(
             UUID tenantId,
+            UUID sourceMailboxId,
+            UUID executingMailboxId,
             String gmailMessageId,
             String gmailThreadId,
             String sanitizedSubject,
@@ -305,6 +320,8 @@ public class TriageAuditSaga {
 
         public TriageAuditCommand(
                 UUID tenantId,
+                UUID sourceMailboxId,
+                UUID executingMailboxId,
                 String gmailMessageId,
                 String gmailThreadId,
                 String sanitizedSubject,
@@ -317,6 +334,8 @@ public class TriageAuditSaga {
                 String reasonEvidence) {
             this(
                     tenantId,
+                    sourceMailboxId,
+                    executingMailboxId,
                     gmailMessageId,
                     gmailThreadId,
                     sanitizedSubject,
@@ -332,6 +351,8 @@ public class TriageAuditSaga {
 
         public TriageAuditCommand {
             Objects.requireNonNull(tenantId, "tenantId must not be null");
+            Objects.requireNonNull(sourceMailboxId, "sourceMailboxId must not be null");
+            Objects.requireNonNull(executingMailboxId, "executingMailboxId must not be null");
             requireText(gmailMessageId, "gmailMessageId");
             requireText(gmailThreadId, "gmailThreadId");
             Objects.requireNonNull(ruleId, "ruleId must not be null");
@@ -343,6 +364,10 @@ public class TriageAuditSaga {
                 Objects.requireNonNull(replyHeaders, "replyHeaders must not be null");
             }
             requireText(reasonEvidence, "reasonEvidence");
+        }
+
+        MailboxRef executingMailboxRef() {
+            return new MailboxRef(tenantId, executingMailboxId);
         }
     }
 

@@ -15,6 +15,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -34,6 +35,12 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
 
     @Column(name = "gmail_thread_id", length = 255)
     private String gmailThreadId;
+
+    @Column(name = "source_mailbox_id", nullable = false)
+    private UUID sourceMailboxId;
+
+    @Column(name = "executing_mailbox_id", nullable = false)
+    private UUID executingMailboxId;
 
     @Column(name = "sanitized_subject", length = 200)
     private String sanitizedSubject;
@@ -115,6 +122,8 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
     public TriageAuditEntity(
             UUID auditId,
             UUID tenantId,
+            UUID sourceMailboxId,
+            UUID executingMailboxId,
             String gmailMessageId,
             String gmailThreadId,
             UUID ruleId,
@@ -134,6 +143,10 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
             Instant lastAttemptAt,
             String leaseOwner) {
         super(auditId, tenantId);
+        this.sourceMailboxId =
+                Objects.requireNonNull(sourceMailboxId, "sourceMailboxId must not be null");
+        this.executingMailboxId =
+                Objects.requireNonNull(executingMailboxId, "executingMailboxId must not be null");
         this.gmailMessageId = requireText(gmailMessageId, "gmailMessageId");
         this.gmailThreadId = gmailThreadId;
         this.ruleId = ruleId;
@@ -166,6 +179,14 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
 
     public String getGmailThreadId() {
         return gmailThreadId;
+    }
+
+    public UUID getSourceMailboxId() {
+        return sourceMailboxId;
+    }
+
+    public UUID getExecutingMailboxId() {
+        return executingMailboxId;
     }
 
     public String getSanitizedSubject() {
@@ -282,6 +303,8 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
         if (source == null) {
             source = CleanupAuditSource.TRIAGE;
         }
+        Objects.requireNonNull(sourceMailboxId, "sourceMailboxId must not be null");
+        Objects.requireNonNull(executingMailboxId, "executingMailboxId must not be null");
     }
 
     private static byte[] copyHash(byte[] argsHash) {

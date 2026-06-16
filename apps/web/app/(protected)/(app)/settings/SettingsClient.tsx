@@ -16,9 +16,10 @@ import { ConnectionHealthBadge } from '@/features/gmail/components/ConnectionHea
 import { ReconnectPromptGate } from '@/features/gmail/components/ReconnectPrompt';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
+import { getConnectMailboxUrl, getReconnectMailboxUrl } from '@/features/mailbox/api/mailbox-api';
+import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
 import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 import type { AppLocale } from '@/i18n/routing';
-import { getApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
 
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
@@ -30,10 +31,6 @@ function isGmailConnectionStatus(value: string | undefined): value is GmailConne
     value === 'NOT_CONNECTED' ||
     value === 'PENDING'
   );
-}
-
-function reconnect() {
-  window.location.href = getApiUrl('/api/tenant/connect-gmail');
 }
 
 function ThemeSwitcher({ currentTheme }: { currentTheme: 'light' | 'dark' }) {
@@ -84,6 +81,7 @@ export function SettingsClient({
   const t = useTranslations();
   const me = useCurrentUser(initialUser);
   const status = useTenantStatus();
+  const activeMailbox = useActiveMailbox();
   const disconnect = useDisconnectGmail();
   const del = useDeleteAccount();
 
@@ -103,6 +101,12 @@ export function SettingsClient({
     me.data?.displayName?.trim() || (accountEmail ? accountEmail.split('@')[0] : '');
   const accountAvatarUrl = me.data?.avatarUrl ?? undefined;
   const accountInitial = (accountDisplayName || accountEmail || '?').charAt(0).toUpperCase();
+  const activeMailboxId = activeMailbox.data?.gmailConnectionId ?? null;
+  const reconnect = () => {
+    window.location.href = activeMailboxId
+      ? getReconnectMailboxUrl(activeMailboxId)
+      : getConnectMailboxUrl();
+  };
 
   return (
     <div className="flex h-full flex-col">

@@ -151,6 +151,54 @@ export const rulesMessages = {
     vi: 'Chưa có hành động',
     en: 'No action yet',
   },
+  'rules.copy.button': {
+    vi: 'Sao chép quy tắc',
+    en: 'Copy rules',
+  },
+  'rules.copy.title': {
+    vi: 'Sao chép quy tắc từ hộp thư khác',
+    en: 'Copy rules from another mailbox',
+  },
+  'rules.copy.body': {
+    vi: 'Quy tắc được sao chép vào hộp thư đang dùng và luôn ở trạng thái tắt để bạn kiểm tra trước.',
+    en: 'Copied rules are added to the active mailbox and stay disabled until you review them.',
+  },
+  'rules.copy.sourceLabel': {
+    vi: 'Hộp thư nguồn',
+    en: 'Source mailbox',
+  },
+  'rules.copy.sourcePlaceholder': {
+    vi: 'Chọn hộp thư',
+    en: 'Choose mailbox',
+  },
+  'rules.copy.activeMailbox': {
+    vi: 'Hộp thư đích đang dùng',
+    en: 'Active target mailbox',
+  },
+  'rules.copy.empty': {
+    vi: 'Kết nối thêm một Gmail để sao chép quy tắc giữa các hộp thư.',
+    en: 'Connect another Gmail account to copy rules between mailboxes.',
+  },
+  'rules.copy.cancel': {
+    vi: 'Hủy',
+    en: 'Cancel',
+  },
+  'rules.copy.confirm': {
+    vi: 'Sao chép',
+    en: 'Copy',
+  },
+  'rules.copy.success': {
+    vi: 'Đã sao chép quy tắc',
+    en: 'Rules copied',
+  },
+  'rules.copy.copied': {
+    vi: 'Đã sao chép {count} quy tắc',
+    en: 'Copied {count} rules',
+  },
+  'errors.rules.copy.generic': {
+    vi: 'Không thể sao chép quy tắc lúc này. Hãy tải lại rồi thử lại.',
+    en: 'Rules could not be copied right now. Reload and try again.',
+  },
   'rules.list.edit': {
     vi: 'Sửa quy tắc',
     en: 'Edit rule',

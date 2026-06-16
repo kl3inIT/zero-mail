@@ -1,0 +1,69 @@
+databaseChangeLog:
+  - changeSet:
+      id: 120-pubsub-delivery-mailbox
+      author: zeromail
+      comment: >
+        Add mailbox scope to Pub/Sub delivery idempotency. Backfill legacy rows to the tenant's
+        deterministic primary mailbox before promoting the column to NOT NULL and widening the
+        delivery dedup key to tenant + mailbox + Pub/Sub message id.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Phase 11 migration halted: pubsub_delivery has tenant rows whose tenant has no
+            gmail_connections row. Create or restore the tenant mailbox before rerunning.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT count(*) FROM (
+                SELECT DISTINCT pubsub_delivery.tenant_id
+                FROM pubsub_delivery
+                WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM gmail_connections
+                  WHERE gmail_connections.tenant_id = pubsub_delivery.tenant_id
+                )
+              ) missing_mailbox;
+      changes:
+        - addColumn:
+            tableName: pubsub_delivery
+            columns:
+              - column:
+                  name: gmail_connection_id
+                  type: uuid
+        - sql:
+            splitStatements: false
+            sql: |
+              WITH primary_mailboxes AS (
+                SELECT DISTINCT ON (tenant_id)
+                  tenant_id,
+                  id AS gmail_connection_id
+                FROM gmail_connections
+                ORDER BY tenant_id, is_primary DESC, (status = 'CONNECTED') DESC, connected_at NULLS LAST, id
+              )
+              UPDATE pubsub_delivery
+              SET gmail_connection_id = primary_mailboxes.gmail_connection_id
+              FROM primary_mailboxes
+              WHERE pubsub_delivery.tenant_id = primary_mailboxes.tenant_id
+                AND pubsub_delivery.gmail_connection_id IS NULL;
+        - addNotNullConstraint:
+            tableName: pubsub_delivery
+            columnName: gmail_connection_id
+            columnDataType: uuid
+        - dropUniqueConstraint:
+            tableName: pubsub_delivery
+            constraintName: uq_pubsub_delivery_tenant_message
+        - addUniqueConstraint:
+            tableName: pubsub_delivery
+            columnNames: tenant_id, gmail_connection_id, pubsub_message_id
+            constraintName: uq_pubsub_delivery_tenant_mailbox_message
+      rollback:
+        - dropUniqueConstraint:
+            tableName: pubsub_delivery
+            constraintName: uq_pubsub_delivery_tenant_mailbox_message
+        - addUniqueConstraint:
+            tableName: pubsub_delivery
+            columnNames: tenant_id, pubsub_message_id
+            constraintName: uq_pubsub_delivery_tenant_message
+        - dropColumn:
+            tableName: pubsub_delivery
+            columnName: gmail_connection_id

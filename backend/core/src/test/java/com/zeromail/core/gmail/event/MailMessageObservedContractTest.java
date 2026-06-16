@@ -26,7 +26,12 @@ class MailMessageObservedContractTest {
 
         assertThat(eventClass.isRecord()).isTrue();
         assertThat(Stream.of(eventClass.getRecordComponents()).map(RecordComponent::getName))
-                .containsExactly("tenantId", "gmailMessageId", "gmailThreadId", "observedAt");
+                .containsExactly(
+                        "tenantId",
+                        "gmailConnectionId",
+                        "gmailMessageId",
+                        "gmailThreadId",
+                        "observedAt");
         assertThat(Stream.of(eventClass.getRecordComponents()).map(RecordComponent::getName))
                 .noneMatch(componentName -> FORBIDDEN_CONTENT_FIELD.matcher(componentName).find());
         assertThat(Stream.of(eventClass.getDeclaredFields()).map(field -> field.getName()))

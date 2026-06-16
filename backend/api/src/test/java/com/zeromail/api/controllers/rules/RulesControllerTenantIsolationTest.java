@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
@@ -47,6 +48,8 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
 
     @Autowired ObjectMapper objectMapper;
 
+    @Autowired JdbcTemplate jdbcTemplate;
+
     @Test
     void tenant_a_cannot_read_mutate_or_preview_tenant_b_rules() throws Exception {
         SeedData tenantA = seedUser("rules-tenant-a");
@@ -64,6 +67,7 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
                         authenticatedClient(tenantA),
                         "/api/rules/" + tenantBRuleId,
                         ruleUpdateBody(
+                                tenantA,
                                 "Hijacked",
                                 "Hijacked source",
                                 tenantBRule.path("entityVersion").asInt()));
@@ -91,20 +95,27 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(
                                 objectMapper.writeValueAsString(
-                                        ruleSaveBody(displayName, "Archive Stripe", matcherJson)))
+                                        ruleSaveBody(
+                                                seedData,
+                                                displayName,
+                                                "Archive Stripe",
+                                                matcherJson)))
                         .retrieve()
                         .toEntity(String.class);
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         return objectMapper.readTree(response.getBody());
     }
 
-    private Map<String, Object> ruleSaveBody(String displayName, String sourceText) {
-        return ruleSaveBody(displayName, sourceText, MATCHER_JSON);
+    private Map<String, Object> ruleSaveBody(
+            SeedData seedData, String displayName, String sourceText) {
+        return ruleSaveBody(seedData, displayName, sourceText, MATCHER_JSON);
     }
 
     private Map<String, Object> ruleSaveBody(
-            String displayName, String sourceText, String matcherJson) {
+            SeedData seedData, String displayName, String sourceText, String matcherJson) {
         return Map.of(
+                "gmailConnectionId",
+                seedData.gmailConnectionId(),
                 "displayName",
                 displayName,
                 "sourceText",
@@ -124,8 +135,9 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
     }
 
     private Map<String, Object> ruleUpdateBody(
-            String displayName, String sourceText, int entityVersion) {
-        Map<String, Object> body = new LinkedHashMap<>(ruleSaveBody(displayName, sourceText));
+            SeedData seedData, String displayName, String sourceText, int entityVersion) {
+        Map<String, Object> body =
+                new LinkedHashMap<>(ruleSaveBody(seedData, displayName, sourceText));
         body.put("entityVersion", entityVersion);
         return body;
     }
@@ -185,6 +197,7 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
 
     private SeedData seedUser(String label) {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         tenantRepository.save(new TenantEntity(tenantId, label));
         String googleSubject = "sub-" + label;
         String email = label + "@example.test";
@@ -197,9 +210,15 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
                                                 tenantId,
                                                 googleSubject,
                                                 email)));
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                gmailConnectionId,
+                tenantId,
+                email);
         testSessionMinter.mint(googleSubject, email);
-        return new SeedData(tenantId, googleSubject, email);
+        return new SeedData(tenantId, gmailConnectionId, googleSubject, email);
     }
 
-    private record SeedData(UUID tenantId, String googleSubject, String email) {}
+    private record SeedData(
+            UUID tenantId, UUID gmailConnectionId, String googleSubject, String email) {}
 }

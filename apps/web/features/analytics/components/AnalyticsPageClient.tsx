@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/select';
 import type { AnalyticsWindow, DailyLoadResponse } from '@/features/analytics/api/analytics-api';
 import { normalizeAnalyticsWindow } from '@/features/analytics/components/analytics-window';
+import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
 import {
   formatCompactCount,
   formatTimeSaved,
@@ -250,8 +251,11 @@ export function AnalyticsPageClient() {
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('analytics.page.title')}</h1>
+      <header className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{t('analytics.page.title')}</h1>
+          <ActiveMailboxBadge />
+        </div>
         <p className="text-muted-foreground text-sm">{t('analytics.page.description')}</p>
       </header>
 
@@ -743,7 +747,7 @@ function SourceRowItem({ row, maxCount }: { row: SourceRow; maxCount: number }) 
           href={row.href}
           target="_blank"
           rel="noreferrer"
-          className="hover:bg-muted/60 focus-visible:ring-ring block outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2"
+          className="hover:bg-muted/60 focus-visible:ring-ring block transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           {content}
         </a>

@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: milestone
-status: planning
-stopped_at: context exhaustion at 75% (2026-06-09)
-last_updated: "2026-06-09T12:10:19.045Z"
-last_activity: 2026-06-03 - Merged main into integration; inbox sender avatars shipped
+milestone: v1.3
+milestone_name: Gmail Workspace Foundation
+status: executing
+stopped_at: Completed 11-05-PLAN.md
+last_updated: "2026-06-09T19:47:43.000Z"
+last_activity: 2026-06-09 -- Phase 11 Plan 11-05 active mailbox scope complete
 progress:
-  total_phases: 1
-  completed_phases: 0
-  total_plans: 11
-  completed_plans: 0
-  percent: 0
+  total_phases: 2
+  completed_phases: 1
+  total_plans: 12
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -21,30 +21,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** Phase 08.1 — Inbox Zero-style Rule Actions & Admin-managed Examples Catalog
+**Current focus:** Phase 11 — mailbox-scoped-ingestion-automation-ui-and-verification
 
 ## Current Position
 
-Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — EXECUTING
-Plan: 6 of 6
-Status: Phase 9 shipped — PR #74; Phase 10 planning complete; v1.2 milestone archived on main (merged 2026-06-03)
-Last activity: 2026-06-03 - Merged main into integration; inbox sender avatars shipped
+Phase: 11
+Plan: 11-06
+Status: Ready to execute next plan
+Last activity: 2026-06-09 -- Phase 11 Plan 11-05 active mailbox scope complete
 
 ## Current Milestone Roadmap
 
-**v1.2 — Admin Console + User Settings UI** (3 phases, 73 requirements; merged 2026-05-19; WebAuthn pivot 2026-05-19; Phase 08.1 inserted 2026-05-23; Phase 08.1 plan 02 completed 2026-05-23)
+**v1.3 — Gmail Workspace Foundation** is active and roadmapped.
 
-- **Phase 8** — Admin Console & Operator Tooling (WebAuthn admin auth + audit foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 42 requirements (OPS-INFRA-01..03, ADMIN-01..10, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
-- **Phase 08.1** — Inbox Zero-style Rule Actions & Admin-managed Examples Catalog (examples/personas seed, admin-managed examples/actions, user settings for outbound automation, send/reply/forward runtime safety gates, and outbound gateway architecture tests) — 12 requirements (RACT-01..12)
-- **Phase 9** — User Settings UI on Curated Catalog (single `/ai` settings surface: voice, behavior, updates, safety net, and AI provider/BYOK) — completed 2026-05-29; 18 shipped requirements (SET-VOICE-01..07, SET-BEHV-01..05, SET-SAFE-01/04, SET-AI-01..04)
+Scope: production multi-Gmail connection management, workspace-shared credits/provider/safety settings, mailbox-isolated inbox/rules/triage/audit/outbound execution, and workspace-ready foundations from SEED-005 without full team collaboration. Requirements and roadmap are now written.
 
-See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
+See `.planning/PROJECT.md` for approved milestone framing, `.planning/REQUIREMENTS.md` for 43 mapped requirements, `.planning/research/V1.3-CODE-RESEARCH.md` for code research, and `.planning/ROADMAP.md` for the 2-phase milestone plan.
+
+| Phase | Status | Goal |
+|-------|--------|------|
+| 10. Gmail Mailbox Foundation and Account Management | Complete | Convert one-Gmail-per-tenant into workspace-owned multi-Gmail mailbox model with shared workspace settings and isolated mailbox state. |
+| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | In Progress | Route ingestion/projection/rules/outbound/audit through active mailbox scope and surface fast mailbox switching in the app. |
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 68
+- Total plans completed: 77
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -59,6 +62,8 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | 05A | 6 | - | - |
 | 05B | 8 | - | - |
 | 07 | 6 | - | - |
+| 10 | 6 | - | - |
+| 11 | 5 | - | - |
 
 **Recent Trend:**
 
@@ -175,6 +180,17 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 09 P05 | multi-session | 2 tasks | 22 files |
 | Phase 09 P06 | multi-session | 5 tasks | 71 files |
 | Phase 09 P07 | multi-session | 3 tasks | 23 app/test/planning files |
+| Phase 10 P01 | 42 min | 3 tasks | 9 files |
+| Phase 10 P02 | 18min | 3 tasks | 4 files |
+| Phase 10 P03 | 24min | 3 tasks | 4 files |
+| Phase 10 P04 | 23min | 4 tasks | 8 files |
+| Phase 10 P05 | 29min | 4 tasks | 8 files |
+| Phase 10 P06 | 18min | 3 tasks | 4 files |
+| Phase 11 P01 | multi-session | 3 tasks | 9 files |
+| Phase 11 P02 | multi-session | 4 tasks | 13 files |
+| Phase 11 P03 | multi-session | 3 tasks | 44 files |
+| Phase 11 P04 | multi-session | 4 tasks | 53 files |
+| Phase 11 P05 | multi-session | 3 tasks | 39 code/test/generated files + 1 planning artifact |
 
 ## Accumulated Context
 
@@ -602,12 +618,11 @@ Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 
 
 ## Session Continuity
 
-Last session: 2026-06-09T12:10:19.036Z
-Stopped at: context exhaustion at 75% (2026-06-09)
+Last session: 2026-06-09T14:49:02.559Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
 
-- Execute Phase 10 with `/gsd:execute-phase 10` (starts at Wave 0 foundation — Liquibase 099-103 + ArchUnit skeletons + Bucket4j 8.19.0 pin)
-- Or continue v1.2 by completing Phase 9 first if dependency ordering matters
-- Start the next milestone with `/gsd-new-milestone` when v1.2 is fully shipped
+- Continue execution with `$gsd-execute-phase 11`; next incomplete plan is 11-03.
+- Check progress with `$gsd-progress` to see the updated v1.3 roadmap.

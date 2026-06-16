@@ -15,19 +15,20 @@ public interface MailMessageObservedRepository
             value =
                     """
             INSERT INTO mail_message_observed
-              (tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids, internal_date,
-               sender_email, sender_name, list_unsubscribe_url, list_unsubscribe_mailto,
-               list_unsubscribe_one_click, observed_at)
+              (tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id, history_id,
+               label_ids, internal_date, sender_email, sender_name, list_unsubscribe_url,
+               list_unsubscribe_mailto, list_unsubscribe_one_click, observed_at)
             VALUES
-              (:tenantId, :gmailMessageId, :gmailThreadId, :historyId, :labelIds, :internalDate,
-               :senderEmail, :senderName, :listUnsubscribeUrl, :listUnsubscribeMailto,
-               :listUnsubscribeOneClick, NOW())
-            ON CONFLICT (tenant_id, gmail_message_id) DO NOTHING
+              (:tenantId, :gmailConnectionId, :gmailMessageId, :gmailThreadId, :historyId,
+               :labelIds, :internalDate, :senderEmail, :senderName, :listUnsubscribeUrl,
+               :listUnsubscribeMailto, :listUnsubscribeOneClick, NOW())
+            ON CONFLICT (tenant_id, gmail_connection_id, gmail_message_id) DO NOTHING
             """,
             nativeQuery = true)
     @Transactional
     int insertObservedIfAbsent(
             @Param("tenantId") UUID tenantId,
+            @Param("gmailConnectionId") UUID gmailConnectionId,
             @Param("gmailMessageId") String gmailMessageId,
             @Param("gmailThreadId") String gmailThreadId,
             @Param("historyId") Long historyId,

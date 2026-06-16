@@ -61,6 +61,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useChat } from '@/features/chat/hooks/use-chat';
+import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
+import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
 import { EmailHtmlFrame, PlainEmailContent } from '@/features/inbox/components/EmailHtmlFrame';
 import { PreviewCard } from '@/features/chat/components/preview-card/preview-card';
 import {
@@ -107,6 +109,18 @@ export function InboxPageClient() {
   const [isResizingSplit, setIsResizingSplit] = useState(false);
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const currentUser = useCurrentUser();
+  // Reset the open message when the active mailbox changes: the selected id belongs to the
+  // PREVIOUS mailbox, and fetching its detail under the new mailbox 404s. Clearing it here in
+  // render (mirroring the detailsExpanded reset pattern in the detail panel) disables the detail
+  // query immediately, before any refetch can fire it against the wrong mailbox.
+  const activeMailboxId = useActiveMailbox().data?.gmailConnectionId ?? null;
+  const trackedActiveMailboxIdRef = useRef(activeMailboxId);
+  if (trackedActiveMailboxIdRef.current !== activeMailboxId) {
+    trackedActiveMailboxIdRef.current = activeMailboxId;
+    if (requestedSelectedMessageId !== null) {
+      setRequestedSelectedMessageId(null);
+    }
+  }
   const inboxQuery = useInboxMessages();
   const messages = useMemo(() => flattenInboxMessages(inboxQuery.data), [inboxQuery.data]);
   const availableLabels = useMemo(() => collectAvailableLabels(messages), [messages]);
@@ -276,11 +290,12 @@ export function InboxPageClient() {
         >
           <div className="border-border shrink-0 border-b px-4 py-2.5">
             <div className="flex h-8 items-center justify-between">
-              <div className="flex items-center gap-2.5">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <span className="flex size-8 items-center justify-center">
                   <Inbox className="text-muted-foreground size-5" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-medium">{t('nav.inbox')}</span>
+                <ActiveMailboxBadge className="hidden max-w-56 sm:inline-flex" />
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-muted-foreground text-xs whitespace-nowrap">
@@ -1476,6 +1491,9 @@ function InboxReplyComposer({
     >
       {previewSubmitted ? null : (
         <div className="bg-card overflow-hidden">
+          <div className="border-border border-b px-3 py-2">
+            <ActiveMailboxBadge className="max-w-full" />
+          </div>
           <div className="flex items-center gap-2 px-3 py-2">
             <span className="text-muted-foreground w-12 shrink-0 text-sm">
               {t('inbox.composer.to')}

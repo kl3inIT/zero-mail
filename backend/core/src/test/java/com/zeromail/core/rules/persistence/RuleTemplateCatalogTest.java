@@ -93,6 +93,7 @@ class RuleTemplateCatalogTest extends PostgresContainerTest {
                 new RuleEntity(
                         UUID.randomUUID(),
                         tenantId,
+                        primaryGmailConnectionId(tenantId),
                         "Archive receipts",
                         "Archive receipts",
                         RuleLanguage.EN,
@@ -167,9 +168,22 @@ class RuleTemplateCatalogTest extends PostgresContainerTest {
 
     private UUID seedTenant(String displayName) {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         jdbcTemplate.update(
                 "insert into tenants(id, display_name) values (?, ?)", tenantId, displayName);
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                gmailConnectionId,
+                tenantId,
+                displayName + "@example.test");
         return tenantId;
+    }
+
+    private UUID primaryGmailConnectionId(UUID tenantId) {
+        return jdbcTemplate.queryForObject(
+                "select id from gmail_connections where tenant_id = ? and is_primary = true",
+                UUID.class,
+                tenantId);
     }
 
     private <T> T withTenant(UUID tenantId, java.util.function.Supplier<T> supplier)

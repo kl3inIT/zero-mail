@@ -13,6 +13,7 @@ import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.outbound.usecases.OutboundSendThrottle;
 import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.projection.EnabledRuleSnapshot;
@@ -51,6 +52,8 @@ class TriageOutboundRuntimeGateTest {
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000008101");
     private static final UUID RULE_ID = UUID.fromString("00000000-0000-0000-0000-000000008102");
     private static final UUID AUDIT_ID = UUID.fromString("00000000-0000-0000-0000-000000008103");
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-000000008104");
     private static final String GMAIL_MESSAGE_ID = "gmail-message-outbound-gate";
     private static final String GMAIL_THREAD_ID = "gmail-thread-outbound-gate";
 
@@ -87,7 +90,8 @@ class TriageOutboundRuntimeGateTest {
     void protected_sender_fails_audit_for_outbound_actions() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, true, senderDomainMatcher(), sendReplyAction());
-        when(draftBodyGenerator.generate(eq(TENANT_ID), eq(GMAIL_THREAD_ID), any(), any()))
+        when(draftBodyGenerator.generate(
+                        eq(TENANT_ID), any(MailboxRef.class), eq(GMAIL_THREAD_ID), any(), any()))
                 .thenReturn("Generated safe reply");
         verifyOutboundFailsWithReason(orchestratorService, "SENDER_SAFETY_NET");
     }
@@ -187,7 +191,8 @@ class TriageOutboundRuntimeGateTest {
                                 List.of("INBOX", "CATEGORY_PROMOTIONS"),
                                 List.of("promotions"),
                                 false));
-        when(ruleManagementService.listEnabledForExecution(TENANT_ID)).thenReturn(List.of());
+        when(ruleManagementService.listEnabledForExecution(eq(TENANT_ID), any(UUID.class)))
+                .thenReturn(List.of());
 
         withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
 
@@ -210,7 +215,8 @@ class TriageOutboundRuntimeGateTest {
                         labelAction(),
                         triageInput(
                                 "sender@example.com", List.of("INBOX"), List.of("personal"), true));
-        when(ruleManagementService.listEnabledForExecution(TENANT_ID)).thenReturn(List.of());
+        when(ruleManagementService.listEnabledForExecution(eq(TENANT_ID), any(UUID.class)))
+                .thenReturn(List.of());
 
         withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
 
@@ -322,7 +328,7 @@ class TriageOutboundRuntimeGateTest {
                 .thenReturn(TenantService.TenantTriageSettings.defaults());
         when(triageRuleEvaluationInputFactory.fetch(any(MailMessageObserved.class)))
                 .thenReturn(Optional.of(triageRuleEvaluationInput));
-        when(ruleManagementService.listEnabledForExecution(TENANT_ID))
+        when(ruleManagementService.listEnabledForExecution(eq(TENANT_ID), any(UUID.class)))
                 .thenReturn(
                         List.of(
                                 new EnabledRuleSnapshot(
@@ -408,6 +414,7 @@ class TriageOutboundRuntimeGateTest {
     private static MailMessageObserved observedEvent() {
         return new MailMessageObserved(
                 TENANT_ID,
+                GMAIL_CONNECTION_ID,
                 GMAIL_MESSAGE_ID,
                 GMAIL_THREAD_ID,
                 Instant.parse("2026-05-23T00:00:00Z"));

@@ -15,6 +15,7 @@ import java.util.UUID;
  */
 public record InboxProjectionUpsertCommand(
         UUID tenantId,
+        UUID gmailConnectionId,
         String gmailMessageId,
         String gmailThreadId,
         String senderEmail,
@@ -28,6 +29,7 @@ public record InboxProjectionUpsertCommand(
 
     public InboxProjectionUpsertCommand {
         java.util.Objects.requireNonNull(tenantId, "tenantId must not be null");
+        java.util.Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
         java.util.Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
         java.util.Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
         java.util.Objects.requireNonNull(senderEmail, "senderEmail must not be null");

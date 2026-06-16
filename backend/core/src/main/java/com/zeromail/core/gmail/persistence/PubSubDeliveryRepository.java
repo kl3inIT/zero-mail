@@ -79,18 +79,19 @@ public interface PubSubDeliveryRepository extends JpaRepository<PubSubDeliveryEn
             value =
                     """
             INSERT INTO pubsub_delivery
-              (id, tenant_id, pubsub_message_id, history_id, payload, status, attempts,
-               locked_until, created_at, updated_at, version)
+              (id, tenant_id, gmail_connection_id, pubsub_message_id, history_id, payload, status,
+               attempts, locked_until, created_at, updated_at, version)
             VALUES
-              (:id, :tenantId, :pubsubMessageId, :historyId, CAST(:payload AS jsonb),
-               'PENDING', 0, NULL, NOW(), NOW(), 0)
-            ON CONFLICT (tenant_id, pubsub_message_id) DO NOTHING
+              (:id, :tenantId, :gmailConnectionId, :pubsubMessageId, :historyId,
+               CAST(:payload AS jsonb), 'PENDING', 0, NULL, NOW(), NOW(), 0)
+            ON CONFLICT (tenant_id, gmail_connection_id, pubsub_message_id) DO NOTHING
             """,
             nativeQuery = true)
     @Transactional
     int insertPendingIfAbsent(
             @Param("id") UUID id,
             @Param("tenantId") UUID tenantId,
+            @Param("gmailConnectionId") UUID gmailConnectionId,
             @Param("pubsubMessageId") String pubsubMessageId,
             @Param("historyId") Long historyId,
             @Param("payload") String payload);

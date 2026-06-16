@@ -19,7 +19,9 @@ import com.zeromail.core.draft.usecases.DraftReplySourceLoader;
 import com.zeromail.core.draft.usecases.DraftReplySourceLoader.DraftReplySource;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftCommand;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftService;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
 import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
@@ -123,13 +125,16 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
     void draft_classify_and_list_success_paths_never_leak_content_to_logs_exceptions_or_storage()
             throws Exception {
         UUID tenantId = seedTenant();
-        DraftScenario draftScenario = newDraftScenario();
-        when(draftScenario.threadReplySourceLoader().load(tenantId, GMAIL_THREAD_ID))
+        DraftScenario draftScenario = newDraftScenario(tenantId);
+        when(draftScenario
+                        .threadReplySourceLoader()
+                        .load(draftScenario.mailboxRef(), GMAIL_THREAD_ID))
                 .thenReturn(sentinelReplySource(GMAIL_MESSAGE_ID, GMAIL_THREAD_ID));
         when(draftScenario
                         .draftBodyGenerator()
                         .generate(
                                 tenantId,
+                                draftScenario.mailboxRef(),
                                 GMAIL_THREAD_ID,
                                 EMAIL_BODY_SENTINEL
                                         + " "
@@ -141,7 +146,7 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
         when(draftScenario
                         .triageGmailWriter()
                         .saveDraft(
-                                eq(tenantId),
+                                eq(draftScenario.mailboxRef()),
                                 any(ReplyHeaders.class),
                                 eq(DRAFT_BODY_SENTINEL + " " + LLM_COMPLETION_SENTINEL),
                                 eq(GMAIL_THREAD_ID)))
@@ -162,7 +167,7 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
 
         verify(draftScenario.triageGmailWriter())
                 .saveDraft(
-                        eq(tenantId),
+                        eq(draftScenario.mailboxRef()),
                         any(ReplyHeaders.class),
                         eq(DRAFT_BODY_SENTINEL + " " + LLM_COMPLETION_SENTINEL),
                         eq(GMAIL_THREAD_ID));
@@ -177,13 +182,16 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
     @Test
     void draft_failure_paths_never_leak_content_to_logs_exceptions_or_storage() throws Exception {
         UUID tenantId = seedTenant();
-        DraftScenario safetyFailureScenario = newDraftScenario();
-        when(safetyFailureScenario.threadReplySourceLoader().load(tenantId, GMAIL_THREAD_ID))
+        DraftScenario safetyFailureScenario = newDraftScenario(tenantId);
+        when(safetyFailureScenario
+                        .threadReplySourceLoader()
+                        .load(safetyFailureScenario.mailboxRef(), GMAIL_THREAD_ID))
                 .thenReturn(sentinelReplySource(GMAIL_MESSAGE_ID, GMAIL_THREAD_ID));
         when(safetyFailureScenario
                         .draftBodyGenerator()
                         .generate(
                                 tenantId,
+                                safetyFailureScenario.mailboxRef(),
                                 GMAIL_THREAD_ID,
                                 EMAIL_BODY_SENTINEL
                                         + " "
@@ -208,13 +216,16 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
                                         exceptionChainSurface(thrownFailure)));
 
         verify(safetyFailureScenario.triageGmailWriter(), never())
-                .saveDraft(any(), any(), anyString(), anyString());
+                .saveDraft(
+                        any(MailboxRef.class), any(ReplyHeaders.class), anyString(), anyString());
         assertDraftPersistenceHasNoRows(tenantId, GMAIL_MESSAGE_ID, GMAIL_THREAD_ID);
 
         String gmailFailureThreadId = GMAIL_THREAD_ID + "-gmail-failure";
         String gmailFailureMessageId = GMAIL_MESSAGE_ID + "-gmail-failure";
-        DraftScenario gmailFailureScenario = newDraftScenario();
-        when(gmailFailureScenario.threadReplySourceLoader().load(tenantId, gmailFailureThreadId))
+        DraftScenario gmailFailureScenario = newDraftScenario(tenantId);
+        when(gmailFailureScenario
+                        .threadReplySourceLoader()
+                        .load(gmailFailureScenario.mailboxRef(), gmailFailureThreadId))
                 .thenThrow(new IOException("gmail metadata unavailable"));
 
         assertThatThrownBy(
@@ -232,29 +243,47 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
                                         exceptionChainSurface(thrownFailure)));
 
         verify(gmailFailureScenario.triageGmailWriter(), never())
-                .saveDraft(any(), any(), anyString(), anyString());
+                .saveDraft(
+                        any(MailboxRef.class), any(ReplyHeaders.class), anyString(), anyString());
         assertDraftPersistenceHasNoRows(tenantId, gmailFailureMessageId, gmailFailureThreadId);
         assertNoForbiddenContent("captured draft failure logs", capturedLogSurface());
     }
 
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
+        UUID mailboxId = UUID.randomUUID();
         jdbcTemplate.update(
                 "insert into tenants(id, display_name) values (?, ?)",
                 tenantId,
                 "draft-privacy-sweep-" + tenantId);
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                mailboxId,
+                tenantId,
+                "draft-privacy-sweep-" + tenantId + "@example.test");
         return tenantId;
     }
 
-    private DraftScenario newDraftScenario() {
+    private UUID primaryMailboxId(UUID tenantId) {
+        return jdbcTemplate.queryForObject(
+                "select id from gmail_connections where tenant_id = ? and is_primary = true",
+                UUID.class,
+                tenantId);
+    }
+
+    private DraftScenario newDraftScenario(UUID tenantId) {
         RedisDistributedLock redisDistributedLock = mock(RedisDistributedLock.class);
         DraftReplySourceLoader threadReplySourceLoader = mock(DraftReplySourceLoader.class);
         DraftBodyGenerator draftBodyGenerator = mock(DraftBodyGenerator.class);
         TriageGmailWriter triageGmailWriter = mock(TriageGmailWriter.class);
+        GmailConnectionService gmailConnectionService = mock(GmailConnectionService.class);
+        MailboxRef mailboxRef = new MailboxRef(tenantId, primaryMailboxId(tenantId));
         LockHandle lockHandle = mock(LockHandle.class);
         ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
         when(redisDistributedLock.tryAcquire(anyString(), any()))
                 .thenReturn(Optional.of(lockHandle));
+        when(gmailConnectionService.primaryMailboxRef(tenantId))
+                .thenReturn(Optional.of(mailboxRef));
 
         GenerateThreadDraftService service =
                 new GenerateThreadDraftService(
@@ -262,6 +291,7 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
                         threadReplySourceLoader,
                         draftBodyGenerator,
                         triageGmailWriter,
+                        gmailConnectionService,
                         classifyThreadReplyStatusService,
                         triageDraftAuditService,
                         eventPublisher,
@@ -272,7 +302,8 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
                 threadReplySourceLoader,
                 draftBodyGenerator,
                 triageGmailWriter,
-                lockHandle);
+                lockHandle,
+                mailboxRef);
     }
 
     private static DraftReplySource sentinelReplySource(
@@ -416,5 +447,6 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
             DraftReplySourceLoader threadReplySourceLoader,
             DraftBodyGenerator draftBodyGenerator,
             TriageGmailWriter triageGmailWriter,
-            LockHandle lockHandle) {}
+            LockHandle lockHandle,
+            MailboxRef mailboxRef) {}
 }

@@ -9,4 +9,8 @@ import java.util.UUID;
  * name.
  */
 public record MailMessageObserved(
-        UUID tenantId, String gmailMessageId, String gmailThreadId, Instant observedAt) {}
+        UUID tenantId,
+        UUID gmailConnectionId,
+        String gmailMessageId,
+        String gmailThreadId,
+        Instant observedAt) {}

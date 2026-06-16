@@ -9,7 +9,9 @@ import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.inbox.usecases.InboxProjectionWriteService;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.exception.MissingMessageIdException;
 import com.zeromail.core.triage.exception.ThreadingHeaderInvalidException;
@@ -45,14 +47,19 @@ public class TriageGmailWriter {
     private static final String DIGEST_LABEL_NAME = "Zero Mail/Digest";
 
     private final GmailApiClientFactory gmailApiClientFactory;
+    private final GmailConnectionService gmailConnectionService;
     private final InboxProjectionWriteService inboxProjectionWriteService;
 
     public TriageGmailWriter(
             GmailApiClientFactory gmailApiClientFactory,
+            GmailConnectionService gmailConnectionService,
             InboxProjectionWriteService inboxProjectionWriteService) {
         this.gmailApiClientFactory =
                 Objects.requireNonNull(
                         gmailApiClientFactory, "gmailApiClientFactory must not be null");
+        this.gmailConnectionService =
+                Objects.requireNonNull(
+                        gmailConnectionService, "gmailConnectionService must not be null");
         this.inboxProjectionWriteService =
                 Objects.requireNonNull(
                         inboxProjectionWriteService,
@@ -61,8 +68,13 @@ public class TriageGmailWriter {
 
     public String applyLabel(UUID tenantId, String gmailMessageId, String labelName)
             throws IOException {
+        return applyLabel(primaryMailboxRefOrThrow(tenantId), gmailMessageId, labelName);
+    }
+
+    public String applyLabel(MailboxRef mailboxRef, String gmailMessageId, String labelName)
+            throws IOException {
         return executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "applyLabel",
                 gmail -> {
                     String resolvedLabelId = resolveOrCreateLabelId(gmail, labelName);
@@ -74,14 +86,18 @@ public class TriageGmailWriter {
                                     new ModifyMessageRequest()
                                             .setAddLabelIds(List.of(resolvedLabelId)))
                             .execute();
-                    logMessageWrite(tenantId, gmailMessageId, "applyLabel");
+                    logMessageWrite(mailboxRef, gmailMessageId, "applyLabel");
                     return resolvedLabelId;
                 });
     }
 
     public void archiveSkipInbox(UUID tenantId, String gmailMessageId) throws IOException {
+        archiveSkipInbox(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void archiveSkipInbox(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "archiveSkipInbox",
                 gmail -> {
                     gmail.users()
@@ -92,7 +108,7 @@ public class TriageGmailWriter {
                                     new ModifyMessageRequest()
                                             .setRemoveLabelIds(List.of(INBOX_LABEL_ID)))
                             .execute();
-                    logMessageWrite(tenantId, gmailMessageId, "archiveSkipInbox");
+                    logMessageWrite(mailboxRef, gmailMessageId, "archiveSkipInbox");
                     return null;
                 });
     }
@@ -104,29 +120,53 @@ public class TriageGmailWriter {
      * throws, the projection stays untouched and the next Pub/Sub event will reconcile.
      */
     public void markRead(UUID tenantId, String gmailMessageId) throws IOException {
-        removeSystemLabel(tenantId, gmailMessageId, UNREAD_LABEL_ID, "markRead");
-        inboxProjectionWriteService.markRead(tenantId, gmailMessageId);
+        markRead(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void markRead(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
+        removeSystemLabel(mailboxRef, gmailMessageId, UNREAD_LABEL_ID, "markRead");
+        inboxProjectionWriteService.markRead(mailboxRef.tenantId(), gmailMessageId);
     }
 
     public void markUnread(UUID tenantId, String gmailMessageId) throws IOException {
-        addSystemLabel(tenantId, gmailMessageId, UNREAD_LABEL_ID, "markUnread");
+        markUnread(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void markUnread(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
+        addSystemLabel(mailboxRef, gmailMessageId, UNREAD_LABEL_ID, "markUnread");
     }
 
     public void star(UUID tenantId, String gmailMessageId) throws IOException {
-        addSystemLabel(tenantId, gmailMessageId, STARRED_LABEL_ID, "star");
+        star(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void star(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
+        addSystemLabel(mailboxRef, gmailMessageId, STARRED_LABEL_ID, "star");
     }
 
     public void unstar(UUID tenantId, String gmailMessageId) throws IOException {
-        removeSystemLabel(tenantId, gmailMessageId, STARRED_LABEL_ID, "unstar");
+        unstar(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void unstar(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
+        removeSystemLabel(mailboxRef, gmailMessageId, STARRED_LABEL_ID, "unstar");
     }
 
     public String addToDigest(UUID tenantId, String gmailMessageId) throws IOException {
-        return applyLabel(tenantId, gmailMessageId, DIGEST_LABEL_NAME);
+        return addToDigest(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public String addToDigest(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
+        return applyLabel(mailboxRef, gmailMessageId, DIGEST_LABEL_NAME);
     }
 
     public void markSpam(UUID tenantId, String gmailMessageId) throws IOException {
+        markSpam(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void markSpam(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "markSpam",
                 gmail -> {
                     gmail.users()
@@ -138,14 +178,18 @@ public class TriageGmailWriter {
                                             .setAddLabelIds(List.of(SPAM_LABEL_ID))
                                             .setRemoveLabelIds(List.of(INBOX_LABEL_ID)))
                             .execute();
-                    logMessageWrite(tenantId, gmailMessageId, "markSpam");
+                    logMessageWrite(mailboxRef, gmailMessageId, "markSpam");
                     return null;
                 });
     }
 
     public void unmarkSpam(UUID tenantId, String gmailMessageId) throws IOException {
+        unmarkSpam(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void unmarkSpam(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "unmarkSpam",
                 gmail -> {
                     gmail.users()
@@ -157,13 +201,19 @@ public class TriageGmailWriter {
                                             .setAddLabelIds(List.of(INBOX_LABEL_ID))
                                             .setRemoveLabelIds(List.of(SPAM_LABEL_ID)))
                             .execute();
-                    logMessageWrite(tenantId, gmailMessageId, "unmarkSpam");
+                    logMessageWrite(mailboxRef, gmailMessageId, "unmarkSpam");
                     return null;
                 });
     }
 
     public String saveDraft(
             UUID tenantId, ReplyHeaders replyHeaders, String body, String gmailThreadId)
+            throws IOException {
+        return saveDraft(primaryMailboxRefOrThrow(tenantId), replyHeaders, body, gmailThreadId);
+    }
+
+    public String saveDraft(
+            MailboxRef mailboxRef, ReplyHeaders replyHeaders, String body, String gmailThreadId)
             throws IOException {
         Objects.requireNonNull(replyHeaders, "replyHeaders must not be null");
         requireText(body, "body");
@@ -180,8 +230,9 @@ public class TriageGmailWriter {
             ThreadingHeaderValidator.validate(mimeMessage, draftMessage, gmailThreadId);
         } catch (MissingMessageIdException | ThreadingHeaderInvalidException threadingException) {
             log.warn(
-                    "event=draft_threading_invalid tenantId={} gmailThreadId={}",
-                    tenantId,
+                    "event=draft_threading_invalid tenantId={} gmailConnectionId={} gmailThreadId={}",
+                    mailboxRef.tenantId(),
+                    mailboxRef.gmailConnectionId(),
                     gmailThreadId);
             throw threadingException;
         } catch (MessagingException messagingException) {
@@ -189,7 +240,7 @@ public class TriageGmailWriter {
         }
 
         return executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "saveDraft",
                 gmail -> {
                     Draft createdDraft =
@@ -197,16 +248,21 @@ public class TriageGmailWriter {
                                     .drafts()
                                     .create(USER_ID, new Draft().setMessage(draftMessage))
                                     .execute();
-                    logThreadWrite(tenantId, gmailThreadId);
+                    logThreadWrite(mailboxRef, gmailThreadId);
                     return createdDraft.getId();
                 });
     }
 
     public String saveDraftMessage(UUID tenantId, Message draftMessage, String gmailThreadId)
             throws IOException {
+        return saveDraftMessage(primaryMailboxRefOrThrow(tenantId), draftMessage, gmailThreadId);
+    }
+
+    public String saveDraftMessage(
+            MailboxRef mailboxRef, Message draftMessage, String gmailThreadId) throws IOException {
         Objects.requireNonNull(draftMessage, "draftMessage must not be null");
         return executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "saveDraftMessage",
                 gmail -> {
                     Draft createdDraft =
@@ -214,15 +270,20 @@ public class TriageGmailWriter {
                                     .drafts()
                                     .create(USER_ID, new Draft().setMessage(draftMessage))
                                     .execute();
-                    logThreadWrite(tenantId, gmailThreadId);
+                    logThreadWrite(mailboxRef, gmailThreadId);
                     return createdDraft.getId();
                 });
     }
 
     public void removeLabel(UUID tenantId, String gmailMessageId, String labelId)
             throws IOException {
+        removeLabel(primaryMailboxRefOrThrow(tenantId), gmailMessageId, labelId);
+    }
+
+    public void removeLabel(MailboxRef mailboxRef, String gmailMessageId, String labelId)
+            throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "removeLabel",
                 gmail -> {
                     gmail.users()
@@ -232,14 +293,18 @@ public class TriageGmailWriter {
                                     gmailMessageId,
                                     new ModifyMessageRequest().setRemoveLabelIds(List.of(labelId)))
                             .execute();
-                    logMessageWrite(tenantId, gmailMessageId, "removeLabel");
+                    logMessageWrite(mailboxRef, gmailMessageId, "removeLabel");
                     return null;
                 });
     }
 
     public void restoreToInbox(UUID tenantId, String gmailMessageId) throws IOException {
+        restoreToInbox(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void restoreToInbox(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "restoreToInbox",
                 gmail -> {
                     gmail.users()
@@ -250,18 +315,22 @@ public class TriageGmailWriter {
                                     new ModifyMessageRequest()
                                             .setAddLabelIds(List.of(INBOX_LABEL_ID)))
                             .execute();
-                    logMessageWrite(tenantId, gmailMessageId, "restoreToInbox");
+                    logMessageWrite(mailboxRef, gmailMessageId, "restoreToInbox");
                     return null;
                 });
     }
 
     public void moveToTrash(UUID tenantId, String gmailMessageId) throws IOException {
+        moveToTrash(primaryMailboxRefOrThrow(tenantId), gmailMessageId);
+    }
+
+    public void moveToTrash(MailboxRef mailboxRef, String gmailMessageId) throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "moveToTrash",
                 gmail -> {
                     gmail.users().messages().trash(USER_ID, gmailMessageId).execute();
-                    logMessageWrite(tenantId, gmailMessageId, "moveToTrash");
+                    logMessageWrite(mailboxRef, gmailMessageId, "moveToTrash");
                     return null;
                 });
     }
@@ -276,12 +345,14 @@ public class TriageGmailWriter {
      * error-propagation convention so the caller's retry semantics are consistent.
      */
     public Optional<String> lookupLabelId(UUID tenantId, String labelName) throws IOException {
-        if (tenantId == null) {
-            throw new IOException("tenantId must not be null");
-        }
+        return lookupLabelId(primaryMailboxRefOrThrow(tenantId), labelName);
+    }
+
+    public Optional<String> lookupLabelId(MailboxRef mailboxRef, String labelName)
+            throws IOException {
         requireText(labelName, "labelName");
-        Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
-        return findLabelIdByName(gmail, labelName);
+        return executeGmailWrite(
+                mailboxRef, "lookupLabelId", gmail -> findLabelIdByName(gmail, labelName));
     }
 
     /**
@@ -294,12 +365,13 @@ public class TriageGmailWriter {
      * TriageAuditWriter.recordCleanupArchive}.
      */
     public String ensureLabelExists(UUID tenantId, String labelName) throws IOException {
-        if (tenantId == null) {
-            throw new IOException("tenantId must not be null");
-        }
+        return ensureLabelExists(primaryMailboxRefOrThrow(tenantId), labelName);
+    }
+
+    public String ensureLabelExists(MailboxRef mailboxRef, String labelName) throws IOException {
         requireText(labelName, "labelName");
         return executeGmailWrite(
-                tenantId, "ensureLabelExists", gmail -> resolveOrCreateLabelId(gmail, labelName));
+                mailboxRef, "ensureLabelExists", gmail -> resolveOrCreateLabelId(gmail, labelName));
     }
 
     /**
@@ -314,9 +386,16 @@ public class TriageGmailWriter {
     public String updateDraftMessage(
             UUID tenantId, String draftId, Message draftMessage, String gmailThreadId)
             throws IOException {
+        return updateDraftMessage(
+                primaryMailboxRefOrThrow(tenantId), draftId, draftMessage, gmailThreadId);
+    }
+
+    public String updateDraftMessage(
+            MailboxRef mailboxRef, String draftId, Message draftMessage, String gmailThreadId)
+            throws IOException {
         Objects.requireNonNull(draftMessage, "draftMessage must not be null");
         return executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "updateDraftMessage",
                 gmail -> {
                     Draft updatedDraft =
@@ -324,7 +403,7 @@ public class TriageGmailWriter {
                                     .drafts()
                                     .update(USER_ID, draftId, new Draft().setMessage(draftMessage))
                                     .execute();
-                    logThreadWrite(tenantId, gmailThreadId);
+                    logThreadWrite(mailboxRef, gmailThreadId);
                     return updatedDraft.getId();
                 });
     }
@@ -337,9 +416,14 @@ public class TriageGmailWriter {
      */
     public List<String> listDraftIdsForThread(UUID tenantId, String gmailThreadId, int maxDrafts)
             throws IOException {
+        return listDraftIdsForThread(primaryMailboxRefOrThrow(tenantId), gmailThreadId, maxDrafts);
+    }
+
+    public List<String> listDraftIdsForThread(
+            MailboxRef mailboxRef, String gmailThreadId, int maxDrafts) throws IOException {
         requireText(gmailThreadId, "gmailThreadId");
         return executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "listDraftIdsForThread",
                 gmail -> {
                     List<String> matchingDraftIds = new ArrayList<>();
@@ -381,9 +465,13 @@ public class TriageGmailWriter {
      * user reopens the composer for a thread that already has a draft.
      */
     public Optional<Draft> fetchDraftRaw(UUID tenantId, String draftId) throws IOException {
+        return fetchDraftRaw(primaryMailboxRefOrThrow(tenantId), draftId);
+    }
+
+    public Optional<Draft> fetchDraftRaw(MailboxRef mailboxRef, String draftId) throws IOException {
         requireText(draftId, "draftId");
         return executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "fetchDraftRaw",
                 gmail -> {
                     try {
@@ -403,8 +491,12 @@ public class TriageGmailWriter {
     }
 
     public void deleteDraft(UUID tenantId, String draftId) throws IOException {
+        deleteDraft(primaryMailboxRefOrThrow(tenantId), draftId);
+    }
+
+    public void deleteDraft(MailboxRef mailboxRef, String draftId) throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 "deleteDraft",
                 gmail -> {
                     try {
@@ -412,8 +504,9 @@ public class TriageGmailWriter {
                     } catch (GoogleJsonResponseException googleResponseException) {
                         if (googleResponseException.getStatusCode() == 404) {
                             log.info(
-                                    "event=triage_gmail_write_idempotent_skip tenantId={} draftId={} op={}",
-                                    tenantId,
+                                    "event=triage_gmail_write_idempotent_skip tenantId={} gmailConnectionId={} draftId={} op={}",
+                                    mailboxRef.tenantId(),
+                                    mailboxRef.gmailConnectionId(),
                                     draftId,
                                     "deleteDraft");
                             return null;
@@ -421,8 +514,9 @@ public class TriageGmailWriter {
                         throw googleResponseException;
                     }
                     log.info(
-                            "event=triage_gmail_write tenantId={} draftId={} op={}",
-                            tenantId,
+                            "event=triage_gmail_write tenantId={} gmailConnectionId={} draftId={} op={}",
+                            mailboxRef.tenantId(),
+                            mailboxRef.gmailConnectionId(),
                             draftId,
                             "deleteDraft");
                     return null;
@@ -430,10 +524,10 @@ public class TriageGmailWriter {
     }
 
     private void addSystemLabel(
-            UUID tenantId, String gmailMessageId, String labelId, String operation)
+            MailboxRef mailboxRef, String gmailMessageId, String labelId, String operation)
             throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 operation,
                 gmail -> {
                     gmail.users()
@@ -443,16 +537,16 @@ public class TriageGmailWriter {
                                     gmailMessageId,
                                     new ModifyMessageRequest().setAddLabelIds(List.of(labelId)))
                             .execute();
-                    logMessageWrite(tenantId, gmailMessageId, operation);
+                    logMessageWrite(mailboxRef, gmailMessageId, operation);
                     return null;
                 });
     }
 
     private void removeSystemLabel(
-            UUID tenantId, String gmailMessageId, String labelId, String operation)
+            MailboxRef mailboxRef, String gmailMessageId, String labelId, String operation)
             throws IOException {
         executeGmailWrite(
-                tenantId,
+                mailboxRef,
                 operation,
                 gmail -> {
                     gmail.users()
@@ -462,7 +556,7 @@ public class TriageGmailWriter {
                                     gmailMessageId,
                                     new ModifyMessageRequest().setRemoveLabelIds(List.of(labelId)))
                             .execute();
-                    logMessageWrite(tenantId, gmailMessageId, operation);
+                    logMessageWrite(mailboxRef, gmailMessageId, operation);
                     return null;
                 });
     }
@@ -470,19 +564,45 @@ public class TriageGmailWriter {
     private <T> T executeGmailWrite(
             UUID tenantId, String operation, GmailWriteOperation<T> gmailWriteOperation)
             throws IOException {
+        return executeGmailWrite(
+                primaryMailboxRefOrThrow(tenantId), operation, gmailWriteOperation);
+    }
+
+    private <T> T executeGmailWrite(
+            MailboxRef mailboxRef, String operation, GmailWriteOperation<T> gmailWriteOperation)
+            throws IOException {
+        Objects.requireNonNull(mailboxRef, "mailboxRef must not be null");
         try {
-            Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
+            Gmail gmail = gmailApiClientFactory.buildClientForMailbox(mailboxRef);
             return gmailWriteOperation.execute(gmail);
         } catch (GoogleJsonResponseException googleResponseException) {
             log.warn(
-                    "event=triage_gmail_write_failed tenantId={} op={} status={}",
-                    tenantId,
+                    "event=triage_gmail_write_failed tenantId={} gmailConnectionId={} op={} status={}",
+                    mailboxRef.tenantId(),
+                    mailboxRef.gmailConnectionId(),
                     operation,
                     googleResponseException.getStatusCode());
             throw googleResponseException;
         } catch (IOException ioException) {
-            log.warn("event=triage_gmail_write_failed tenantId={} op={}", tenantId, operation);
+            log.warn(
+                    "event=triage_gmail_write_failed tenantId={} gmailConnectionId={} op={}",
+                    mailboxRef.tenantId(),
+                    mailboxRef.gmailConnectionId(),
+                    operation);
             throw ioException;
+        }
+    }
+
+    private MailboxRef primaryMailboxRefOrThrow(UUID tenantId) throws IOException {
+        try {
+            return gmailConnectionService
+                    .primaryMailboxRef(tenantId)
+                    .orElseThrow(
+                            () ->
+                                    new IllegalStateException(
+                                            "Primary Gmail mailbox is required for Gmail write"));
+        } catch (RuntimeException runtimeException) {
+            throw new IOException("Unable to resolve primary Gmail mailbox", runtimeException);
         }
     }
 
@@ -534,18 +654,21 @@ public class TriageGmailWriter {
         return labelName.startsWith("Label_") || INBOX_LABEL_ID.equals(labelName);
     }
 
-    private static void logMessageWrite(UUID tenantId, String gmailMessageId, String operation) {
+    private static void logMessageWrite(
+            MailboxRef mailboxRef, String gmailMessageId, String operation) {
         log.info(
-                "event=triage_gmail_write tenantId={} gmailMessageId={} op={}",
-                tenantId,
+                "event=triage_gmail_write tenantId={} gmailConnectionId={} gmailMessageId={} op={}",
+                mailboxRef.tenantId(),
+                mailboxRef.gmailConnectionId(),
                 stripCrlf(gmailMessageId),
                 operation);
     }
 
-    private static void logThreadWrite(UUID tenantId, String gmailThreadId) {
+    private static void logThreadWrite(MailboxRef mailboxRef, String gmailThreadId) {
         log.info(
-                "event=triage_gmail_write tenantId={} gmailThreadId={} op={}",
-                tenantId,
+                "event=triage_gmail_write tenantId={} gmailConnectionId={} gmailThreadId={} op={}",
+                mailboxRef.tenantId(),
+                mailboxRef.gmailConnectionId(),
                 stripCrlf(gmailThreadId),
                 "saveDraft");
     }

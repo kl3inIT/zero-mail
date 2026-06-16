@@ -26,17 +26,27 @@ public class PubSubTenantLookupRepository {
     }
 
     public Optional<UUID> findConnectedTenantIdByEmail(String emailAddress) {
-        List<UUID> tenantIds =
+        return findConnectedMailboxByEmail(emailAddress).map(TenantMailboxRef::tenantId);
+    }
+
+    public Optional<TenantMailboxRef> findConnectedMailboxByEmail(String emailAddress) {
+        List<TenantMailboxRef> mailboxRefs =
                 jdbcTemplate.query(
                         """
-                        SELECT tenant_id
+                        SELECT tenant_id, id AS gmail_connection_id
                         FROM gmail_connections
                         WHERE LOWER(google_email) = ?
                           AND status = 'CONNECTED'
-                        LIMIT 1
                         """,
-                        (resultSet, _) -> resultSet.getObject("tenant_id", UUID.class),
+                        (resultSet, _) ->
+                                new TenantMailboxRef(
+                                        resultSet.getObject("tenant_id", UUID.class),
+                                        resultSet.getObject("gmail_connection_id", UUID.class)),
                         emailAddress.toLowerCase(Locale.ROOT));
-        return tenantIds.stream().findFirst();
+        if (mailboxRefs.size() > 1) {
+            throw new IllegalStateException(
+                    "Expected at most one CONNECTED mailbox for lowercased Gmail address");
+        }
+        return mailboxRefs.stream().findFirst();
     }
 }

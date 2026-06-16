@@ -12,6 +12,7 @@
 @ApplicationModule(
         displayName = "Cleanup",
         allowedDependencies = {
+            "mailbox",
             "gmail",
             "gmail :: domain",
             "gmail :: gateway",

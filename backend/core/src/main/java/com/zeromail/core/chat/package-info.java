@@ -39,6 +39,8 @@
             "rules :: usecases",
             "gmail",
             "gmail :: gateway",
+            "gmail :: usecases",
+            "mailbox",
             "outbound :: api",
             "triage",
             "triage :: domain",

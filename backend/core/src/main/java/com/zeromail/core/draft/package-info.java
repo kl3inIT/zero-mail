@@ -2,6 +2,7 @@
 @ApplicationModule(
         displayName = "Draft",
         allowedDependencies = {
+            "mailbox",
             "llm",
             "llm :: domain",
             "llm :: exception",
@@ -17,6 +18,7 @@
             "rules :: domain",
             "gmail",
             "gmail :: gateway",
+            "gmail :: usecases",
             "thread",
             "thread :: events",
             "thread :: usecases",

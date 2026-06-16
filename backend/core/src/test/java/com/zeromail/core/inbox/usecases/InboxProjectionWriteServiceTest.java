@@ -23,6 +23,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 class InboxProjectionWriteServiceTest extends PostgresContainerTest {
 
+    private static final UUID GMAIL_CONNECTION_ID =
+            UUID.fromString("00000000-0000-0000-0000-00000000bb11");
+
     @Autowired InboxProjectionWriteService inboxProjectionWriteService;
     @Autowired InboxProjectionCipher cipher;
     @Autowired GmailInboxProjectionRepository projectionRepository;
@@ -40,6 +43,7 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                                 inboxProjectionWriteService.upsert(
                                         new InboxProjectionUpsertCommand(
                                                 tenantId,
+                                                GMAIL_CONNECTION_ID,
                                                 gmailMessageId,
                                                 "thread-xyz",
                                                 "alice@example.com",
@@ -58,7 +62,9 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                                         projectionRepository
                                                 .findById(
                                                         new GmailInboxProjectionId(
-                                                                tenantId, gmailMessageId))
+                                                                tenantId,
+                                                                GMAIL_CONNECTION_ID,
+                                                                gmailMessageId))
                                                 .orElseThrow());
 
         assertThat(projection.getInboxState()).isEqualTo(InboxState.INBOX);
@@ -112,6 +118,7 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                             inboxProjectionWriteService.upsert(
                                     new InboxProjectionUpsertCommand(
                                             tenantId,
+                                            GMAIL_CONNECTION_ID,
                                             gmailMessageId,
                                             "thread-flip",
                                             "bob@example.com",
@@ -125,6 +132,7 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                             inboxProjectionWriteService.upsert(
                                     new InboxProjectionUpsertCommand(
                                             tenantId,
+                                            GMAIL_CONNECTION_ID,
                                             gmailMessageId,
                                             "thread-flip",
                                             "bob@example.com",
@@ -144,7 +152,9 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                                         projectionRepository
                                                 .findById(
                                                         new GmailInboxProjectionId(
-                                                                tenantId, gmailMessageId))
+                                                                tenantId,
+                                                                GMAIL_CONNECTION_ID,
+                                                                gmailMessageId))
                                                 .orElseThrow());
 
         assertThat(projection.getInboxState()).isEqualTo(InboxState.OUT_OF_INBOX);
@@ -165,6 +175,7 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                             inboxProjectionWriteService.upsert(
                                     new InboxProjectionUpsertCommand(
                                             tenantId,
+                                            GMAIL_CONNECTION_ID,
                                             gmailMessageId,
                                             "thread-mark-read",
                                             "carol@example.com",
@@ -185,7 +196,9 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                                         projectionRepository
                                                 .findById(
                                                         new GmailInboxProjectionId(
-                                                                tenantId, gmailMessageId))
+                                                                tenantId,
+                                                                GMAIL_CONNECTION_ID,
+                                                                gmailMessageId))
                                                 .orElseThrow());
 
         assertThat(projection.isUnread()).isFalse();
@@ -221,7 +234,9 @@ class InboxProjectionWriteServiceTest extends PostgresContainerTest {
                                         projectionRepository
                                                 .findById(
                                                         new GmailInboxProjectionId(
-                                                                tenantId, missingGmailMessageId))
+                                                                tenantId,
+                                                                GMAIL_CONNECTION_ID,
+                                                                missingGmailMessageId))
                                                 .isPresent());
         assertThat(rowPresent)
                 .as("missing projection row must remain absent — markRead does NOT insert")

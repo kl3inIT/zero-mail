@@ -67,12 +67,21 @@ public class LoginRedirectAuthenticationFailureHandler
             @NonNull HttpServletResponse response,
             @NonNull AuthenticationException authenticationException)
             throws IOException, ServletException {
+        // Read (and clear) the one-shot callback intent FIRST. An add/reconnect-mailbox attempt
+        // comes
+        // from an already-authenticated user inside the app, so its failures must keep the user IN
+        // the
+        // app (an in-app error toast) instead of bouncing them to the public /login page.
+        boolean managementIntent = consumeManagementIntent(request);
         if (authenticationException instanceof OAuth2AuthenticationException oauthException) {
             switch (oauthException.getError().getErrorCode()) {
                 case "access_denied", "consent_denied" -> {
-                    log.info("event=login_consent_denied");
-                    getRedirectStrategy()
-                            .sendRedirect(request, response, buildLoginUrl("consent_denied"));
+                    redirectForFailure(
+                            request,
+                            response,
+                            managementIntent,
+                            "consent_denied",
+                            "login_consent_denied");
                     return;
                 }
                 case "gmail_scope_required" -> {
@@ -84,17 +93,99 @@ public class LoginRedirectAuthenticationFailureHandler
                     } catch (Exception _) {
                         // Best-effort — never log the principal name (privacy contract).
                     }
-                    log.info("event=login_gmail_scope_missing");
-                    getRedirectStrategy()
-                            .sendRedirect(request, response, buildLoginUrl("gmail_scope_required"));
+                    redirectForFailure(
+                            request,
+                            response,
+                            managementIntent,
+                            "gmail_scope_required",
+                            "login_gmail_scope_missing");
+                    return;
+                }
+                case "mailbox_already_connected" -> {
+                    // Add/reconnect-mailbox failure: the chosen Google account is already a
+                    // CONNECTED
+                    // mailbox for THIS workspace. Surface a specific message instead of the generic
+                    // signin_failed fallback. No tenant/email logged (privacy contract).
+                    redirectForFailure(
+                            request,
+                            response,
+                            managementIntent,
+                            "mailbox_already_connected",
+                            "login_mailbox_already_connected");
+                    return;
+                }
+                case "mailbox_in_other_workspace" -> {
+                    // The chosen Google account is CONNECTED under a DIFFERENT workspace. Guide the
+                    // user to
+                    // free it there first. No tenant/email logged (privacy contract).
+                    redirectForFailure(
+                            request,
+                            response,
+                            managementIntent,
+                            "mailbox_in_other_workspace",
+                            "login_mailbox_in_other_workspace");
                     return;
                 }
                 default -> {
-                    /* fall through to super */
+                    /* fall through */
                 }
             }
         }
+        if (managementIntent) {
+            // Any other failure of an in-app add/reconnect attempt: still keep the authenticated
+            // user in
+            // the app with a generic error rather than the /login fallback.
+            log.info("event=mailbox_management_oauth_failed");
+            getRedirectStrategy()
+                    .sendRedirect(request, response, buildMailboxErrorUrl("signin_failed"));
+            return;
+        }
         super.onAuthenticationFailure(request, response, authenticationException);
+    }
+
+    /**
+     * Routes a mapped OAuth failure to the right surface: an authenticated add/reconnect-mailbox
+     * attempt stays in-app ({@code /inbox?mailboxError=...}, rendered as a toast), while a
+     * first-login failure goes to the public {@code /login?error=...} page. Event names stay opaque
+     * (privacy contract) — no tenant, email, or token bytes.
+     */
+    private void redirectForFailure(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            boolean managementIntent,
+            String errorCode,
+            String loginEventName)
+            throws IOException {
+        if (managementIntent) {
+            log.info("event=mailbox_management_oauth_failed");
+            getRedirectStrategy().sendRedirect(request, response, buildMailboxErrorUrl(errorCode));
+        } else {
+            log.info("event={}", loginEventName);
+            getRedirectStrategy().sendRedirect(request, response, buildLoginUrl(errorCode));
+        }
+    }
+
+    /**
+     * Consumes the one-shot OAuth callback-intent snapshot and its initiating security context from
+     * the session (so a stale intent cannot be replayed on a later callback) and reports whether
+     * the failed attempt was an in-app mailbox-management intent ({@code add_mailbox} / {@code
+     * reconnect_mailbox}).
+     */
+    private static boolean consumeManagementIntent(HttpServletRequest request) {
+        var session = request.getSession(false);
+        if (session == null) {
+            return false;
+        }
+        Object callbackIntentValue =
+                session.getAttribute(OAuthIntentSnapshot.CALLBACK_INTENT_SESSION_ATTRIBUTE);
+        session.removeAttribute(OAuthIntentSnapshot.CALLBACK_INTENT_SESSION_ATTRIBUTE);
+        session.removeAttribute(OAuthIntentSnapshot.INITIATING_SECURITY_CONTEXT_SESSION_ATTRIBUTE);
+        if (callbackIntentValue instanceof OAuthIntentSnapshot callbackIntentSnapshot) {
+            return OAuthIntentSnapshot.INTENT_ADD_MAILBOX.equals(callbackIntentSnapshot.intent())
+                    || OAuthIntentSnapshot.INTENT_RECONNECT_MAILBOX.equals(
+                            callbackIntentSnapshot.intent());
+        }
+        return false;
     }
 
     /**
@@ -107,6 +198,20 @@ public class LoginRedirectAuthenticationFailureHandler
         return UriComponentsBuilder.fromUri(properties.web().baseUrl())
                 .path("/login")
                 .queryParam("error", errorCode)
+                .build()
+                .toUriString();
+    }
+
+    /**
+     * Build an in-app redirect URL carrying a {@code ?mailboxError=} query param. Used when an
+     * already-authenticated user's add/reconnect-mailbox OAuth attempt fails — they stay on the
+     * mail app ({@code /inbox}) and the frontend surfaces the error as a toast, rather than being
+     * kicked out to the public login page.
+     */
+    private String buildMailboxErrorUrl(String errorCode) {
+        return UriComponentsBuilder.fromUri(properties.web().baseUrl())
+                .path("/inbox")
+                .queryParam("mailboxError", errorCode)
                 .build()
                 .toUriString();
     }

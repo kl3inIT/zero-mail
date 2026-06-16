@@ -30,7 +30,10 @@ class SpendAggregateQueryServiceTest extends PostgresContainerTest {
     void cleanTables() {
         // CASCADE so any other test class that leaves rows in tables that FK to `tenants`
         // (users, rules, chat, billing, etc.) does not block this DELETE in CI ordering.
-        jdbcTemplate.execute("TRUNCATE TABLE tenants RESTART IDENTITY CASCADE");
+        // gmail_connections has no FK to tenants, so CASCADE does not reach it; truncate it
+        // explicitly or the new global active-email unique (changeset 127) collides when this
+        // class re-seeds the same fixed emails across methods.
+        jdbcTemplate.execute("TRUNCATE TABLE tenants, gmail_connections RESTART IDENTITY CASCADE");
     }
 
     @Test

@@ -455,6 +455,14 @@
         "body": "Sign in worked, but Gmail access wasn't granted. Click Sign in with Google and approve the Gmail permission to continue.",
         "title": "Gmail permission missing"
       },
+      "mailbox_already_connected": {
+        "body": "This Gmail account is already connected to your current workspace. Choose a different Google account to add another mailbox.",
+        "title": "Mailbox already connected"
+      },
+      "mailbox_in_other_workspace": {
+        "body": "This Gmail account belongs to a different Zero Mail workspace. Each Gmail address can belong to only one workspace — sign in to that workspace and delete it before adding this Gmail here, or choose a different Google account.",
+        "title": "Gmail belongs to another workspace"
+      },
       "signin_failed": {
         "body": "Something interrupted sign-in before it finished. Click Sign in with Google to try again.",
         "title": "Sign-in didn't complete"
@@ -996,7 +1004,11 @@
     "fallback": "The action could not finish. Refresh the page, then try again.",
     "fieldFallback": "This value is invalid. Check it and try again.",
     "gmail": {
-      "disconnected": "Google access was revoked or expired. Reconnect Gmail."
+      "disconnected": "Google access was revoked or expired. Reconnect Gmail.",
+      "mailbox": {
+        "duplicate_active": "This Gmail mailbox is already active.",
+        "not_found": "This Gmail mailbox could not be found in the workspace."
+      }
     },
     "knowledge": {
       "not_found": "This snippet could not be found. Reload the list.",
@@ -1034,6 +1046,9 @@
       "compile": {
         "clarification_required": "This rule needs one clarification answer before it can be saved.",
         "invalid": "Zero Mail could not review this rule. Edit the wording or answer the clarification, then review again."
+      },
+      "copy": {
+        "generic": "Rules could not be copied right now. Reload and try again."
       },
       "duplicate": "An identical rule already exists in the list. Edit the existing rule or change the conditions/actions.",
       "gmail": {
@@ -2165,6 +2180,19 @@
       "tabsLabel": "Rule authoring mode",
       "title": "Create email rule"
     },
+    "copy": {
+      "activeMailbox": "Active target mailbox",
+      "body": "Copied rules are added to the active mailbox and stay disabled until you review them.",
+      "button": "Copy rules",
+      "cancel": "Cancel",
+      "confirm": "Copy",
+      "copied": "Copied {count} rules",
+      "empty": "Connect another Gmail account to copy rules between mailboxes.",
+      "sourceLabel": "Source mailbox",
+      "sourcePlaceholder": "Choose mailbox",
+      "success": "Rules copied",
+      "title": "Copy rules from another mailbox"
+    },
     "delete": {
       "body": "This removes the rule definition. Gmail will not be changed, but this rule will no longer appear in previews.",
       "confirm": "Delete rule",
@@ -2556,7 +2584,12 @@
   },
   "shell": {
     "accounts": {
+      "active": "Active",
+      "addGmail": "Add Gmail",
       "addManage": "Add or manage accounts",
+      "noMailboxes": "No Gmail mailboxes",
+      "primary": "Primary",
+      "switch": "Switch",
       "title": "Accounts"
     },
     "balance": {
@@ -2756,6 +2789,7 @@
         "retry": "Retry",
         "title": "Could not load triage history"
       },
+      "executingMailbox": "Executing",
       "loadingMore": "Loading...",
       "loadingOlder": "Loading...",
       "loadMore": "Load more",
@@ -2766,6 +2800,7 @@
       },
       "noReason": "No detailed reason",
       "regenerateDraftAction": "Regenerate draft",
+      "sourceMailbox": "Source",
       "thenLabel": "Then",
       "unavailable": {
         "body": "The backend currently exposes undo for individual audit entries, but not the audit-list endpoint. Zero Mail will show the history here when that endpoint exists.",

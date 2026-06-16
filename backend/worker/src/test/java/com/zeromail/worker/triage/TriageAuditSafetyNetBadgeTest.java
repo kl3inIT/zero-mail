@@ -12,9 +12,15 @@ class TriageAuditSafetyNetBadgeTest {
 
     @Test
     void triageAuditCommandCarriesBlockedSafetyNetPatternWhenSafetyNetBlocksAction() {
+        UUID tenantId = UUID.randomUUID();
+        UUID sourceMailboxId = UUID.randomUUID();
+        UUID executingMailboxId = UUID.randomUUID();
+
         TriageAuditCommand command =
                 new TriageAuditCommand(
-                        UUID.randomUUID(),
+                        tenantId,
+                        sourceMailboxId,
+                        executingMailboxId,
                         "gmail-message-id",
                         "gmail-thread-id",
                         "Subject excerpt",

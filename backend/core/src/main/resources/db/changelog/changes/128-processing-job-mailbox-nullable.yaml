@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 128-processing-job-mailbox-nullable
+      author: zeromail
+      comment: >
+        Relax processing_job.gmail_connection_id back to NULLABLE. Changeset 124 promoted it to
+        NOT NULL assuming every job is mailbox-scoped, but processing_job also holds tenant-scoped
+        jobs (sender UNSUBSCRIBE_CAMPAIGN) and admin-global jobs (CATALOG_SYNC) that have no
+        mailbox. Mailbox-scoped INBOX_PROJECTION_BACKFILL jobs still set the column, and the partial
+        unique index uq_processing_job_open_inbox_backfill_mailbox only covers those rows, so it is
+        unaffected by NULLs on non-mailbox jobs.
+      changes:
+        - dropNotNullConstraint:
+            tableName: processing_job
+            columnName: gmail_connection_id
+            columnDataType: uuid
+      rollback:
+        - addNotNullConstraint:
+            tableName: processing_job
+            columnName: gmail_connection_id
+            columnDataType: uuid

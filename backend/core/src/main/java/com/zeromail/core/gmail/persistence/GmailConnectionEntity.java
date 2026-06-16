@@ -36,6 +36,12 @@ public class GmailConnectionEntity extends AbstractTenantOwnedEntity {
     @Column(name = "connected_at")
     private Instant connectedAt;
 
+    @Column(name = "is_primary", nullable = false)
+    private boolean isPrimary = false;
+
+    @Column(name = "display_purpose")
+    private String displayPurpose;
+
     @Column(name = "disconnected_at")
     private Instant disconnectedAt;
 
@@ -87,6 +93,14 @@ public class GmailConnectionEntity extends AbstractTenantOwnedEntity {
         return connectedAt;
     }
 
+    public boolean isPrimary() {
+        return isPrimary;
+    }
+
+    public String getDisplayPurpose() {
+        return displayPurpose;
+    }
+
     public Instant getDisconnectedAt() {
         return disconnectedAt;
     }
@@ -129,6 +143,14 @@ public class GmailConnectionEntity extends AbstractTenantOwnedEntity {
 
     public void setConnectedAt(Instant connectedAt) {
         this.connectedAt = connectedAt;
+    }
+
+    public void setPrimary(boolean primary) {
+        isPrimary = primary;
+    }
+
+    public void setDisplayPurpose(String displayPurpose) {
+        this.displayPurpose = displayPurpose;
     }
 
     public void setDisconnectedAt(Instant disconnectedAt) {

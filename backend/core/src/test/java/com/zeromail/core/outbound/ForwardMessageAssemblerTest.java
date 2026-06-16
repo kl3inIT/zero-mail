@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.outbound.usecases.ForwardMessageAssembler;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
@@ -25,6 +26,8 @@ import org.junit.jupiter.api.Test;
 class ForwardMessageAssemblerTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-0000000091f0");
+    private static final UUID MAILBOX_ID = UUID.fromString("00000000-0000-0000-0000-0000000091f1");
+    private static final MailboxRef MAILBOX_REF = new MailboxRef(TENANT_ID, MAILBOX_ID);
     private static final String SOURCE_MESSAGE_ID = "gmail-source-1";
     private static final String MESSAGE_ID =
             "<00000000-0000-0000-0000-0000000091f0.k1@zero-mail.invalid>";
@@ -41,7 +44,7 @@ class ForwardMessageAssemblerTest {
 
         Message forward =
                 assembler.buildForward(
-                        TENANT_ID,
+                        MAILBOX_REF,
                         SOURCE_MESSAGE_ID,
                         List.of("recipient@example.com"),
                         List.of(),
@@ -75,7 +78,7 @@ class ForwardMessageAssemblerTest {
 
         Message forward =
                 assembler.buildForward(
-                        TENANT_ID,
+                        MAILBOX_REF,
                         SOURCE_MESSAGE_ID,
                         List.of("recipient@example.com"),
                         List.of(),
@@ -94,7 +97,7 @@ class ForwardMessageAssemblerTest {
         Gmail.Users users = mock(Gmail.Users.class);
         Gmail.Users.Messages messages = mock(Gmail.Users.Messages.class);
         Gmail.Users.Messages.Get getRequest = mock(Gmail.Users.Messages.Get.class);
-        when(gmailApiClientFactory.buildClientForTenant(TENANT_ID)).thenReturn(gmail);
+        when(gmailApiClientFactory.buildClientForMailbox(MAILBOX_REF)).thenReturn(gmail);
         when(gmail.users()).thenReturn(users);
         when(users.messages()).thenReturn(messages);
         when(messages.get(eq("me"), eq(SOURCE_MESSAGE_ID))).thenReturn(getRequest);

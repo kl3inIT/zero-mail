@@ -4,6 +4,7 @@ import com.zeromail.core.inbox.domain.InboxSyncStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
@@ -17,6 +18,7 @@ import org.hibernate.annotations.TenantId;
  */
 @Entity
 @Table(name = "gmail_inbox_sync_state")
+@IdClass(GmailInboxSyncStateId.class)
 @SuppressWarnings({"JpaDataSourceORMInspection", "unused"})
 public class GmailInboxSyncStateEntity {
 
@@ -24,6 +26,10 @@ public class GmailInboxSyncStateEntity {
     @TenantId
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
+
+    @Id
+    @Column(name = "gmail_connection_id", nullable = false)
+    private UUID gmailConnectionId;
 
     @Column(name = "last_history_id")
     private Long lastHistoryId;
@@ -54,13 +60,19 @@ public class GmailInboxSyncStateEntity {
         // Hibernate
     }
 
-    public GmailInboxSyncStateEntity(UUID tenantId, InboxSyncStatus status) {
+    public GmailInboxSyncStateEntity(
+            UUID tenantId, UUID gmailConnectionId, InboxSyncStatus status) {
         this.tenantId = tenantId;
+        this.gmailConnectionId = gmailConnectionId;
         this.status = status.id();
     }
 
     public UUID getTenantId() {
         return tenantId;
+    }
+
+    public UUID getGmailConnectionId() {
+        return gmailConnectionId;
     }
 
     public Long getLastHistoryId() {

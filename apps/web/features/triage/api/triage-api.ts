@@ -27,6 +27,10 @@ export type AuditEntry = {
   draftId?: string;
   decisionState?: string;
   blockedBySafetyNetPattern?: string | null;
+  sourceMailboxId?: string;
+  sourceMailboxEmail?: string;
+  executingMailboxId?: string;
+  executingMailboxEmail?: string;
 };
 
 export type AuditLogPage = {
@@ -75,6 +79,12 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
   if (!row.auditId) return null;
   const timestamp = row.createdAt ?? new Date(0).toISOString();
   const action = row.action ?? 'unknown';
+  const mailboxProvenance = row as components['schemas']['AuditEntryResponse'] & {
+    sourceMailboxId?: string;
+    sourceMailboxEmail?: string;
+    executingMailboxId?: string;
+    executingMailboxEmail?: string;
+  };
 
   return {
     id: row.auditId,
@@ -95,6 +105,10 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
     draftId: row.draftId ?? undefined,
     decisionState: row.decisionState,
     blockedBySafetyNetPattern: row.blockedBySafetyNetPattern ?? null,
+    sourceMailboxId: mailboxProvenance.sourceMailboxId,
+    sourceMailboxEmail: mailboxProvenance.sourceMailboxEmail,
+    executingMailboxId: mailboxProvenance.executingMailboxId,
+    executingMailboxEmail: mailboxProvenance.executingMailboxEmail,
   };
 }
 

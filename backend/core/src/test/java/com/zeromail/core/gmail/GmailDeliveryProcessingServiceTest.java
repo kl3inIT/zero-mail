@@ -24,6 +24,7 @@ import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.GmailDeliveryProcessingService;
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import java.math.BigInteger;
 import java.util.List;
@@ -74,7 +75,12 @@ class GmailDeliveryProcessingServiceTest {
         connection.setLastSyncedHistoryId(100L);
         PubSubDeliveryEntity delivery =
                 new PubSubDeliveryEntity(
-                        DELIVERY_ID, TENANT_ID, "pubsub-message", 200L, "{\"historyId\":\"200\"}");
+                        DELIVERY_ID,
+                        TENANT_ID,
+                        CONNECTION_ID,
+                        "pubsub-message",
+                        200L,
+                        "{\"historyId\":\"200\"}");
         Message historyMessage = new Message().setId(GMAIL_MESSAGE_ID);
         History history =
                 new History()
@@ -88,8 +94,9 @@ class GmailDeliveryProcessingServiceTest {
                         .setLabelIds(List.of("SENT"))
                         .setInternalDate(1_779_999_999_000L);
 
-        when(connectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.of(connection));
-        when(gmailApiClientFactory.buildClientForConnection(connection, TENANT_ID))
+        when(connectionRepository.findByIdAndTenantId(CONNECTION_ID, TENANT_ID))
+                .thenReturn(Optional.of(connection));
+        when(gmailApiClientFactory.buildClientForMailbox(new MailboxRef(TENANT_ID, CONNECTION_ID)))
                 .thenReturn(gmail);
         when(gmail.users()).thenReturn(gmailUsers);
         when(gmailUsers.history()).thenReturn(gmailHistory);
@@ -115,6 +122,7 @@ class GmailDeliveryProcessingServiceTest {
         doNothing().when(transactionManager).rollback(transactionStatus);
         when(observedRepository.insertObservedIfAbsent(
                         eq(TENANT_ID),
+                        eq(CONNECTION_ID),
                         eq(GMAIL_MESSAGE_ID),
                         eq(GMAIL_THREAD_ID),
                         eq(101L),
@@ -140,7 +148,8 @@ class GmailDeliveryProcessingServiceTest {
                 .processDelivery(delivery);
 
         verify(historyListRequest, never()).setLabelId("INBOX");
-        verify(connectionRepository).updateLastSyncedHistoryIdMonotonic(TENANT_ID, 200L);
+        verify(connectionRepository)
+                .updateLastSyncedHistoryIdMonotonicByConnectionId(CONNECTION_ID, 200L);
         verify(deliveryRepository).updateStatus(DELIVERY_ID, "PROCESSED");
 
         ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
@@ -148,6 +157,7 @@ class GmailDeliveryProcessingServiceTest {
         assertThat(eventCaptor.getValue()).isInstanceOf(MailOutboundObserved.class);
         MailOutboundObserved outboundObserved = (MailOutboundObserved) eventCaptor.getValue();
         assertThat(outboundObserved.tenantId()).isEqualTo(TENANT_ID);
+        assertThat(outboundObserved.gmailConnectionId()).isEqualTo(CONNECTION_ID);
         assertThat(outboundObserved.gmailThreadId()).isEqualTo(GMAIL_THREAD_ID);
         assertThat(outboundObserved.gmailMessageId()).isEqualTo(GMAIL_MESSAGE_ID);
     }
@@ -174,9 +184,15 @@ class GmailDeliveryProcessingServiceTest {
         connection.setLastSyncedHistoryId(100L);
         PubSubDeliveryEntity delivery =
                 new PubSubDeliveryEntity(
-                        DELIVERY_ID, TENANT_ID, "pubsub-message", 200L, "{\"historyId\":\"200\"}");
+                        DELIVERY_ID,
+                        TENANT_ID,
+                        CONNECTION_ID,
+                        "pubsub-message",
+                        200L,
+                        "{\"historyId\":\"200\"}");
 
-        when(connectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.of(connection));
+        when(connectionRepository.findByIdAndTenantId(CONNECTION_ID, TENANT_ID))
+                .thenReturn(Optional.of(connection));
         when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
         doNothing().when(transactionManager).commit(transactionStatus);
         doNothing().when(transactionManager).rollback(transactionStatus);
@@ -195,6 +211,6 @@ class GmailDeliveryProcessingServiceTest {
 
         verify(deliveryRepository).updateStatus(DELIVERY_ID, "DEAD");
         verify(deliveryRepository, never()).releaseForRetry(eq(DELIVERY_ID), any());
-        verify(gmailApiClientFactory, never()).buildClientForConnection(any(), any());
+        verify(gmailApiClientFactory, never()).buildClientForMailbox(any());
     }
 }

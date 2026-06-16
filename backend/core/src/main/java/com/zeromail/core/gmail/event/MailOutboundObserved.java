@@ -4,8 +4,16 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Integration event consumed when Gmail ingestion observes an outbound message. Carries only stable
+ * Gmail ids and a timestamp; never subject, snippet, body, or sender display name.
+ */
 public record MailOutboundObserved(
-        UUID tenantId, String gmailThreadId, String gmailMessageId, Instant observedAt) {
+        UUID tenantId,
+        UUID gmailConnectionId,
+        String gmailThreadId,
+        String gmailMessageId,
+        Instant observedAt) {
 
     public MailOutboundObserved {
         Objects.requireNonNull(tenantId, "tenantId must not be null");

@@ -129,10 +129,12 @@ class CleanupPrivacySweepTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                 insert into mail_message_observed(
-                    tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids,
+                    tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id, history_id,
+                    label_ids,
                     sender_email, list_unsubscribe_url, list_unsubscribe_mailto,
                     list_unsubscribe_one_click, observed_at)
-                values (?, ?, ?, ?, ARRAY['INBOX']::text[], ?, ?, ?, ?, ?)
+                values (?, '00000000-0000-4000-8000-0000000000c1', ?, ?, ?,
+                    ARRAY['INBOX']::text[], ?, ?, ?, ?, ?)
                 """,
                 tenantId,
                 "gmail-msg-" + UUID.randomUUID(),

@@ -47,7 +47,7 @@ class DeadLetterRequeueServiceTest extends PostgresContainerTest {
         jdbcTemplate.update("DELETE FROM admin_audit_event WHERE actor_user_id = ?", ADMIN_USER_ID);
         jdbcTemplate.execute(
                 "ALTER TABLE admin_audit_event ENABLE TRIGGER admin_audit_event_append_only");
-        jdbcTemplate.execute("DELETE FROM processing_job");
+        jdbcTemplate.execute("TRUNCATE TABLE processing_job CASCADE");
         adminUserRepository.save(
                 new AdminUserEntity(
                         ADMIN_USER_ID,
@@ -61,9 +61,10 @@ class DeadLetterRequeueServiceTest extends PostgresContainerTest {
     void requeue_resets_attempts_increments_admin_count_and_writes_audit_row() {
         UUID jobId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO processing_job(id, job_type, status, attempts,"
+                "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id,"
                         + " last_failure_reason, last_failed_at)"
-                        + " VALUES (?, 'TRIAGE_INCOMING', 'DEAD_LETTER', 5, 'DOWNSTREAM_TIMEOUT',"
+                        + " VALUES (?, 'TRIAGE_INCOMING', 'DEAD_LETTER', 5,"
+                        + " '00000000-0000-4000-8000-0000000000c1', 'DOWNSTREAM_TIMEOUT',"
                         + " NOW() - INTERVAL '10 minutes')",
                 jobId);
 
@@ -117,8 +118,9 @@ class DeadLetterRequeueServiceTest extends PostgresContainerTest {
     void requeue_is_idempotent_when_job_already_pending() {
         UUID jobId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO processing_job(id, job_type, status, attempts)"
-                        + " VALUES (?, 'TRIAGE_INCOMING', 'PENDING', 0)",
+                "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id)"
+                        + " VALUES (?, 'TRIAGE_INCOMING', 'PENDING', 0,"
+                        + " '00000000-0000-4000-8000-0000000000c1')",
                 jobId);
 
         int updatedRows =
@@ -146,8 +148,9 @@ class DeadLetterRequeueServiceTest extends PostgresContainerTest {
     void requeue_requires_admin_context() {
         UUID jobId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO processing_job(id, job_type, status, attempts)"
-                        + " VALUES (?, 'TRIAGE_INCOMING', 'DEAD_LETTER', 5)",
+                "INSERT INTO processing_job(id, job_type, status, attempts, gmail_connection_id)"
+                        + " VALUES (?, 'TRIAGE_INCOMING', 'DEAD_LETTER', 5,"
+                        + " '00000000-0000-4000-8000-0000000000c1')",
                 jobId);
 
         org.assertj.core.api.Assertions.assertThatIllegalStateException()

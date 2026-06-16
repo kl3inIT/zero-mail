@@ -2,17 +2,28 @@ package com.zeromail.core.gmail.usecases;
 
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.domain.GmailIngestionHealth;
+import com.zeromail.core.gmail.exception.DuplicateActiveMailboxException;
+import com.zeromail.core.gmail.exception.MailboxDisconnectedException;
+import com.zeromail.core.gmail.exception.MailboxNotOwnedException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GoogleOAuthRevokeClient;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.projection.GmailConnectionProjection;
+import com.zeromail.core.gmail.projection.MailboxSummaryProjection;
+import com.zeromail.core.mailbox.MailboxRef;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +37,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class GmailConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(GmailConnectionService.class);
+    private static final String DUPLICATE_ACTIVE_EMAIL_CONSTRAINT = "uq_gmail_conn_active_email";
 
     private final GmailConnectionRepository connectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
@@ -64,6 +76,80 @@ public class GmailConnectionService {
                 .orElseGet(GmailConnectionProjection::notConnected);
     }
 
+    @Transactional(readOnly = true)
+    public GmailConnectionEntity resolveOwnedConnectionOrThrow(
+            UUID tenantId, UUID gmailConnectionId) {
+        GmailConnectionEntity gmailConnection =
+                connectionRepository
+                        .findByIdAndTenantId(gmailConnectionId, tenantId)
+                        .orElseThrow(
+                                () -> {
+                                    log.warn(
+                                            "event=gmail_mailbox_resolve_denied tenantId={} gmailConnectionId={} reason=not_owned",
+                                            tenantId,
+                                            gmailConnectionId);
+                                    return new MailboxNotOwnedException(
+                                            tenantId, gmailConnectionId);
+                                });
+        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            log.warn(
+                    "event=gmail_mailbox_resolve_denied tenantId={} gmailConnectionId={} reason=not_connected",
+                    tenantId,
+                    gmailConnectionId);
+            throw new MailboxDisconnectedException(
+                    tenantId, gmailConnectionId, gmailConnection.getStatus());
+        }
+        return gmailConnection;
+    }
+
+    @Transactional(readOnly = true)
+    public GmailConnectionEntity resolveReconnectableConnectionOrThrow(
+            UUID tenantId, UUID gmailConnectionId) {
+        return connectionRepository
+                .findByIdAndTenantId(gmailConnectionId, tenantId)
+                .orElseThrow(
+                        () -> {
+                            log.warn(
+                                    "event=gmail_mailbox_reconnect_resolve_denied tenantId={} gmailConnectionId={} reason=not_owned",
+                                    tenantId,
+                                    gmailConnectionId);
+                            return new MailboxNotOwnedException(tenantId, gmailConnectionId);
+                        });
+    }
+
+    public void setPrimary(UUID tenantId, UUID gmailConnectionId) {
+        disconnectTransaction.executeWithoutResult(
+                _ -> {
+                    GmailConnectionEntity targetConnection =
+                            resolveOwnedConnectionOrThrow(tenantId, gmailConnectionId);
+                    // Clear every other primary atomically via a bulk UPDATE and flush it to the DB
+                    // BEFORE promoting the target. This removes the dependency on Hibernate flush
+                    // ordering that previously kept two is_primary=true rows from coexisting in the
+                    // transaction and tripping uq_gmail_conn_primary.
+                    connectionRepository.clearPrimaryForTenantExcept(tenantId, gmailConnectionId);
+                    // The bulk UPDATE bypasses the persistence context, so refresh the managed
+                    // target's flag from the just-resolved CONNECTED row before promoting it.
+                    if (!targetConnection.isPrimary()) {
+                        targetConnection.setPrimary(true);
+                        connectionRepository.saveAndFlush(targetConnection);
+                    }
+                });
+    }
+
+    @Transactional(readOnly = true)
+    public List<MailboxSummaryProjection> listMailboxes(UUID tenantId) {
+        return connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                .map(MailboxSummaryProjection::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<MailboxRef> primaryMailboxRef(UUID tenantId) {
+        return connectionRepository
+                .findByTenantId(tenantId)
+                .map(gmailConnection -> new MailboxRef(tenantId, gmailConnection.getId()));
+    }
+
     /**
      * Marks the tenant's Gmail connection as disconnected.
      *
@@ -77,6 +163,23 @@ public class GmailConnectionService {
     public void disconnect(UUID tenantId) {
         revokeGrantForCurrentTenant(tenantId);
         markDisconnected(tenantId);
+    }
+
+    public void disconnect(MailboxRef mailboxRef) {
+        GmailConnectionEntity gmailConnection =
+                connectionRepository
+                        .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                        .orElseThrow(
+                                () ->
+                                        new MailboxNotOwnedException(
+                                                mailboxRef.tenantId(),
+                                                mailboxRef.gmailConnectionId()));
+        if (gmailConnection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            return;
+        }
+        tryStopWatch(mailboxRef);
+        revokeStoredRefreshToken(mailboxRef);
+        markDisconnected(mailboxRef);
     }
 
     /**
@@ -101,18 +204,64 @@ public class GmailConnectionService {
                                 .findByTenantId(tenantId)
                                 .ifPresent(
                                         connection -> {
-                                            connection.setStatus(
-                                                    GmailConnectionStatus.DISCONNECTED);
-                                            connection.setDisconnectedAt(Instant.now());
-                                            connection.setRefreshTokenEncrypted(null);
-                                            connection.setWatchExpiresAt(null);
-                                            connection.setWatchHistoryId(null);
-                                            connection.setWatchRenewedAt(null);
-                                            connection.setWatchConsecutiveFailures(0);
-                                            connection.setIngestionHealth(
-                                                    GmailIngestionHealth.HEALTHY);
+                                            applyDisconnectedState(connection);
+                                            connection.setPrimary(false);
                                             connectionRepository.save(connection);
                                         }));
+    }
+
+    public void markDisconnected(MailboxRef mailboxRef) {
+        disconnectTransaction.executeWithoutResult(
+                _ ->
+                        connectionRepository
+                                .findByIdAndTenantId(
+                                        mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                                .ifPresent(
+                                        gmailConnection -> {
+                                            boolean wasPrimary = gmailConnection.isPrimary();
+                                            applyDisconnectedState(gmailConnection);
+                                            gmailConnection.setPrimary(false);
+                                            connectionRepository.save(gmailConnection);
+                                            if (wasPrimary) {
+                                                promoteNextPrimaryMailbox(mailboxRef);
+                                            }
+                                        }));
+    }
+
+    private void applyDisconnectedState(GmailConnectionEntity gmailConnection) {
+        // Evict any cached access token for this connection so a still-valid (~59 min TTL) token
+        // can never keep issuing Gmail API calls against a mailbox the user just disconnected.
+        gmailApiClientFactory.evictAccessToken(gmailConnection.getId());
+        gmailConnection.setStatus(GmailConnectionStatus.DISCONNECTED);
+        gmailConnection.setDisconnectedAt(Instant.now());
+        gmailConnection.setRefreshTokenEncrypted(null);
+        gmailConnection.setWatchExpiresAt(null);
+        gmailConnection.setWatchHistoryId(null);
+        gmailConnection.setWatchRenewedAt(null);
+        gmailConnection.setWatchConsecutiveFailures(0);
+        gmailConnection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+    }
+
+    private void promoteNextPrimaryMailbox(MailboxRef disconnectedMailboxRef) {
+        connectionRepository
+                .findByTenantIdOrderByIsPrimaryDesc(disconnectedMailboxRef.tenantId())
+                .stream()
+                .filter(
+                        gmailConnection ->
+                                gmailConnection.getStatus() == GmailConnectionStatus.CONNECTED
+                                        && !gmailConnection
+                                                .getId()
+                                                .equals(disconnectedMailboxRef.gmailConnectionId()))
+                .min(
+                        Comparator.comparing(
+                                        GmailConnectionEntity::getConnectedAt,
+                                        Comparator.nullsLast(Comparator.naturalOrder()))
+                                .thenComparing(GmailConnectionEntity::getId))
+                .ifPresent(
+                        nextPrimaryMailbox -> {
+                            nextPrimaryMailbox.setPrimary(true);
+                            connectionRepository.save(nextPrimaryMailbox);
+                        });
     }
 
     private void revokeStoredRefreshToken(UUID tenantId) {
@@ -133,6 +282,35 @@ public class GmailConnectionService {
             // ciphertext decrypt failure (key rotation, corrupted bytes) must NOT block the
             // DB-side disconnect.
             log.warn("event=gmail_revoke_call_failed tenantId={}", tenantId);
+        }
+    }
+
+    private void revokeStoredRefreshToken(MailboxRef mailboxRef) {
+        try {
+            GmailConnectionEntity gmailConnection =
+                    connectionRepository
+                            .findByIdAndTenantId(
+                                    mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                            .orElse(null);
+            if (gmailConnection == null || gmailConnection.getRefreshTokenEncrypted() == null) {
+                return;
+            }
+            byte[] decryptedRefreshTokenBytes =
+                    refreshTokenCipher.decrypt(
+                            gmailConnection.getRefreshTokenEncrypted(),
+                            mailboxRef.tenantId().toString());
+            try {
+                String decryptedRefreshToken =
+                        new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
+                googleOAuthRevokeClient.revoke(decryptedRefreshToken);
+            } finally {
+                Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
+            }
+        } catch (Exception revokeCallException) {
+            log.warn(
+                    "event=gmail_revoke_call_failed tenantId={} gmailConnectionId={}",
+                    mailboxRef.tenantId(),
+                    mailboxRef.gmailConnectionId());
         }
     }
 
@@ -157,6 +335,25 @@ public class GmailConnectionService {
                     .execute();
         } catch (Exception watchStopException) {
             log.warn("event=gmail_watch_stop_failed tenantId={}", tenantId);
+        }
+    }
+
+    private void tryStopWatch(MailboxRef mailboxRef) {
+        try {
+            GmailConnectionEntity gmailConnection =
+                    connectionRepository
+                            .findByIdAndTenantId(
+                                    mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                            .orElse(null);
+            if (gmailConnection == null || gmailConnection.getRefreshTokenEncrypted() == null) {
+                return;
+            }
+            gmailApiClientFactory.buildClientForMailbox(mailboxRef).users().stop("me").execute();
+        } catch (Exception watchStopException) {
+            log.warn(
+                    "event=gmail_watch_stop_failed tenantId={} gmailConnectionId={}",
+                    mailboxRef.tenantId(),
+                    mailboxRef.gmailConnectionId());
         }
     }
 
@@ -192,7 +389,7 @@ public class GmailConnectionService {
      * cập nhật {@code version} + {@code updated_at} qua save.
      */
     @Transactional
-    public void upsert(
+    public UUID upsert(
             UUID tenantId, String googleEmail, String scopesGranted, byte[] refreshTokenEncrypted) {
         GmailConnectionEntity connection =
                 connectionRepository
@@ -209,77 +406,273 @@ public class GmailConnectionService {
         connection.setScopesGranted(scopesGranted);
         connection.setConnectedAt(Instant.now());
         connection.setDisconnectedAt(null);
-        connectionRepository.save(connection);
+        GmailConnectionEntity savedConnection = connectionRepository.save(connection);
+        return savedConnection.getId();
     }
 
     @Transactional
-    public void markHistoryLost(UUID tenantId, Long newPointer) {
+    public UUID addConnection(
+            UUID tenantId, String googleEmail, String scopesGranted, String plaintextRefreshToken) {
+        assertNoActiveDuplicate(tenantId, googleEmail);
+        UUID gmailConnectionId = UUID.randomUUID();
+        byte[] plaintextRefreshTokenBytes = plaintextRefreshToken.getBytes(StandardCharsets.UTF_8);
+        try {
+            byte[] refreshTokenEncrypted =
+                    refreshTokenCipher.encrypt(plaintextRefreshTokenBytes, tenantId.toString());
+            GmailConnectionEntity gmailConnection =
+                    new GmailConnectionEntity(
+                            gmailConnectionId,
+                            tenantId,
+                            googleEmail,
+                            GmailConnectionStatus.CONNECTED);
+            gmailConnection.setRefreshTokenEncrypted(refreshTokenEncrypted);
+            gmailConnection.setScopesGranted(scopesGranted);
+            gmailConnection.setConnectedAt(Instant.now());
+            // Become primary when the tenant currently has no CONNECTED primary, so the first/only
+            // connected mailbox is never left with zero primaries (which would strand every
+            // "operate on primary" consumer). promoteNextPrimaryMailbox only repairs disconnects of
+            // an existing primary, not this fresh-add case.
+            gmailConnection.setPrimary(!tenantHasConnectedPrimary(tenantId));
+            try {
+                connectionRepository.saveAndFlush(gmailConnection);
+            } catch (DataIntegrityViolationException dataIntegrityViolation) {
+                rethrowDuplicateActiveMailboxIfMatched(tenantId, dataIntegrityViolation);
+            }
+            return gmailConnectionId;
+        } finally {
+            Arrays.fill(plaintextRefreshTokenBytes, (byte) 0);
+        }
+    }
+
+    @Transactional
+    public void reconnect(
+            UUID tenantId,
+            UUID targetMailboxId,
+            String scopesGranted,
+            String plaintextRefreshToken) {
+        GmailConnectionEntity gmailConnection =
+                resolveReconnectableConnectionOrThrow(tenantId, targetMailboxId);
+        // Defensive 409 if another active mailbox already owns this email (the disconnected target
+        // freed the partial-unique slot and an add re-used the address); excludes the target row.
+        assertNoActiveDuplicateExcludingTarget(
+                tenantId, gmailConnection.getGoogleEmail(), targetMailboxId);
+        // Resolve whether another CONNECTED primary already exists BEFORE flipping the target back
+        // to CONNECTED, so a tenant left with no live primary (e.g. CR-03 disconnected-only state)
+        // promotes this reconnected mailbox instead of being stranded with zero primaries.
+        boolean tenantHadConnectedPrimary = tenantHasConnectedPrimary(tenantId);
+        byte[] plaintextRefreshTokenBytes = plaintextRefreshToken.getBytes(StandardCharsets.UTF_8);
+        try {
+            byte[] refreshTokenEncrypted =
+                    refreshTokenCipher.encrypt(plaintextRefreshTokenBytes, tenantId.toString());
+            gmailConnection.setStatus(GmailConnectionStatus.CONNECTED);
+            if (!tenantHadConnectedPrimary) {
+                gmailConnection.setPrimary(true);
+            }
+            gmailConnection.setRefreshTokenEncrypted(refreshTokenEncrypted);
+            gmailConnection.setScopesGranted(scopesGranted);
+            gmailConnection.setConnectedAt(Instant.now());
+            gmailConnection.setDisconnectedAt(null);
+            gmailConnection.setWatchExpiresAt(null);
+            gmailConnection.setWatchHistoryId(null);
+            gmailConnection.setWatchRenewedAt(null);
+            gmailConnection.setLastSyncedHistoryId(null);
+            gmailConnection.setWatchConsecutiveFailures(0);
+            gmailConnection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+            try {
+                connectionRepository.saveAndFlush(gmailConnection);
+            } catch (DataIntegrityViolationException dataIntegrityViolation) {
+                rethrowDuplicateActiveMailboxIfMatched(tenantId, dataIntegrityViolation);
+            }
+            // Reconnect reuses the same gmailConnectionId with a NEW refresh token; evict the
+            // cached access token derived from the OLD grant so post-reconnect calls never run on
+            // the stale token until its TTL expires.
+            gmailApiClientFactory.evictAccessToken(targetMailboxId);
+        } finally {
+            Arrays.fill(plaintextRefreshTokenBytes, (byte) 0);
+        }
+    }
+
+    @Transactional
+    public void markHistoryLost(MailboxRef mailboxRef, Long newPointer) {
         connectionRepository
-                .findByTenantId(tenantId)
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
                 .ifPresent(
-                        connection -> {
-                            connection.setLastSyncedHistoryId(newPointer);
-                            connection.setIngestionHealth(GmailIngestionHealth.HISTORY_LOST);
-                            connectionRepository.save(connection);
+                        gmailConnection -> {
+                            gmailConnection.setLastSyncedHistoryId(newPointer);
+                            gmailConnection.setIngestionHealth(GmailIngestionHealth.HISTORY_LOST);
+                            connectionRepository.save(gmailConnection);
                         });
     }
 
     @Transactional
-    public void markWatchUnhealthy(UUID tenantId) {
+    public void markWatchUnhealthy(MailboxRef mailboxRef) {
         connectionRepository
-                .findByTenantId(tenantId)
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
                 .ifPresent(
-                        connection -> {
-                            connection.setIngestionHealth(GmailIngestionHealth.WATCH_UNHEALTHY);
-                            connectionRepository.save(connection);
+                        gmailConnection -> {
+                            gmailConnection.setIngestionHealth(
+                                    GmailIngestionHealth.WATCH_UNHEALTHY);
+                            connectionRepository.save(gmailConnection);
                         });
     }
 
     @Transactional
-    public void recordWatchSuccess(UUID tenantId, Long watchHistoryId, Instant watchExpiresAt) {
+    public void recordWatchSuccess(
+            MailboxRef mailboxRef, Long watchHistoryId, Instant watchExpiresAt) {
         connectionRepository
-                .findByTenantId(tenantId)
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
                 .ifPresent(
-                        connection -> {
-                            connection.setWatchHistoryId(watchHistoryId);
-                            if (connection.getLastSyncedHistoryId() == null) {
-                                connection.setLastSyncedHistoryId(watchHistoryId);
+                        gmailConnection -> {
+                            gmailConnection.setWatchHistoryId(watchHistoryId);
+                            if (gmailConnection.getLastSyncedHistoryId() == null) {
+                                gmailConnection.setLastSyncedHistoryId(watchHistoryId);
                             }
-                            connection.setWatchExpiresAt(watchExpiresAt);
-                            connection.setWatchRenewedAt(Instant.now());
-                            connection.setWatchConsecutiveFailures(0);
-                            if (connection.getIngestionHealth()
+                            gmailConnection.setWatchExpiresAt(watchExpiresAt);
+                            gmailConnection.setWatchRenewedAt(Instant.now());
+                            gmailConnection.setWatchConsecutiveFailures(0);
+                            if (gmailConnection.getIngestionHealth()
                                     == GmailIngestionHealth.WATCH_UNHEALTHY) {
-                                connection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+                                gmailConnection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
                             }
-                            connectionRepository.save(connection);
+                            connectionRepository.save(gmailConnection);
                         });
     }
 
     @Transactional
-    public void incrementWatchFailure(UUID tenantId) {
-        connectionRepository
-                .findByTenantId(tenantId)
-                .ifPresent(
-                        connection -> {
-                            connection.setWatchConsecutiveFailures(
-                                    connection.getWatchConsecutiveFailures() + 1);
-                            connectionRepository.save(connection);
-                        });
+    public int incrementWatchFailure(MailboxRef mailboxRef) {
+        return connectionRepository
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
+                .map(
+                        gmailConnection -> {
+                            int consecutiveFailures =
+                                    gmailConnection.getWatchConsecutiveFailures() + 1;
+                            gmailConnection.setWatchConsecutiveFailures(consecutiveFailures);
+                            connectionRepository.save(gmailConnection);
+                            return consecutiveFailures;
+                        })
+                .orElse(0);
     }
 
     @Transactional
-    public void clearForReconnect(UUID tenantId) {
+    public void clearForReconnect(MailboxRef mailboxRef) {
         connectionRepository
-                .findByTenantId(tenantId)
+                .findByIdAndTenantId(mailboxRef.gmailConnectionId(), mailboxRef.tenantId())
                 .ifPresent(
-                        connection -> {
-                            connection.setWatchExpiresAt(null);
-                            connection.setWatchHistoryId(null);
-                            connection.setLastSyncedHistoryId(null);
-                            connection.setWatchConsecutiveFailures(0);
-                            connection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
-                            connectionRepository.save(connection);
+                        gmailConnection -> {
+                            gmailConnection.setWatchExpiresAt(null);
+                            gmailConnection.setWatchHistoryId(null);
+                            gmailConnection.setLastSyncedHistoryId(null);
+                            gmailConnection.setWatchConsecutiveFailures(0);
+                            gmailConnection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+                            connectionRepository.save(gmailConnection);
                         });
+    }
+
+    private boolean tenantHasConnectedPrimary(UUID tenantId) {
+        return connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                .anyMatch(
+                        gmailConnection ->
+                                gmailConnection.isPrimary()
+                                        && gmailConnection.getStatus()
+                                                == GmailConnectionStatus.CONNECTED);
+    }
+
+    private void assertNoActiveDuplicate(UUID tenantId, String googleEmail) {
+        assertNoActiveDuplicateExcludingTarget(tenantId, googleEmail, null);
+    }
+
+    private void assertNoActiveDuplicateExcludingTarget(
+            UUID tenantId, String googleEmail, UUID excludedMailboxId) {
+        boolean duplicateActiveMailboxExists =
+                connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                        .anyMatch(
+                                gmailConnection ->
+                                        !gmailConnection.getId().equals(excludedMailboxId)
+                                                && gmailConnection.getStatus()
+                                                        == GmailConnectionStatus.CONNECTED
+                                                && gmailConnection
+                                                        .getGoogleEmail()
+                                                        .equalsIgnoreCase(googleEmail));
+        if (duplicateActiveMailboxExists) {
+            // Same-tenant hit: the address is already a CONNECTED mailbox of THIS tenant.
+            throw new DuplicateActiveMailboxException(
+                    tenantId, DuplicateActiveMailboxException.Scope.SAME_WORKSPACE);
+        }
+    }
+
+    private void rethrowDuplicateActiveMailboxIfMatched(
+            UUID tenantId, DataIntegrityViolationException dataIntegrityViolation) {
+        if (matchesDuplicateActiveEmailConstraint(dataIntegrityViolation)) {
+            // The same-tenant duplicate was already excluded before the insert, so a global
+            // active-email constraint violation here means the address is CONNECTED under a
+            // DIFFERENT tenant.
+            throw new DuplicateActiveMailboxException(
+                    tenantId, DuplicateActiveMailboxException.Scope.OTHER_WORKSPACE);
+        }
+        throw dataIntegrityViolation;
+    }
+
+    /**
+     * Maps a {@link DataIntegrityViolationException} to the duplicate-active-mailbox case without
+     * depending solely on driver-specific reflective accessors. Two independent signals are checked
+     * across the cause chain: (1) the reflective {@code
+     * getConstraintName()/getServerErrorMessage()} getters (when the PG driver exposes them), and
+     * (2) a SQLState {@code 23505} (unique_violation) whose message text mentions the
+     * partial-unique index name. Either match is sufficient, so the 409 translation does not break
+     * if Boot 4's exception nesting hides the reflective getters.
+     */
+    private static boolean matchesDuplicateActiveEmailConstraint(Throwable throwable) {
+        Throwable currentThrowable = throwable;
+        while (currentThrowable != null) {
+            if (DUPLICATE_ACTIVE_EMAIL_CONSTRAINT.equals(constraintName(currentThrowable))) {
+                return true;
+            }
+            if (isUniqueViolation(currentThrowable)
+                    && messageMentions(currentThrowable, DUPLICATE_ACTIVE_EMAIL_CONSTRAINT)) {
+                return true;
+            }
+            currentThrowable = currentThrowable.getCause();
+        }
+        return false;
+    }
+
+    private static boolean isUniqueViolation(Throwable throwable) {
+        if (throwable instanceof java.sql.SQLException sqlException) {
+            return "23505".equals(sqlException.getSQLState());
+        }
+        // PSQLException exposes getSQLState() too, but may not be a SQLException subtype on every
+        // classpath shape; fall back to the reflective getter so the check stays driver-agnostic.
+        return "23505".equals(invokeStringMethod(throwable, "getSQLState"));
+    }
+
+    private static boolean messageMentions(Throwable throwable, String token) {
+        String message = throwable.getMessage();
+        return message != null && message.contains(token);
+    }
+
+    private static String constraintName(Throwable throwable) {
+        String directConstraintName = invokeStringMethod(throwable, "getConstraintName");
+        if (directConstraintName != null) {
+            return directConstraintName;
+        }
+        Object serverErrorMessage = invokeObjectMethod(throwable, "getServerErrorMessage");
+        if (serverErrorMessage == null) {
+            return null;
+        }
+        return invokeStringMethod(serverErrorMessage, "getConstraint");
+    }
+
+    private static String invokeStringMethod(Object target, String methodName) {
+        Object value = invokeObjectMethod(target, methodName);
+        return value instanceof String stringValue ? stringValue : null;
+    }
+
+    private static Object invokeObjectMethod(Object target, String methodName) {
+        try {
+            Method method = target.getClass().getMethod(methodName);
+            return method.invoke(target);
+        } catch (ReflectiveOperationException | SecurityException ignoredReflectionFailure) {
+            return null;
+        }
     }
 }

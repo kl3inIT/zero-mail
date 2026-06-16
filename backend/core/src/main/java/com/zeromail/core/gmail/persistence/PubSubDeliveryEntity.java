@@ -13,6 +13,9 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "pubsub_delivery")
 public class PubSubDeliveryEntity extends AbstractTenantOwnedEntity {
 
+    @Column(name = "gmail_connection_id", nullable = false)
+    private UUID gmailConnectionId;
+
     @Column(name = "pubsub_message_id", nullable = false)
     private String pubsubMessageId;
 
@@ -35,11 +38,21 @@ public class PubSubDeliveryEntity extends AbstractTenantOwnedEntity {
     protected PubSubDeliveryEntity() {}
 
     public PubSubDeliveryEntity(
-            UUID id, UUID tenantId, String pubsubMessageId, Long historyId, String payload) {
+            UUID id,
+            UUID tenantId,
+            UUID gmailConnectionId,
+            String pubsubMessageId,
+            Long historyId,
+            String payload) {
         super(id, tenantId);
+        this.gmailConnectionId = gmailConnectionId;
         this.pubsubMessageId = pubsubMessageId;
         this.historyId = historyId;
         this.payload = payload;
+    }
+
+    public UUID getGmailConnectionId() {
+        return gmailConnectionId;
     }
 
     public String getPubSubMessageId() {

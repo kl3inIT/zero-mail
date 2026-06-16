@@ -1,5 +1,6 @@
 package com.zeromail.core.triage.usecases;
 
+import com.zeromail.core.mailbox.MailboxRef;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageDecision;
@@ -16,7 +17,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.NoSuchElementException;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -77,7 +77,7 @@ public class TriageUndoService {
         TriageActionResult actionResult = undoPreparation.actionResult();
 
         try {
-            executeInverse(command.tenantId(), auditRow, actionResult);
+            executeInverse(auditRow, actionResult);
         } catch (IOException gmailWriteFailure) {
             log.warn(
                     "event=triage_action_revert_failed tenantId={} auditId={} errorClass={}",
@@ -153,32 +153,34 @@ public class TriageUndoService {
         return new UndoPreparation(auditRow, actionType, actionResult, appliedAt);
     }
 
-    private void executeInverse(
-            UUID tenantId, TriageAuditEntity auditRow, TriageActionResult actionResult)
+    private void executeInverse(TriageAuditEntity auditRow, TriageActionResult actionResult)
             throws IOException {
+        MailboxRef executingMailboxRef =
+                new MailboxRef(auditRow.getTenantId(), auditRow.getExecutingMailboxId());
         switch (actionResult) {
             case TriageActionResult.Label _ ->
                     triageGmailWriter.removeLabel(
-                            tenantId,
+                            executingMailboxRef,
                             auditRow.getGmailMessageId(),
                             requiredAddedLabelId(auditRow.getGmailChangeToken()));
             case TriageActionResult.Archive _ -> {
                 requireArchiveChangeToken(auditRow.getGmailChangeToken());
-                triageGmailWriter.restoreToInbox(tenantId, auditRow.getGmailMessageId());
+                triageGmailWriter.restoreToInbox(executingMailboxRef, auditRow.getGmailMessageId());
             }
             case TriageActionResult.SaveDraft saveDraft ->
-                    triageGmailWriter.deleteDraft(tenantId, draftId(auditRow, saveDraft));
+                    triageGmailWriter.deleteDraft(
+                            executingMailboxRef, draftId(auditRow, saveDraft));
             case TriageActionResult.MarkRead _ ->
-                    triageGmailWriter.markUnread(tenantId, auditRow.getGmailMessageId());
+                    triageGmailWriter.markUnread(executingMailboxRef, auditRow.getGmailMessageId());
             case TriageActionResult.Star _ ->
-                    triageGmailWriter.unstar(tenantId, auditRow.getGmailMessageId());
+                    triageGmailWriter.unstar(executingMailboxRef, auditRow.getGmailMessageId());
             case TriageActionResult.AddToDigest _ ->
                     triageGmailWriter.removeLabel(
-                            tenantId,
+                            executingMailboxRef,
                             auditRow.getGmailMessageId(),
                             requiredAddedLabelId(auditRow.getGmailChangeToken()));
             case TriageActionResult.MarkSpam _ ->
-                    triageGmailWriter.unmarkSpam(tenantId, auditRow.getGmailMessageId());
+                    triageGmailWriter.unmarkSpam(executingMailboxRef, auditRow.getGmailMessageId());
             case TriageActionResult.SendReply _ ->
                     throw TriageAuditException.unsupportedActionType();
             case TriageActionResult.ForwardEmail _ ->

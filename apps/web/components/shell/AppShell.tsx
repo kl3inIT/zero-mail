@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { Menu } from 'lucide-react';
 
@@ -8,6 +9,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppSidebar } from './AppSidebar';
+import { MailboxErrorToast } from './MailboxErrorToast';
 
 function MobileTopBar() {
   const t = useTranslations();
@@ -59,6 +61,9 @@ export function AppShell({
         </div>
       </SidebarProvider>
       <Toaster />
+      <Suspense fallback={null}>
+        <MailboxErrorToast />
+      </Suspense>
     </TooltipProvider>
   );
 }

@@ -1,24 +1,33 @@
 package com.zeromail.api.security;
 
 import com.zeromail.api.config.ApiProperties;
+import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import com.zeromail.core.account.usecases.OAuthProvisioningService.BundledProvisioningResult;
 import com.zeromail.core.admin.tenant.usecases.TenantActivityRecorder;
 import com.zeromail.core.admin.tenant.usecases.TenantActivityRequestContext;
+import com.zeromail.core.gmail.exception.DuplicateActiveMailboxException;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
+import com.zeromail.core.tenant.TenantContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -27,6 +36,7 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -67,6 +77,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final OAuthProvisioningService provisioningService;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final UserRepository userRepository;
+    private final GmailConnectionService gmailConnectionService;
     private final RuleTemplateMaterializationService ruleTemplateMaterializationService;
     private final TenantActivityRecorder tenantActivityRecorder;
     private final Clock clock;
@@ -75,6 +86,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             OAuthProvisioningService provisioningService,
             OAuth2AuthorizedClientService authorizedClientService,
             UserRepository userRepository,
+            GmailConnectionService gmailConnectionService,
             RuleTemplateMaterializationService ruleTemplateMaterializationService,
             TenantActivityRecorder tenantActivityRecorder,
             Clock clock,
@@ -82,6 +94,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         this.provisioningService = provisioningService;
         this.authorizedClientService = authorizedClientService;
         this.userRepository = userRepository;
+        this.gmailConnectionService = gmailConnectionService;
         this.ruleTemplateMaterializationService = ruleTemplateMaterializationService;
         this.tenantActivityRecorder =
                 Objects.requireNonNull(
@@ -117,6 +130,14 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             @NonNull Authentication authentication)
             throws IOException, ServletException {
         OAuth2AuthenticationToken authenticationToken = (OAuth2AuthenticationToken) authentication;
+        OAuthIntentSnapshot callbackIntentSnapshot = consumeCallbackIntentSnapshot(request);
+        SecurityContext initiatingSecurityContext = consumeInitiatingSecurityContext(request);
+        String oauthIntent = intentOrFirstLogin(callbackIntentSnapshot);
+        if (!supportedIntent(oauthIntent)) {
+            log.warn("event=oauth_intent_invalid");
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("oauth_intent_invalid", "OAuth intent is not supported", null));
+        }
         OidcUser oidcUser =
                 Objects.requireNonNull(
                         (OidcUser) authenticationToken.getPrincipal(),
@@ -161,6 +182,16 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
         // (b) Null refresh-token check.
         if (authorizedClient.getRefreshToken() == null) {
+            if (managementIntent(oauthIntent)) {
+                OAuthIntentSnapshot managementIntentSnapshot =
+                        requiredManagementIntentSnapshot(callbackIntentSnapshot);
+                log.info(
+                        "event=oauth_no_refresh_token_management_intent tenantId={}",
+                        managementIntentSnapshot.initiatingTenantId());
+                removeAuthorizedClient(authenticationToken.getName());
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error("consent_denied", "Refresh token was not granted", null));
+            }
             boolean existingUser = userRepository.findByGoogleSubject(googleSubject).isPresent();
             if (!existingUser) {
                 // First-login with no refresh token: Google already had a prior authorization for
@@ -168,12 +199,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 // sees the consent screen and Google issues a fresh refresh token — avoids
                 // showing a confusing "consent_denied" error for a normal re-auth scenario.
                 log.info("event=oauth_no_refresh_token_first_login_retry_consent");
-                try {
-                    authorizedClientService.removeAuthorizedClient(
-                            "google", authenticationToken.getName());
-                } catch (Exception ignored) {
-                    /* best-effort */
-                }
+                removeAuthorizedClient(authenticationToken.getName());
                 response.sendRedirect("/oauth2/authorization/google?reconnect=true");
                 return;
             }
@@ -192,6 +218,88 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 authorizedClient.getRefreshToken() == null
                         ? null
                         : authorizedClient.getRefreshToken().getTokenValue();
+
+        if (OAuthIntentSnapshot.INTENT_ADD_MAILBOX.equals(oauthIntent)) {
+            OAuthIntentSnapshot managementIntentSnapshot =
+                    requiredManagementIntentSnapshot(callbackIntentSnapshot);
+            String managementRefreshToken = requiredManagementRefreshToken(refreshToken);
+            UUID tenantId =
+                    verifiedManagementTenantId(managementIntentSnapshot, initiatingSecurityContext);
+            restoreInitiatingSecurityContext(request, initiatingSecurityContext);
+            try {
+                TenantContext.runWith(
+                        tenantId,
+                        () ->
+                                gmailConnectionService.addConnection(
+                                        tenantId, email, gmailScopes, managementRefreshToken));
+            } catch (DuplicateActiveMailboxException duplicateActiveMailbox) {
+                // The selected Google account is already CONNECTED. Translate the domain exception
+                // into an
+                // AuthenticationException so the OAuth2 filter routes it to the failure handler
+                // (friendly
+                // /login redirect) instead of letting a raw RuntimeException escape the success
+                // handler
+                // into a 500 Whitelabel page. The error code distinguishes a same-workspace re-add
+                // from a
+                // collision with the user's other workspace so the UI can guide them. The completed
+                // OAuth
+                // grant proves the user controls this address, so revealing the other-workspace
+                // case is not
+                // a disclosure to a third party. Never log the email (privacy).
+                String duplicateErrorCode = duplicateMailboxErrorCode(duplicateActiveMailbox);
+                log.info(
+                        "event=oauth_add_mailbox_duplicate tenantId={} scope={}",
+                        tenantId,
+                        duplicateActiveMailbox.scope());
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error(
+                                duplicateErrorCode, "Gmail mailbox is already connected", null));
+            }
+            log.info("event=oauth_add_mailbox_connected tenantId={}", tenantId);
+            super.onAuthenticationSuccess(request, response, authentication);
+            return;
+        }
+
+        if (OAuthIntentSnapshot.INTENT_RECONNECT_MAILBOX.equals(oauthIntent)) {
+            OAuthIntentSnapshot managementIntentSnapshot =
+                    requiredManagementIntentSnapshot(callbackIntentSnapshot);
+            String managementRefreshToken = requiredManagementRefreshToken(refreshToken);
+            UUID tenantId =
+                    verifiedManagementTenantId(managementIntentSnapshot, initiatingSecurityContext);
+            UUID targetMailboxId = managementIntentSnapshot.targetMailboxId();
+            if (targetMailboxId == null) {
+                log.warn("event=oauth_intent_invalid tenantId={}", tenantId);
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error(
+                                "oauth_intent_invalid", "Reconnect target is required", null));
+            }
+            restoreInitiatingSecurityContext(request, initiatingSecurityContext);
+            try {
+                TenantContext.runWith(
+                        tenantId,
+                        () ->
+                                gmailConnectionService.reconnect(
+                                        tenantId,
+                                        targetMailboxId,
+                                        gmailScopes,
+                                        managementRefreshToken));
+            } catch (DuplicateActiveMailboxException duplicateActiveMailbox) {
+                // Another active mailbox already owns this email (the disconnected target freed the
+                // partial-unique slot and an add re-used the address). Route to the failure handler
+                // instead of escaping as a 500. Never log the email (privacy).
+                String duplicateErrorCode = duplicateMailboxErrorCode(duplicateActiveMailbox);
+                log.info(
+                        "event=oauth_reconnect_mailbox_duplicate tenantId={} scope={}",
+                        tenantId,
+                        duplicateActiveMailbox.scope());
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error(
+                                duplicateErrorCode, "Gmail mailbox is already connected", null));
+            }
+            log.info("event=oauth_reconnect_mailbox_connected tenantId={}", tenantId);
+            super.onAuthenticationSuccess(request, response, authentication);
+            return;
+        }
 
         // (e) Single delegation to atomic provisioning service.
         BundledProvisioningResult provisioningResult =
@@ -222,6 +330,138 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         super.onAuthenticationSuccess(request, response, authentication);
+    }
+
+    private OAuthIntentSnapshot consumeCallbackIntentSnapshot(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object callbackIntentValue =
+                session.getAttribute(OAuthIntentSnapshot.CALLBACK_INTENT_SESSION_ATTRIBUTE);
+        session.removeAttribute(OAuthIntentSnapshot.CALLBACK_INTENT_SESSION_ATTRIBUTE);
+        if (callbackIntentValue == null) {
+            return null;
+        }
+        if (callbackIntentValue instanceof OAuthIntentSnapshot callbackIntentSnapshot) {
+            return callbackIntentSnapshot;
+        }
+        log.warn("event=oauth_intent_invalid");
+        return null;
+    }
+
+    private SecurityContext consumeInitiatingSecurityContext(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object initiatingSecurityContextValue =
+                session.getAttribute(
+                        OAuthIntentSnapshot.INITIATING_SECURITY_CONTEXT_SESSION_ATTRIBUTE);
+        session.removeAttribute(OAuthIntentSnapshot.INITIATING_SECURITY_CONTEXT_SESSION_ATTRIBUTE);
+        if (initiatingSecurityContextValue == null) {
+            return null;
+        }
+        if (initiatingSecurityContextValue instanceof SecurityContext securityContext) {
+            return securityContext;
+        }
+        log.warn("event=oauth_initiating_security_context_invalid");
+        return null;
+    }
+
+    private UUID verifiedManagementTenantId(
+            OAuthIntentSnapshot callbackIntentSnapshot, SecurityContext initiatingSecurityContext) {
+        UUID initiatingTenantId = callbackIntentSnapshot.initiatingTenantId();
+        Optional<UUID> initiatingSessionTenantId =
+                initiatingSessionTenantId(initiatingSecurityContext);
+        if (initiatingTenantId == null
+                || initiatingSessionTenantId.isEmpty()
+                || !initiatingTenantId.equals(initiatingSessionTenantId.get())) {
+            log.warn("event=oauth_intent_tenant_mismatch tenantId={}", initiatingTenantId);
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error(
+                            "oauth_intent_tenant_mismatch",
+                            "OAuth intent tenant did not match the authenticated session",
+                            null));
+        }
+        return initiatingTenantId;
+    }
+
+    private Optional<UUID> initiatingSessionTenantId(SecurityContext initiatingSecurityContext) {
+        if (initiatingSecurityContext == null) {
+            return Optional.empty();
+        }
+        Authentication initiatingAuthentication = initiatingSecurityContext.getAuthentication();
+        if (initiatingAuthentication == null
+                || !(initiatingAuthentication.getPrincipal()
+                        instanceof OidcUser initiatingOidcUser)) {
+            return Optional.empty();
+        }
+        return userRepository
+                .findByGoogleSubject(initiatingOidcUser.getSubject())
+                .map(UserEntity::getTenantId);
+    }
+
+    private static OAuthIntentSnapshot requiredManagementIntentSnapshot(
+            OAuthIntentSnapshot callbackIntentSnapshot) {
+        return Objects.requireNonNull(
+                callbackIntentSnapshot, "OAuth management intent snapshot is required");
+    }
+
+    private static String requiredManagementRefreshToken(String refreshToken) {
+        return Objects.requireNonNull(
+                refreshToken, "Refresh token is required for mailbox management OAuth intent");
+    }
+
+    private static void restoreInitiatingSecurityContext(
+            HttpServletRequest request, SecurityContext initiatingSecurityContext) {
+        if (initiatingSecurityContext == null) {
+            return;
+        }
+        SecurityContextHolder.setContext(initiatingSecurityContext);
+        request.getSession(true)
+                .setAttribute(
+                        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                        initiatingSecurityContext);
+    }
+
+    private void removeAuthorizedClient(String principalName) {
+        try {
+            authorizedClientService.removeAuthorizedClient("google", principalName);
+        } catch (Exception ignored) {
+            // Best-effort — failure to clean up is non-fatal for the error redirect.
+        }
+    }
+
+    private static String intentOrFirstLogin(OAuthIntentSnapshot callbackIntentSnapshot) {
+        return callbackIntentSnapshot == null
+                ? OAuthIntentSnapshot.INTENT_FIRST_LOGIN
+                : callbackIntentSnapshot.intent();
+    }
+
+    private static boolean managementIntent(String oauthIntent) {
+        return OAuthIntentSnapshot.INTENT_ADD_MAILBOX.equals(oauthIntent)
+                || OAuthIntentSnapshot.INTENT_RECONNECT_MAILBOX.equals(oauthIntent);
+    }
+
+    private static boolean supportedIntent(String oauthIntent) {
+        return OAuthIntentSnapshot.INTENT_FIRST_LOGIN.equals(oauthIntent)
+                || OAuthIntentSnapshot.INTENT_ADD_MAILBOX.equals(oauthIntent)
+                || OAuthIntentSnapshot.INTENT_RECONNECT_MAILBOX.equals(oauthIntent);
+    }
+
+    /**
+     * Maps the duplicate scope to the login {@code ?error=} code the failure handler renders. Same
+     * workspace → {@code mailbox_already_connected} (you re-added your own mailbox). Other
+     * workspace → {@code mailbox_in_other_workspace} (the address has its own Zero Mail tenant; it
+     * must be freed there first).
+     */
+    private static String duplicateMailboxErrorCode(
+            DuplicateActiveMailboxException duplicateActiveMailbox) {
+        return duplicateActiveMailbox.scope()
+                        == DuplicateActiveMailboxException.Scope.OTHER_WORKSPACE
+                ? "mailbox_in_other_workspace"
+                : "mailbox_already_connected";
     }
 
     private void recordLoginActivity(

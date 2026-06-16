@@ -19,9 +19,11 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
     @Test
     void insertAndRead_compositePk_roundtrip() {
         UUID tenantId = seedTenant();
+        UUID gmailConnectionId = UUID.randomUUID();
         MailMessageObservedEntity entity =
                 new MailMessageObservedEntity(
                         tenantId,
+                        gmailConnectionId,
                         "gmail-1",
                         "thread-1",
                         123L,
@@ -38,9 +40,12 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
                                 () ->
                                         observed.findById(
                                                         new MailMessageObservedId(
-                                                                tenantId, "gmail-1"))
+                                                                tenantId,
+                                                                gmailConnectionId,
+                                                                "gmail-1"))
                                                 .orElseThrow());
         assertThat(found.getTenantId()).isEqualTo(tenantId);
+        assertThat(found.getGmailConnectionId()).isEqualTo(gmailConnectionId);
         assertThat(found.getGmailMessageId()).isEqualTo("gmail-1");
         assertThat(found.getGmailThreadId()).isEqualTo("thread-1");
         assertThat(found.getHistoryId()).isEqualTo(123L);
@@ -50,16 +55,29 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
     @Test
     void labelIds_textArray_roundtrip() {
         UUID tenantId = seedTenant();
-        insertObserved(tenantId, "array-roundtrip", "thread-array", "ARRAY['INBOX','UNREAD']");
+        UUID gmailConnectionId = UUID.randomUUID();
+        insertObserved(
+                tenantId,
+                gmailConnectionId,
+                "array-roundtrip",
+                "thread-array",
+                "ARRAY['INBOX','UNREAD']");
 
         String[] labels =
                 jdbc.queryForObject(
-                        "SELECT label_ids FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
+                        """
+                        SELECT label_ids
+                        FROM mail_message_observed
+                        WHERE tenant_id = ?
+                          AND gmail_connection_id = ?
+                          AND gmail_message_id = ?
+                        """,
                         (rs, rowNum) -> {
                             assertThat(rowNum).isZero();
                             return (String[]) rs.getArray(1).getArray();
                         },
                         tenantId,
+                        gmailConnectionId,
                         "array-roundtrip");
         assertThat(labels).containsExactly("INBOX", "UNREAD");
     }
@@ -67,10 +85,12 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
     @Test
     void onConflictDoNothing_deduplication() {
         UUID tenantId = seedTenant();
+        UUID gmailConnectionId = UUID.randomUUID();
 
         int first =
                 observed.insertObservedIfAbsent(
                         tenantId,
+                        gmailConnectionId,
                         "gmail-dupe",
                         "thread-dupe",
                         100L,
@@ -84,6 +104,7 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
         int second =
                 observed.insertObservedIfAbsent(
                         tenantId,
+                        gmailConnectionId,
                         "gmail-dupe",
                         "thread-dupe",
                         101L,
@@ -97,9 +118,16 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
 
         Long count =
                 jdbc.queryForObject(
-                        "SELECT COUNT(*) FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
+                        """
+                        SELECT COUNT(*)
+                        FROM mail_message_observed
+                        WHERE tenant_id = ?
+                          AND gmail_connection_id = ?
+                          AND gmail_message_id = ?
+                        """,
                         Long.class,
                         tenantId,
+                        gmailConnectionId,
                         "gmail-dupe");
         assertThat(first).isEqualTo(1);
         assertThat(second).isZero();
@@ -110,8 +138,8 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
     void tenantIdFilter_blocksCrossTenantJpaReads() {
         UUID tenantA = seedTenant();
         UUID tenantB = seedTenant();
-        insertObserved(tenantA, "message-a", "thread-a", "ARRAY['INBOX']");
-        insertObserved(tenantB, "message-b", "thread-b", "ARRAY['INBOX']");
+        insertObserved(tenantA, UUID.randomUUID(), "message-a", "thread-a", "ARRAY['INBOX']");
+        insertObserved(tenantB, UUID.randomUUID(), "message-b", "thread-b", "ARRAY['INBOX']");
 
         List<MailMessageObservedEntity> visible =
                 ScopedValue.where(TenantContext.TENANT, tenantA.toString()).call(observed::findAll);
@@ -131,17 +159,23 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
     }
 
     private void insertObserved(
-            UUID tenantId, String messageId, String threadId, String labelsSql) {
+            UUID tenantId,
+            UUID gmailConnectionId,
+            String messageId,
+            String threadId,
+            String labelsSql) {
         jdbc.update(
                 """
                 INSERT INTO mail_message_observed(
-                    tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids, internal_date
+                    tenant_id, gmail_connection_id, gmail_message_id, gmail_thread_id, history_id,
+                    label_ids, internal_date
                 )
-                VALUES (?, ?, ?, ?, %s::text[], ?)
-                ON CONFLICT (tenant_id, gmail_message_id) DO NOTHING
+                VALUES (?, ?, ?, ?, ?, %s::text[], ?)
+                ON CONFLICT (tenant_id, gmail_connection_id, gmail_message_id) DO NOTHING
                 """
                         .formatted(labelsSql),
                 tenantId,
+                gmailConnectionId,
                 messageId,
                 threadId,
                 100L,

@@ -20,18 +20,18 @@ class GmailInboxSyncStateRepositoryTest extends PostgresContainerTest {
     @Test
     void upsertStatus_creates_row_when_missing_and_flips_value_on_repeat() {
         UUID tenantId = seedTenant();
+        UUID gmailConnectionId = UUID.randomUUID();
 
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(
                         () -> {
                             syncStateRepository.upsertStatus(
-                                    tenantId, InboxSyncStatus.BACKFILLING.id());
-                            syncStateRepository.upsertStatus(tenantId, InboxSyncStatus.IDLE.id());
+                                    tenantId, gmailConnectionId, InboxSyncStatus.BACKFILLING.id());
+                            syncStateRepository.upsertStatus(
+                                    tenantId, gmailConnectionId, InboxSyncStatus.IDLE.id());
                         });
 
-        GmailInboxSyncStateEntity syncState =
-                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> syncStateRepository.findById(tenantId).orElseThrow());
+        GmailInboxSyncStateEntity syncState = findSyncState(tenantId, gmailConnectionId);
 
         assertThat(syncState.getStatus()).isEqualTo(InboxSyncStatus.IDLE);
         assertThat(syncState.getVersion()).isEqualTo(1);
@@ -40,6 +40,7 @@ class GmailInboxSyncStateRepositoryTest extends PostgresContainerTest {
     @Test
     void recordBackfillSuccess_sets_idle_and_advances_cursor_and_resets_errors() {
         UUID tenantId = seedTenant();
+        UUID gmailConnectionId = UUID.randomUUID();
         Instant syncedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
@@ -47,13 +48,12 @@ class GmailInboxSyncStateRepositoryTest extends PostgresContainerTest {
                         () -> {
                             // Seed with a prior error so we observe the reset.
                             syncStateRepository.recordBackfillFailure(
-                                    tenantId, Instant.now(), "GMAIL_5XX");
-                            syncStateRepository.recordBackfillSuccess(tenantId, 99999L, syncedAt);
+                                    tenantId, gmailConnectionId, Instant.now(), "GMAIL_5XX");
+                            syncStateRepository.recordBackfillSuccess(
+                                    tenantId, gmailConnectionId, 99999L, syncedAt);
                         });
 
-        GmailInboxSyncStateEntity syncState =
-                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> syncStateRepository.findById(tenantId).orElseThrow());
+        GmailInboxSyncStateEntity syncState = findSyncState(tenantId, gmailConnectionId);
 
         assertThat(syncState.getStatus()).isEqualTo(InboxSyncStatus.IDLE);
         assertThat(syncState.getLastHistoryId()).isEqualTo(99999L);
@@ -66,6 +66,7 @@ class GmailInboxSyncStateRepositoryTest extends PostgresContainerTest {
     @Test
     void recordBackfillFailure_increments_consecutive_errors_and_records_code() {
         UUID tenantId = seedTenant();
+        UUID gmailConnectionId = UUID.randomUUID();
         Instant firstFailureAt = Instant.now().minusSeconds(60);
         Instant secondFailureAt = Instant.now();
 
@@ -73,18 +74,27 @@ class GmailInboxSyncStateRepositoryTest extends PostgresContainerTest {
                 .run(
                         () -> {
                             syncStateRepository.recordBackfillFailure(
-                                    tenantId, firstFailureAt, "GMAIL_5XX");
+                                    tenantId, gmailConnectionId, firstFailureAt, "GMAIL_5XX");
                             syncStateRepository.recordBackfillFailure(
-                                    tenantId, secondFailureAt, "GMAIL_TIMEOUT");
+                                    tenantId, gmailConnectionId, secondFailureAt, "GMAIL_TIMEOUT");
                         });
 
-        GmailInboxSyncStateEntity syncState =
-                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                        .call(() -> syncStateRepository.findById(tenantId).orElseThrow());
+        GmailInboxSyncStateEntity syncState = findSyncState(tenantId, gmailConnectionId);
 
         assertThat(syncState.getStatus()).isEqualTo(InboxSyncStatus.ERROR);
         assertThat(syncState.getConsecutiveErrors()).isEqualTo(2);
         assertThat(syncState.getLastErrorCode()).isEqualTo("GMAIL_TIMEOUT");
+    }
+
+    private GmailInboxSyncStateEntity findSyncState(UUID tenantId, UUID gmailConnectionId) {
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(
+                        () ->
+                                syncStateRepository
+                                        .findById(
+                                                new GmailInboxSyncStateId(
+                                                        tenantId, gmailConnectionId))
+                                        .orElseThrow());
     }
 
     private UUID seedTenant() {

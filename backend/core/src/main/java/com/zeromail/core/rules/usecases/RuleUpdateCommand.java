@@ -4,6 +4,7 @@ import java.util.UUID;
 
 public record RuleUpdateCommand(
         UUID tenantId,
+        UUID gmailConnectionId,
         UUID ruleId,
         String displayName,
         String sourceText,
@@ -13,6 +14,9 @@ public record RuleUpdateCommand(
     public RuleUpdateCommand {
         if (tenantId == null) {
             throw new IllegalArgumentException("tenantId must not be null");
+        }
+        if (gmailConnectionId == null) {
+            throw new IllegalArgumentException("gmailConnectionId must not be null");
         }
         if (ruleId == null) {
             throw new IllegalArgumentException("ruleId must not be null");

@@ -3,6 +3,7 @@ package com.zeromail.core.rules.usecases;
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.SemanticIntentRequest;
+import com.zeromail.core.mailbox.MailboxContext;
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
 import com.zeromail.core.rules.domain.ActionProposalMerger;
@@ -155,9 +156,26 @@ public class RulePreviewService {
             List<ActionIntent> actionIntents,
             Integer requestedSampleSize,
             boolean evaluateSemanticIntents) {
+        return previewDraft(
+                tenantId,
+                activeGmailConnectionIdOrThrow(),
+                matcherNode,
+                actionIntents,
+                requestedSampleSize,
+                evaluateSemanticIntents);
+    }
+
+    public RulePreviewResult previewDraft(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            MatcherNode matcherNode,
+            List<ActionIntent> actionIntents,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
         return preview(
                 RulePreviewCommand.draft(
                         tenantId,
+                        gmailConnectionId,
                         matcherNode,
                         actionIntents,
                         requestedSampleSize,
@@ -182,7 +200,10 @@ public class RulePreviewService {
             UUID tenantId, Integer requestedSampleSize, boolean evaluateSemanticIntents) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         PreviewSampleSize sampleSize = PreviewSampleSize.normalize(requestedSampleSize);
-        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
+        List<RuleEntity> orderedRules =
+                ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
+                        tenantId, gmailConnectionId);
         ArrayList<PreviewCandidate> previewCandidates = new ArrayList<>();
         for (RuleEntity ruleEntity : orderedRules) {
             if (!ruleEntity.isEnabled()) {
@@ -202,7 +223,7 @@ public class RulePreviewService {
                         .anyMatch(candidate -> candidate.matcherNode().requiresBodyEvidence());
         List<RulePreviewDataService.PreviewInput> previewInputs =
                 rulePreviewDataService.fetchPreviewInputs(
-                        tenantId, requiresBodyEvidence, sampleSize);
+                        tenantId, gmailConnectionId, requiresBodyEvidence, sampleSize);
         Map<String, Map<String, Boolean>> semanticOverridesByMessage =
                 evaluateSemanticIntents
                         ? resolveSemanticOverrides(previewCandidates, previewInputs)
@@ -219,8 +240,10 @@ public class RulePreviewService {
     public RuleTestMessageList listRecentTestMessages(UUID tenantId, Integer requestedSampleSize) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         PreviewSampleSize sampleSize = PreviewSampleSize.normalize(requestedSampleSize);
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
         List<RulePreviewDataService.PreviewInput> previewInputs =
-                rulePreviewDataService.fetchPreviewInputs(tenantId, false, sampleSize);
+                rulePreviewDataService.fetchPreviewInputs(
+                        tenantId, gmailConnectionId, false, sampleSize);
         List<RuleTestMessageList.Message> messages =
                 previewInputs.stream()
                         .map(
@@ -247,7 +270,10 @@ public class RulePreviewService {
         Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
         Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
         PreviewSampleSize singleMessageSize = PreviewSampleSize.normalize(null);
-        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
+        List<RuleEntity> orderedRules =
+                ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
+                        tenantId, gmailConnectionId);
         ArrayList<PreviewCandidate> previewCandidates = new ArrayList<>();
         for (RuleEntity ruleEntity : orderedRules) {
             if (!ruleEntity.isEnabled()) {
@@ -272,7 +298,7 @@ public class RulePreviewService {
         List<RulePreviewDataService.PreviewInput> previewInputs =
                 List.of(
                         rulePreviewDataService.fetchPreviewInputById(
-                                tenantId, gmailMessageId, gmailThreadId));
+                                tenantId, gmailConnectionId, gmailMessageId, gmailThreadId));
         Map<String, Map<String, Boolean>> semanticOverridesByMessage =
                 resolveSemanticOverrides(previewCandidates, previewInputs);
         return buildResult(
@@ -297,6 +323,22 @@ public class RulePreviewService {
                 evaluateSemanticIntents);
     }
 
+    public RulePreviewResult previewDraft(
+            UUID tenantId,
+            UUID gmailConnectionId,
+            String matcherAst,
+            String actionIntents,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
+        return previewDraft(
+                tenantId,
+                gmailConnectionId,
+                parseMatcher(matcherAst),
+                parseActionIntents(actionIntents),
+                requestedSampleSize,
+                evaluateSemanticIntents);
+    }
+
     public RuleCustomPreviewResult previewCustomMail(
             UUID tenantId, String subject, String body, List<UUID> requestedRuleIds) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -304,7 +346,10 @@ public class RulePreviewService {
                 requestedRuleIds == null || requestedRuleIds.isEmpty()
                         ? null
                         : Set.copyOf(requestedRuleIds);
-        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        UUID gmailConnectionId = activeGmailConnectionIdOrThrow();
+        List<RuleEntity> orderedRules =
+                ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
+                        tenantId, gmailConnectionId);
         List<RuleEntity> targetRules =
                 orderedRules.stream()
                         .filter(
@@ -486,7 +531,10 @@ public class RulePreviewService {
                                         previewCandidate.matcherNode().requiresBodyEvidence());
         List<RulePreviewDataService.PreviewInput> previewInputs =
                 rulePreviewDataService.fetchPreviewInputs(
-                        command.tenantId(), requiresBodyEvidence, sampleSize);
+                        command.tenantId(),
+                        previewTarget.gmailConnectionId(),
+                        requiresBodyEvidence,
+                        sampleSize);
         Map<String, Map<String, Boolean>> semanticOverridesByMessage =
                 command.evaluateSemanticIntents()
                         ? resolveSemanticOverrides(previewTarget.candidates(), previewInputs)
@@ -501,6 +549,7 @@ public class RulePreviewService {
         if (command.savedRulePreview()) {
             ruleManagementService.markPreviewSucceeded(
                     command.tenantId(),
+                    previewTarget.gmailConnectionId(),
                     command.ruleId(),
                     previewTarget.savedRuleEntityVersion(),
                     Instant.now(clock));
@@ -575,13 +624,19 @@ public class RulePreviewService {
         return SemanticEvalContentBuilder.build(evaluationInput);
     }
 
+    private static UUID activeGmailConnectionIdOrThrow() {
+        return MailboxContext.currentOptional().orElseThrow(RuleValidationException::notFound);
+    }
+
     private PreviewTarget savedPreviewTarget(RulePreviewCommand command) {
-        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(command.tenantId());
         RuleEntity currentRule =
-                orderedRules.stream()
-                        .filter(ruleEntity -> ruleEntity.getId().equals(command.ruleId()))
-                        .findFirst()
+                ruleRepository
+                        .findByIdAndTenantId(command.ruleId(), command.tenantId())
                         .orElseThrow(RuleValidationException::notFound);
+        UUID gmailConnectionId = currentRule.getGmailConnectionId();
+        List<RuleEntity> orderedRules =
+                ruleRepository.findOrderedByTenantIdAndGmailConnectionId(
+                        command.tenantId(), gmailConnectionId);
 
         ArrayList<PreviewCandidate> previewCandidates = new ArrayList<>();
         for (RuleEntity ruleEntity : orderedRules) {
@@ -591,11 +646,13 @@ public class RulePreviewService {
             }
             previewCandidates.add(toPreviewCandidate(ruleEntity, currentRuleForPreview));
         }
-        return new PreviewTarget(previewCandidates, currentRule.getEntityVersion());
+        return new PreviewTarget(
+                gmailConnectionId, previewCandidates, currentRule.getEntityVersion());
     }
 
     private PreviewTarget draftPreviewTarget(RulePreviewCommand command) {
         return new PreviewTarget(
+                command.gmailConnectionId(),
                 List.of(
                         new PreviewCandidate(
                                 DRAFT_RULE_ID,
@@ -975,9 +1032,12 @@ public class RulePreviewService {
     }
 
     private record PreviewTarget(
-            List<PreviewCandidate> candidates, Integer savedRuleEntityVersion) {
+            UUID gmailConnectionId,
+            List<PreviewCandidate> candidates,
+            Integer savedRuleEntityVersion) {
 
         private PreviewTarget {
+            Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
             candidates =
                     List.copyOf(Objects.requireNonNull(candidates, "candidates must not be null"));
         }

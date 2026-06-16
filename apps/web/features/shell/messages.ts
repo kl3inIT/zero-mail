@@ -99,6 +99,34 @@ export const shellMessages = {
     vi: 'Thêm hoặc quản lý tài khoản',
     en: 'Add or manage accounts',
   },
+  'shell.accounts.active': {
+    vi: 'Đang dùng',
+    en: 'Active',
+  },
+  'shell.accounts.primary': {
+    vi: 'Chính',
+    en: 'Primary',
+  },
+  'shell.accounts.switch': {
+    vi: 'Chuyển',
+    en: 'Switch',
+  },
+  'shell.accounts.addGmail': {
+    vi: 'Thêm Gmail',
+    en: 'Add Gmail',
+  },
+  'shell.accounts.noMailboxes': {
+    vi: 'Chưa có hộp thư Gmail',
+    en: 'No Gmail mailboxes',
+  },
+  'errors.gmail.mailbox.not_found': {
+    vi: 'Không tìm thấy hộp thư Gmail này trong workspace.',
+    en: 'This Gmail mailbox could not be found in the workspace.',
+  },
+  'errors.gmail.mailbox.duplicate_active': {
+    vi: 'Hộp thư Gmail này đã là hộp thư đang dùng.',
+    en: 'This Gmail mailbox is already active.',
+  },
   'shell.userMenu.planLoading': {
     vi: 'Đang tải gói',
     en: 'Loading plan',

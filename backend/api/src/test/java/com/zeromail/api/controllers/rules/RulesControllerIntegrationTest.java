@@ -86,6 +86,8 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         "Archive receipts from Stripe",
                         compileJson.path("compiled"));
         UUID firstRuleId = UUID.fromString(firstRuleJson.path("ruleId").asString());
+        assertThat(firstRuleJson.path("gmailConnectionId").asString())
+                .isEqualTo(seedData.gmailConnectionId().toString());
         assertThat(firstRuleJson.path("enabled").asBoolean()).isFalse();
         assertThat(firstRuleJson.path("entityVersion").asInt()).isZero();
 
@@ -112,7 +114,10 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         objectMapper.valueToTree(secondCompiled));
         UUID secondRuleId = UUID.fromString(secondRuleJson.path("ruleId").asString());
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(10))))
+                        eq(seedData.tenantId()),
+                        eq(seedData.gmailConnectionId()),
+                        eq(false),
+                        eq(new PreviewSampleSize(10))))
                 .thenReturn(List.of(previewInput()));
 
         JsonNode previewJson =
@@ -146,6 +151,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         authenticatedClient(seedData),
                         "/api/rules/" + firstRuleId,
                         ruleSaveBody(
+                                seedData,
                                 "Archive Stripe mail",
                                 "Archive all Stripe mail",
                                 compileJson.path("compiled"),
@@ -175,6 +181,52 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         .retrieve()
                         .toEntity(String.class);
         assertThat(deleteResponse.getStatusCode().value()).isEqualTo(204);
+    }
+
+    @Test
+    void copy_rules_endpoint_copies_source_mailbox_rules_to_target_mailbox() throws Exception {
+        SeedData seedData = seedUser("rules-api-copy");
+        UUID targetGmailConnectionId =
+                insertConnectedMailbox(
+                        seedData.tenantId(),
+                        UUID.randomUUID(),
+                        "target-" + seedData.email(),
+                        false);
+        JsonNode sourceRuleJson =
+                createRule(
+                        seedData,
+                        "Archive Stripe copy source",
+                        "Archive Stripe copy source",
+                        objectMapper.valueToTree(
+                                compiledPayload(STRIPE_MATCHER_JSON, ARCHIVE_ACTIONS_JSON)));
+
+        JsonNode copyJson =
+                postJson(
+                        authenticatedClient(seedData),
+                        "/api/rules/copy",
+                        Map.of(
+                                "sourceGmailConnectionId",
+                                seedData.gmailConnectionId(),
+                                "targetGmailConnectionId",
+                                targetGmailConnectionId));
+
+        assertThat(sourceRuleJson.path("gmailConnectionId").asString())
+                .isEqualTo(seedData.gmailConnectionId().toString());
+        assertThat(copyJson.path("copiedCount").asInt()).isEqualTo(1);
+        assertThat(copyJson.path("copiedRuleIds").size()).isEqualTo(1);
+        UUID copiedRuleId = UUID.fromString(copyJson.path("copiedRuleIds").get(0).asString());
+        Integer copiedRuleCount =
+                jdbcTemplate.queryForObject(
+                        "select count(*) from rules where tenant_id = ? and gmail_connection_id = ? and id = ?",
+                        Integer.class,
+                        seedData.tenantId(),
+                        targetGmailConnectionId,
+                        copiedRuleId);
+        Boolean copiedRuleEnabled =
+                jdbcTemplate.queryForObject(
+                        "select enabled from rules where id = ?", Boolean.class, copiedRuleId);
+        assertThat(copiedRuleCount).isEqualTo(1);
+        assertThat(copiedRuleEnabled).isFalse();
     }
 
     @Test
@@ -242,6 +294,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         authenticatedClient(seedData),
                         "/api/rules",
                         ruleSaveBody(
+                                seedData,
                                 "Needs clarification",
                                 "Clean up newsletters",
                                 clarificationPayload(
@@ -278,6 +331,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         authenticatedClient(seedData),
                         "/api/rules",
                         ruleSaveBody(
+                                seedData,
                                 "Unsafe",
                                 "Send this email",
                                 compiledPayload(STRIPE_MATCHER_JSON, "[{\"type\":\"send\"}]")));
@@ -294,6 +348,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         authenticatedClient(seedData),
                         "/api/rules",
                         ruleSaveBody(
+                                seedData,
                                 "Tampered matcher",
                                 "Archive Stripe",
                                 compiledPayload(
@@ -304,6 +359,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         authenticatedClient(seedData),
                         "/api/rules",
                         ruleSaveBody(
+                                seedData,
                                 "Prompt leak",
                                 "Archive Stripe",
                                 compiledPayload(
@@ -321,6 +377,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         authenticatedClient(seedData),
                         "/api/rules",
                         ruleSaveBody(
+                                seedData,
                                 "Missing label",
                                 "Label Stripe",
                                 compiledPayload(STRIPE_MATCHER_JSON, "[{\"type\":\"label\"}]")));
@@ -344,11 +401,12 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}/preview")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}/enabled")).isTrue();
+        assertThat(openApiJson.path("paths").has("/api/rules/copy")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/templates")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/templates/{templateKey}/materialize"))
                 .isTrue();
         String openApiBody = openApiJson.toString();
-        assertThat(openApiBody).contains("ruleId", "entityVersion");
+        assertThat(openApiBody).contains("ruleId", "gmailConnectionId", "entityVersion");
     }
 
     private JsonNode createRule(
@@ -357,21 +415,31 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         return postJson(
                 authenticatedClient(seedData),
                 "/api/rules",
-                ruleSaveBody(displayName, sourceText, compiledPayload));
+                ruleSaveBody(seedData, displayName, sourceText, compiledPayload));
     }
 
     private Map<String, Object> ruleSaveBody(
-            String displayName, String sourceText, Object compiledPayload) {
+            SeedData seedData, String displayName, String sourceText, Object compiledPayload) {
         return Map.of(
-                "displayName", displayName, "sourceText", sourceText, "compiled", compiledPayload);
+                "gmailConnectionId",
+                seedData.gmailConnectionId(),
+                "displayName",
+                displayName,
+                "sourceText",
+                sourceText,
+                "compiled",
+                compiledPayload);
     }
 
     private Map<String, Object> ruleSaveBody(
-            String displayName, String sourceText, Object compiledPayload, int entityVersion) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("displayName", displayName);
-        body.put("sourceText", sourceText);
-        body.put("compiled", compiledPayload);
+            SeedData seedData,
+            String displayName,
+            String sourceText,
+            Object compiledPayload,
+            int entityVersion) {
+        Map<String, Object> body =
+                new LinkedHashMap<>(
+                        ruleSaveBody(seedData, displayName, sourceText, compiledPayload));
         body.put("entityVersion", entityVersion);
         return body;
     }
@@ -480,6 +548,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
 
     private SeedData seedUser(String label) {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         tenantRepository.save(new TenantEntity(tenantId, label));
         String googleSubject = "sub-" + label;
         String email = label + "@example.test";
@@ -492,8 +561,20 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                                                 tenantId,
                                                 googleSubject,
                                                 email)));
+        insertConnectedMailbox(tenantId, gmailConnectionId, email, true);
         testSessionMinter.mint(googleSubject, email);
-        return new SeedData(tenantId, googleSubject, email);
+        return new SeedData(tenantId, gmailConnectionId, googleSubject, email);
+    }
+
+    private UUID insertConnectedMailbox(
+            UUID tenantId, UUID gmailConnectionId, String googleEmail, boolean primary) {
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', ?)",
+                gmailConnectionId,
+                tenantId,
+                googleEmail,
+                primary);
+        return gmailConnectionId;
     }
 
     private void insertSelection(UUID tenantId, String templateKey, boolean enabled) {
@@ -540,5 +621,6 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         Set.of()));
     }
 
-    private record SeedData(UUID tenantId, String googleSubject, String email) {}
+    private record SeedData(
+            UUID tenantId, UUID gmailConnectionId, String googleSubject, String email) {}
 }

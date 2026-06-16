@@ -2,6 +2,7 @@ package com.zeromail.core.gmail.usecases;
 
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
 import com.zeromail.core.gmail.persistence.lowlevel.PubSubTenantLookupRepository;
+import com.zeromail.core.gmail.persistence.lowlevel.TenantMailboxRef;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,14 +53,19 @@ public class PubSubIngestionService {
      */
     public IngestResult ingestPushEnvelope(
             String emailAddress, String pubsubMessageId, long historyId, String sanitizedPayload) {
-        Optional<UUID> tenantIdLookup =
-                tenantLookupRepository.findConnectedTenantIdByEmail(emailAddress);
-        if (tenantIdLookup.isEmpty()) {
-            log.info("event=pubsub_unknown_email_dropped");
+        Optional<TenantMailboxRef> tenantMailboxLookup =
+                tenantLookupRepository.findConnectedMailboxByEmail(emailAddress);
+        if (tenantMailboxLookup.isEmpty()) {
+            log.info(
+                    "event=pubsub_delivery_unresolved tenantId={} gmailConnectionId={}",
+                    null,
+                    null);
             return IngestResult.UNKNOWN_EMAIL;
         }
 
-        UUID tenantId = tenantIdLookup.get();
+        TenantMailboxRef tenantMailboxRef = tenantMailboxLookup.orElseThrow();
+        UUID tenantId = tenantMailboxRef.tenantId();
+        UUID gmailConnectionId = tenantMailboxRef.gmailConnectionId();
         AtomicReference<IngestResult> result = new AtomicReference<>();
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(
@@ -72,18 +78,21 @@ public class PubSubIngestionService {
                                                                     .insertPendingIfAbsent(
                                                                             UUID.randomUUID(),
                                                                             tenantId,
+                                                                            gmailConnectionId,
                                                                             pubsubMessageId,
                                                                             historyId,
                                                                             sanitizedPayload);
                                                     if (insertedCount == 0) {
                                                         log.info(
-                                                                "event=pubsub_duplicate_delivery_dropped tenantId={}",
-                                                                tenantId);
+                                                                "event=pubsub_duplicate_delivery_dropped tenantId={} gmailConnectionId={}",
+                                                                tenantId,
+                                                                gmailConnectionId);
                                                         return IngestResult.DUPLICATE;
                                                     }
                                                     log.info(
-                                                            "event=pubsub_delivery_accepted tenantId={}",
-                                                            tenantId);
+                                                            "event=pubsub_delivery_accepted tenantId={} gmailConnectionId={}",
+                                                            tenantId,
+                                                            gmailConnectionId);
                                                     return IngestResult.ACCEPTED;
                                                 })));
         return result.get();

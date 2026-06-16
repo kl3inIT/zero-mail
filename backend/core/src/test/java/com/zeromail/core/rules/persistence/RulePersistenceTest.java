@@ -37,6 +37,7 @@ class RulePersistenceTest extends PostgresContainerTest {
                 new RuleEntity(
                         UUID.randomUUID(),
                         tenantId,
+                        primaryGmailConnectionId(tenantId),
                         "Archive receipts",
                         "Archive Stripe receipts",
                         RuleLanguage.EN,
@@ -77,6 +78,7 @@ class RulePersistenceTest extends PostgresContainerTest {
                 new RuleEntity(
                         UUID.randomUUID(),
                         tenantId,
+                        primaryGmailConnectionId(tenantId),
                         "Label newsletters",
                         "Label newsletters",
                         RuleLanguage.EN,
@@ -221,9 +223,22 @@ class RulePersistenceTest extends PostgresContainerTest {
 
     private UUID seedTenant(String displayName) {
         UUID tenantId = UUID.randomUUID();
+        UUID gmailConnectionId = UUID.randomUUID();
         jdbcTemplate.update(
                 "insert into tenants(id, display_name) values (?, ?)", tenantId, displayName);
+        jdbcTemplate.update(
+                "insert into gmail_connections(id, tenant_id, google_email, status, is_primary) values (?, ?, ?, 'CONNECTED', true)",
+                gmailConnectionId,
+                tenantId,
+                displayName + "@example.test");
         return tenantId;
+    }
+
+    private UUID primaryGmailConnectionId(UUID tenantId) {
+        return jdbcTemplate.queryForObject(
+                "select id from gmail_connections where tenant_id = ? and is_primary = true",
+                UUID.class,
+                tenantId);
     }
 
     private String indexDefinition(String indexName) {
@@ -236,15 +251,16 @@ class RulePersistenceTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
         insert into rules(
-          id, tenant_id, display_name, source_text, source_language, schema_version,
-          matcher_ast, action_intents, order_index, template_key, template_version
+          id, tenant_id, gmail_connection_id, display_name, source_text, source_language,
+          schema_version, matcher_ast, action_intents, order_index, template_key, template_version
         )
-        values (?, ?, 'Archive receipts', 'Archive receipts', 'en', 'rules.v1',
+        values (?, ?, ?, 'Archive receipts', 'Archive receipts', 'en', 'rules.v1',
           '{"schemaVersion":"rules.v1","type":"SENDER_DOMAIN","domain":"stripe.com"}'::jsonb,
           '[{"type":"archive"}]'::jsonb, ?, ?, 1)
         """,
                 ruleId,
                 tenantId,
+                primaryGmailConnectionId(tenantId),
                 orderIndex,
                 templateKey);
     }
