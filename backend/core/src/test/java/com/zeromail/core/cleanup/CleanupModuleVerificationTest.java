@@ -36,8 +36,8 @@ class CleanupModuleVerificationTest {
                                                         + " core.cleanup.package-info.java with"
                                                         + " @ApplicationModule(allowedDependencies = ...)"));
 
-        assertThat(cleanupModule.getName())
-                .as("Module name must match 'cleanup'")
+        assertThat(cleanupModule.getIdentifier().toString())
+                .as("Module identifier must match 'cleanup'")
                 .isEqualTo("cleanup");
 
         assertThat(cleanupModule.getBasePackage().getName())

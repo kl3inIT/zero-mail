@@ -7,7 +7,7 @@ plugins {
 configure<DependencyManagementExtension> {
     // Keep this GA pin in sync with gradle/libs.versions.toml springModulith.
     imports {
-        mavenBom("org.springframework.modulith:spring-modulith-bom:2.0.6")
+        mavenBom("org.springframework.modulith:spring-modulith-bom:2.1.0")
     }
 }
 
