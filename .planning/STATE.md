@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Gmail Workspace Foundation
-status: milestone-complete
-stopped_at: v1.3 milestone shipped (Phases 10-11 complete, 43/43 requirements)
-last_updated: "2026-06-16T05:00:00.000Z"
-last_activity: 2026-06-16 -- v1.3 Gmail Workspace Foundation milestone archived and tagged
+milestone: v1.4
+milestone_name: Calendar Co-Pilot + Drive Filing
+status: planning
+last_updated: "2026-06-17T02:16:23.305Z"
+last_activity: 2026-06-17
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 ## Current Position
 
-Milestone: v1.3 Gmail Workspace Foundation — SHIPPED 2026-06-16
-Phase: 11 complete (final phase of v1.3)
-Status: Milestone complete; awaiting next-milestone planning
-Last activity: 2026-06-16 -- v1.3 archived (milestones/v1.3-ROADMAP.md + v1.3-REQUIREMENTS.md), tagged v1.3
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-17 — Milestone v1.4 started
 
 ## Current Milestone Roadmap
 

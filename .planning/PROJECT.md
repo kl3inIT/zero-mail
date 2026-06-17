@@ -50,23 +50,27 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 </details>
 
-## Current Milestone: v1.3 Gmail Workspace Foundation
+## Current Milestone: v1.4 Calendar Co-Pilot + Drive Filing
 
-**Goal:** Let one workspace safely connect multiple Gmail / Google Workspace mailboxes while sharing business configuration at workspace level and keeping mail automation isolated per active mailbox.
+**Goal:** Add Google Calendar-aware draft replies, AI meeting briefs, and Google Drive document auto-filing to make Zero Mail handle the schedule + attachment workflow that pairs with email — mirroring Inbox Zero's UX, scoped to the Google ecosystem and Zero Mail's privacy constraints.
 
 **Target features:**
 
-1. **Multi-Gmail connection management** — users can connect, view, label/purpose, reconnect, and disconnect multiple Gmail accounts in the same workspace, with per-mailbox health and watch status.
-2. **Mailbox-isolated automation** — inbox, rules, ingestion, triage audit, undo, analytics, outbound sends, and Gmail write actions operate inside the active mailbox context so one Gmail account cannot read, write, or send as another.
-3. **Workspace-shared business layer** — credits, billing, AI provider/model/BYOK, global pause/auto-send controls, safety policy, templates/catalog, and future business context stay shared at workspace/tenant level.
-4. **Workspace-ready foundation** — product language, data model, and authorization assumptions prepare for SEED-005 shared inbox/team collaboration, but v1.3 does not ship comments, assignments, due dates, seats, or complex role management.
+1. **Multi-Google-Calendar connection** — incremental OAuth for `calendar.freebusy` + `calendar.events`, multi-calendar enable/disable per connection, timezone resolution (per-calendar + workspace fallback). Reuses the v1.3 multi-Gmail connection model rather than inventing a parallel one.
+2. **AI calendar availability in draft replies** — free/busy across all enabled calendars, suggested 3-5 meeting time slots, booking-link fallback when the user has one configured. Integrated into the existing draft reply flow, not a separate surface.
+3. **Public booking links (Calendly-style)** — slug, duration, weekly availability windows, destination calendar, location type (Google Meet / phone / in-person / custom), and a public booking page that writes events back to the destination calendar.
+4. **AI meeting briefs** — cron job fires N hours before external meetings, agentic AI loop summarizes guest context from past email history + past meeting briefs (+ optional web search). Delivered via email + the existing in-app daily digest channel only. Slack / Teams / Telegram delivery deferred (no messaging-channel infra yet).
+5. **Calendar-aware triage** — auto-classify Gmail calendar invites / cancellations / reschedules and surface them at top-of-inbox so they cannot be silently archived.
+6. **Rule action `propose_meeting`** — new rule action that, on match, drafts a reply containing suggested time slots from free/busy. Routed through the existing outbound gateway boundary; gated by the global `Auto-send rules` setting and per-tenant safety/rate/audit gates.
+7. **Google Drive connection** — incremental OAuth on minimal `drive.file` scope (matching IZ's deliberate choice); per-workspace connection model, not per-mailbox.
+8. **AI document auto-filing** — filing engine analyzes incoming Gmail attachments in memory, suggests destination folder + confidence, presents low-confidence cases to the user for review/correction, files via Drive API, and notifies via in-app + email. **Privacy carve-out:** attachment content is processed in-memory only and NEVER persisted, even temporarily, in a `AttachmentDocument` style table — IZ's persistence model is rejected as incompatible with ARCH-02.
+9. **Attachment source rules** — rules can attach files from a user-curated Drive folder/source to outbound replies (parallels IZ's `attachment_source`), with the same in-memory-only privacy guard.
 
-**Seeds activating in v1.3:**
+**Seeds activating in v1.4:**
 
-- `SEED-005` — team-collaboration-shared-email-workspace, included as foundation/context for workspace-ready multi-Gmail and future shared inbox monetization.
-- `SEED-019` — ai-communication-ops-zalo-crm-vietnam, included as directional context only: Gmail remains the production channel; Zalo OA, CRM, and omnichannel work stay deferred.
+- `SEED-006` — calendar-scheduling-and-meeting-briefs (promoted to v1.4; trigger fired).
 
-**Explicitly deferred to v1.4+:** Microsoft/Outlook, Zalo OA, CRM/contact timeline, omnichannel inbox, private comments, assignment/due dates, team seats, full user-within-tenant permission matrix, and any long-term raw Gmail body or embedding storage.
+**Explicitly deferred to v1.5+:** Microsoft Outlook / Office 365 (Gmail-only locked), Microsoft OneDrive, full `drive` scope, Slack / Teams / Telegram meeting brief delivery, persistent attachment indexing / RAG, Zalo OA / CRM / omnichannel, team seats / private comments / assignment, and OPS-FUT-04 (hostile-corpus eval + Grafana + CASA refresh + LAUNCH-GO-NOGO + formal GA tag). VISUAL-REFRESH-01..06 also stays deferred — v1.4 visual surfaces should adopt the purple palette as they are built, but a project-wide visual refresh is not in scope.
 
 ## Core Value
 
@@ -171,9 +175,9 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 ### Active
 
-*Next milestone: planning (start via `/gsd-new-milestone`).*
+*v1.4 in progress (2026-06-17). Scope: Google Calendar Co-Pilot (multi-calendar OAuth + AI availability + booking links + meeting briefs + calendar-aware triage + propose_meeting rule action) and Google Drive document auto-filing + attachment source rules. Requirements: `.planning/REQUIREMENTS.md`. Roadmap: `.planning/ROADMAP.md`.*
 
-Carry-forward candidates not automatically included unless roadmapped: OPS-FUT-01 / SET-BEHV-05 (shadow-mode toggle), OPS-FUT-02 / SET-SAFE-02 (paste-import), OPS-FUT-03 / SET-SAFE-03 (protect/escalate per-entry mode); OPS-FUT-04 — hostile-corpus aiEval, Grafana ops dashboards, CASA evidence refresh, LAUNCH-GO-NOGO, and the **formal GA tag** (still outstanding after three milestones); VISUAL-REFRESH-01..06 (purple palette alignment of user pages); team collaboration (TEAM-01..06); and the Zalo OA / CRM channel expansion (CHAN-01..03).
+**Not in v1.4 (carry-forward candidates):** OPS-FUT-01 / SET-BEHV-05 (shadow-mode toggle), OPS-FUT-02 / SET-SAFE-02 (paste-import), OPS-FUT-03 / SET-SAFE-03 (protect/escalate per-entry mode); OPS-FUT-04 — hostile-corpus aiEval, Grafana ops dashboards, CASA evidence refresh, LAUNCH-GO-NOGO, and the **formal GA tag** (still outstanding after three milestones); VISUAL-REFRESH-01..06 (purple palette alignment of user pages); team collaboration (TEAM-01..06); and the Zalo OA / CRM channel expansion (CHAN-01..03).
 
 <details>
 <summary>Prior Active note (pre-v1.2-close)</summary>
@@ -283,4 +287,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-16 after v1.3 Gmail Workspace Foundation milestone (Phases 10-11 shipped; 43/43 requirements complete; multi-Gmail workspace-shared, mailbox-isolated foundation live-verified via 11-UAT 10/10; next milestone in planning)*
+*Last updated: 2026-06-17 — v1.4 Calendar Co-Pilot + Drive Filing milestone started (mirroring Inbox Zero's calendar + drive UX, Google-only, privacy-hardened: no persistent attachment indexing)*
