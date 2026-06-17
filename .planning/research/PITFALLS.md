@@ -1,1013 +1,669 @@
-# Pitfalls Research — Zero Mail v1.2 (Admin Console Foundation + Settings UI on Curated Catalog)
+# Pitfalls Research — Zero Mail v1.4 (Calendar Co-Pilot + Drive Filing)
 
-**Domain:** Adding `/admin/*` console (`ROLE_ADMIN` RBAC + audit + tenant inspection + AES-GCM master-key management for OpenAI/Anthropic/Google/DeepSeek + provider catalog with Sync-from-`/models` + worker queue health + global spend dashboard) and a four-tab user Settings UI on the admin-curated catalog, on top of the v1.0 + v1.1 trust-first baseline (Gmail-only, auto-send architecturally blocked, no long-term storage of raw bodies/email-content LLM prompts/embeddings, tenant isolation via Scoped Values, single Gmail send call site enforced by ArchUnit + grep).
-**Researched:** 2026-05-19
-**Confidence:** HIGH on Zero Mail v1.0/v1.1 invariant landscape (sources read directly: `.planning/PROJECT.md`, `CLAUDE.md`, v1.1 PITFALLS.md, `NoGmailSendAllowedTest.java` referenced shape, `TenantAwareTaskScope` pattern). HIGH on the admin/key-management pitfall pattern (CWE-522, CWE-532, CWE-798, NIST SP 800-57 key rotation guidance, OWASP Top 10 A04:2021 Insecure Design, A09:2021 Logging Failures). HIGH on supply-chain risk from provider `/models` endpoints (OpenRouter / OpenAI `/v1/models` responses are vendor-controlled JSON, not pinned). MEDIUM-HIGH on Inbox Zero admin reference (read `apps/web/app/(app)/admin/AdminUserControls.tsx`, `AdminUpgradeUserForm.tsx`, `top-spenders/route.ts` shape — small surface, not a full curated-catalog reference). MEDIUM on Spring Security 7.0 `@PreAuthorize` + method-security composition with ScopedValue tenant context (verified via Spring Security 6.x/7.x docs; specific Scoped Values + `@PreAuthorize` ordering is product-specific risk).
+**Domain:** Adding Google Calendar (multi-calendar OAuth on `calendar.freebusy` + `calendar.events`, free/busy in draft replies, public booking links, AI meeting briefs, calendar-aware triage, `propose_meeting` rule action) and Google Drive (`drive.file` connection, AI document auto-filing, attachment-source rules) to the v1.3 baseline: multi-Gmail workspace foundation, Spring Boot 4.1 / Java 25 / Spring AI 2.0.0 GA, ARCH-02 no-body-persistence privacy contract, `MailboxContext` ScopedValue + ArchUnit `findByTenantId` ban, OutboundSendGateway-enforced send boundary, single-VPS Postgres 18 + Redis 7.
+**Researched:** 2026-06-17
+**Confidence:** HIGH on baseline invariants (sources read directly: `CLAUDE.md`, `.planning/PROJECT.md`, prior `PITFALLS.md` for v1.2). HIGH on CASA / scope-tier mechanics ([Google sensitive-scope verification docs](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification), [restricted-scope verification docs](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification), [Google CASA 2025 explainer](https://deepstrike.io/blog/google-casa-security-assessment-2025)). HIGH on Calendar API quota mechanics ([Calendar usage limits](https://developers.google.com/workspace/calendar/api/guides/quota), [freebusy.query reference](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query)). HIGH on `drive.file` semantics ([Drive Picker overview](https://developers.google.com/workspace/add-ons/studio/drive-picker), [Drive API scope guide](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) — confirmed: a folder picked under `drive.file` grants write-into-folder but NOT read-existing-files-in-folder). HIGH on Spring AI 2.0 tool-execution migration ([Spring AI 2.0.0-RC1 announcement](https://spring.io/blog/2026/06/06/spring-ai-2-0-0-RC1-available-now/), [Upgrade Notes](https://docs.spring.io/spring-ai/reference/upgrade-notes.html) — RC1 dropped the built-in call/stream tool-execution loop from every `ChatModel`; M6→GA is a real migration). MEDIUM-HIGH on booking-page abuse patterns (Calendly community + ops posts: per-IP CAPTCHA only after 2-3 bookings/hour is insufficient for a brand-new SaaS). MEDIUM on Calendar push-notification channel auth ([Calendar push notifications docs](https://developers.google.com/workspace/calendar/api/guides/push)).
 
-> **Scope.** This document is the v1.2 delta only. It enumerates the pitfalls that appear when adding the admin console + Settings UI on the v1.0 + v1.1 baseline. v1.0 + v1.1 pitfalls (raw-body persistence, ThreadLocal tenant leaks, ordinal-based enum storage, send-call-site weakening, BYOK round-trip leaks, JSONB schema drift, etc.) are addressed in shipped phases or in the prior milestone delta; we surface only the new failure modes the admin surface and the curated-catalog Settings introduce, plus the **regression vectors** v1.2 features can use to silently undo v1.0/v1.1 trust invariants.
+> **Scope.** This document is the v1.4 delta only. v1.0/v1.1/v1.2/v1.3 pitfalls (raw-body persistence, ThreadLocal tenant leaks, JSONB schema drift, BYOK round-trip leaks, admin master-key handling, multi-Gmail isolation) live in prior milestone deltas and shipped phases. We surface only the new failure modes that Calendar + Drive features introduce, plus the **regression vectors** v1.4 features can use to silently undo v1.0–v1.3 trust invariants.
+>
+> **Mapping convention.** Each pitfall maps to a specific v1.4 phase (P1=Calendar OAuth + connection foundation, P2=Free/busy + draft availability, P3=Booking pages, P4=AI meeting briefs, P5=Calendar-aware triage + `propose_meeting`, P6=Drive OAuth + Picker, P7=AI document auto-filing, P8=Attachment source rules). Phase numbers are research-suggested; ROADMAP.md is authoritative.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: ROLE_ADMIN promoted via a misconfigured DB seed becomes a permanent backdoor
+### Pitfall 1: Adding `calendar.events` + `drive.file` scopes re-opens the CASA window and silently pushes GA further out
 
 **What goes wrong:**
-The naive way to ship admin in v1.2 is a Liquibase changeset that flips `user.role = 'ADMIN'` for the founder's email (`kythuatclaude@gmail.com` or a seeded admin account), plus a controller annotation `@PreAuthorize("hasRole('ADMIN')")`. Three failure modes appear immediately:
+v1.0 already kicked off CASA verification for restricted Gmail scopes (FND-07, dormant SEED-012). v1.4 adds three new scopes. Each scope falls into a different verification tier, and the team's mental model "we already did CASA, so this is free" is wrong:
 
-1. **Forever-admin via the seed.** The seed runs on every fresh environment (CI, staging, prod). Anyone who provisions a Zero Mail instance using the same seed inherits a hardcoded "founder admin." A staging DB snapshot restored into prod (a normal disaster-recovery drill) **silently re-grants the founder role** to whichever email was in the snapshot, even if it was rotated out in prod.
-2. **No revocation path.** The admin role is a column on `user` with no audit trail of who granted it or when. If the founder account is compromised, there is no log of "admin granted at X, by Y, for reason Z" — the rotation playbook is unclear.
-3. **Admin role bypasses tenant scoping by design.** v1.0 ships per-tenant `Scoped Values` and an ArchUnit rule against `ThreadLocal`, but admin endpoints **need** cross-tenant access (that's the point). The first admin controller writes `// @PreAuthorize("hasRole('ADMIN')") — bypassing TenantContext.currentOrThrow()` and now there are **two** code paths in the app: one that always asserts a tenant context, one that doesn't. A future refactor merges them. A bug in the merger drops the admin check but keeps the tenant bypass. Every tenant's data is now reachable from any authenticated user.
+| Scope | Tier (per Google docs) | Verification cost | CASA timeline impact |
+|-------|------------------------|-------------------|----------------------|
+| `https://www.googleapis.com/auth/calendar.freebusy` | **Non-sensitive** | Brand verification + privacy URL only | None — does not trigger sensitive/restricted review |
+| `https://www.googleapis.com/auth/calendar.events` | **Sensitive** | Manual justification + demo video + privacy policy review (no CASA audit) | Adds a verification cycle to the OAuth consent screen; **does NOT** require CASA audit by itself but the OAuth app sits in "Testing" until justified |
+| `https://www.googleapis.com/auth/drive.file` | **Non-sensitive** (per Google's "minimum scope" doc, deliberately) | Brand verification only | None — this is precisely why IZ picked `drive.file` over `drive` |
+| `https://www.googleapis.com/auth/gmail.modify` (existing) | **Restricted** | CASA Tier 2 lab assessment (annual) | Already in flight via SEED-012 |
+
+The traps:
+
+1. **Mixing `drive.file` with `drive.readonly` "for the auto-filing inbox scan."** A developer convinced that "we need to see existing folders to suggest a destination" adds `drive.readonly` — which is **restricted** — and the entire app's verification timeline gets re-anchored to the new restricted scope. CASA re-clocks; any prior progress on `gmail.modify` doesn't transfer to a re-submission with new restricted scopes. **GA tag slips by an unbounded number of weeks** while CASA processes the new scope.
+2. **Adding `calendar` (full) instead of `calendar.events` + `calendar.freebusy`.** The single-string `calendar` scope is **restricted**, not sensitive — same CASA-re-clock hazard as above. A "we'll just take everything to keep options open" decision moves the app from Sensitive verification to Restricted.
+3. **Forgetting to update the OAuth consent screen scope list before users see the consent screen.** Adding a scope to the SecurityConfig client registration without updating the verified scope list in Google Cloud Console results in unverified-app warnings ("Google hasn't verified this app") for every user, even existing ones whose previous grant didn't include the new scope.
+4. **Demo video drift.** Sensitive-scope verification requires a demo video showing each requested scope being used. v1.0's video covered Gmail only. v1.4 needs a new video showing `calendar.events` write + reasoning. If the video doesn't precisely match the in-app UX (because the UX is still in flight when the video is recorded), Google reviewer rejects → another 1-3 week cycle.
+5. **Incremental authorization rejected by product but re-requested by reviewer.** Zero Mail bundles login + Gmail in one consent (per `feedback_bundled_oauth_scopes` memory). Adding Calendar/Drive to the same bundle inflates the initial consent screen to 4-5 permission groups — Google's reviewer may push back asking for incremental authorization (the pattern v1.0 explicitly rejected). Either we bend the product decision or we negotiate with the reviewer; both cost cycles.
 
 **Why it happens:**
-- Path of least resistance: a single `role` column + `@PreAuthorize` is what every Spring Security tutorial demonstrates. Audit + grant provenance + revocation feel like "v1.3 problems."
-- Admin endpoints conceptually live "outside" tenant isolation, so developers reflexively bypass `TenantContext.currentOrThrow()` instead of designing an explicit **admin-scoped** context that is loud about cross-tenant access.
-- Liquibase seeds are "developer convenience" — nobody documents that they're security-critical.
+- "Scope" is treated as a Spring Security config edit, not a verification-process trigger.
+- Tier classifications are non-obvious — Google's "sensitive" / "restricted" / "non-sensitive" mapping is published per-scope and not in any single table the team can grep.
+- CASA is felt as a one-time tax; team forgets that the assessment is per-scope-set, not per-app.
 
 **How to avoid:**
 
-1. **Admin grant is a row in `admin_grant`, not a column on `user`.** Schema:
-   ```yaml
-   - createTable:
-       tableName: admin_grant
-       columns:
-         - column: { name: id, type: UUID, constraints: { primaryKey: true } }
-         - column: { name: user_id, type: UUID, constraints: { nullable: false, foreignKeyName: fk_admin_grant_user, references: app_user(id) } }
-         - column: { name: role, type: VARCHAR(32), constraints: { nullable: false } }  # ADMIN, SUPPORT (future)
-         - column: { name: granted_by_user_id, type: UUID, constraints: { nullable: true, foreignKeyName: fk_admin_grant_grantor, references: app_user(id) } }  # nullable for bootstrap
-         - column: { name: granted_at, type: TIMESTAMPTZ, constraints: { nullable: false } }
-         - column: { name: granted_reason, type: TEXT, constraints: { nullable: false } }
-         - column: { name: revoked_at, type: TIMESTAMPTZ, constraints: { nullable: true } }
-         - column: { name: revoked_by_user_id, type: UUID, constraints: { nullable: true, foreignKeyName: fk_admin_grant_revoker, references: app_user(id) } }
-         - column: { name: revoked_reason, type: TEXT, constraints: { nullable: true } }
-   - sql:
-       sql: |
-         CREATE UNIQUE INDEX uq_admin_grant_active
-           ON admin_grant (user_id, role)
-           WHERE revoked_at IS NULL;
-   ```
-   `user.role` does **not** exist. The application asks `adminGrantRepository.hasActiveGrant(userId, "ADMIN")` per request.
-
-2. **Bootstrap admin via env var, not seed.** First-boot bootstrap reads `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL` from environment. If set and no active `admin_grant` row exists, the bootstrap inserts one with `granted_reason = "first-boot bootstrap from env"` and `granted_by_user_id = NULL`. **Bootstrap runs once and only once** — guarded by `SELECT EXISTS (SELECT 1 FROM admin_grant)` check. Subsequent boots with the same env var **log a WARN and do nothing**; they do not re-grant. CI / staging never sets this env var.
-
-3. **Admin context is explicit, not "no tenant context."** Introduce a separate `AdminContext` (Scoped Value) populated only inside `@AdminEndpoint`-annotated controllers. The two contexts are mutually exclusive:
-   - `TenantContext.currentOrThrow()` throws inside `AdminContext`.
-   - `AdminContext.currentOrThrow()` throws inside `TenantContext`.
-   - An ArchUnit rule forbids any service in `core.*.application.*` from reading both contexts in the same call chain.
-   - Cross-tenant admin reads (e.g., "fetch tenant X's spend") go through `AdminTenantAccess.readOnly(tenantId, supplier)` which binds a **read-only** tenant context inside an admin context and records the access in `admin_audit_log` with the admin's user ID, the target tenant ID, the operation name, and a redacted parameter snapshot.
-
-4. **Revocation works without DB surgery.** `POST /admin/grants/{id}/revoke` requires another admin (`ADMIN ≠ self`) and writes `revoked_at + revoked_by_user_id + revoked_reason`. The unique-partial-index ensures only one active grant per (user, role). Re-granting is an explicit new row, not an `UPDATE`.
-
-5. **Two-admin rule for sensitive operations.** Operations that touch master keys or modify the catalog require an `AdminConfirmation` row co-signed by a second active admin (or, in single-admin bootstrap mode, an explicit `--allow-single-admin` server flag toggled per-operation via env). This is intentionally heavyweight — it's the difference between "I have admin" and "I can rotate the master key."
+1. **One-page scope ledger in `docs/oauth-scopes.md`.** Per-scope: literal scope string, tier (non-sensitive / sensitive / restricted), verification artifact (brand only / video + justification / CASA), `git blame`-style "added in milestone X for feature Y" line. PR template item: "If you added a scope, did you update `docs/oauth-scopes.md`?"
+2. **ArchUnit + grep test forbids restricted-tier scopes.** A `OAuthScopeAllowListTest` enumerates the allowed scope strings (Gmail subset already approved + `calendar.events` + `calendar.freebusy` + `drive.file`). Any string literal anywhere in `backend/` matching `googleapis.com/auth/[a-z.]+` that is NOT in the allow-list fails CI. Catches a developer typing `https://www.googleapis.com/auth/drive` (no suffix) or `https://www.googleapis.com/auth/calendar` (no suffix) — both restricted.
+3. **Demo video is owned by a phase milestone, not by an individual.** Phase P1 (Calendar OAuth foundation) and Phase P6 (Drive OAuth) each own a checklist item "submit new demo video covering only this phase's scopes." Videos are recorded against a frozen UX snapshot at phase-close; not while UX is still drifting.
+4. **CASA timeline expectation written into the milestone.** PROJECT.md "Explicitly deferred" section: "v1.4 ships `calendar.events` + `drive.file` in OAuth Testing mode behind the same SEED-012 production gate as Gmail. GA does not unblock at v1.4 close. CASA refresh window opens when ALL of Gmail / Calendar / Drive scopes are stable across one consecutive milestone." This stops anyone arguing "but v1.4 was supposed to GA us."
+5. **Auth flow design proves we never need `drive.readonly`.** The auto-filing engine MUST work entirely with `drive.file` semantics: destination folder is picked once via Google Picker (giving write-into-folder permission), and the engine never enumerates existing files in that folder. This is enforced by Pitfall 3's design.
 
 **Warning signs:**
-- `user` table has a `role` column.
-- A Liquibase changeset hardcodes an admin email.
-- The bootstrap mechanism reads from a YAML/property file checked into the repo rather than a runtime env var.
-- A controller mixes `@PreAuthorize("hasRole('ADMIN')")` with `TenantContext.currentOrThrow()` in the same handler.
-- The codebase has no `AdminContext` Scoped Value separate from `TenantContext`.
-- `admin_grant` has no `revoked_at` column.
-- PR adds an admin endpoint without an `admin_audit_log` insert.
+- A PR adds a scope string not in `docs/oauth-scopes.md`.
+- A spike branch experiments with `drive.readonly` or `drive` to "see what files are there."
+- CASA / verification work is scheduled in v1.4 closeout planning.
+- The OAuth consent screen review submits before the user-visible UX matches the demo video.
+- An engineer says "we'll just request `calendar` to keep options open."
 
-**Phase to address:** **Phase 8 / sub-phase 8A — Admin foundation (RBAC + audit + AdminContext)**, lands **BEFORE** any admin endpoint, before master-key management, before tenant-inspection views. The `admin_grant` schema + `AdminContext` Scoped Value + ArchUnit "mutually exclusive contexts" rule + bootstrap env-var contract must be in the same merge as the first admin controller.
+**Phase to own prevention:** **P1 (Calendar OAuth foundation)** for the scope ledger + ArchUnit allow-list + Phase 1 demo-video checklist. **P6 (Drive OAuth)** for the second demo-video checklist. PROJECT.md update on milestone start documenting the CASA non-unblock.
 
 ---
 
-### Pitfall 2: Master-key leak through the AES-GCM key-management UI (logs, response round-trip, test-connection probe, error message, ChatModel cache, Liquibase seed)
+### Pitfall 2: Free/busy quota exhaustion under the AI draft-reply hot path
 
 **What goes wrong:**
-v1.2 introduces **master keys** for OpenAI/Anthropic/Google/DeepSeek — operator-supplied API keys the platform uses when a tenant has **no BYOK** for that provider. These are far higher-value than per-tenant BYOK: a single master key for OpenAI lets attackers spend the platform's pooled budget across all tenants, and rotation is operationally expensive. The same five regressions identified for BYOK in v1.1 Pitfall 8 re-surface — **plus** five admin-specific extensions:
+The "AI calendar availability in draft replies" feature calls `freebusy.query` whenever the AI needs to propose meeting times. Naïve implementation calls it on every draft generation, for every enabled calendar, on every model retry. Google Calendar API quota mechanics ([usage limits](https://developers.google.com/workspace/calendar/api/guides/quota)):
 
-1. **Admin "Test connection" logs the master key.** Mirror of BYOK Pitfall 8.1, but the blast radius is the entire platform's spend.
-2. **Admin save endpoint returns the new master key.** Frontend caches in TanStack Query.
-3. **Admin read endpoint returns full key** to render in the form for editing convenience.
-4. **No per-provider ChatModel cache eviction on master-key rotation** — rotated master key takes effect for new tenants but in-flight cached `ChatModel` instances keep the old key until cache TTL. If the old key was rotated **because it was compromised**, the platform keeps using it.
-5. **Master-key probe abused as a key oracle.** Admin "Test connection" calls the provider's `/models` endpoint with the key and returns success/failure to the UI. An attacker who reaches `/admin/master-keys/{provider}/test` (e.g., via a session-hijacked admin) can submit a candidate key and learn whether it's valid — i.e., turn the test endpoint into a key-validation oracle for keys harvested elsewhere.
-6. **Master-key stored in `application.yml` "for development convenience"** — the dev profile checks a key into the repo for "easy testing." The same file gets pushed to GitHub via a bad `.gitignore` edit. Vendor revokes the leaked key; rotation cost = real.
-7. **Master-key inserted via Liquibase seed for dev.** The seed runs in CI with a placeholder; nobody notices when an engineer "temporarily" replaces the placeholder with a real key locally and accidentally commits.
-8. **Error responses echo the key.** A 401 from the provider returns a JSON body like `{"error":"invalid api key sk-proj-abc..."}` which the admin proxies into a Vercel-style error envelope. Now the key is in the admin's browser console / error reporter, in nginx access logs (if the response was logged), and possibly in error-reporting tools like Sentry.
-9. **Master-key value compared via `equals()` in not-constant-time** — leaks the prefix via timing if exposed in a high-RPS code path. Lower priority but a real concern in the test-connection endpoint if the key check is naive.
-10. **Master-key shown on an admin page that doesn't have CSP frame-ancestors / clickjacking protection** — admin page rendered inside an attacker's iframe via UI redress.
+- **Default per-user quota** is `~600 queries / 60 seconds / user`. Sounds high until you realize one draft = N calendars × M model retries × P time windows, easily 10-50 calls per draft.
+- **Per-project quota** is shared across the entire Zero Mail platform tenant population. A high-traffic tenant can starve every other tenant.
+- 403 `quotaExceeded` and 429 `usageLimits` are the failure modes; both require exponential backoff, which directly extends draft latency.
+
+Specific traps:
+
+1. **Cache key omits the time window.** A naive cache `freebusy:{calendarId}` returns yesterday's result for today's draft. Cache key must include normalized time window (e.g., `[start..end]` rounded to 15-min buckets).
+2. **Cache TTL too long.** TTL of 24h means a user who books a meeting via a different client (mobile Calendar app, Calendly directly) gets double-booked because Zero Mail's free/busy view is stale.
+3. **No coalescing across concurrent drafts.** Two simultaneous draft generations for the same tenant call `freebusy.query` twice for the same window. Without a per-(tenant, calendarId, window) singleflight gate, every concurrent request adds quota pressure.
+4. **Quota error fails the entire draft.** A 429 from `freebusy.query` aborts the draft instead of falling back to "Here are some times that work for me, [user]" without explicit slots — degrading gracefully should be the default.
+5. **`calendarExpansionMax` defaults blow up on multi-calendar users.** [Per the docs](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query), `calendarExpansionMax` is capped at 50 — but the team may not know this until a Workspace user with 80 calendars (team calendars + room resources) triggers a silent truncation.
+6. **`quotaUser` parameter not set.** Google distinguishes per-user quota via the `quotaUser` opaque string. If not set, the entire platform shares one bucket; one heavy tenant exhausts the platform.
+7. **AI retries amplify quota.** Spring AI agentic loop retries up to N times on tool errors. If the tool wraps `freebusy.query` and returns the raw 429, the LLM sees an error and may retry the tool — each retry costs another quota call.
 
 **Why it happens:**
-"Encryption at rest" is the part developers remember. The admin UI is where the key crosses **every** other boundary: HTTP request, response, browser memory, error reporter, log proxy, retry queue, dev seed, prod config, dev/prod parity drift.
+- Free/busy feels "lightweight" relative to a chat completion — devs forget it has its own quota.
+- Caching is added reactively after the first quota incident.
+- The "tool" abstraction in Spring AI hides retry semantics — the LLM-level retry is invisible to the call-site engineer.
 
 **How to avoid:**
 
-1. **Save endpoint never returns the saved key.** Contract: `PUT /admin/master-keys/{provider}` accepts `{ apiKey, reason }`, returns `{ provider, apiKeyMasked: "sk-...XYZ4", rotatedAt, rotatedByUserId, validatedAt }`. No plaintext in response, no plaintext in TanStack Query cache. Same as BYOK Pitfall 8.1.
-2. **Read endpoint returns mask only + metadata.** `GET /admin/master-keys` returns `[{ provider, apiKeyMasked, rotatedAt, rotatedByUserId, lastValidatedAt, currentlyEncrypted: true }]`. No "show me the key" flow exists. Replacement = full re-enter.
-3. **Test-connection endpoint:**
-   - Runs server-side only; never echoes the key back.
-   - Uses a dedicated HTTP client configured with `.proxy(NO_PROXY)` and explicit `.userAgent("zero-mail-admin-probe")` — never the shared logging-proxy client used for tenant traffic.
-   - **Rate-limited per admin user** (max 10 test-connection requests / hour / admin) to neutralize the validation-oracle attack.
-   - **Test-connection requires an "active edit session" token** — admin must first click "Edit master key" which mints a short-lived (5 min) edit session, and test-connection is bound to that session. Random "POST /admin/master-keys/openai/test" with arbitrary keys outside an edit session is rejected.
-   - Returns only `{ ok: boolean, latencyMs: int, providerErrorCode: "INVALID_KEY" | "RATE_LIMITED" | "NETWORK_ERROR" }` — never the provider's raw error message.
-4. **`@Sensitive` propagation.** Master keys typed as `Sensitive<String>` everywhere off the storage path. ArchUnit:
+1. **Two-tier cache: Redis + per-request memo.**
+   - L1: per-request `ConcurrentHashMap` keyed by `(calendarId, windowStart, windowEnd)` — caches inside one draft generation across all model retries.
+   - L2: Redis `freebusy:{tenantId}:{mailboxId}:{calendarId}:{bucket15min}` with TTL = 60s. Short enough that a sibling-app booking surfaces within a minute; long enough to coalesce burst.
+2. **Singleflight per `(tenantId, calendarId, bucket)`.** Use Redis `SETNX` or a per-JVM `ReentrantLock` keyed by the same tuple. Concurrent calls block on the first inflight call's result.
+3. **Always set `quotaUser`** to `sha256(tenantId + ":" + calendarId)`. Per-tenant quota isolation. ArchUnit rule: any call to the Calendar `Freebusy.query` builder MUST set `quotaUser` — caught via a wrapper class `CalendarApiClient` that is the only call site permitted, plus an ArchUnit rule confining Google Calendar SDK imports to that class.
+4. **Hard cap `calendarExpansionMax = 50`** in the wrapper + chunk requests for users with >50 calendars. Surface a UX warning when truncation would occur.
+5. **Quota-failure graceful degradation in `propose_meeting` AND in draft-reply.** On 429, return a placeholder list `[{ "slot": null, "reason": "free_busy_unavailable" }]` to the LLM; the LLM tool description includes "if free_busy_unavailable, propose ranges instead of fixed times." Draft completes with degraded content; user sees a banner "Schedule lookup paused — retry in N seconds."
+6. **Per-tenant outbound free/busy rate cap.** Token-bucket in Redis: max 60 free/busy calls / minute / tenant. Caps any one tenant from starving the project quota. Operator dashboard surfaces the top consumers.
+7. **Exponential backoff with jitter** for 429/403 retries, capped at 3 retries; never auto-retry inside the LLM tool — the tool returns degraded immediately and the LLM is told.
+
+**Warning signs:**
+- A direct `new Calendar.Builder(...).freebusy().query(...)` call exists outside the `CalendarApiClient` wrapper.
+- `quotaUser` is unset in any Calendar API call.
+- The cache key does not include time bucket.
+- LLM tool description doesn't document the "free_busy_unavailable" fallback path.
+- No per-tenant outbound free/busy rate cap in Redis.
+
+**Phase to own prevention:** **P2 (Free/busy + draft availability)** owns the wrapper, cache, singleflight, quotaUser convention, and rate cap. ArchUnit confinement test ships at P2 close.
+
+---
+
+### Pitfall 3: `drive.file` scope makes "Browse my Drive" UX impossible — surprise emerges only at integration time
+
+**What goes wrong:**
+The natural UX for auto-filing is "let users browse and pick a destination folder in their Drive." This is incompatible with `drive.file` semantics. Per [Google's official Picker docs](https://developers.google.com/workspace/add-ons/studio/drive-picker): *"Even if a user picks a folder with the Picker, the add-on can't read files that have not been created by the add-on. What it does allow is to determine whether the folder exists, and creating new files in that folder."*
+
+The trap concretely:
+
+1. **`/drive/files/list` returns empty** under `drive.file` because no files were created by Zero Mail yet. Engineer assumes a token bug; spends a day debugging OAuth.
+2. **"Suggest destination folder based on existing filing patterns"** — the v1.4 SPEC implies the AI suggests folders based on past filing. Past filing under `drive.file` is visible (Zero Mail created those files), so this works. But the FIRST-FILING case for a new tenant has zero history → AI has no destination to suggest → either we make user type folder name manually, or we Google Picker every time.
+3. **Folder enumeration `drive.files.list(q="mimeType='application/vnd.google-apps.folder'")`** returns empty too. Cannot offer "select from your existing folders" dropdown.
+4. **"Attachment source from a Drive folder"** rule action requires the rule to attach files the user picked into a folder. Under `drive.file` we can read files the user explicitly opened via Picker, but we can NOT scan a folder and grab "any file that landed there since last check." So a rule like "every time someone in marketing emails me, attach the latest deck from my /Sales/Decks folder" cannot work as a server-side scan; the user must Picker-open each file individually, which is high-friction.
+5. **Switching to `drive.readonly` or `drive` to unblock UX** is the worst escape hatch — see Pitfall 1 (CASA re-clock).
+6. **Picker session-token expiry mid-flow.** Picker requires an OAuth access token that expires in ~1 hour. If the user opens the auto-filing modal, walks away for lunch, comes back, picks a folder — the token is stale and the file creation fails with a confusing error.
+
+**Why it happens:**
+- Drive API mental model is "I have an OAuth token → I can browse Drive." `drive.file` deliberately breaks that — and the docs only mention this in passing.
+- The Drive Picker is named confusingly: "Picker" implies "pick anything you can see" but under `drive.file` you only see files your app created or files the user explicitly opens via Picker.
+- IZ's own implementation may inadvertently rely on `drive.file` files-it-created list — fine for them; if our UX diverges from theirs, the assumption silently breaks.
+
+**How to avoid:**
+
+1. **UX is built around Picker, not Browser.** Every "select destination folder" interaction is a Google Picker invocation. No `<Select>` dropdown of folders. No "Browse my Drive" tree. Design copy: "Choose a folder via Google Drive Picker" with a single button.
+2. **First-filing flow asks the user to pick destination, not the AI to suggest.** AI may suggest a folder NAME ("Receipts") but the user must Picker-open or Picker-create that folder. Once picked, the folder ID is stored in `drive_filing_destination` with `(tenant_id, mailbox_id, category)` — subsequent filings into that category go to the stored ID without re-prompting.
+3. **AI "suggest destination" uses ONLY Zero-Mail-created file history.** A `drive_filed_document` table records `(tenant_id, mailbox_id, gmail_message_id_hash, gmail_attachment_id_hash, drive_file_id, drive_folder_id, filed_at, category)`. AI input = "user's past filings: 90% of `invoice_*.pdf` went to folder ID X." No live Drive scan. Honors ARCH-02: no attachment content stored, only IDs/hashes.
+4. **Attachment-source rule = user-pre-picked file set, not folder scan.** UX: rule editor has a "Choose files to attach via Drive Picker" multi-select. Files are picked once at rule creation; the rule stores file IDs. Adding new files later = re-edit the rule. Trade-off explicitly documented in SPEC.md.
+5. **Picker token refresh.** Frontend re-mints the Picker token on modal open (not on Settings page load). If the user idles >50 minutes inside the modal, re-mint silently on Picker open.
+6. **`drive.file` semantic test in CI.** Integration test against a sandbox Google account: create a folder via Picker simulation → list folder contents via API → assert empty (proves our code does not depend on listing). Then create a file via our API → re-list → assert one file. Catches any developer who adds a "list files in folder" call expecting it to return Drive-wide results.
+7. **Explicit ADR (`docs/adr/drive-file-only.md`) documenting why this UX exists.** Future maintainer asking "why don't we just add `drive.readonly`" hits the answer: CASA Tier 2 re-clock + ARCH-02 alignment + IZ precedent.
+
+**Warning signs:**
+- A Drive API code path calls `files.list` without a `q` clause that pins to known file IDs.
+- The UX spec has a "Browse Drive" tree component.
+- An engineer files a bug "Drive returns empty — token broken?"
+- A spike adds `drive.readonly` to "unblock the folder picker."
+- Picker is invoked on page load instead of on modal-open.
+
+**Phase to own prevention:** **P6 (Drive OAuth + Picker)** owns the Picker-only UX contract, the ADR, the semantic CI test, the `drive_filing_destination` schema. **P7 (Auto-filing)** consumes the per-tenant history table. **P8 (Attachment source rules)** ships the "pick files once" UX with the trade-off documented.
+
+---
+
+### Pitfall 4: Public booking page is a bot/abuse magnet AND a calendar-DOS vector
+
+**What goes wrong:**
+A public, unauthenticated URL like `zeromail.app/book/jane-smith/30min` lets bots:
+
+1. **Enumerate slugs** by walking `/book/[a-z]+` until they find a real one — then spam the form.
+2. **Brute-force create events** on the host's calendar. Each successful POST writes a real Calendar event. A bot at 10 req/s creates 864,000 events/day — Calendar API write quota exhausted, host's calendar polluted with thousands of fake meetings, possibly Google Calendar account flagged for abuse.
+3. **Replay a successful booking** with different times/emails (the form's `submit` endpoint is idempotent only on slot+email match — varying email defeats idempotency).
+4. **Double-book** by racing two simultaneous bookings for the same slot. Without DB-level slot-locking, both writes succeed; host has overlapping events.
+5. **Probe slug existence** via timing differences — 404 vs 200 latency differs; bot enumerates slugs even with strict 404 responses.
+6. **Use the booking endpoint as a Calendar-event-spam tool against arbitrary hosts** by guessing real users' slugs and creating offensive event titles. Trust kill.
+7. **Send invites with adversarial attendee emails** (the form's "Your email" field) — Google sends invitation emails to whatever the bot puts in. Zero Mail's domain becomes an open invite-spam relay.
+8. **Bypass per-IP rate limits via residential proxy networks.** Calendly's "after 2-3 bookings/hour" CAPTCHA ([per Calendly community](https://community.calendly.com/how-do-i-40/adding-a-captcha-to-my-booking-page-2295)) is insufficient for a brand-new app whose abuse model isn't yet known.
+9. **Carbon-copy slug from a competitor's leaked sitemap.** If `/book/*` is crawlable, search engines index hosts' slugs publicly — anyone can spam any host.
+
+**Why it happens:**
+- "Calendly-style booking" is a well-known UX; the failure modes feel like Calendly's problem, not ours.
+- Public endpoints are not on Spring Security's authenticated chain; ScopedValue tenant context doesn't apply; per-tenant rate caps don't naturally bind.
+- The booking endpoint writes to Calendar (real external state) — abuse has long-tail blast radius.
+
+**How to avoid:**
+
+1. **Slug enumeration mitigation:**
+   - `/book/{slug}` returns identical timing + body for non-existent and existing slugs that have been disabled (`410 Gone` only after the slug is known via an authenticated probe). Slugs are user-chosen but minimum 12 chars OR random suffix (`/book/jane-smith-x7q9k`).
+   - `robots.txt` disallows `/book/*`. No sitemap entry.
+   - Response includes `X-Robots-Tag: noindex, nofollow`.
+2. **CAPTCHA on every submit, not just after N attempts.** hCaptcha or Cloudflare Turnstile (free tier, no Google dependency) — server-side verification on the booking POST. Failed verification returns 400 without any DB or Calendar write.
+3. **DB-locked slot uniqueness.** Schema: `booking_slot_reservation (booking_link_id, slot_start, slot_end, status, created_at)` with `UNIQUE (booking_link_id, slot_start) WHERE status IN ('reserved', 'confirmed')`. Two concurrent bookings: one INSERT wins, the other gets `unique_violation` → 409 to client. Calendar API write happens AFTER the DB lock is held, inside the same transaction (compensating delete if Calendar fails).
+4. **Per-IP + per-slug + per-platform rate caps.** Redis token-bucket: `bookings_per_ip: 3/hour`, `bookings_per_slug: 10/hour`, `bookings_platform_wide: 1000/hour`. The platform-wide cap protects the project's Calendar API quota.
+5. **Per-host booking cap.** A booking link has `max_bookings_per_day` (default 20, user-configurable). Hard limit at the slot-reservation layer.
+6. **Invite-email throttle.** Per attendee email address (the form input), max 5 bookings to that email across the platform per day. Stops bot-driven invite spam to arbitrary targets.
+7. **Email validation:** RFC 5321/5322 + MX lookup + disposable-domain block-list. Bot using `random@gmail-fake.tld` gets 400.
+8. **Booking writes route through the OutboundSendGateway-equivalent.** A `BookingCalendarGateway` is the only path that calls `events.insert`. ArchUnit + grep confine it (mirrors v1.0 TRG-03 + v1.2 RACT-12 patterns). All booking events tagged with extended properties: `{private: {zeromail_booking_id: "..."}}` so support can identify Zero-Mail-created events vs user-created.
+9. **Idempotency-Key required on submit.** Frontend generates UUID, sends as `Idempotency-Key` header; Redis dedup window 24h. Replays no-op.
+10. **Audit:** every booking attempt (success/CAPTCHA fail/rate-limit/dup) writes an `booking_audit` row — append-only. Pattern mirrors `admin_audit_log` (per v1.2 Pitfall 6). Operator dashboard surfaces per-tenant booking abuse counts.
+11. **Slug rotation.** User can rotate a slug (invalidating the public URL) without losing the link config — protective response if abuse detected.
+12. **Booking page CSP + frame-ancestors.** `Content-Security-Policy: frame-ancestors 'none'` prevents clickjacking-driven bookings.
+
+**Warning signs:**
+- `/book/{slug}` has a different response shape for valid vs invalid slugs.
+- No CAPTCHA on the public submit.
+- Slot uniqueness enforced only in application code, not DB constraint.
+- Calendar `events.insert` called from a controller directly, not via a gateway.
+- Booking endpoint does not require an `Idempotency-Key` header.
+- No per-attendee-email rate cap.
+
+**Phase to own prevention:** **P3 (Booking pages)** owns slug semantics, slot-reservation schema, CAPTCHA wiring, `BookingCalendarGateway` + ArchUnit, idempotency, audit, rate caps. CI test: simulate 100 concurrent bookings for the same slot → assert exactly 1 success + 99 × 409.
+
+---
+
+### Pitfall 5: AI meeting brief contains extracted email content — silently breaks ARCH-02 if persistence/scope is wrong
+
+**What goes wrong:**
+The brief is generated by an agentic LLM loop that summarizes "guest context from past email history." The brief literally contains content **extracted from user email**. Where it lives, how long, and which DTO it crosses determines whether this is an ARCH-02 violation.
+
+The traps:
+
+1. **Brief saved to a `meeting_brief` table for the cron delivery window.** Even if "only for 24 hours" — this is persistent storage of email-content-derived output. ARCH-02 bans long-term storage; "24 hours" is long-term relative to the in-memory carve-out used for triage. Audit trail will show this is the same column family as banned bodies.
+2. **Brief delivered via the in-app digest channel** which reads from `daily_digest` table. The brief's content lands in `daily_digest.body_text` or similar — same problem.
+3. **Brief generation logs include the source emails.** The agentic loop iterates: "fetch past emails with this guest → summarize." Each tool call's args/returns may end up in DEBUG / TRACE logs if not properly scrubbed (LLM-09 logging ban applies but extends only to LLM prompts; tool call args may slip through).
+4. **Brief contains an LLM completion** — the entire output IS an LLM completion. v1.0 banned persistent LLM completion storage. The brief is a permitted exception, but only if its storage shape is explicit.
+5. **The "draft body carve-out" pattern (chat assistant draft body, per CLAUDE.md) is mis-applied as license for briefs.** The carve-out exists specifically because user-authored draft body is "user data" they review before send. A brief is NOT user-authored — it's LLM-extracted-from-email content. Wrong carve-out → wrong invariant.
+6. **Brief delivered via email (Resend) is fine** *if* the email is sent and not persisted as a row in our DB. But if Resend's "scheduled delivery" requires us to persist the body until send time, we hold extracted content for hours.
+7. **Brief generation runs as an agentic loop with tool access to `searchInbox`, `getMessage`, `getThread`.** Each tool call returns email bodies into the LLM context window. The body-content ban (CLAUDE.md ARCH-02) requires those outputs go through `ToolOutputSanitizer` and never persist into `chat_message.parts`. The brief loop must use the SAME sanitizer + the SAME in-memory-only short-cache pattern triage uses.
+
+**Why it happens:**
+- The product spec says "brief delivered by email + in-app digest" without specifying the storage envelope.
+- The "draft body carve-out" precedent feels like cover.
+- The agentic loop is new; nobody has wired the existing `ToolOutputSanitizer` into a non-chat-orchestrator call site.
+
+**How to avoid:**
+
+1. **Brief is rendered at delivery time from the same in-memory short-cache pattern used for triage.** No `meeting_brief.body` column. The cron job:
+   - Reads `meeting_brief_schedule (id, tenant_id, mailbox_id, calendar_event_id, scheduled_for, delivery_channels, status)`.
+   - At fire time, re-runs the agentic loop in-memory using the in-memory cache for body content.
+   - Streams the generated brief directly to (a) the Resend email send call, and (b) the in-app digest renderer.
+   - Persists only `{ generated_at, channels_delivered, model_used, token_count, success_flag }` — metadata. No body.
+2. **In-app delivery uses a `derived_view` pattern, not a stored row.** The "in-app digest channel" surfaces the brief by re-running the loop on user view (cached for 1h in Redis with `EX 3600`, keyed by event ID, value scrubbed of any PII via `@Sensitive` wrapper). After 1h it's regenerated. No DB row.
+3. **Resend delivery is fire-and-forget.** We POST the brief to Resend's send API; we do NOT use Resend's scheduled-send feature (which would require us to hold the body server-side until send time). The cron fires at brief-delivery time and sends synchronously.
+4. **ToolOutputSanitizer extended to the brief loop.** Same regex/ArchUnit pattern from chat orchestrator (per `feedback_draft_body_carve_out_no_defense` memory — but that "trust the Java gate" applies to chat draft body; here we need active sanitization because the brief is NOT user-authored). The brief loop uses `BriefOrchestrator` which sits next to `ChatOrchestrator` and reuses the sanitizer.
+5. **ArchUnit rule explicit on brief tables.** Any column matching `body|content|brief_text|summary|extracted` on any `meeting_brief*` table fails ArchUnit. Test: `MeetingBriefSchemaBanTest` reads `db.changelog/*` and asserts no banned column shape.
+6. **PROJECT.md addendum to "Privacy scope" carve-out.** Two explicit carve-outs: (a) chat assistant **draft body** = user-authored, persistable; (b) meeting brief = extracted-email-content, in-memory-only at delivery, **NOT** persistable. Three sources now (chat draft, brief, triage) each with their own envelope explicitly enumerated.
+7. **Logging ban on tool args inside the brief loop.** The `BriefOrchestrator` configures a per-thread MDC scrub that redacts `searchInbox`/`getMessage` tool args + returns at DEBUG/TRACE/INFO. Validated by a structured-log test that runs the loop with sentinel content and grep-asserts the sentinel never appears in test logs.
+8. **No web-search-tool persistence either.** If the brief loop has optional web search, the web results may include PII matched from email. Those results pass through the same scrubber and are not persisted.
+
+**Warning signs:**
+- A Liquibase changeset creates `meeting_brief.body_text` / `meeting_brief.summary` / `meeting_brief.content`.
+- The brief is generated at schedule time (hours before delivery) instead of at delivery time.
+- The cron job persists the rendered brief to send later.
+- `BriefOrchestrator` does not extend `ToolOutputSanitizer`.
+- The brief loop's tool calls are visible in INFO-level logs.
+- A developer cites "the chat draft body carve-out" to justify storing a brief.
+
+**Phase to own prevention:** **P4 (AI meeting briefs)** owns the in-memory envelope contract, the `BriefOrchestrator`, the ArchUnit schema ban, and the PROJECT.md carve-out addendum. PROJECT.md update lands in the SAME PR as the first brief code.
+
+---
+
+### Pitfall 6: Drive attachment streaming OOMs the JVM at scale
+
+**What goes wrong:**
+The auto-filing pipeline: Gmail attachment download → AI summarization (or content type detection) → Drive upload. Each attachment is `≤25MB` per Gmail attachment cap, but the worker JVM hosts the entire `backend/worker` for the platform. Failure modes:
+
+1. **`InputStream` to `byte[]` materialization.** `gmailAttachmentResponse.getBody().getData()` returns the base64 string; naive decode into `byte[]` holds 25MB per attachment in heap. Ten concurrent filings = 250MB; concurrent triage + chat + queue work + filing = OOM.
+2. **AI summarization reads entire byte array into model context.** Even though Spring AI rejects 25MB into a prompt, the engineer may add a "summarize the document" step that PDF-extracts text first — PDF text extraction (e.g., PDFBox) allocates document-size structures.
+3. **GC pauses spike under burst.** A burst of 50 large attachments → 1.25GB transient allocation → G1 mixed GC pauses spike to seconds. Triage latency P99 explodes; Pub/Sub push retries fire (Google retries after 30s by default), creating duplicate processing.
+4. **No bounded executor for filing.** Filing tasks share the worker thread pool with triage. A filing burst starves triage.
+5. **Drive resumable upload not used.** Drive supports resumable uploads (`uploadType=resumable`) for >5MB; single-shot uploads (`uploadType=multipart`) hold the whole body for upload + retry — doubling memory.
+6. **`MultipartFile.transferTo` to a temp file** uses disk — fine — but the same engineer also reads the file back in to "hand to AI" or "verify hash" — heap pressure returns.
+7. **In-flight stream not closed on cancellation.** User disconnects mid-filing; the Gmail input stream stays open until GC; quota leak + socket leak.
+8. **JVM heap headroom on a single VPS is shared with `backend/api` + Postgres + Redis + Next.js.** A 4GB VPS with 1.5GB allocated to worker JVM can OOM at 60 concurrent 25MB filings.
+
+**Why it happens:**
+- The "stream from Gmail → stream to Drive" model is natural in theory, but the AI-in-the-middle step forces materialization in practice.
+- Test environments use small attachments; OOM only manifests at production scale.
+- Single-VPS deployment shares heap with everything.
+
+**How to avoid:**
+
+1. **Streaming pipe pattern, no full materialization.**
+   - Gmail download: use `MediaHttpDownloader` with a `PipedOutputStream` → drain to a temp file on disk in chunked 256KB writes. NEVER `getBytes()` into a `byte[]`.
+   - AI step: process the temp file via streaming readers (PDF text via PDFBox `PDFTextStripper.writeText(Writer)`, images via metadata-only sniff for size/MIME). Output is a small summary (KB), not the file.
+   - Drive upload: read the temp file via `FileInputStream` + Drive's `uploadType=resumable` with 256KB chunks.
+   - Temp file lives in a bounded directory (`/tmp/zeromail-filing/`) with a janitor that deletes files >1h old.
+2. **Bounded filing executor.** Dedicated `Executor` with `maxConcurrent = 4` (configurable). Filing tasks queue separately from triage; backpressure on the Postgres outbox table.
+3. **Per-attachment size cap with degraded path.** If size >10MB, skip AI summarization, just file with filename-based categorization. UX informs: "Large attachment — filed by name; AI category skipped."
+4. **Heap budget assertion at startup.** A `HeapBudgetCheck` runs on `ApplicationStartedEvent`: reads `-Xmx` and asserts `worker.filing.maxConcurrent * worker.filing.maxAttachmentSizeMB * 4 < heapMax * 0.3`. Fails loud if config implies > 30% of heap can be held by filing.
+5. **Resumable upload required on Drive side.** ArchUnit + grep: any Drive `Files.Create` call must set `uploadType=resumable`. Catch via wrapper `DriveApiClient.uploadFile(...)` that's the only call site.
+6. **InputStream lifecycle linted.** `try-with-resources` mandatory for any `InputStream` from Gmail/Drive — verified via SpotBugs/SonarQube/checker-framework rule.
+7. **Cancellation propagation.** Filing job carries a `CancellationToken`; periodic checks abort the download/upload and close streams.
+8. **JVM tuning:** `-XX:+UseG1GC` with `-XX:MaxGCPauseMillis=200`, `-XX:+ExitOnOutOfMemoryError` (fail-fast over OOM-spinning). Single VPS uses container memory limits to fence the worker.
+9. **Load test in CI.** Synthetic test enqueues 50 × 10MB attachments and asserts no OOM, no >500ms GC pause, no temp file leaks after completion.
+
+**Warning signs:**
+- A code path calls `attachment.getData()` and stores in a local `byte[]`.
+- The filing executor is the shared worker pool.
+- Drive upload code does not set `uploadType=resumable`.
+- A try block opens a stream without try-with-resources.
+- No bounded `/tmp/zeromail-filing/` janitor.
+- No load test for concurrent filing.
+
+**Phase to own prevention:** **P7 (AI document auto-filing)** owns the streaming pipe, bounded executor, heap budget check, ArchUnit `DriveApiClient` confinement, load test.
+
+---
+
+### Pitfall 7: AI agentic loop runaway — surprise BYOK bill or platform credit drain on meeting briefs
+
+**What goes wrong:**
+IZ's reference meeting-brief loop allows up to ~15 tool-calling iterations. Without budget caps:
+
+1. **BYOK user gets a $50 brief.** A 15-step loop with web search + multiple inbox searches across a chatty inbox can cost $1-$5 per brief on a frontier model. Multiply by N briefs/day. User opens their OpenAI bill, sees a $200 surprise charge, refunds, churns.
+2. **Platform credits drain on default-model users.** Per-tenant daily LLM spend cap (LLM-10, shipped v1.0) caps total spend but does NOT cap per-brief — one runaway brief consumes the day's cap, blocking all other briefs/triage/chat.
+3. **Loop never converges on adversarial inputs.** A guest with weird historical email content triggers the model to keep "researching one more thing" — 15 iterations of `searchInbox` returning empty results, costing tokens for each step.
+4. **Tool error → retry → repeat indefinitely.** Without an iteration cap or error-budget cap, a flaky `searchInbox` causes the LLM to retry; tool error returns count against iteration budget but are not visible as "cost."
+5. **Web search adds variable third-party cost.** If the brief loop uses Serper/Bing/Tavily for "research the guest," each web search is metered separately AND adds prompt tokens to the next iteration.
+6. **Streaming-mode loop doesn't enforce caps until completion.** Token caps need pre-call estimation + post-call settlement; streaming makes pre-call estimation harder.
+7. **Cost-cap exception swallowed.** `BUDGET_EXHAUSTED` thrown mid-loop is caught by a generic `Exception` handler that retries → infinite loop within the cap-exhausted state.
+
+**Why it happens:**
+- "AI agentic loop" is the feature; "with caps" is the engineering job that comes second.
+- Spring AI 2.0 unified the tool-execution loop ([per RC1 notes](https://spring.io/blog/2026/06/06/spring-ai-2-0-0-RC1-available-now/)), making iteration-cap configuration a single config point — but only if the team actually configures it.
+- BYOK bypasses platform credit ledger; cap responsibility flips to the user but no user-side guardrail exists.
+
+**How to avoid:**
+
+1. **Per-brief hard caps in three dimensions:**
+   - `MAX_ITERATIONS = 8` (cut from IZ's 15 by 40% — empirical default, tunable per tenant later).
+   - `MAX_INPUT_TOKENS_PER_BRIEF = 60_000` (sum across all loop iterations).
+   - `MAX_OUTPUT_TOKENS_PER_BRIEF = 4_000`.
+   - `MAX_WALL_CLOCK_SECONDS = 90`.
+   First cap hit → loop terminates with `BriefTruncated{reason}` outcome; brief delivered with "Best-effort summary — analysis depth limited" footer.
+2. **Per-tenant per-day brief cost cap separate from LLM cap.** `meeting_brief_daily_spend_cap_credits` (default 50 credits/tenant/day). Brief gen reserves cap-bytes upfront; insufficient → degrade to non-AI brief (just calendar event metadata + last 1 email subject).
+3. **BYOK cost preview.** Before generating a brief on BYOK, show "Estimated cost: $0.12 - $0.40 — confirm" in the in-app digest preview. User explicitly opts in to first brief; subsequent briefs auto-approve up to a user-set per-day BYOK budget. Tenant setting: `byok_brief_daily_usd_cap` (default $5).
+4. **Configure Spring AI 2.0 `ToolCallingManager` iteration cap** explicitly:
    ```java
-   noClasses().that().resideInAPackage("..admin.masterkey..")
-     .should().callMethodWhere(target ->
-       "format".equals(target.getName())
-       || "toString".equals(target.getName())
-       || "info".equals(target.getName()) || "debug".equals(target.getName()) || "warn".equals(target.getName()) || "error".equals(target.getName()))
-     .andShould().haveRawParameterTypes(thatIncludeASensitiveField())
-     .because("Master keys must not be formatted into strings or log messages.");
+   ToolCallingManager.builder()
+       .maxIterations(8)
+       .build();
    ```
-5. **Per-provider ChatModel cache eviction on master-key rotation.** A `MASTER_KEY_ROTATED` Spring Modulith event fires from `MasterKeyService.rotate(...)` after commit. The LLM gateway adapter handles the event by evicting **every** cached ChatModel for that provider across **every** tenant (not just one) — because the cached client may have been instantiated with the old master key for any tenant currently on the platform default. Pseudocode:
-   ```java
-   @ApplicationModuleListener
-   void onMasterKeyRotated(MasterKeyRotatedEvent event) {
-       chatModelCache.evictAllForProvider(event.provider());
-       meterRegistry.counter("master_key.cache_eviction", "provider", event.provider().name()).increment();
-   }
-   ```
-6. **Master-key never lives in `application.yml`.** Reads only from an opaque KMS / Vault / env-var-backed `MasterKeyVault` SPI. Dev profile uses a `StubMasterKeyVault` that throws `IllegalStateException("dev profile has no master key for provider X; use BYOK or fail loudly")` unless a developer explicitly sets `ZEROMAIL_DEV_MASTER_KEY_OPENAI=...` in their **local shell** — never in any checked-in file. An ArchUnit + grep test fails the build if `application*.yml` contains any string matching `sk-[a-zA-Z0-9_-]{20,}` or `AIza[a-zA-Z0-9_-]{35}`.
-7. **Liquibase: no master-key seed exists.** A test asserts no Liquibase changeset INSERTs into `master_key_credential`. The only way a row appears is via `PUT /admin/master-keys/{provider}` through the live admin API.
-8. **Error-response sanitization.** A `ProviderErrorTranslator` strips the provider's raw error body and maps to enum codes. Test: a forced provider 401 response with body `{"error":"invalid api key sk-real-key-12345"}` results in an admin-API response containing **none** of the original error body — only the enum code.
-9. **Constant-time comparison only where the key is used to authenticate** (currently nowhere in master-key flow because keys are sent outbound to the provider, not used to authenticate inbound; defer until use-case appears, document the rule).
-10. **CSP + frame-ancestors enforced on `/admin/*`.** `Content-Security-Policy: frame-ancestors 'none'; default-src 'self'; ...`. Verify via Playwright test.
-11. **Sentinel-leak test extended for master keys.** Set master key for OpenAI = `sk-MASTER-SENTINEL-NEVER-LOG-99999`. Run save → test-connection → tenant triage (which routes through the master key by default) → admin list → rotation → logout. The sentinel must appear **only** in `master_key_credential.api_key_cipher` (encrypted) — not in app logs, access logs, HTTP responses, Redis dumps, JFR recordings, Playwright HAR captures, error-reporter snapshots, or `pg_dump | grep`.
+   ArchUnit asserts the `BriefOrchestrator`'s `ToolCallingManager` instance is constructed with explicit caps.
+5. **Loop telemetry.** Each brief generation emits Micrometer metrics: `brief.iterations`, `brief.input_tokens`, `brief.output_tokens`, `brief.wall_clock_ms`, `brief.cost_credits`, `brief.outcome (success|truncated|error)`. Operator dashboard alerts on P99 iterations > 6 (regression signal).
+6. **`BUDGET_EXHAUSTED` is a typed exception** that propagates through the loop without retry; caught only by the brief-job outermost handler which writes a structured audit row.
+7. **Web search is opt-in per tenant**, default OFF for v1.4. Reduces variability and third-party cost surprise.
+8. **Tool error budget.** A separate counter `tool_errors_per_brief`; >3 → loop terminates with truncated outcome. Stops the "flaky tool → infinite retry" trap.
 
 **Warning signs:**
-- `PUT /admin/master-keys` response includes `apiKey`, even briefly.
-- A controller / service does `String.format(... key ...)` anywhere in `admin.masterkey.*`.
-- Master-key rotation does not emit a `MASTER_KEY_ROTATED` event.
-- Test suite has no master-key sentinel test.
-- Frontend `admin-master-key-api.ts` returns a typed `apiKey: string` field.
-- Test-connection endpoint is reachable without an edit-session token, with no rate limit, and proxies provider error bodies verbatim.
-- `application*.yml` grep for `sk-` / `AIza` matches anywhere.
-- Liquibase changesets INSERT into `master_key_credential`.
+- `BriefOrchestrator` does not set `maxIterations` on `ToolCallingManager`.
+- No per-brief token cap.
+- BYOK briefs auto-fire without user preview.
+- A test forces a flaky `searchInbox` and the loop doesn't terminate.
+- No Micrometer metrics for brief loop.
 
-**Phase to address:** **Phase 8 / sub-phase 8B — Master-key management**, gated behind 8A admin foundation. The sentinel-leak test runs in CI before any master-key endpoint is wired into the frontend.
+**Phase to own prevention:** **P4 (AI meeting briefs)** owns all caps, Micrometer metrics, BYOK preview UX, ArchUnit test on `ToolCallingManager` builder.
 
 ---
 
-### Pitfall 3: ROLE_ADMIN session reused for self-service user actions (no role pivot)
+### Pitfall 8: Spring AI 2.0.0 GA migration churn breaks tool-call streaming the v1.3 chat already exercised
 
 **What goes wrong:**
-The founder admin opens `/admin` to inspect a problem tenant. The admin session cookie is the same cookie used for the **user-facing app**. The admin browses to `/rules` mid-session and creates a rule on their own tenant. Without explicit role pivoting:
+v1.3 uses Spring AI 2.0.0-M6. v1.4 brings new agentic-loop work (brief generation, `propose_meeting` tool). CLAUDE.md says "Spring AI 2.0.0 GA on 2026-06-12." Per [Spring AI 2.0.0-RC1 blog](https://spring.io/blog/2026/06/06/spring-ai-2-0-0-RC1-available-now/) and [Upgrade Notes](https://docs.spring.io/spring-ai/reference/upgrade-notes.html):
 
-1. **Admin permissions silently apply to user-facing endpoints.** A bug in `/rules` route handler that filters by `TenantContext.currentOrThrow()` is fine for users, but if a developer "helpfully" adds a fallback `if admin: skip tenant filter` to handle the admin's own inspection, the route now reads any tenant's rules when accessed by an admin. The admin clicks "Save Rule" while looking at tenant X's rule — the rule is saved against the admin's own account, or worse, against tenant X (depending on the bug shape).
-2. **Audit log conflates admin and user actions.** The same user (`admin@zeromail.local`) creates a rule. Did the admin create it as a user, or did the admin escalate to admin and use a cross-tenant write? The audit log can't distinguish without an explicit pivot.
-3. **CSRF / clickjacking blast radius is doubled.** An admin who is also logged into the user app has a cookie that — if leaked — grants both surfaces. An attacker who CSRFs the admin while they browse a malicious page gets admin-level reach.
-4. **The admin's own user data is harder to debug** — when supporting their own account, the admin can't reproduce what a normal user sees because their session is admin.
+1. **Built-in call/stream tool-execution loop dropped from `ChatModel`.** RC1 (and presumably GA) removed the in-`ChatModel` tool loop; consumers must use `ChatClient` + `ToolCallingAdvisor` or build their own `DefaultToolCallingManager` loop. v1.3 code that did `chatModel.call(prompt)` with embedded tools **silently stops looping** — the model emits a tool-call message and execution stops. Chat assistant breaks mid-conversation; brief loop never iterates.
+2. **`PromptChatMemoryAdvisor` deprecated** (per M6 notes); migration to advisors that require explicit conversation IDs. v1.3 chat may rely on implicit memory scoping; the migration replaces it.
+3. **MCP annotation package renames + transport artifact relocations** (per M3 notes already in place). If v1.4 adds MCP-based tools (unlikely but possible), the import paths differ from M6.
+4. **Jackson 2 → Jackson 3** migration was in M3 already, but v1.3 may have stale `com.fasterxml.jackson.*` imports that survived; GA may enforce more strictly.
+5. **`ToolContext` no longer carries conversation history.** Tools that read conversation context via `ToolContext` (some v1.3 tools may) return null.
+6. **OpenRouter adapter behavior may have changed** for the OpenAI-compatible base-url pattern; tool JSON schema strictness may have tightened (no-arg tools need `properties: {}` per CLAUDE.md memory).
+7. **Streaming `StreamingChatModel.stream(...)` signature/return type** may have shifted; v1.3 chat assistant uses streaming heavily.
+8. **Anthropic/Google adapters auto-import behavior** may change with GA; provider-specific BYOK derivation in `core.llm.gateway.springai` may need rewrites.
 
 **Why it happens:**
-- Spring Security default is "one authentication, all granted authorities." Splitting into a "user session" and an "admin session" requires explicit design.
-- The founder is **also** a normal Zero Mail user (they have their own Gmail connected to their own account). The path of least resistance is one cookie, one session.
+- The team's libs.versions.toml may have already been bumped from M6 to GA at v1.4 start, OR may still be M6 — both states are dangerous (M6 will be deprecated; GA forces migration).
+- "GA = stable" feels reassuring but masks 6+ months of breaking changes since M6.
+- Tool-execution loop change is the highest-impact: silent behavior change, not a compile error.
 
 **How to avoid:**
 
-1. **Two distinct session cookies, two distinct mount points.**
-   - User app: `apps/web` mounts at `/`, cookie `zm_session`, scope `Path=/; Domain=app.zero-mail.invalid`.
-   - Admin app: `apps/web` admin routes mount at `/admin`, cookie `zm_admin_session`, scope `Path=/admin; Domain=app.zero-mail.invalid` (or on a separate subdomain `admin.zero-mail.invalid` if reverse proxy supports it).
-   - Logging in as admin requires a **second** OAuth round-trip from `/admin/login` even if the user is already authenticated on `/`.
-   - The user session does not carry admin authorities; the admin session does not carry tenant authorities for the admin's own tenant. To act on their own tenant the admin signs into `/` separately.
-2. **`@AdminEndpoint` annotation enforces `zm_admin_session` cookie**, not `zm_session`. A separate Spring Security filter chain validates each.
-3. **Audit log records the session cookie type** in every entry: `admin_audit_log.session_type = 'admin'`. Cross-checking shows whether a given action happened via admin escalation or as a user.
-4. **CSP frame-ancestors + SameSite=Strict on the admin cookie**, vs `SameSite=Lax` on the user cookie. Admin actions cannot be triggered from any cross-site context.
-5. **Auto-logout on admin session.** The admin session has a much shorter idle timeout (e.g., 30 min) than the user session (24 hours).
-6. **Admin login displays an unambiguous banner.** `/admin/*` pages render a persistent red/yellow chrome bar "ADMIN MODE — actions affect all tenants" so the admin never confuses admin context with user context.
-7. **Architectural test: every admin controller asserts `AdminContext.currentOrThrow()`** as the first statement; ArchUnit enforces. No admin controller may invoke `TenantContext.currentOrThrow()` directly — cross-tenant reads route through `AdminTenantAccess`.
+1. **Phase 0 / v1.4 entry task: Spring AI version bump + migration audit.** Before any v1.4 feature work:
+   - Bump `libs.versions.toml` from `2.0.0-M6` to `2.0.0` GA.
+   - Run full test suite; ArchUnit boundary tests on LLM adapter package.
+   - Read [Upgrade Notes](https://docs.spring.io/spring-ai/reference/upgrade-notes.html) end-to-end; check off each breaking change against current code.
+   - Convert any `chatModel.call()` with embedded tools to `ChatClient.builder().defaultAdvisors(toolCallingAdvisor).build().prompt(...)`.
+2. **Re-verify chat tool streaming on real OpenRouter route** as a smoke test. v1.3 had a real-streaming requirement (CLAUDE.md "no non-streaming fallback for chat assistant model calls").
+3. **Explicit `ToolCallingManager` construction in `BriefOrchestrator` + `ChatOrchestrator` + `RuleProposeMeetingExecutor`.** No reliance on in-`ChatModel` loop. Single shared factory `ZeroMailToolCallingManagerFactory` configures iteration cap + retry + error-budget consistently across surfaces.
+4. **Provider-shape contract tests.** Per provider + per BYOK adapter, a `@Tag("llm-eval")` smoke test issues a no-arg tool call and asserts the tool fires + result returns. Catches the `properties: {}` JSON schema regression (CLAUDE.md memory).
+5. **Conversation memory advisor explicit conversation ID.** Migrate v1.3 chat memory wiring to explicit conversation ID = `chat_session.id`. ArchUnit asserts no `PromptChatMemoryAdvisor` import.
+6. **Jackson import sweep.** Grep `apply plugin: spring-boot` modules for `com.fasterxml.jackson.databind` / `com.fasterxml.jackson.core` — flag any still-present. Per CLAUDE.md memory: `jackson-annotations` stays at old package, databind/core moved to `tools.jackson.*`.
+7. **`ToolContext` audit.** Grep all `ToolContext` reads; document expected fields; rewrite any that read conversation history.
+8. **Run M6 → GA diff in a CI job that fails on dependency-tree change.** `./gradlew dependencyInsight --dependency=org.springframework.ai:spring-ai-bom` artifact in CI logs; reviewed in PR.
 
 **Warning signs:**
-- Admin endpoints use the same `zm_session` cookie as the user app.
-- A user-facing endpoint contains `if (isAdmin) { skip tenant filter }`.
-- Audit log has no `session_type` field.
-- Admin login is "automatic" when an admin user authenticates at `/login`.
-- Admin pages don't visually differ from user pages.
+- libs.versions.toml still pins `2.0.0-M6` at v1.4 phase 1 close.
+- A `chatModel.call(prompt)` call exists where the prompt has tool definitions but no `ChatClient` wrapping.
+- `PromptChatMemoryAdvisor` import in any v1.3 chat code.
+- A no-arg tool's schema doesn't include `properties: {}`.
+- Chat assistant streams successfully but tools never execute on OpenRouter route.
+- Brief loop "completes" in one iteration with no tool calls.
 
-**Phase to address:** **Phase 8 / sub-phase 8A — Admin foundation**, alongside `AdminContext`. Two-cookie + two-filter-chain setup must land with the first admin endpoint.
+**Phase to own prevention:** **P0 / Phase Zero (Spring AI 2.0 GA migration)** — a stub phase before P1 to do the bump + migration audit. P4 (brief) and P5 (propose_meeting rule) inherit the validated `ToolCallingManager` factory.
 
 ---
 
-### Pitfall 4: Tenant read-only "convenience" view leaks email body / completion content the v1.0/v1.1 privacy contract forbids
+### Pitfall 9: Multi-Gmail × workspace-shared Calendar cross-account leak
 
 **What goes wrong:**
-The admin console needs **tenant inspection** to support users — "tenant X reports triage misbehaving, let me see what their last 20 messages were classified as." The well-meaning implementation:
+v1.3 shipped multi-Gmail per workspace. v1.4 adds multi-Google-Calendar. The ownership boundary needs explicit design:
 
-1. Admin opens `/admin/tenants/{id}/triage-history` — backend reads `triage_action_audit` rows + joins to `gmail_message_metadata` for subject / sender — this is correct (metadata-only).
-2. Admin clicks a row to "see what the AI did" — backend goes one further and calls Gmail API on behalf of the tenant (using the tenant's stored OAuth refresh token) to fetch the **live body** for "context."
-3. Backend returns the body to the admin UI, which renders it.
+- **Are Calendar connections workspace-shared (one set of calendars used across all mailboxes) OR mailbox-isolated (each Gmail has its own Calendar set)?**
 
-The privacy contract — "no long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings" — is **technically** preserved because the body is fetched live, not stored. **But the trust contract is broken**:
+If wrong, the leak modes are real:
 
-- The body **transits the admin's browser**, ends up in browser memory, possibly in the admin's session HAR / Playwright recordings / error reporter snapshots.
-- Admin nginx access logs may capture the response body if the proxy is configured for diagnostic mode.
-- The admin's "tenant inspection" capability now silently includes "read any tenant's email content" — a privilege the v1.0 trust posture explicitly forbade in PROJECT.md ("the AI has write access; the human operator does NOT have read access to bodies").
-- Compliance / CASA / data-retention story is silently inconsistent: "we don't store bodies" but "any admin can read any user's body on demand." The trust story is "we can't see your mail" — the admin endpoint contradicts it.
-- **Tenant OAuth tokens are misused.** Using the tenant's refresh token to make a Gmail call **driven by an admin click**, not by the tenant, violates the OAuth grant: the user authorized Zero Mail to access their mail for triage on their behalf, not for support inspection.
+1. **Free/busy from Google account A used in draft reply from Gmail mailbox B.** User connects Gmail-A (personal) + Gmail-B (work) + Calendar-A (personal). Drafting a reply on Gmail-B uses Calendar-A's free/busy — leaks personal availability into work emails. User intent: "use only work calendar for work emails."
+2. **`propose_meeting` rule on Gmail-B writes an event to Calendar-A.** Personal calendar fills with work meetings without user consent.
+3. **Booking page tied to Calendar-A but linked from Gmail-B sender signature.** Visitor books on personal calendar.
+4. **Brief generation pulls history across both Gmails for a meeting on Calendar-A.** Work meeting brief includes personal email context.
+5. **`MailboxContext` ScopedValue (v1.3) carries `gmail_connection_id` but no `calendar_connection_id`.** Calendar code paths must either bind their own scoped value OR consult a per-mailbox calendar preference. Without explicit binding, the default-active-calendar wins — wrong tenant intent.
 
-A worse variant: the admin "convenience" endpoint also exposes the **last LLM prompt + completion** for that triage action, fetched from in-memory cache or reconstructed from logs. Now the privacy contract is broken twice — bodies AND prompts AND completions visible to the admin.
+The v1.4 SPEC says Calendar is per-workspace, not per-mailbox. That's a coherent default but exposes the user to leaks (1)–(4) unless per-mailbox override is supported.
 
 **Why it happens:**
-- Customer support tooling for triage SaaS naturally wants to see "what the AI saw." The privacy invariant fights this.
-- v1.0's `LlmRepositoryContentBanTest` proves no **column** stores bodies; it does not prove no **endpoint response** contains bodies.
-- The line between "metadata read" and "body read" is not architecturally enforced — both go through the same `GmailClient`.
+- "Workspace-shared" feels simpler than "per-mailbox" — Calendar is "one user, one schedule" semantically.
+- The leak mode requires the user to have **mixed personal + work** accounts, which is the actual target persona.
+- `MailboxContext` is the v1.3 isolation primitive; extending it to Calendar wasn't designed.
 
 **How to avoid:**
 
-1. **Hard rule, written in PROJECT.md and Constraints:** "Admin endpoints MUST NOT return email body content, LLM prompts, LLM completions, or any content the privacy contract bans from long-term storage. The metadata-only triage history is sufficient for support; tenant body access is forbidden by design."
-
-2. **Two architectural enforcement layers:**
-
-   a) **ArchUnit `AdminPathBodyBanTest`.** Any class in `core.admin.*` or `api.controllers.admin.*` may NOT call any method on `GmailClient` that returns a body field (e.g., `gmailClient.getMessage(...)` returns `Message` which has `payload.body` — those methods are explicitly listed in a `BodyExposingGmailMethods` constant set, and ArchUnit forbids admin packages from calling them). Admin paths may only call `GmailClient.listMessageMetadata(...)` or other metadata-only methods.
-
-   b) **Response sanitizer `AdminResponseBodyBanFilter`.** A Spring `OncePerRequestFilter` on admin endpoints inspects every JSON response for fields named `body`, `bodyHtml`, `bodyText`, `payload`, `snippet`, `prompt`, `completion`, `content` longer than 200 chars. On match, log `event=admin_response_body_ban_triggered adminUserId=... endpoint=... fieldName=... contentLength=...` at WARN and **strip the field, replace with `{"truncatedForPrivacy": true}`**. This is the failsafe: even if ArchUnit is bypassed, the filter scrubs.
-
-3. **No admin endpoint may use a tenant's OAuth refresh token to call Gmail on the tenant's behalf** for support inspection. Tenant OAuth tokens are usable only for the original purposes the user consented to: triage, draft, send-via-chat. ArchUnit:
-   ```java
-   noClasses().that().resideInAPackage("..admin..")
-     .should().callMethodWhere(target ->
-       target.getOwner().getName().endsWith("GmailOAuthCredentialResolver"))
-     .because("Admin paths must not resolve tenant OAuth credentials.");
-   ```
-
-4. **What admin CAN see (allow-list):**
-   - Triage audit rows (`triage_action_audit`): which messageId, what action, what rule fired, when, undo state.
-   - Gmail message metadata as already cached in `gmail_message_metadata`: subject, from, date, threadId. No body, no snippet.
-   - Tenant's rule list (the rule itself is user-config, not email content).
-   - Tenant's chat session list — **but not chat message contents** (carve-out: chat messages contain user-typed config which is privacy-allowed, but admin viewing them is still a tenant-content boundary violation; default-deny, justify per surfaced support need).
-   - Spend per tenant (credit ledger).
-   - Connection health: last sync, last Pub/Sub message, scope status.
-
-5. **What admin explicitly CANNOT see:**
-   - Email bodies, ever.
-   - LLM prompts, completions, intermediate model outputs.
-   - BYOK keys (only mask + last-validated-at).
-   - Chat message text / tool outputs (privacy-allowed for the tenant, not for the admin without an explicit support ticket-bound grant; out of scope for v1.2).
-
-6. **Per-tenant data access audit.** Every admin endpoint that reads tenant data writes an `admin_audit_log` row with `target_tenant_id`, `operation`, `field_set_accessed`, `reason` (admin must supply a free-text reason on form submit). The tenant has a Settings page later (v1.3+) showing "admin accessed your data on date X for reason Y."
+1. **Explicit per-mailbox → calendar mapping.** Schema: `mailbox_calendar_preference (mailbox_id, calendar_connection_id, role)` where role ∈ {`primary_freebusy`, `event_write_target`, `brief_source`}. A mailbox has at most one mapping per role. Default at mailbox creation: mailbox's owning Google account → matching Calendar connection (if exists) → primary for all three roles.
+2. **`CalendarContext` ScopedValue.** Bound by a filter at request start, derived from `MailboxContext.currentOrThrow()` + `mailbox_calendar_preference` lookup. Calendar code paths read `CalendarContext.currentForRole(Role.FREEBUSY)`. No code path reads "the active Calendar" without going through this.
+3. **ArchUnit: `findAllCalendarsForTenant` ban** (parallel to v1.3 `findByTenantId` ban). Calendar repository methods that don't carry a mailbox / calendar_connection scope are forbidden in application code.
+4. **UX surface in Settings:** "Which calendar should mailbox X use for free/busy / event writes / meeting briefs?" Per-role selector. Default visible; explicit choice required if the user has more than one Calendar connected.
+5. **`propose_meeting` rule action carries a `calendar_connection_id`** — not derived at runtime. Rule editor surfaces the picker; rule clone via copy-rules (v1.3) prompts "this rule writes to Calendar-X; copy it to mailbox-B which uses Calendar-Y — keep target or re-pick?"
+6. **Booking link tied to a specific `calendar_connection_id` + a specific `gmail_connection_id`.** Stored explicitly; UI prevents implicit-default choice.
+7. **Cross-account isolation test extended** from v1.3's mailbox isolation: tenant connects (Gmail-A, Calendar-A) and (Gmail-B, Calendar-B); test asserts a draft on Gmail-B never reads Calendar-A free/busy unless the user explicitly mapped them.
+8. **Brief generation reads ONLY the brief-source Gmail mapped for the calendar that owns the meeting.** Brief for a Calendar-A meeting reads Gmail-A inbox; never cross.
 
 **Warning signs:**
-- An admin controller imports `GmailClient`.
-- An admin response DTO has a field named `body`, `bodyHtml`, `snippet`, `prompt`, `completion`.
-- A code review says "we need to show the admin what the email said for support."
-- The `AdminResponseBodyBanFilter` is not on the admin filter chain.
-- ArchUnit `AdminPathBodyBanTest` does not exist.
-- Admin can see chat message contents.
+- `mailbox_calendar_preference` table does not exist.
+- A draft-reply code path resolves "active calendar" without consulting the per-mailbox mapping.
+- `propose_meeting` rule executor reads "first connected calendar."
+- Booking link schema lacks `gmail_connection_id` and `calendar_connection_id` columns.
+- No ArchUnit ban on `findAllCalendarsForTenant`-shaped repository methods.
 
-**Phase to address:** **Phase 8 / sub-phase 8C — Tenant read-only views.** The ArchUnit ban + response filter + allow-list contract land **before** any tenant-inspection view is rendered. PROJECT.md policy entry logged in the same PR.
+**Phase to own prevention:** **P1 (Calendar OAuth + connection foundation)** owns the schema + `CalendarContext` + ArchUnit. P2/P3/P4/P5 each verify their feature respects the mapping.
 
 ---
 
-### Pitfall 5: Catalog Sync-from-`/models` is a supply-chain trust boundary that's invisible to the admin clicking "Sync"
+### Pitfall 10: Calendar enable/disable mid-flight invalidates a brief or draft generation
 
 **What goes wrong:**
-The admin clicks "Sync from /models" on the OpenAI catalog page. Backend calls `GET https://api.openai.com/v1/models` and updates `catalog_model` rows. The naïve implementation trusts:
 
-1. The provider's `/models` response JSON shape (fields, types).
-2. The model IDs returned (used directly as the foreign key on per-tenant model selection).
-3. The provider's claim that a returned model "exists" (no validation against actual chat-completion success).
-4. The transport (assumes TLS verification handles MITM).
-5. The provider's response is deterministic between syncs.
-
-The trap: each of these assumptions can be silently violated:
-
-1. **Schema drift.** OpenAI adds a new field `deprecated: true` on legacy models. Code that does `JsonNode.get("modelId").asText()` doesn't break, but `JsonNode.get("supportsToolUse").asBoolean()` on a missing field returns `false` and silently disables tool-calling for models that actually support it. Or worse: a typo in the provider's response (`modelid` lowercased) silently creates a separate catalog entry.
-2. **Adversarial model IDs.** A future provider may return a model ID like `../../../etc/passwd` or `<script>` or `gpt-4o';DROP TABLE catalog_model;--`. If the catalog UI renders the ID without escaping (likely — model IDs are "trusted strings"), stored XSS. If the catalog DB upsert uses string concatenation, SQL injection.
-3. **Ghost models / phantom additions.** Provider response includes a model ID that doesn't actually work for chat completion (e.g., `whisper-1` showing up under the chat-completion compatible list because the endpoint mixes use cases). Admin curates it, exposes it to users, users select it, runtime errors at completion time.
-4. **Sync removes models silently.** OpenAI deprecates `gpt-3.5-turbo-0613` overnight. Sync runs, the catalog removes the row. Every per-tenant `assistant_settings.preferred_model_id = gpt-3.5-turbo-0613` row now points at a non-existent FK. Worker chat completion fails for every affected tenant simultaneously.
-5. **Sync is irreversible.** Admin clicks "Sync" by accident at 3am, prod catalog state diverges from manually curated state, hours of curation lost.
-6. **No diff preview.** Admin clicks "Sync" and the catalog mutates in place. No "9 added, 2 removed, 4 changed — confirm?" dialog.
-7. **`/models` endpoint requires the master key.** If the master key is wrong / expired / rate-limited, sync errors. The error is shown to the admin including (possibly) the provider's raw error response containing key fragments.
-8. **Sync writes during normal user traffic.** Admin clicks sync; the catalog upsert holds locks on `catalog_model` that conflict with `SELECT ... FOR UPDATE` from a worker building a chat request → request latency spikes.
-9. **No per-feature curation in /models response.** The provider gives one flat list; the admin needs to mark which models are allowed for "chat assistant" vs "triage" vs "draft generation" — that's a Zero Mail editorial decision, not a provider one. Sync must not overwrite the per-feature toggles.
-10. **OpenRouter / DeepSeek / smaller providers vary wildly in `/models` shape.** A code path coded for OpenAI's response shape will misbehave on Anthropic's response (Anthropic doesn't even have a public `/models` endpoint — Spring AI's Anthropic adapter doesn't expose one; the admin must enter Anthropic models manually).
+1. **User disables a calendar while a brief is being generated.** Brief loop is mid-iteration when the user toggles `calendar_connection.status = 'DISABLED'`. Tool calls keep returning data from the disabled calendar; brief uses it; brief is delivered with data the user just said "stop using."
+2. **Reconnect after `invalid_grant` re-enables a calendar the user disabled.** OAuth reconnect endpoint sets `status = 'CONNECTED'` unconditionally; user's explicit "disable" intent is lost.
+3. **Free/busy cache holds disabled-calendar data.** Cache TTL is 60s (per Pitfall 2); for that minute, drafts use disabled-calendar availability.
+4. **Per-mailbox preference points at a disabled calendar.** `mailbox_calendar_preference.calendar_connection_id` → disabled connection. Code paths must handle this — drop to "no free/busy available" rather than fall back to a different calendar without consent.
+5. **Pub/Sub `users.watch` for Calendar continues firing after disable** because we forgot to call `events.stop` on the channel. Notifications accumulate; storage waste; potentially picked up by stale handlers.
+6. **`calendar_connection.status` flag has too many states.** `CONNECTED | DISCONNECTED | DISABLED | INVALID_GRANT | REVOKED | TEMPORARILY_PAUSED`... drift = state-machine bugs.
 
 **Why it happens:**
-- Provider docs make `/models` look like a trusted source — it's literally the provider telling you "these are our models." Developers don't treat it as untrusted input.
-- Schema validation is "boring" — gets skipped.
-- A "Sync" button is one click; the admin doesn't see the diff in advance.
+- Mid-flight cancellation is rarely tested.
+- The "reconnect after revoke" path is rare; the engineer assumes reconnect == enable.
+- Watch-channel cleanup is an "easy to forget" side effect.
 
 **How to avoid:**
 
-1. **Sync is a three-step flow, not one click.**
-   - **Step 1: Fetch + validate.** Backend calls `/models`, parses against a strict JSON Schema (per-provider — `openai-models-v1.schema.json`, `openrouter-models-v1.schema.json`, etc.). Unknown fields warn (logged at WARN with field name); missing required fields fail. Result: a `SyncDraft` row with the parsed result, no live mutation yet. SyncDraft has `created_at`, `provider`, `raw_response_hash`, `parsed_count`, `parse_warnings`.
-   - **Step 2: Diff + preview.** Admin sees a diff page: "9 new models will be added (list), 2 will be marked removed (list), 4 attribute changes (table)." Per-feature toggles (`allow_for_chat_assistant`, `allow_for_triage`, `allow_for_draft`) are preserved from the existing catalog row — sync only updates provider-derived fields.
-   - **Step 3: Confirm + commit.** Admin clicks "Apply diff." Sync writes happen inside a single transaction with `SELECT ... FOR UPDATE` on a small lock table, not the catalog itself, so user-traffic reads aren't blocked.
-
-2. **Strict per-provider response schemas.** A `ModelsResponseSchema` per provider, validated via `jakarta.json.bind` + json-schema-validator on every fetch. Unknown shapes reject the entire sync; never partial-apply.
-
-3. **Model ID validation.** Regex allow-list: `^[a-zA-Z0-9._:/\-]{1,128}$`. Reject anything else with a structured error. Add to the diff preview: "1 invalid model ID rejected — see audit log."
-
-4. **Soft-delete, never hard-delete.** Removed models in the provider's response → `catalog_model.deprecated_at = now()` + `deprecated_reason = "no longer in provider /models response"`. Tenants currently using a deprecated model keep working (FK still resolves) but the model is hidden from new selection in the Settings UI. Background email to affected tenants: "Model X has been deprecated; please select an alternative."
-
-5. **Per-feature curation is preserved by sync.**
-   ```sql
-   INSERT INTO catalog_model (provider, model_id, display_name, ...)
-   VALUES (?, ?, ?, ...)
-   ON CONFLICT (provider, model_id) DO UPDATE SET
-       display_name = EXCLUDED.display_name,
-       provider_metadata = EXCLUDED.provider_metadata,
-       last_synced_at = now()
-       -- explicitly DO NOT update: allow_for_chat_assistant, allow_for_triage, allow_for_draft, custom_display_order
-   ```
-
-6. **Diff preview is rendered server-side from the SyncDraft, escaped via the standard JSX/React XSS protection** — model IDs and display names always rendered as text content via React children, never via raw-HTML injection escape hatches.
-
-7. **Connection-test path reused for ghost models.** Before a model is enabled for any feature, admin must click "Test" on it — backend issues a minimal chat completion (e.g., "ping" → expect any non-empty response). Models that fail test stay disabled. This catches `/models` lying or schema mismatches.
-
-8. **Admin-supplied notes per model.** Admin can add a `editorial_note` per model (e.g., "Reasoning model — use for complex queries only"). Surfaced in the Settings UI dropdown subtitle. This is admin-only content, sanitized for HTML.
-
-9. **Anthropic / providers with no `/models` endpoint:** the catalog UI for these providers shows a "Manual entry" form. The admin types model IDs explicitly. Sync button is disabled for these providers. No fake `/models` call is fabricated.
-
-10. **Audit every catalog mutation.** `catalog_audit_log` table: `id, admin_user_id, provider, action (sync_applied | manual_create | manual_update | manual_delete | toggle_feature), diff_summary, applied_at`. Reversible — admin can click "Revert last sync" within 24h, which re-applies the previous state from `SyncDraft` history.
-
-11. **Provider response stored hashed, not verbatim.** The raw `/models` response can contain provider rate-limit data, account context that shouldn't be logged. Store `SHA-256(response_body)` + parsed-result summary; not the full JSON.
+1. **Tight state machine on `calendar_connection`.** Three states only: `ACTIVE`, `INACTIVE` (user disabled OR `invalid_grant`), `REVOKED` (cleanup target). All transitions logged with cause. `OrderedEnum`/`IdentifiedEnum` per CLAUDE.md.
+2. **Reconnect from `INACTIVE` does NOT auto-resume usage.** OAuth reconnect flips status to `ACTIVE` but requires explicit "re-enable for use" confirmation from the user (matching the trust-first pattern).
+3. **Cache invalidation on status transition.** `calendar_connection` status change fires `CALENDAR_CONNECTION_STATUS_CHANGED` Spring Modulith event; free/busy cache evicts all `freebusy:*:{calendarId}*` keys.
+4. **Brief loop and draft-reply re-check status before each tool call** (cheap Redis read of status enum). Mid-flight disable terminates the loop with `CalendarDisabledMidFlight` outcome; brief degrades.
+5. **Per-mailbox preference fallback contract.** If preferred calendar is `INACTIVE`, free/busy returns empty (with a UX banner "Free/busy paused for mailbox X — reconnect or change preference"). No silent fallback to another calendar.
+6. **`events.stop` on watch channel** when status flips to `INACTIVE` / `REVOKED`. ArchUnit + grep test: any `Channels.watch` call site has a corresponding cleanup path verified by a state-machine test.
+7. **CI integration test:** start brief gen, mid-loop set status to `INACTIVE`, assert loop terminates within 1 iteration + brief outcome is `CalendarDisabledMidFlight`.
 
 **Warning signs:**
-- Sync is a one-click action with no preview.
-- The sync code uses `JsonNode.get(...)` without schema validation.
-- Hard-deletes happen on the catalog.
-- No `editorial_note` / per-feature toggles preserved across sync.
-- Anthropic provider page has a `/models` Sync button.
-- Diff preview renders model IDs via any raw-HTML React escape hatch (the one explicitly forbidden by React for untrusted input).
-- No "ping completion" test before a model is enabled.
+- `calendar_connection.status` has >3 enum values.
+- Reconnect endpoint sets status unconditionally.
+- Brief loop does not re-check status per iteration.
+- No Modulith event on status change.
+- `events.stop` is missing from disable/revoke paths.
 
-**Phase to address:** **Phase 8 / sub-phase 8D — Catalog management + Sync flow.** Three-step flow + schema validation + audit + soft-delete land together. The Anthropic-no-sync rule is documented at the same time.
+**Phase to own prevention:** **P1 (Calendar OAuth foundation)** owns the state machine + status-change event. **P4 (briefs)** + **P2 (draft availability)** consume the status-check contract.
 
 ---
 
-### Pitfall 6: Admin audit log used as exfiltration channel OR admin can edit their own audit
+### Pitfall 11: Liquibase migration stacking on v1.3's big multi-mailbox migration
 
 **What goes wrong:**
-The admin audit log (`admin_audit_log`) is meant as the trust backstop: "what did the admin do, when, on which tenant, with what reason." Two failure modes:
+v1.3 just landed major schema shifts (multi-mailbox columns, FK redirects, `MailboxContext` binding tables). v1.4 adds ~10 new tables (calendar_connection, calendar, freebusy_cache_meta, booking_link, booking_slot_reservation, meeting_brief_schedule, drive_connection, drive_filing_destination, drive_filed_document, mailbox_calendar_preference). Failure modes:
 
-1. **Admin can edit / delete their own audit rows.** An admin who does something untoward (reads a tenant body via a forgotten endpoint, exports a key) deletes the audit row from `admin_audit_log` via raw SQL or a misguided "Cleanup" admin endpoint. The audit log is now unreliable; the trust backstop fails.
-2. **Audit log itself is an exfiltration channel.** Admin writes audit entries with a `reason` field they control. They embed sensitive data (an exfiltrated tenant body, a stolen key) inside the reason text. The audit log is **append-only** (good!) but is now the long-term storage of the very thing that's supposed to be banned. Worse: the audit log is exportable / queryable by other admins, so the exfiltrator can later "ask for the audit log" from any admin user.
-3. **Audit log writes inside the same transaction as the admin action.** If the admin action succeeds but the audit insert fails (DB hiccup, constraint violation), the action rolls back. Convenient for atomicity, but an admin could **deliberately** craft a `reason` that violates a constraint (e.g., overlong, contains a forbidden pattern) to make their action "untraceable" by ensuring the audit fails AND the action is silently rolled back AND nothing tells anyone they tried.
-4. **Audit log is silently swallowed on async paths.** If admin actions emit a Spring Modulith event for audit, and the listener fails after-commit, the action happened but no audit row exists. v1.0 uses Spring Modulith — the trap is real.
-5. **No tamper-evidence.** A DBA can write directly to `admin_audit_log`. Without per-row hashing or external write-ahead log, tampering is invisible.
+1. **FK ordering chaos.** v1.4 tables reference both `tenant_id` and `mailbox_id` (gmail_connection_id). If a changeset orders columns wrong, FK on a not-yet-created table fails on fresh-DB bootstrap.
+2. **Changesets edited after merge.** CLAUDE.md rule #10 (Liquibase discipline): applied changesets are immutable. The first developer accidentally edits a v1.4 changeset after staging deploy; checksum mismatch on prod deploy.
+3. **Rollback windows missing.** Each new changeset needs explicit rollback block. A late-cycle "we'll skip rollback for now" gets forgotten.
+4. **Calendar event_id stored as Postgres `TEXT` vs `VARCHAR(N)`.** Google event IDs can be long (up to 1024 chars per Google docs); a `VARCHAR(255)` cap silently truncates on insert (Postgres errors, but the engineer may default to TEXT — fine — or to a `varchar` with `varchar(255)` — wrong).
+5. **JSONB columns for free/busy snapshots or filing metadata without `jsonb_path_ops` index** → query performance regression as data grows.
+6. **Migration runs on prod with worker still draining a multi-mailbox migration backfill** from v1.3 → competing DDL locks → worker errors.
+7. **Seed data assumes v1.3 default-mailbox already backfilled.** If v1.4 ships before v1.3 backfill completes in any environment, seed crashes.
+8. **`mailbox_calendar_preference` UNIQUE constraint** on `(mailbox_id, role)` enforced by Postgres exclusion or unique index — choosing the wrong shape breaks the per-role default.
+9. **No `preCondition` on environment-sensitive changesets.** E.g., a changeset that backfills calendar preferences from existing mailboxes runs on a fresh dev DB with no mailboxes → silently no-op'd OR errors confusingly.
 
 **Why it happens:**
-- "Audit" is usually treated as a write-once table with no further design. Editability via SQL is "obviously bad" but never tested.
-- Free-text `reason` fields are tempting for flexibility.
-- Atomicity-via-same-transaction is a textbook pattern, but the failure-mode-as-feature isn't explored.
+- v1.3 just shipped; the team feels schema fatigue and rushes v1.4.
+- 10 new tables is a lot — review thoroughness drops.
+- Hot-path tables (free/busy cache, filing audit) need index discipline; defaults don't.
 
 **How to avoid:**
 
-1. **DB-level append-only enforcement.** A Postgres trigger:
-   ```sql
-   CREATE OR REPLACE FUNCTION admin_audit_log_no_update_no_delete() RETURNS trigger AS $$
-   BEGIN
-     RAISE EXCEPTION 'admin_audit_log is append-only';
-   END;
-   $$ LANGUAGE plpgsql;
-   CREATE TRIGGER admin_audit_log_no_update
-     BEFORE UPDATE OR DELETE ON admin_audit_log
-     FOR EACH ROW EXECUTE FUNCTION admin_audit_log_no_update_no_delete();
-   ```
-   Combined with: the application DB user has **no** `UPDATE` / `DELETE` privilege on the table (only `INSERT` + `SELECT`). The trigger is a belt-and-braces last line; the missing grant is the primary defence.
-
-2. **`reason` field length cap + content sanitization.** `reason VARCHAR(500)`. Reject control characters, anything matching key-prefix regex (`sk-[a-zA-Z0-9_-]{16,}`, `AIza[a-zA-Z0-9_-]{16,}`), email-address shaped content, or longer-than-500-char content. Sanitization happens **before** the audit insert, not after; if sanitization triggers, the admin action **also** rejects (because the admin tried to write something suspicious in their reason — that's a signal). Log a separate `admin_audit_sanitization_triggered` row in a separate `admin_audit_meta_log` table.
-
-3. **Audit insert outside the admin-action transaction, in a separate same-request transaction with required success.** Pattern:
-   ```java
-   public AdminActionResult performAdminAction(AdminCommand command) {
-       AdminAuditId auditId = adminAuditLogService.beginAction(command);  // own tx, must succeed
-       try {
-           AdminActionResult result = doAction(command);  // own tx
-           adminAuditLogService.completeAction(auditId, result);  // own tx, must succeed
-           return result;
-       } catch (Throwable failure) {
-           adminAuditLogService.failAction(auditId, failure);  // own tx, must succeed
-           throw failure;
-       }
-   }
-   ```
-   The audit row is inserted **before** the action starts (with `state = "started"`) and updated only via INSERT of a follow-up row (`state = "completed"` or `state = "failed"`). Three rows per action — start, end, optional retry — all append-only. An attempt to "fail the audit insert to roll back the action" doesn't work because the START insert happens first; if it fails, the action never starts.
-
-4. **Per-row HMAC-chained hashing.** Each audit row includes a `chain_hash = HMAC-SHA256(server_secret, previous_chain_hash || current_row_content)`. A nightly job verifies the chain. Tampering with any historical row breaks the chain. The server_secret is in `MasterKeyVault`, not the DB.
-
-5. **External replication.** Audit rows replicated (via logical replication or a CDC sink) to an off-host log store (Loki / S3) within seconds. A DBA who tampers with the local copy doesn't tamper with the replica. Detection via replica vs primary diff job.
-
-6. **Audit log is read-only in the admin UI.** No "Edit reason" / "Delete entry" actions exist. Surface the chain-hash verification status prominently — green "verified" / red "tamper detected" banner.
-
-7. **Admin cannot read their own audit log without a co-admin.** A separate admin role `AUDIT_AUDITOR` (or use the existing two-admin rule) is required to view `admin_audit_log`. The admin who took the action sees only their own action confirmations, not the full log. (This prevents an attacker with admin access from "checking what they left behind" to refine their cover-up.)
+1. **Phase-level schema review checklist.** For each v1.4 phase, a `SCHEMA-REVIEW.md` lists: tables created, FK ordering, indexes added, rollback blocks present, preConditions used, JSONB columns + their indexes, column type vs Google's documented max length.
+2. **One logical change per changeset** (per CLAUDE.md rule #10). 10 tables → ~30-40 changesets, not 5 mega-changesets.
+3. **CI on changeset immutability.** Pre-merge: a git hook (already in repo OR add) prevents modifying any file matching `db/changelog/changes/*.yaml` that has been merged to main. Forces new-roll-forward pattern.
+4. **Calendar `event_id` and Drive `file_id` types:** use `VARCHAR(1024)` (Google docs cap). Schema review verifies.
+5. **JSONB indexes:** every new JSONB column has an `ON ... USING gin (col jsonb_path_ops)` index in the SAME changeset.
+6. **No backfills against multi-mailbox state.** v1.4 schema migrations are additive only. Backfills of calendar preferences happen via application code on first mailbox-touch, not via Liquibase.
+7. **Rollback blocks mandatory.** ArchUnit-equivalent for YAML: a CI script greps every new `db/changelog/changes/*.yaml` for `rollback:` block; missing rollback fails CI.
+8. **preConditions on env-sensitive changesets.** Backfills (if any) use `preConditions` with `onFail: MARK_RAN` and `sqlCheck` for "do we have data to backfill?"
+9. **Postgres MCP `analyze_query_indexes`** run on the new free/busy + booking + filing audit tables as part of phase acceptance.
+10. **Deploy gate.** Liquibase changes deploy via a separate "schema-only" pre-deploy step; app pods deploy only after schema migration completes. Avoids worker-vs-migrator lock fights.
 
 **Warning signs:**
-- The app DB user has `UPDATE` / `DELETE` on `admin_audit_log`.
-- No append-only trigger.
-- `reason` field has no length cap or content sanitization.
-- Audit insert is wrapped in `@Transactional` together with the admin action.
-- No chain-hash or external replication.
-- Admin UI surfaces an "Edit entry" or "Delete entry" button.
-- An admin can read the full audit log without a co-admin.
+- A changeset creates >1 logical schema change.
+- A `db/changelog/changes/*.yaml` file is modified in a PR.
+- New JSONB column without paired GIN index.
+- Calendar `event_id` typed `VARCHAR(255)` or smaller.
+- No rollback block on a new changeset.
 
-**Phase to address:** **Phase 8 / sub-phase 8A — Admin foundation** (audit primitive lands with the first admin endpoint). External replication is a follow-up but the per-row HMAC chain + append-only trigger + reason sanitization land in 8A.
+**Phase to own prevention:** Every phase. Phase-specific schema review at phase planning. Final v1.4 cross-phase schema audit before milestone close.
 
 ---
 
-### Pitfall 7: Stale catalog cache races with admin edits — user sees a model the admin just removed (or fails to see one the admin just added)
+### Pitfall 12: Spring Modulith verification fails on Calendar↔Outbound and Gmail↔Calendar event boundaries
 
 **What goes wrong:**
-The Settings UI shows the curated catalog (Phase 9, AI Provider/Model tab). To avoid a DB hit on every Settings open, the catalog is cached — in TanStack Query on the frontend, in Redis (or in-memory `ConcurrentHashMap`) on the backend. Four race scenarios:
+Spring Modulith verifies module isolation. New cross-module flows:
 
-1. **Admin removes a model; user opens Settings; user sees model.** Cached backend response was minted before the removal; user selects the model; backend write fails with FK violation ("model not in catalog"); user sees a confusing error.
-2. **Admin adds a model; user opens Settings within cache TTL; user does not see it.** Slow propagation feels broken; admin re-clicks Sync repeatedly trying to "make it appear."
-3. **Admin saves catalog edit; user is mid-save on Settings.** Concurrent: admin disables model X, user clicks "Save settings" with X selected. Last-write-wins: user save commits first → admin disable applies but user is now on a disabled model. Or admin disable commits first → user save tries to write disabled FK → constraint violation.
-4. **Frontend caches the catalog AND user settings independently.** TanStack Query has `['catalog']` and `['settings']`. Admin changes the catalog; user changes their settings. Without coordinated invalidation, the Settings dropdown shows stale options against fresh settings.
-5. **Per-tenant `ChatModel` cache holds a model ID** the admin just deprecated — the cache is keyed by `(tenantId, modelId)`. Cache hit returns the old cached client which still successfully calls a now-deprecated model.
+- **Gmail → Calendar:** calendar-aware triage parses an invite from Gmail and writes to Calendar.
+- **Calendar → Outbound:** `propose_meeting` rule action reads free/busy then sends a reply via OutboundSendGateway.
+- **Calendar → Drive:** brief generation pulls past attachments from Drive context (unlikely for v1.4 but a future trap).
+- **Booking page → Calendar:** public booking writes events.
+
+Failure modes:
+
+1. **Direct cross-module repository call.** `GmailTriageService` calls `CalendarConnectionRepository` directly → `spring-modulith-test` fails the boundary check at build time.
+2. **Synchronous cross-module call where event fits.** `CalendarInviteHandler` calls `OutboundSendGateway` synchronously from a request thread → couples Calendar module to Outbound and complicates transaction boundary. Should be an after-commit event.
+3. **Listener in `backend/api` for an event published in `backend/core`** — works in-process but breaks if api/worker split processes (per CLAUDE.md convention #6: "Spring events do not cross backend/api ↔ backend/worker processes").
+4. **Event payload includes email body content.** A `MailMessageWithInviteObserved` event includes the iCal body; persists if Modulith's event publication registry stores it; ARCH-02 violation.
+5. **Booking page in `backend/api` module fires an event that triggers Calendar event creation in `backend/core`** — fine — but the cron retry layer is in `backend/worker`. Cross-process event = wrong.
+6. **Listener annotations:** `@ApplicationModuleListener` is only for cross-module inside core (per `feedback_modulith_listener_scope` memory). Using it in `backend/api` to listen to a core event is wrong; use `@TransactionalEventListener(AFTER_COMMIT)`.
 
 **Why it happens:**
-- Caching the catalog seems obviously cheap. It is, until edits land.
-- Coordinated invalidation across (admin write → backend cache → frontend cache → per-tenant ChatModel cache) requires explicit wiring that no single feature owner thinks about.
+- New modules don't have established event types; first implementer reaches for the easy import.
+- Modulith verification runs in test phase; first integration test failure surfaces late.
 
 **How to avoid:**
 
-1. **Backend catalog cache invalidation on every admin write.** A `CATALOG_UPDATED` Spring Modulith event fires from `CatalogService.applyDiff(...)` after commit. The catalog cache (Redis key `catalog:{provider}`) is evicted in the listener. Per-tenant `ChatModel` cache is **not** automatically evicted (different concern — see step 5).
-
-2. **Frontend cache invalidation via ETag + admin-visible "catalog version" cookie.** Catalog endpoint returns `ETag: "catalog-v-{monotonic_counter}"`. The counter increments on each admin write (`CATALOG_UPDATED` event also bumps a Redis counter). Settings page uses `If-None-Match` on revalidation. Stale frontend caches get a fresh response within one network roundtrip of the admin edit.
-
-3. **User Settings save validates against fresh catalog inside the same transaction.** Pattern:
-   ```java
-   @Transactional
-   public AssistantSettings save(EmailAccountId emailAccountId, AssistantSettingsCommand command) {
-       CatalogModel selectedModel = catalogRepository.findActiveByProviderAndModelId(
-           command.preferredProvider(), command.preferredModelId())
-           .orElseThrow(() -> new ModelNotInCatalogException(...));
-       if (!selectedModel.isAllowedForFeature(Feature.CHAT_ASSISTANT)) {
-           throw new ModelNotAllowedForFeatureException(...);
-       }
-       return assistantSettingsRepository.save(...);
-   }
-   ```
-   The `findActiveByProviderAndModelId` bypasses the cache and goes straight to DB (or uses a versioned read inside the same tx). If the model was just deprecated, the save fails loud with a structured error code `MODEL_DEPRECATED_DURING_SAVE`. Frontend renders "The model you selected was just removed by an admin. Refresh and pick another." with a "Refresh catalog" button.
-
-4. **TanStack Query coordinated invalidation.** Settings mutation `onSuccess` invalidates both `['settings']` and `['catalog']`. Conversely, a frontend WebSocket / SSE / poll-on-focus mechanism (whichever lands first) bumps `['catalog']` when the server-side counter changes.
-
-5. **Per-tenant `ChatModel` cache eviction on `MODEL_DEPRECATED` event.** When a catalog model is deprecated, all per-tenant `ChatModel` entries keyed by that model ID are evicted. New chats next request mints a fresh client.
-
-6. **Optimistic-concurrency on `assistant_settings.updated_at`.** User save reads `updated_at`, writes with `WHERE updated_at = $observed`. Conflict resurfaces as 409 "Settings were updated elsewhere; refresh and try again." (Catches the case where two tabs of the same user race their own save.)
-
-7. **Frontend Settings form does not double-submit.** Submit button disabled after first click until response returns; per-form idempotency key sent as header `X-Idempotency-Key: <uuid>` so a network-retried request hits a Redis-backed dedup and returns the original result. (Specifically addresses BYOK form double-submit which would otherwise issue two encrypt operations and two DB writes for the same key.)
-
-8. **Race-test in CI.** Test: admin disables model X in one HTTP session; in another, user-A's settings save with model X. Assert (a) one wins cleanly, (b) the other gets a structured error, (c) no orphan `assistant_settings` row with a disabled model.
+1. **Define event types in `backend/core` ONLY** for cross-module events: `CalendarInviteObserved`, `MeetingBriefScheduled`, `BookingCreated`, `DocumentFiled`, `AttachmentSourceAttached`. Each event carries metadata only — IDs, timestamps, status codes — no email bodies, no LLM completions, no attachment content.
+2. **Module boundaries declared in `package-info.java`** per Modulith convention. `core.calendar`, `core.drive`, `core.booking`, `core.brief` are new modules.
+3. **`@ApplicationModuleListener` only inside `backend/core`.** API/worker listeners use `@TransactionalEventListener(AFTER_COMMIT)`.
+4. **Cross-process handoffs use Postgres outbox** (per CLAUDE.md convention #6) — e.g., booking event creation triggered by API but executed by worker uses an outbox row.
+5. **Modulith verification test green** at every phase close.
+6. **Event payload ArchUnit test:** events in `core.*.events.*` may not have a field of type `String` longer-than-128-char allowed via a `@PayloadField` annotation that asserts length cap; bodies are banned by type pattern.
+7. **Direct calls for transaction-critical commands.** OAuth provisioning, booking slot reservation, brief schedule creation are direct calls (per CLAUDE.md convention #6). After-commit reactions (send brief, notify) are events.
 
 **Warning signs:**
-- Catalog cache TTL is the only invalidation mechanism (no event-driven eviction).
-- User Settings save reads from the cached catalog, not from DB inside the transaction.
-- Frontend has no coordinated invalidation between `['catalog']` and `['settings']`.
-- Settings submit button has no disable-during-submit logic.
-- No race test in CI.
-- Per-tenant `ChatModel` cache is keyed by tenant only, not by `(tenantId, modelId)`.
+- A Calendar/Drive/Booking class imports a Gmail/Triage repository.
+- `@ApplicationModuleListener` in `backend/api` or `backend/worker`.
+- An event has a `String body` field.
+- Spring Modulith verification test red.
+- Cross-process flow goes through Spring events instead of the outbox.
 
-**Phase to address:** **Phase 8 / sub-phase 8D (catalog write contract) + Phase 9 / Settings save handlers.** The event + ETag scheme lands in 8D; the Settings save validation + frontend coordinated invalidation lands in 9. Race test runs against both.
+**Phase to own prevention:** **P1 (Calendar foundation)** and **P6 (Drive foundation)** declare module boundaries + events. Every subsequent phase verifies Modulith green at phase close.
 
 ---
 
-### Pitfall 8: Worker queue health view DoS's the DB or leaks job payload contents
+## Moderate Pitfalls
+
+### Pitfall 13: Frontend bundle size regression from calendar UI + booking page + Drive Picker
 
 **What goes wrong:**
-v1.2 admin includes a worker queue health view: outbox lag, processing-job depth, failed-job list. Two failure modes:
+v1.3 just stabilized Turbopack + React 19 builds. Adding:
+- Calendar UI components (date pickers, time slot pickers, week views).
+- Booking page (public route, SSR'd for SEO-resistant rendering — actually we want noindex, so SSR is optional).
+- Google Picker script loader.
+- Possibly `@hello-pangea/dnd` or similar for booking slot drag.
 
-1. **Naïve queries.** Admin opens `/admin/queue/health` — backend runs `SELECT COUNT(*) FROM outbox WHERE status = 'pending'` + `SELECT COUNT(*) FROM processing_job WHERE state = 'running'`. On a healthy small instance, this is fine. At scale (50k+ rows in outbox after a Pub/Sub catch-up burst), the unindexed `COUNT(*)` scans 50k rows + holds locks against worker `SKIP LOCKED` queries. Worker throughput drops; the admin clicking refresh repeatedly amplifies the problem.
-2. **Failed-job list shows payload.** "Investigation convenience": admin clicks a failed job, sees `processing_job.payload_json` — which for triage jobs contains the `messageId` + (worst case) cached body content + LLM prompt fragments that were captured at job-enqueue time before privacy sanitization. Privacy contract is broken via the admin convenience surface.
-3. **Failed-job retry button re-enqueues with a stale tenant context.** Admin clicks "Retry"; the retry handler reconstructs `TenantContext` from the job row's `tenant_id` and re-fires the worker, but does so via the admin's HTTP request thread. ScopedValue propagation is wrong; the retry runs with admin context, not tenant context; tenant data writes might end up cross-tenant.
-4. **Admin can drain the queue.** A "Cancel all pending" admin button (or worse, an inadvertent SQL admin endpoint) wipes the outbox. Tenant data loss.
-5. **Queue stats expose tenant identifiers** in aggregate views: "30 jobs pending for tenant-id-abc, 5 for tenant-id-xyz." Even tenant IDs are PII in a multi-tenant context.
-
-**Why it happens:**
-- Operations tooling is built ad-hoc; admin features ride on whatever queries are easy.
-- The queue tables grow much larger than other tables; queries that are fast in dev are slow in prod.
-- "Show me what failed" naturally wants the payload.
+Risks bundle bloat → slower TTI → regression vs v1.3.
 
 **How to avoid:**
 
-1. **Pre-computed queue stats, not live aggregation.** A `queue_stats_snapshot` table updated by a 30s scheduled job: rows like `(captured_at, queue_name, status, count_total, count_per_tenant_redacted_top_10)`. Admin reads the latest snapshot, not live `COUNT(*)`. Drilling into a specific row triggers a targeted query bounded by `LIMIT 100`.
+1. **shadcn first** (per CLAUDE.md rule #7). shadcn has Calendar primitive + DatePicker; reuse rather than installing react-big-calendar (heavy).
+2. **Booking page in its own route group** `app/(public)/book/[slug]` — separate bundle from app shell. No app-shell imports.
+3. **Google Picker via dynamic import** (`next/dynamic` with `ssr: false`) — loads only when user opens the destination-folder modal.
+4. **Bundle-size CI gate.** `next build` + size-limit check; PR fails if `apps/web/.next/static/chunks/pages/_app*.js` grows >5% vs main.
+5. **Reuse shadcn primitives** for time slot UI; do not install Radix UI primitives beyond what's in shadcn.
 
-2. **Job payload is metadata-only in admin views.** `processing_job.payload_json` is not exposed; instead, admin sees `processing_job.payload_summary` — a computed column / view containing `{ jobType, tenantId, messageId, lastAttemptAt, attemptCount, lastErrorCode }`. The full payload is hidden; reading it requires a separate explicit admin endpoint with audit-row + reason-required.
-
-3. **Failed-job retry uses the worker's normal enqueue path.** "Retry" admin endpoint inserts a new outbox row with the same payload; the actual retry runs via the worker `SKIP LOCKED` poll in the worker JVM, with correct ScopedValue propagation. Admin's HTTP thread never executes the job.
-
-4. **No "drain queue" admin action exists.** Cancellation is per-job, audited, with reason required, and limited to specific job types (e.g., never cancel a `gmail_send` job). An ArchUnit rule forbids any DELETE on outbox / processing_job tables from admin paths.
-
-5. **Tenant IDs in admin queue views are pseudonymized to short prefixes** (`tenant-abc...`) unless the admin clicks "reveal" with reason. Per-tenant counts above a threshold (e.g., >100) are surfaced as concrete numbers; below are bucketed (`< 10`, `10-100`).
-
-6. **Index every WHERE clause used in admin queue queries.** Schema review verifies indexes on `(status, last_attempt_at)`, `(tenant_id, status)`, etc. Postgres MCP `analyze_query_indexes` run as part of the phase acceptance check.
-
-7. **Read replica for admin queries** — defer to v1.3+ unless load testing proves blocking, but document the option.
-
-**Warning signs:**
-- Admin queue endpoints do `COUNT(*)` on outbox / processing_job.
-- `processing_job.payload_json` is returned in any admin response.
-- A "Retry" admin endpoint calls the worker handler directly on the admin's request thread.
-- A "Drain queue" or "Cancel all" admin action exists.
-- Tenant IDs are surfaced verbatim in queue stats.
-
-**Phase to address:** **Phase 8 / sub-phase 8E — Worker queue health view.** Pre-computed snapshots + payload-summary view + retry-via-enqueue land together. ArchUnit rule for no-delete-from-queue-in-admin lands at the same time.
+**Phase to own prevention:** Every UI phase (P2/P3/P4 frontend portions). Bundle gate runs on every PR.
 
 ---
 
-### Pitfall 9: Global spend dashboard leaks cross-tenant info via aggregation, naïve drill-down, or unsecured raw rows
+### Pitfall 14: Forgetting an outbound gate when adding `propose_meeting` to the gateway
 
 **What goes wrong:**
-v1.2 promotes the global spend dashboard (previously deferred OPS-02) — total LLM spend across all tenants, broken down by provider, by feature, by time. Three failure modes:
+v1.2 Phase 08.1 introduced `OutboundSendGateway` with gates: global Auto-send + safety net + rate cap + idempotency + audit. `propose_meeting` is a new outbound action. Risks:
 
-1. **Aggregation reveals individual tenants.** Total spend "$1,234.56" — single tenant in the data set; the total IS the tenant's spend. A "top 10 spenders" view (Inbox Zero's `top-spenders/route.ts` does this — hashes the email!) exposes per-tenant identity. Even hashed, a hash is a stable identifier that can be correlated with external signals.
-2. **Drill-down endpoint exposes raw rows.** Admin clicks a date — backend returns every spend row for that date including `tenant_id`, `model_id`, `cost_credits`, `messageId` (if accidentally captured), prompt-token counts that, at unit prices, reverse-engineer to actual prompt sizes.
-3. **Spend rows contain prompt / completion fragments.** Privacy invariant says no LLM prompts / completions are persisted; the spend ledger correctly stores **token counts** only. But a previous engineer added a `last_failure_reason TEXT` column for debugging and it occasionally contains a snippet of the provider's error response which mirrors the prompt.
-
-**Why it happens:**
-- Aggregation is a textbook anonymization trap (k-anonymity violations).
-- Drill-down exists because the dashboard is useless without it.
-- Debug columns added long ago drift in scope.
+1. **`propose_meeting` routed through gateway but skips a gate** (e.g., rate cap forgotten).
+2. **`propose_meeting` bypasses gateway entirely** because "it's not a send_reply, it's a reply with suggested times" — the engineer adds a new code path.
+3. **Booking-page event creation routed through outbound gateway** when it shouldn't be (booking is host-initiated event creation, not an email send — the booking notification email IS an outbound send, but the Calendar event write isn't).
+4. **`propose_meeting` invite-to-attendee defaults to "send invite"** in Calendar API — the Calendar `events.insert` has a `sendUpdates` query param. If unset, defaults to `none`; if set to `all`, sends an email invite. Forgetting this = no invite delivered; setting unconditionally = leaks the meeting to attendees without user confirmation in some flows.
 
 **How to avoid:**
 
-1. **k-anonymity threshold on aggregates.** Any displayed bucket must contain at least 5 distinct tenants; sub-5 buckets are merged into "Other (N tenants)" or suppressed. Backend enforces; frontend renders the suppressed buckets visibly so admin understands why.
+1. **`propose_meeting` is a `send_reply` variant in the gateway taxonomy.** Reuses every existing gate. The "suggested times" are a body template, not a new outbound type.
+2. **ArchUnit `OutboundCallSiteAllowList` extended.** Existing test ensures all outbound paths route through gateway; add `BookingNotificationGateway` + reuse `OutboundSendGateway` for `propose_meeting`.
+3. **Calendar event writes have a separate `BookingCalendarGateway`** (per Pitfall 4) — not the same as the email outbound gateway. ArchUnit confines `events.insert` to that gateway.
+4. **`sendUpdates` is explicit at every call site.** Wrapper enforces: callers pass `SendUpdatesPolicy.{NONE, ALL, EXTERNAL_ONLY}`. No default. Test forces a code-review on each value.
+5. **`propose_meeting` rule editor surfaces the `sendUpdates` choice** as a per-rule option ("Send Google Calendar invite emails: yes / no").
 
-2. **No per-tenant drill-down without an explicit support ticket reference.** "Drill into this row" requires admin to enter a ticket ID (free-text validated against `^TICKET-\d+$` pattern) which is logged in `admin_audit_log`. Surfaces a friction step; trains admins not to drill casually.
-
-3. **`spend_ledger` schema review.** Audit every column. Allowed: `tenant_id`, `provider`, `model_id`, `feature` (chat/triage/draft), `input_tokens`, `output_tokens`, `cost_credits`, `created_at`. Forbidden: any free-text column; any column that could store prompt/completion fragments. ArchUnit + schema test enforces.
-
-4. **Per-tenant identifiers hashed in admin views by default.** `tenant_id` rendered as `t-{hash[:6]}`. Reveal requires explicit per-row click with audit + reason. Inbox Zero's hashing approach is the right pattern, but Zero Mail goes one step further: the reveal is auditable and the hashed value is **not** stable across admin sessions (per-session salt) so admins can't easily correlate across views.
-
-5. **Spend rows are admin-readable only via aggregate APIs.** No `GET /admin/spend/raw` endpoint exists; only `GET /admin/spend/aggregate?groupBy=provider,date&from=...&to=...` and `GET /admin/spend/drill?ticketId=...`. ArchUnit forbids admin controllers from reading `spend_ledger` directly except via `SpendAggregateService`.
-
-6. **Total-spend rendering uses appropriate precision.** Don't render `$1234.5678` (high-precision values can reverse-engineer prompt sizes); round to `$1,234.57`. Render percentage shares not raw totals where possible.
-
-**Warning signs:**
-- A "top spenders" view exposes individual tenants (hashed or not) without k-anonymity threshold.
-- `spend_ledger` has a free-text column.
-- Drill-down is one click with no ticket-reference / audit step.
-- An admin endpoint returns raw rows from `spend_ledger`.
-- Tenant identifiers are rendered as full UUIDs in admin views.
-
-**Phase to address:** **Phase 8 / sub-phase 8F — Global spend dashboard.** Aggregation API + k-anonymity threshold + drill-down ticket-required land together. Spend ledger schema audit (ArchUnit + Liquibase) is verified in the same phase.
+**Phase to own prevention:** **P5 (calendar-aware triage + propose_meeting)** owns gateway integration; ArchUnit extension lands with the first `propose_meeting` PR.
 
 ---
 
-### Pitfall 10: Admin "send on behalf of tenant" feature regresses the single Gmail send call site
+### Pitfall 15: Calendar/Drive OAuth refresh tokens stored in plaintext or in a different vault than Gmail
 
 **What goes wrong:**
-"Helpful" admin feature requests appear: "let me send an apology email from the tenant's account when an outage affected them" or "let me forward a debugging email to the tenant from their own inbox." Implementing this requires the admin path to call `Gmail.Users.Messages.send` — which means a **second** send call site, regressing v1.1's `OnlyOneGmailSendCallSiteTest` invariant. The naïve developer:
+v1.0 ships AES-GCM app-layer encryption for Gmail refresh tokens. Adding Calendar + Drive:
 
-1. Adds `AdminGmailSendExecutor` under `core.admin.gmail.send.*`.
-2. "Fixes" the ArchUnit `OnlyOneGmailSendCallSiteTest` by changing `isEqualTo(1L)` to `isLessThanOrEqualTo(2L)`.
-3. Updates the grep gate threshold to 2.
-4. Now two send paths exist; the "we have exactly one send path" trust property is broken; future code can add a third path more easily.
-
-A subtler variant: admin doesn't directly send, but **simulates a user-confirmed send** by replaying a `chat_message.parts` tool call. This re-uses `AssistantSendExecutor.send(...)` but with `AdminContext` instead of `TenantContext`. Now `AssistantSendExecutor` accepts admin invocation — its tenant-isolation assumptions are silently broken; the executor was designed assuming `TenantContext.currentOrThrow()` is bound.
-
-**Why it happens:**
-- The trust posture is a property maintained by a human-readable rule. Each individual "we just need to send one email as an admin" feels small.
-- The ArchUnit number is "just a number." Bumping it from 1 to 2 looks reasonable.
-- AssistantSendExecutor is the existing call site — "why duplicate it?"
+1. **New `calendar_oauth_credential` / `drive_oauth_credential` tables** built by an engineer who forgot the AES-GCM pattern → plaintext refresh tokens.
+2. **Reuse of `gmail_oauth_credential` schema** but stored in the wrong column (the engineer thinks "Gmail has cipher columns, I'll reuse" but the FK is to `gmail_connection_id` not `calendar_connection_id`).
+3. **One token to rule them all.** Calendar/Drive scopes piggyback on the Gmail OAuth grant — same refresh token used for all three APIs. Saves storage but couples revocation: revoking Drive revokes Gmail. UX trade-off.
+4. **Token rotation event handler missing.** `OAUTH_TOKEN_ROTATED` event evicts only Gmail caches; Calendar/Drive clients keep stale token until cache expiry.
+5. **Refresh token stored in Redis "for fast access."** Redis is not the durable store; Redis dump exposed = plaintext token leak.
+6. **`@Sensitive` not applied to new token types.** Refresh tokens log via `String.format` → token in app logs.
 
 **How to avoid:**
 
-1. **Hard product decision, written in PROJECT.md:** "Admin users may NOT send email on behalf of any tenant. There is exactly one Gmail send call site (`AssistantSendExecutor`), invoked only with a bound `TenantContext` from the user-confirmed chat preview flow. v1.2 does NOT introduce admin-initiated email actions; if support needs to communicate with a tenant, support sends from a separate operator mailbox, not the tenant's account."
+1. **Decision: single OAuth credential per Google account, multiple scope sets.** Same refresh token can be used for all Gmail/Calendar/Drive APIs because they're all in the same OAuth grant if bundled at consent. Storage: `google_account_oauth_credential (google_account_subject, encrypted_refresh_token, scopes_granted_csv, ...)`. One row per Google account; `gmail_connection`, `calendar_connection`, `drive_connection` reference the credential row.
+2. **OR per-API credential rows for explicit revocation independence.** Trade-off: more storage, simpler revoke-Drive-only flow. Pick one in P1 design phase; document choice.
+3. **AES-GCM at the SAME app-layer code path** as Gmail. Reuse `OAuthCredentialEncryptor`. ArchUnit: any new credential column matching `refresh_token` / `access_token` shape must be `BYTEA` (cipher) — not `VARCHAR` / `TEXT`.
+4. **`@Sensitive` typed everywhere.** Compiler-enforced.
+5. **Sentinel-leak test extended** to calendar + drive token columns. Same pattern as v1.2 master-key sentinel.
+6. **No Redis-stored tokens.** Redis caches `ChatModel` / Gmail client by tenant; refresh token always read from DB on cache miss, decrypted in-memory, never re-cached.
+7. **Token rotation event covers all three APIs.** `GOOGLE_OAUTH_TOKEN_ROTATED { googleAccountSubject }` event evicts Gmail + Calendar + Drive client caches for that subject.
 
-2. **Reaffirm v1.1's `OnlyOneGmailSendCallSiteTest`.** The number stays at exactly 1. The grep gate stays at exactly 1.
-
-3. **ArchUnit extension: forbid `AdminContext` in the send call chain.**
-   ```java
-   noClasses().that().resideInAPackage("..chat.confirm.send..")
-     .should().callMethodWhere(target ->
-       target.getOwner().getName().endsWith("AdminContext")
-       && Set.of("current", "currentOrThrow").contains(target.getName()))
-     .because("The single send call site must run only with a tenant context; admin send is forbidden.");
-   ```
-
-4. **Reaffirm via a v1.2 acceptance test** in Phase 8 that no admin endpoint touches Gmail send. Test: scan every controller bean in `api.controllers.admin.*`; assert no transitive call graph reaches `AssistantSendExecutor` or `GmailClient.send`.
-
-5. **PR review checklist item:** every v1.2 PR explicitly answers "Does this PR change the count of Gmail send call sites? If yes, escalate to founder + log a Key Decisions row in PROJECT.md with rationale."
-
-**Warning signs:**
-- A PR adds `AdminGmailSendExecutor` or any class under `core.admin.*gmail.send*` or `core.admin.*mail.send*`.
-- The `OnlyOneGmailSendCallSiteTest` count is bumped above 1.
-- The grep gate threshold is bumped above 1.
-- A PR makes `AssistantSendExecutor` callable from an admin context.
-- Feature requests mentioning "send on behalf of tenant" appear without a PROJECT.md decision logged.
-
-**Phase to address:** **Phase 8 / sub-phase 8A — Admin foundation** (reaffirm at the start). The ArchUnit extension lands with the first admin endpoint. The PROJECT.md decision is logged in the phase-opening commit.
+**Phase to own prevention:** **P1 (Calendar OAuth foundation)** decides + implements the credential storage shape; ArchUnit + sentinel-leak test land in P1. **P6 (Drive OAuth)** reuses the pattern.
 
 ---
 
-### Pitfall 11: ScopedValue + `@PreAuthorize` ordering — admin authority granted before tenant context bound
-
-**What goes wrong:**
-Spring Security's `@PreAuthorize("hasRole('ADMIN')")` runs **before** the controller method body. The admin role is checked, the method executes, the method's first line tries to read `AdminContext.currentOrThrow()` — but `AdminContext` was never bound because the binding code lives in a Spring `OncePerRequestFilter` ordered **after** `MethodSecurityInterceptor`. Result: `AdminContext.currentOrThrow()` throws "no admin context bound." A panicked developer fixes this by adding a fallback "if no admin context, but @PreAuthorize passed, fall back to user context" — and now admin endpoints execute with the **user's** tenant context, silently filtering admin reads through the admin's own tenant scope.
-
-A worse variant: the developer adds a `@PreAuthorize` SpEL expression that reads `#tenantId` from the request and calls `tenantAccessChecker.canRead(#tenantId)`. The check runs before any tenant context binding. The checker has its own DB query that doesn't know it's running in an admin context — defaults to "yes, the requesting user can read their own tenant" and the admin reads tenant X's data because tenant X **is** the admin's own tenant ID (collision).
-
-**Why it happens:**
-- Spring Security filter ordering is not obvious from controller code.
-- Scoped Values are new (Java 25 finalization); developer mental model isn't fully formed.
-- The `@PreAuthorize` + `@AdminEndpoint` combination is product-specific; Spring guides don't cover it.
-
-**How to avoid:**
-
-1. **Single `AdminEndpointFilter` ordered BEFORE `MethodSecurityInterceptor`.** The filter:
-   - Validates the admin session cookie.
-   - Loads the admin user from `app_user` + `admin_grant`.
-   - Binds `AdminContext`.
-   - Allows the request to proceed.
-   - `MethodSecurityInterceptor` then runs `@PreAuthorize`, which reads `AdminContext` to check authority.
-
-   ```java
-   @Configuration
-   @EnableMethodSecurity
-   public class AdminSecurityConfig {
-       @Bean
-       SecurityFilterChain adminFilterChain(HttpSecurity http, AdminEndpointFilter adminEndpointFilter) throws Exception {
-           return http
-               .securityMatcher("/admin/**")
-               .addFilterBefore(adminEndpointFilter, AuthorizationFilter.class)
-               .authorizeHttpRequests(authz -> authz.anyRequest().authenticated())
-               .build();
-       }
-   }
-   ```
-
-2. **`@PreAuthorize` reads `AdminContext`, not `Authentication`.** A custom `PermissionEvaluator` reads `AdminContext.currentOrThrow()` to determine authorities. Forces the order: filter binds context → method security checks context.
-
-3. **ArchUnit rule: no `@PreAuthorize` SpEL expression may reference request-bound parameters** for authorization decisions (`#tenantId`, `#userId`). Admin authority is exclusively derived from `AdminContext` which is filter-populated.
-
-4. **Integration test: admin endpoint with no admin session cookie returns 401 BEFORE controller body runs.** Test asserts the filter rejects, the controller `beforeAdvice` log is not present (verifying the controller method was never entered).
-
-5. **Integration test: admin endpoint with a valid admin session reads `AdminContext` in the first line of every controller method.** ArchUnit checks: every method annotated `@AdminEndpoint` has `AdminContext.currentOrThrow()` as its first executable statement.
-
-**Warning signs:**
-- `@PreAuthorize` SpEL references `#tenantId` or `#userId` from request params.
-- An admin controller's first line is anything other than `AdminContext.currentOrThrow()`.
-- A fallback exists: "if admin context unbound, use tenant context."
-- The admin filter is registered without explicit ordering.
-
-**Phase to address:** **Phase 8 / sub-phase 8A — Admin foundation.** Filter ordering + custom PermissionEvaluator + ArchUnit rules land before the first admin controller is wired.
-
----
-
-### Pitfall 12: Settings UI BYOK form double-submit + concurrent admin master-key rotation produce key chaos
-
-**What goes wrong:**
-A user types a new BYOK key for OpenAI in the Settings UI. They click Save. The button isn't disabled. They click Save again 100ms later. Two POST requests fire to `PUT /settings/byok/openai`. Concurrently, an admin clicks "Rotate master key" in the admin console. Three writes happen within the same ~500ms window:
-
-1. User write A: encrypts `byok-key-v2` for tenant T, persists.
-2. User write B: encrypts `byok-key-v2` (same content, different IV due to AES-GCM random IV) for tenant T, persists — but the table has `ON CONFLICT (tenant_id, provider) DO UPDATE`, so this overwrites write A with a different ciphertext.
-3. Admin write: rotates the master key. Emits `MASTER_KEY_ROTATED` event, which evicts every cached `ChatModel` for the provider.
-
-Result: per-tenant ChatModel cache is evicted, **but** the in-flight chat request for tenant T (already past the cache lookup) keeps using the just-replaced ChatModel which was instantiated with `byok-key-v2 from write A` (now superseded by write B's ciphertext). If write A's ciphertext somehow can't be decrypted (extremely unlikely, but possible if the key derivation changes mid-flight), the in-flight request fails mysteriously.
-
-A simpler version of the same trap without the admin: user-side double-submit on BYOK alone — two AES-GCM encrypt operations, two DB writes, redundant audit rows, one is "lost" but its audit row remains, audit reads "2 BYOK updates within 200ms" — not strictly wrong but confusing.
-
-A worse version: the BYOK form encrypts client-side (which it shouldn't! see Pitfall 8 v1.1) but the developer adds it "for defense in depth." Two encrypts with two different client-side IVs. Server receives two different ciphertexts of the same plaintext. Race resolution is non-obvious.
-
-**Why it happens:**
-- Frontend submit buttons rarely disable on first click in admin/internal SaaS.
-- Master-key rotation and BYOK save are designed independently; their interaction is invisible.
-- Idempotency is "obvious" but easy to skip.
-
-**How to avoid:**
-
-1. **Idempotency key on every Settings mutation.** Frontend mints `X-Idempotency-Key: <uuidv7>` on form submit. Backend dedups via Redis (`SET NX EX 60`); duplicate request returns the original 200/4xx response. The same uuid is logged in `admin_audit_log` / `settings_audit_log` so retries don't create duplicate audit rows.
-
-2. **Submit button disabled during in-flight request.** Standard TanStack Query `isPending` gating + a `data-testid="settings-submit"` for Playwright to assert disabled state.
-
-3. **Frontend never encrypts BYOK** (reaffirm v1.1 Pitfall 8 rule). Plaintext over HTTPS to the backend; backend is the only encrypt site.
-
-4. **BYOK save serializes per `(tenantId, provider)` via Postgres `pg_advisory_xact_lock`.**
-   ```sql
-   SELECT pg_advisory_xact_lock(hashtext('byok:' || $1 || ':' || $2));  -- tenantId, provider
-   ```
-   Two simultaneous writes serialize; the second sees the first's commit and either no-ops (idempotency-key match) or proceeds against the updated state.
-
-5. **Master-key rotation is decoupled from BYOK** — they share the `MasterKeyVault` / `ByokCredentialRepository` only at the chat-model-instantiation layer. Rotation event evicts cached ChatModels for the **master-key** provider; BYOK changes evict cached ChatModels for the **(tenant, provider)** pair. Distinct events, distinct eviction scopes.
-
-6. **In-flight request safety: ChatModel instance is short-lived.** Per chat request the LLM gateway resolves the current ChatModel from cache (or creates fresh) and uses it for the whole request. A mid-request master-key rotation doesn't affect the in-flight request because the request already holds its ChatModel reference. The next request gets the new one.
-
-7. **Race test in CI.** Spawn 5 concurrent BYOK saves + 1 master-key rotation; assert (a) final BYOK state matches the last save with an `Idempotency-Key` resolution, (b) exactly one audit row per distinct idempotency key, (c) no decryption errors observed in subsequent chat requests.
-
-**Warning signs:**
-- BYOK form doesn't disable submit during in-flight.
-- No `Idempotency-Key` header on Settings mutations.
-- No advisory lock on BYOK save.
-- The same `MASTER_KEY_ROTATED` event eviction also drops per-tenant BYOK ChatModels.
-- No race test covering BYOK + master-key rotation.
-
-**Phase to address:** **Phase 9 / Settings page** (idempotency + submit disable + advisory lock) + **Phase 8 / sub-phase 8B (master-key rotation)** for the event-scoping decision. Race test lives in Phase 9 acceptance.
-
----
-
-### Pitfall 13: Admin-curated `editorial_note` becomes a stored-XSS sink in the user-facing Settings dropdown
-
-**What goes wrong:**
-The catalog includes admin-supplied editorial notes per model ("Reasoning model — use for complex queries only"). These notes render in the user-facing Settings dropdown as a subtitle. An admin types HTML / `<script>` / event handlers in the note. The user's Settings dropdown executes the script.
-
-Variants:
-- Markdown rendering on the user side parses `[click](javascript:...)`.
-- Admin paste of a "helpful template" containing prompt-injection-like content that, when the user reads it, manipulates the user's perception.
-- Notes longer than UI accommodates push other UI elements off-screen / cover Save button (UI redress).
-
-**Why it happens:**
-- Admin-supplied content is "trusted" by reflex.
-- Markdown features get added without auditing.
-- Length limits are usually skipped.
-
-**How to avoid:**
-
-1. **Editorial notes are plain text, server-side sanitized.** Length cap 280 chars. Strip control characters, HTML, markdown special characters that render (`<`, `>`, `&`, `[`, `]`, `(`, `)` reformatted to escaped HTML entities). Stored sanitized; rendered as plain text content via React text children. No raw-HTML React escape hatches.
-
-2. **Editorial notes display in a fixed-height container** in the Settings dropdown — overflow is ellipsis + tooltip; cannot push other UI off-screen.
-
-3. **ArchUnit + frontend test: any rendering of admin-supplied content** (model `display_name`, `editorial_note`, `provider_metadata.description`) uses React text-children only — never the React raw-HTML escape hatch, never `<div innerHTML={...}>`, never markdown renderers that allow inline HTML.
-
-4. **CSP `default-src 'self'`** + nonce-based inline script policy on user pages — even if a script slips through, browser refuses to execute.
-
-5. **XSS test for editorial note injection.** Test set of hostile editorial notes (`<script>alert(1)</script>`, `<img src=x onerror=...>`, `javascript:alert(1)`, Markdown `[x](javascript:alert(1))`); render each in the Settings dropdown via Playwright; assert no `dialog`, no console errors, all content rendered as text.
-
-**Warning signs:**
-- Editorial note rendered via any React raw-HTML escape hatch or a markdown renderer.
-- No length cap on editorial note.
-- No sanitization on save.
-- CSP allows `unsafe-inline` on user pages.
-- No XSS test.
-
-**Phase to address:** **Phase 8 / sub-phase 8D — Catalog editorial fields** (server sanitization) + **Phase 9 / Settings dropdown render** (frontend safe-rendering verification).
-
----
-
-## Technical Debt Patterns
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Single `role` column on `user` instead of `admin_grant` table | Two-line Liquibase changeset | No revocation history; bootstrap-via-snapshot creates permanent backdoors; no granted_by audit; co-signed rotation impossible | **Never** — `admin_grant` is one extra changeset and trivially worth it |
-| Reuse the `zm_session` cookie for admin authentication | One auth wiring, single OAuth flow | Admin role silently applies to user endpoints; CSRF + clickjacking surface doubled; can't distinguish admin-action from user-action in audit | **Never** — two cookies + two filter chains is the v1.2 baseline |
-| Skip the `AdminContext` Scoped Value; rely on `@PreAuthorize` alone | Less infrastructure to write | Filter ordering bugs let admin authority leak into user-context endpoints; tenant isolation invariant becomes "trust me bro" | **Never** — Scoped Value is consistent with v1.0 tenant isolation pattern |
-| Hard-delete catalog rows on Sync | Keeps the table small | Tenants on deprecated models see immediate breakage; no soft-rollback; FK violations on user save | **Never** — soft-delete with `deprecated_at` is the same code with one column |
-| One-click Sync without diff preview | Faster admin workflow | Accidental sync loses curation in seconds; no audit-friendly preview; admin can't reason about "what will change" | **Never** — 3-step flow is essentially free once SyncDraft exists |
-| `payload_json` exposed on admin failed-job page | Easy debugging | Body / prompt fragments leak via admin convenience; admin reads tenant content; privacy story silently false | **Never** — payload_summary view + explicit per-job endpoint with audit |
-| Frontend caches BYOK / master key plaintext in TanStack Query | Trivial "Saved!" display | Browser DevTools snapshot, error-reporter capture, session-hijack escalation — same as v1.1 Pitfall 8 | **Never** — mask-only response contract |
-| Skip k-anonymity threshold on spend aggregates | Sharper drill-downs | Single-tenant buckets reveal individual spend; tenant identity correlation across views | **Never** — threshold is one SQL clause |
-| Mutate `admin_audit_log` via the same DB user the app uses | Single connection string | Admin can delete their own audit via raw SQL; DBA leak deletes traces; chain-hash useless if mutability allowed | **Never** — DB-grant scoping is one Liquibase changeset |
-| Bump `OnlyOneGmailSendCallSiteTest` count from 1 to 2 for an "admin send" feature | One feature shipped | The "we have exactly one send path" trust property dies; every future PR can add a send site more easily | **Never** — admin send is forbidden by product decision |
-| Pre-emptively cache `/models` Sync results as authoritative | Sync feels instant | Schema drift hides under cache; provider-side correctness issues never surface | **Never** — Sync is a 3-step explicit flow |
-| Allow admin to view chat message contents for "support" | Faster bug triage | Privacy contract on user-typed content silently widened; UI promise "no admin can read your data" is silently false | **Defer to v1.3 with explicit tenant-grant flow** — never as a default admin capability |
-
----
-
-## Integration Gotchas
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| OpenAI `/v1/models` | Trusting model IDs as safe strings | Allow-list regex `^[a-zA-Z0-9._:/\-]{1,128}$`; reject anything else |
-| OpenAI `/v1/models` | Treating the response as schema-stable | JSON Schema validation per provider; unknown fields warn but parse continues; missing required fail loud |
-| OpenRouter `/v1/models` | Assuming response shape matches OpenAI | Separate `openrouter-models-v1.schema.json`; routing-specific fields (`pricing.prompt`, `pricing.completion`) require their own validation |
-| Anthropic | Assuming `/v1/models` exists | No public `/models` endpoint; admin must enter model IDs manually; Sync button disabled for Anthropic |
-| Google GenAI | Assuming model list is short and stable | Vertex / Gemini model list churns frequently; treat as live data, sync more often (cron-able) |
-| DeepSeek | Treating as OpenAI-compatible without verification | DeepSeek's `/models` differs subtly; validate against a DeepSeek-specific schema |
-| Spring Security 7 method security | `@PreAuthorize` SpEL with request parameters for tenant-scope decisions | Authority derived exclusively from filter-bound `AdminContext`; SpEL reads context, not request |
-| Spring Security 7 filter chains | Single SecurityFilterChain for `/` + `/admin/**` | Two distinct chains via `securityMatcher`; distinct cookies; distinct timeout |
-| Spring Modulith events | Emit `MASTER_KEY_ROTATED` synchronously inside the rotation transaction | Emit after-commit (`@ApplicationModuleListener`); rotation transaction commits first, eviction runs after |
-| Liquibase YAML | INSERT admin grants or master keys via changesets | All bootstrap goes through env-var-driven runtime path; no Liquibase data seeds for secrets or grants |
-| Postgres `admin_audit_log` | Grant `UPDATE` / `DELETE` to the app DB user | App user has `INSERT, SELECT` only; trigger blocks `UPDATE`/`DELETE` as last line; replica catches local tampering |
-| Postgres triggers on `admin_audit_log` | Raise on UPDATE/DELETE only, allow TRUNCATE | Trigger covers UPDATE OR DELETE OR TRUNCATE (or revoke TRUNCATE privilege) |
-| TanStack Query | Cache `catalog` and `settings` independently with no cross-invalidation | `onSuccess` of settings mutation invalidates both keys; catalog ETag-driven refetch |
-| TanStack Query | Cache BYOK / master-key plaintext | Mask-only contract; even mask is non-cached if it changes per session |
-| Spring Session Redis | Use the same session backing for admin and user sessions | Different cookie names + distinct session attribute namespaces; consider separate Redis logical DBs for clarity |
-| Reverse proxy (nginx) | Log full response bodies for `/admin/*` | `/admin/*` location: `access_log off` for bodies; only status + size + URI logged |
-| Reverse proxy | Set `X-Forwarded-For` without trusting it | Use Spring's `ForwardedHeaderFilter` with explicit trusted proxy IP allow-list |
-| Provider HTTP client | Reuse the shared LLM-gateway HTTP client for `/models` Sync | Use a dedicated `AdminProbeHttpClient` with no logging proxy, no retry, no shared connection pool with tenant LLM traffic |
-
----
-
-## Performance Traps
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Admin queue-health endpoint runs `COUNT(*)` on outbox / processing_job | Worker throughput drops when admin refreshes the page; `SKIP LOCKED` poll latency rises | Pre-computed `queue_stats_snapshot` table updated every 30s by a scheduled job; admin reads the snapshot | At ~50k pending rows |
-| Catalog cache TTL is the only invalidation | Stale Settings UI options after admin edit; user save fails with `MODEL_DEPRECATED_DURING_SAVE` confusion | Event-driven eviction (`CATALOG_UPDATED` → cache evict + ETag bump) | Always observable after first admin edit |
-| `admin_audit_log` chain-hash recomputed on every read | Audit log view becomes slow once >100k rows | Cache chain validity per N rows; verify on a schedule, not per-read | At ~100k rows |
-| Spend aggregate query scans entire `spend_ledger` per dashboard load | Dashboard load time grows linearly with spend rows | Materialized view / precomputed daily rollups; index on `(created_at, provider)` | At ~1M spend rows |
-| Master-key cache eviction iterates all per-tenant ChatModel cache entries on rotation | Brief latency spike on rotation; OK for occasional event | Accept the cost; rotation is infrequent | Never problematic at v1.2 scale |
-| Sync-from-/models fetches all model details synchronously inside the admin's HTTP request | Admin sees a 30s spinner on Sync; provider rate-limits | Sync is async — admin clicks Sync, gets a SyncDraft ID, polls or waits for SSE completion; UI shows progress | At >50 models or slow providers |
-| Catalog `editorial_note` rendered to every Settings dropdown without server-side caching | Dropdown render latency grows with catalog size | Server caches the rendered Settings UI catalog payload; ETag-invalidated | At ~200 models per provider |
-| Admin audit insertion blocks admin-action commits if external replica is slow | Admin actions stall during replica lag | Audit insert is local + async replication; replica lag is observed but doesn't block the local insert | Replica-dependent |
-
----
-
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Admin role as a column on `user` instead of `admin_grant` table (Pitfall 1) | Permanent backdoors via snapshot restore; no revocation audit; no co-sign requirement on rotation | `admin_grant` schema with revocation columns + partial unique index |
-| Bootstrap admin via Liquibase data seed (Pitfall 1) | Repo-checked-in admin grants leak; CI/staging snapshots become prod backdoors | Bootstrap via runtime env var only; guarded by `EXISTS (SELECT 1 FROM admin_grant)` |
-| Master key returned in save response (Pitfall 2) | Browser-side capture via DevTools, error reporters, session hijack | Save response returns mask + metadata only |
-| Master key in `application.yml` for dev (Pitfall 2) | Repo-checked-in key leaks via bad `.gitignore` edit | StubMasterKeyVault for dev; live keys only via runtime env var; ArchUnit + grep test fails build on `sk-` / `AIza` in YAML |
-| Master-key Test-connection used as validation oracle (Pitfall 2) | Attacker who reaches the endpoint validates harvested keys | Edit-session-token required; rate-limited per admin; no provider error body echoed |
-| Provider error body proxied to admin (Pitfall 2) | Provider error responses leak key fragments | `ProviderErrorTranslator` maps to enum codes; raw body never returned |
-| Admin session cookie shared with user session (Pitfall 3) | Admin authority bleeds into user endpoints; doubled CSRF/clickjacking blast radius | Two distinct cookies + two filter chains + auto-logout on admin side |
-| Admin "convenience" tenant body access (Pitfall 4) | Privacy contract silently broken; admin reads any tenant's mail; OAuth grant misused | ArchUnit ban on Gmail body methods from admin path; response body-ban filter; OAuth refresh-token access forbidden from admin path |
-| Sync-from-/models accepts arbitrary model IDs (Pitfall 5) | Stored XSS / SQL injection via adversarial model ID strings | Allow-list regex; JSON Schema validation; admin diff preview |
-| Hard-delete catalog rows on Sync (Pitfall 5) | Tenant FK violations; immediate breakage for users on deprecated models | Soft-delete with `deprecated_at`; tenant grace period |
-| `admin_audit_log` mutable by app user (Pitfall 6) | Admin can erase their own audit; trust backstop fails | DB user has INSERT + SELECT only; append-only trigger as last line; external replication |
-| Free-text `reason` field in admin audit unsanitized (Pitfall 6) | Audit becomes exfiltration channel | Length cap + content sanitization + separate `admin_audit_meta_log` for triggered-sanitization events |
-| Catalog stale cache races with admin edit (Pitfall 7) | User saves a model the admin just deprecated; confusing error | Event-driven invalidation; same-transaction fresh-read validation on user save |
-| Admin queue endpoint exposes `payload_json` (Pitfall 8) | Body / prompt fragments leak via failed-job inspection | `payload_summary` view; full payload behind audit-required endpoint |
-| Global spend dashboard reveals single-tenant buckets (Pitfall 9) | Cross-tenant inference; admin learns individual tenant spend | k-anonymity threshold ≥5; pseudonymized identifiers; drill-down ticket-required |
-| Admin "send on behalf of tenant" feature (Pitfall 10) | Single send call site invariant dies; trust posture regresses | Hard product decision: no admin send; ArchUnit reaffirms count=1 |
-| Filter ordering: `@PreAuthorize` runs before `AdminContext` binding (Pitfall 11) | Admin authority + user tenant context combined silently | Custom filter ordered before `AuthorizationFilter`; SpEL reads AdminContext only |
-| BYOK form double-submit + master-key rotation race (Pitfall 12) | Confusing audit; partial cache eviction; mid-flight key chaos | Idempotency-Key + advisory lock + scope-separated cache eviction |
-| Stored XSS in catalog `editorial_note` (Pitfall 13) | Script execution in user Settings UI | Server sanitize on save; React text-only rendering; CSP nonce |
-
----
-
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Admin and user pages look visually identical | Admin confuses contexts; accidental cross-tenant writes | Persistent red/yellow chrome bar on `/admin/*`; distinct admin layout |
-| Master-key rotation has no "are you sure" + reason field | Accidental rotation breaks every tenant relying on the master key | Confirm modal with required reason text + 5-second cooldown + co-admin notification |
-| Catalog Sync is a single button with no diff preview | Admin loses curation in one click | 3-step flow: Fetch → Diff → Apply; cancel at any step |
-| Settings UI shows a model the admin just deprecated | User selects it, save fails with cryptic error | Frontend ETag-driven catalog refresh on focus; structured error code maps to "Refresh and pick another" |
-| BYOK / master-key save form has no submit-disable during in-flight | Double-submit chaos; confusing audit rows | TanStack `isPending` disable + idempotency key |
-| Editorial notes pushed off-screen by long admin text | Other UI elements obscured | Fixed height + ellipsis + tooltip |
-| Spend dashboard shows "Total: $1,234.56" with 1 tenant | Single-tenant context inferable | k-anonymity bucketing; "Other (3 tenants)" rollups |
-| Worker queue health view auto-refreshes every second | Worker throughput drops under admin load | Manual refresh + 30s pre-computed snapshot |
-| Test-connection endpoint shows raw provider error | Provider error bodies (with key fragments) appear in admin browser | Translate to enum codes; friendly error string per code |
-| Admin "view audit log" shows their own entries first | Admin self-checks before doing something untoward | Audit log accessible only via co-admin; own actions shown in a separate confirmations panel |
-| "Revoke admin" UI doesn't require reason or co-admin | Quiet revocation hides intent | Reason required; co-admin click required (except in single-admin bootstrap) |
-| Catalog model dropdown shows full provider description and editorial note inline | Cluttered Settings tab | Provider description in tooltip; editorial note as subtitle (truncated) |
-| Settings save success surfaces immediately without confirming server-side state | User assumes save worked; race vs admin disable surfaces later as bug report | Optimistic UI rollback on 4xx; explicit "Saved at HH:MM" timestamp from server |
-
----
-
-## "Looks Done But Isn't" Checklist
-
-- [ ] **Admin foundation:** Bootstrap admin grant exists only via env var `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL`; second boot with the same env var logs WARN and does not re-grant; CI / staging do not set this var.
-- [ ] **`admin_grant` schema:** `revoked_at` column exists; partial unique index on `(user_id, role) WHERE revoked_at IS NULL`; FK to `app_user` enforced.
-- [ ] **AdminContext + TenantContext mutually exclusive:** Test asserts `TenantContext.currentOrThrow()` throws inside an admin context and vice versa; ArchUnit asserts no service reads both in the same call chain.
-- [ ] **Two-cookie session split:** `/admin/*` uses `zm_admin_session`; `/` uses `zm_session`; Playwright test verifies they are independent (logging in to one does not authenticate the other).
-- [ ] **Master-key sentinel leak test:** `sk-MASTER-SENTINEL-NEVER-LOG-99999` set as OpenAI master key; sentinel appears only in `master_key_credential.api_key_cipher` (encrypted) — verified against app logs, access logs, HTTP responses, Redis dumps, JFR, Playwright HAR, Sentry mock.
-- [ ] **Master-key edit-session token + rate limit:** test-connection endpoint outside an edit session returns 403; >10 tests/hour returns 429; provider error bodies are not echoed in any response.
-- [ ] **ChatModel cache eviction on master-key rotation:** Force rotation; assert every cached ChatModel for the provider is evicted; new chat requests instantiate fresh clients.
-- [ ] **Admin path body-ban:** ArchUnit `AdminPathBodyBanTest` green; `AdminResponseBodyBanFilter` strips body-like fields >200 chars; admin endpoints do NOT call `GmailClient.getMessage` or other body-exposing methods; admin paths do NOT resolve tenant OAuth refresh tokens.
-- [ ] **Catalog Sync 3-step flow:** Fetch creates a `SyncDraft`; diff preview shows added/removed/changed counts; Apply mutates inside a single tx; per-feature toggles + `editorial_note` preserved across sync.
-- [ ] **Catalog schema validation:** Hostile `/models` response (malformed model ID, unknown field) handled correctly — model ID rejected with audit row; unknown field logged as WARN with field name.
-- [ ] **Catalog soft-delete:** Deprecated models retain FK validity; tenant with deprecated model selection can still send messages; new selection in Settings filters out deprecated models.
-- [ ] **`admin_audit_log` append-only:** Direct `DELETE FROM admin_audit_log` via psql raises trigger exception; app DB user has no `UPDATE` / `DELETE` grant; chain-hash verification job runs and passes.
-- [ ] **`admin_audit_log` start/end pattern:** Every admin action produces a "started" row before action execution + "completed" or "failed" row after; failure to insert started row aborts action.
-- [ ] **Spend dashboard k-anonymity:** Force test data with 4 tenants in a bucket; assert bucket is suppressed / merged into "Other"; 5+ tenants → bucket visible.
-- [ ] **Spend dashboard drill-down requires ticket ID:** Drill click without `TICKET-\d+` reason rejected with structured error; rejection logged in `admin_audit_log`.
-- [ ] **Single Gmail send call site preserved:** `OnlyOneGmailSendCallSiteTest` count = 1 unchanged in v1.2; grep gate threshold = 1 unchanged; no admin send path exists; ArchUnit forbids admin packages from invoking `AssistantSendExecutor`.
-- [ ] **AdminEndpointFilter ordered before MethodSecurityInterceptor:** Test asserts admin endpoint with no admin session cookie returns 401 BEFORE controller body runs; ArchUnit asserts every `@AdminEndpoint` method's first statement is `AdminContext.currentOrThrow()`.
-- [ ] **Settings idempotency:** BYOK save form double-submit produces one DB write + one audit row; `X-Idempotency-Key` header round-trips correctly.
-- [ ] **Catalog cache + Settings race:** Concurrent admin disable + user save produces (a) one wins, (b) other gets `MODEL_DEPRECATED_DURING_SAVE` 409, (c) no orphan `assistant_settings` row.
-- [ ] **Editorial note XSS resistance:** Playwright test loads 10 hostile editorial notes; renders each via the Settings dropdown; no console errors, no dialog, no script execution; content rendered as plain text.
-- [ ] **Worker queue payload not exposed:** Admin queue page shows `payload_summary` only; full payload behind audit-gated endpoint with reason; `payload_json` does not appear in any admin response by default.
-- [ ] **Two-admin co-sign for master-key rotation:** Single-admin bootstrap allows the rotation with `--allow-single-admin` flag; otherwise blocks until second admin confirms; integration test covers both paths.
-- [ ] **Stale catalog ETag refresh:** Frontend Settings tab open; admin disables a model; within one network roundtrip the Settings UI updates the dropdown options.
-- [ ] **CSP `frame-ancestors 'none'` on `/admin/*`:** Playwright loads admin page inside an iframe; browser refuses to render; CSP header verified.
-- [ ] **Admin login banner persistent:** Visible red/yellow chrome on every `/admin/*` page; Playwright asserts presence on Tenant view, Catalog view, Master-key view, Queue view, Spend view.
-
----
-
-## Recovery Strategies
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Bootstrap admin email rotated but old admin still active in restored DB snapshot | MEDIUM | (1) `UPDATE admin_grant SET revoked_at = now(), revoked_reason = 'snapshot restore — stale grant'` for the old admin; (2) re-run bootstrap with current env var; (3) audit `admin_audit_log` for actions by the stale admin during the gap; (4) document snapshot-restore runbook to include grant audit |
-| Master key leaked to logs / access logs / response bodies | HIGH | (1) Rotate the master key at the provider immediately (revoke + mint new); (2) update `master_key_credential` via `PUT /admin/master-keys/{provider}`; (3) ChatModel cache evicts via `MASTER_KEY_ROTATED` event; (4) deploy the missing sanitizer / ArchUnit rule / Sentry scrubber; (5) audit access during the leak window; (6) disclosure decision per provider's billing transparency |
-| Admin reads a tenant body via a forgotten convenience endpoint | HIGH (trust) | (1) Remove the endpoint immediately; (2) deploy `AdminPathBodyBanTest` + `AdminResponseBodyBanFilter`; (3) audit which admins hit the endpoint via `admin_audit_log`; (4) tenant-side disclosure per privacy policy; (5) PROJECT.md policy entry confirming admin-no-body-access |
-| Catalog Sync hard-deleted models still in use by tenants | MEDIUM | (1) Restore deleted rows from `catalog_audit_log` JSON snapshot of pre-sync state; (2) mark them `deprecated_at` instead of deleted; (3) deploy soft-delete + sync 3-step flow; (4) communicate to affected tenants |
-| `admin_audit_log` row deleted by a DBA | HIGH | (1) Verify chain-hash via the integrity job; (2) restore deleted rows from external replica (Loki / S3); (3) compute the missing entries; (4) tighten DB grants (remove DBA `DELETE` privilege on the table); (5) post-mortem on how the DBA had the privilege |
-| Spend dashboard showed individual-tenant spend before k-anonymity threshold deployed | MEDIUM | (1) Disable the dashboard immediately; (2) audit who viewed it via `admin_audit_log`; (3) deploy k-anonymity threshold; (4) re-enable with verified bucketing; (5) consider per-admin attestation that no individual-tenant data was extracted |
-| Admin sent an email on behalf of a tenant via a "send on behalf" endpoint that should never have shipped | HIGH | (1) Remove the endpoint immediately; (2) audit `assistant_send_audit` (or the second audit table if it was added) for affected tenants; (3) reaffirm `OnlyOneGmailSendCallSiteTest` count = 1; (4) tenant notification per affected user; (5) post-mortem |
-| Stored XSS in editorial note executed in user Settings | MEDIUM | (1) Sanitize all existing notes via a one-off migration; (2) deploy server-side sanitizer; (3) audit for affected sessions in access logs; (4) CSP hardening; (5) tenant-side disclosure if any session compromise observed |
-| BYOK double-submit landed two writes; final state is the second submit not the first | LOW | (1) Audit logs reveal both writes; if the user wanted the second value (typical), no action; if the second was a retry that "should have been idempotent," deploy `X-Idempotency-Key` + advisory lock |
-| Admin filter ordering bug let `@PreAuthorize` run before AdminContext bound | HIGH | (1) Patch the filter ordering; (2) deploy the ArchUnit "first statement = AdminContext.currentOrThrow()" rule; (3) audit `admin_audit_log` for any cross-context anomalies during the affected deploy window; (4) regression test ensuring the order is structurally enforced |
-
----
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| 1. ROLE_ADMIN seed backdoor | **Phase 8 / sub-phase 8A — Admin foundation** | `admin_grant` schema + bootstrap env-var contract + ArchUnit "mutually exclusive contexts" rule green; bootstrap re-run is no-op test |
-| 2. Master-key leak through key-management UI | **Phase 8 / sub-phase 8B — Master-key management** (after 8A) | Master-key sentinel leak test in CI; edit-session-token + rate-limit tests; `application*.yml` grep test for `sk-`/`AIza` |
-| 3. ROLE_ADMIN session reused for user actions | **Phase 8 / sub-phase 8A — Admin foundation** | Playwright two-cookie test; audit `session_type` column present and populated |
-| 4. Admin tenant view leaks body / completion | **Phase 8 / sub-phase 8C — Tenant read-only views** | `AdminPathBodyBanTest` + `AdminResponseBodyBanFilter` integration test; admin response sweep for `body`/`prompt`/`completion` fields |
-| 5. Catalog Sync supply-chain trust | **Phase 8 / sub-phase 8D — Catalog management** | Hostile `/models` response test; SyncDraft 3-step flow integration test; per-provider schema validation |
-| 6. Admin audit log used as exfiltration / editable | **Phase 8 / sub-phase 8A — Admin foundation** | DB-grant test (app user has only INSERT+SELECT); trigger-rejection test; chain-hash verification job; reason-sanitization test |
-| 7. Stale catalog cache races with admin edit | **Phase 8 / sub-phase 8D (write contract) + Phase 9 (Settings save)** | Concurrent admin-disable + user-save race test; ETag-driven refresh Playwright test |
-| 8. Worker queue health DoS / payload leak | **Phase 8 / sub-phase 8E — Worker queue health view** | Pre-computed snapshot freshness test; admin-no-payload-json response test; retry-via-enqueue thread-of-execution test |
-| 9. Spend dashboard cross-tenant leakage | **Phase 8 / sub-phase 8F — Global spend dashboard** | k-anonymity threshold test; drill-down ticket-required test; spend_ledger schema audit |
-| 10. Admin "send on behalf" regresses single send call site | **Phase 8 / sub-phase 8A — Admin foundation (reaffirm)** | `OnlyOneGmailSendCallSiteTest` count = 1 unchanged; ArchUnit "admin packages do not call `AssistantSendExecutor`" rule; PROJECT.md policy entry |
-| 11. Filter ordering / `@PreAuthorize` before AdminContext | **Phase 8 / sub-phase 8A — Admin foundation** | Integration test: no-admin-cookie → 401 before controller; ArchUnit first-statement test |
-| 12. BYOK double-submit + master-key rotation race | **Phase 8 / sub-phase 8B + Phase 9 — Settings page** | Concurrent BYOK + rotation race test; idempotency-key dedup test; advisory-lock test |
-| 13. Editorial note XSS | **Phase 8 / sub-phase 8D (server sanitize) + Phase 9 (frontend render)** | Hostile editorial note Playwright suite (10 vectors); CSP header verification |
-
----
-
-**Recommended phase ordering (forced by dependencies):**
-
-1. **Phase 8A — Admin foundation: RBAC + AdminContext + Audit** (no admin endpoints visible yet)
-   - `admin_grant` + `admin_audit_log` schema (append-only trigger + DB-grant scoping + chain-hash)
-   - `AdminContext` Scoped Value, mutually exclusive with `TenantContext`
-   - Two-cookie session split + `AdminEndpointFilter` ordered before `AuthorizationFilter`
-   - Bootstrap-admin env-var contract; no Liquibase seed for grants
-   - Reaffirm `OnlyOneGmailSendCallSiteTest` count = 1; ArchUnit "admin packages do not call AssistantSendExecutor"
-   - ArchUnit "first statement is `AdminContext.currentOrThrow()`" enforcer
-   - Custom Spring Security `PermissionEvaluator` reading `AdminContext`
-   - Persistent admin-chrome layout for `/admin/*` pages
-
-2. **Phase 8B — Master-key management** (depends on 8A)
-   - `master_key_credential` schema; no Liquibase seed
-   - AES-GCM encrypt/decrypt service (mirrors BYOK pattern, separate key class)
-   - PUT/GET/Test endpoints with mask-only contract, edit-session-token, rate limit, `ProviderErrorTranslator`
-   - `MASTER_KEY_ROTATED` Spring Modulith event + provider-scoped ChatModel cache eviction
-   - Master-key sentinel leak test
-   - Two-admin co-sign for rotation (with `--allow-single-admin` bootstrap escape)
-   - `application*.yml` no-secret-pattern grep test
-
-3. **Phase 8C — Tenant read-only views** (depends on 8A)
-   - `AdminPathBodyBanTest` ArchUnit rule
-   - `AdminResponseBodyBanFilter` Spring filter
-   - Allow-listed admin tenant endpoints: triage history, metadata, rule list, spend, connection health
-   - Admin tenant audit-log entries on every read with reason-required
-   - PROJECT.md policy entry: "admins MUST NOT read tenant email content"
-
-4. **Phase 8D — Catalog management + Sync flow** (depends on 8A and 8B for `/models` calls via master keys)
-   - `catalog_model` + `catalog_audit_log` + `sync_draft` schema; soft-delete via `deprecated_at`
-   - Per-provider JSON Schema validators (`openai-models-v1.schema.json`, `openrouter-models-v1.schema.json`, etc.)
-   - Anthropic / manual-entry path (no Sync button)
-   - 3-step Sync flow: Fetch → Diff → Apply
-   - Model-ID regex allow-list
-   - Editorial note server-side sanitizer
-   - Per-feature toggle preservation across sync
-   - Ping-completion test before model enablement
-   - `CATALOG_UPDATED` Spring Modulith event + ETag-versioned response
-
-5. **Phase 8E — Worker queue health view** (depends on 8A)
-   - `queue_stats_snapshot` table + 30s scheduled refresh job
-   - `payload_summary` view on `processing_job`
-   - Admin retry endpoint via outbox enqueue (no direct worker invocation)
-   - ArchUnit ban on DELETE-from-queue from admin paths
-   - Tenant-ID pseudonymization in queue stats
-
-6. **Phase 8F — Global spend dashboard** (depends on 8A; consume spend_ledger from v1.0)
-   - k-anonymity threshold enforced server-side
-   - Drill-down ticket-required endpoint
-   - `SpendAggregateService` as the only admin-readable spend interface
-   - ArchUnit ban on admin direct reads of `spend_ledger`
-   - Spend ledger schema audit (no free-text columns)
-
-7. **Phase 9 — Settings UI on curated catalog** (depends on 8B for BYOK contract, 8D for catalog read API)
-   - 4 tabs via shadcn `<Tabs>` query-param-driven: Personalization, Behavior, Safety Net, AI Provider/Model
-   - AI Provider/Model tab reads admin-curated catalog with ETag-driven refresh
-   - BYOK save: idempotency-key + advisory lock + submit-disable + mask-only response
-   - Same-transaction catalog freshness validation on settings save → `MODEL_DEPRECATED_DURING_SAVE` 409
-   - Coordinated TanStack Query invalidation across `['settings']` and `['catalog']`
-   - Editorial note safe-render (React text-only)
-   - Carry the 19 deferred v1.1 reqs (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04)
-   - Playwright suites: stale-catalog refresh, BYOK double-submit, hostile editorial note XSS, race admin-disable + user-save
+## Phase-Specific Warning Cross-Reference
+
+| Phase (research-suggested) | Likely Pitfalls | Mitigation summary |
+|----------------------------|-----------------|--------------------|
+| **P0 — Spring AI 2.0 GA migration** | #8 (Spring AI churn) | Bump bom; migration audit; rebuild `ToolCallingManager` factory; smoke-test streaming + tools on real OpenRouter |
+| **P1 — Calendar OAuth + connection foundation** | #1 (CASA), #9 (multi-mailbox×calendar), #10 (enable/disable state machine), #12 (Modulith boundaries), #15 (OAuth token storage) | Scope ledger + ArchUnit allow-list; `mailbox_calendar_preference` + `CalendarContext`; `calendar_connection` state machine; module boundaries declared; AES-GCM token storage |
+| **P2 — Free/busy + draft availability** | #2 (quota) | `CalendarApiClient` wrapper, two-tier cache, singleflight, `quotaUser`, rate cap, degradation contract |
+| **P3 — Booking pages** | #4 (bot/abuse), #11 (schema), #14 (outbound gateway) | CAPTCHA, DB-locked slot uniqueness, `BookingCalendarGateway` + ArchUnit, idempotency, audit, slug semantics |
+| **P4 — AI meeting briefs** | #5 (ARCH-02 brief envelope), #7 (agentic loop runaway), #8 (Spring AI) | In-memory rendering at delivery time; `BriefOrchestrator` + sanitizer; per-brief caps; BYOK preview; PROJECT.md carve-out addendum |
+| **P5 — Calendar-aware triage + propose_meeting** | #12 (Modulith), #14 (outbound gateway) | Events for invite-observed; `propose_meeting` reuses gateway; explicit `sendUpdates` |
+| **P6 — Drive OAuth + Picker** | #1 (CASA), #3 (drive.file UX), #15 (token storage) | Picker-only UX; ADR; `drive.file` semantic CI test; reuse OAuth credential pattern |
+| **P7 — AI document auto-filing** | #6 (streaming OOM), #3 (no folder browse), #11 (schema) | Streaming pipe + bounded executor + heap budget; AI history from `drive_filed_document` (no live scan); JSONB index discipline |
+| **P8 — Attachment source rules** | #3 (Picker-once UX), #14 (gateway) | UX: pick files once at rule creation; trade-off documented in SPEC; gateway routing for outbound |
+| **Every phase** | #11 (Liquibase discipline) | Per-phase schema review; one-change-per-changeset; immutability hook; rollback blocks; JSONB indexes |
+| **Every phase** | #13 (bundle size) | shadcn-first; route-group isolation; dynamic Picker import; CI bundle-size gate |
 
 ---
 
 ## Sources
 
-### Zero Mail source code (read directly)
-- `D:/study-materials-summer-2026/EXE202/zero-mail/.planning/PROJECT.md` — privacy carve-out, write-actions policy, decision log, v1.2 milestone scope
-- `D:/study-materials-summer-2026/EXE202/zero-mail/CLAUDE.md` — constraints, conventions, hard "do not use" list, master-key + BYOK rules
-- `D:/study-materials-summer-2026/EXE202/zero-mail/.planning/research/PITFALLS.md` (v1.1 prior baseline, this file replaces it) — confirmation state machine, BYOK regressions, JSONB schema drift, send-call-site invariant
-
-### Inbox Zero source code (read directly)
-- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/app/(app)/admin/AdminUserControls.tsx` — admin user-impersonation / role-grant UI pattern (Zero Mail diverges: no impersonation in v1.2)
-- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/app/(app)/admin/AdminUpgradeUserForm.tsx` — admin self-service upgrade reference
-- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/app/api/admin/top-spenders/route.ts` — hashed-email top-spenders pattern (Zero Mail extends: k-anonymity threshold + per-session salt + drill-down ticket-required)
-
-### Spring Security / Modulith / Java (verified)
-- [Spring Security 7.0 Method Security Reference](https://docs.spring.io/spring-security/reference/servlet/authorization/method-security.html) — `@PreAuthorize` ordering, custom `PermissionEvaluator`
-- [Spring Security Filter Chains](https://docs.spring.io/spring-security/reference/servlet/architecture.html) — `securityMatcher` + multiple chains
-- [Spring Modulith `@ApplicationModuleListener`](https://docs.spring.io/spring-modulith/reference/events.html) — after-commit event ordering for cache eviction
-- [JEP 506: Scoped Values (Java 25)](https://openjdk.org/jeps/506) — final ScopedValue API, immutable per-thread bindings
-
-### Postgres / Liquibase (verified)
-- [Postgres trigger functions for append-only tables](https://www.postgresql.org/docs/current/sql-createtrigger.html) — `BEFORE UPDATE OR DELETE` rejection pattern
-- [Postgres `pg_advisory_xact_lock`](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS) — serialization without table locks for BYOK save
-- [Liquibase YAML changeset reference](https://docs.liquibase.com/concepts/changelogs/yaml-format.html) — append-only changelog discipline; partial unique index via custom SQL
-
-### Security / Privacy guidance (verified)
-- [OWASP Top 10 2021 — A04 Insecure Design](https://owasp.org/Top10/A04_2021-Insecure_Design/) — design-time controls for admin authority + auditability
-- [OWASP Top 10 2021 — A09 Security Logging & Monitoring Failures](https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/) — audit log integrity, tamper-evidence
-- [CWE-522 — Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html) — master-key storage and exposure surface
-- [CWE-532 — Insertion of Sensitive Information into Log File](https://cwe.mitre.org/data/definitions/532.html) — sentinel-leak test rationale
-- [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html) — Liquibase seed / `application.yml` prohibitions
-- [NIST SP 800-57 Part 1 Rev 5 — Recommendation for Key Management](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final) — rotation cadence, distinct key purposes (master vs per-tenant BYOK)
-- [PortSwigger — DOM-based XSS](https://portswigger.net/web-security/cross-site-scripting/dom-based) — editorial-note rendering vulnerability class
-- [k-anonymity (Wikipedia, with reference to Sweeney 2002)](https://en.wikipedia.org/wiki/K-anonymity) — aggregation threshold rationale for spend dashboard
-
-### Provider supply-chain references
-- [OpenAI Models API reference](https://platform.openai.com/docs/api-reference/models) — `/v1/models` shape
-- [OpenRouter Models API](https://openrouter.ai/docs/api-reference/list-available-models) — extended fields (pricing, routing metadata)
-- [Anthropic API reference — no `/models` endpoint](https://docs.anthropic.com/en/api/getting-started) — manual catalog entry required
-- [Google Gemini API — Models list](https://ai.google.dev/api/models) — fast-churning model list
-
-### Inbox Zero "negative" reference (admin features deliberately not ported)
-- Inbox Zero admin includes user-impersonation (`AdminUserControls.tsx`), Stripe-sync, and hashed-email top-spenders. Zero Mail v1.2 deliberately omits user-impersonation entirely; reuses the hashed-email approach with k-anonymity + per-session salt + drill-down ticket-required hardening; does not include Stripe sync (Zero Mail uses SePay/VietQR + Postgres ledger).
+- [Google: Sensitive scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification) — HIGH confidence — sensitive vs restricted scope classification mechanics
+- [Google: Restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification) — HIGH — CASA Tier 2/3 requirement triggers
+- [Google CASA 2025: Tiers, Costs & Compliance Explained (deepstrike.io)](https://deepstrike.io/blog/google-casa-security-assessment-2025) — MEDIUM-HIGH — non-canonical but corroborates tier timelines
+- [Google Calendar API usage limits](https://developers.google.com/workspace/calendar/api/guides/quota) — HIGH — per-user, per-project quota mechanics, 403/429 patterns, `quotaUser` semantics
+- [Google Calendar API freebusy.query reference](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query) — HIGH — `calendarExpansionMax=50` cap, request shape
+- [Google Calendar API push notifications](https://developers.google.com/workspace/calendar/api/guides/push) — HIGH — channel mechanics, HTTPS + cert requirements
+- [Google Drive: Select files and folders with Google Picker](https://developers.google.com/workspace/add-ons/studio/drive-picker) — HIGH — definitive source for `drive.file` folder-pick = write-only-into-folder semantics
+- [Google Drive: Choose Drive API scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) — HIGH — `drive.file` non-sensitive classification
+- [Spring AI 2.0.0-RC1 Available Now](https://spring.io/blog/2026/06/06/spring-ai-2-0-0-RC1-available-now/) — HIGH — "built-in call/stream tool-execution loop dropped from every ChatModel"
+- [Spring AI Upgrade Notes](https://docs.spring.io/spring-ai/reference/upgrade-notes.html) — HIGH — comprehensive migration matrix
+- [Spring AI 1.0.7, 1.1.6, 2.0.0-M6 release notes](https://spring.io/blog/2026/05/08/spring-ai-1-0-7-1-1-6-2-0-0-M6-available-now/) — HIGH — M6 baseline (`PromptChatMemoryAdvisor` deprecation, explicit conversation ID required)
+- [Calendly community: CAPTCHA on booking page](https://community.calendly.com/how-do-i-40/adding-a-captcha-to-my-booking-page-2295) — MEDIUM — confirms Calendly's "2-3 bookings/hour per IP triggers CAPTCHA" pattern is insufficient
+- [Calendly community: SPAM Booking Prevention](https://community.calendly.com/how-do-i-40/spam-booking-prevention-ideas-2711) — MEDIUM — confirms ongoing bot abuse pressure on public booking endpoints
+- `CLAUDE.md` — HIGH — ARCH-02 scope (email-content pipeline vs chat draft body carve-out), OutboundSendGateway, libs/version locks, `feedback_*` memory entries
+- `.planning/PROJECT.md` — HIGH — v1.4 scope, v1.3 baseline (multi-mailbox `MailboxContext`, ArchUnit `findByTenantId` ban), explicit deferrals
+- v1.2 `.planning/research/PITFALLS.md` — HIGH — pattern reuse for `AdminContext`/scoped-value isolation, sentinel-leak test design, append-only audit, rate-limit primitives
 
 ---
 
-*Pitfalls research for: Zero Mail v1.2 admin console foundation + Settings UI on curated catalog, added on top of v1.0/v1.1 trust-first baseline*
-*Researched: 2026-05-19*
+*Pitfalls research for: Zero Mail v1.4 Calendar Co-Pilot + Drive Filing, added on top of v1.0–v1.3 trust-first baseline*
+*Researched: 2026-06-17*

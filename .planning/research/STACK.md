@@ -1,415 +1,432 @@
-# Stack Research — Zero Mail v1.2 (Admin Console Foundation + Settings UI on Curated Catalog)
+# Stack Research — Zero Mail v1.4 (Google Calendar Co-Pilot + Drive Filing)
 
-**Domain:** Operator/admin surface added to an existing multi-tenant Spring Boot 4 + Next.js 16 SaaS
-**Researched:** 2026-05-19
-**Overall confidence:** HIGH on all additions/changes (verified via Context7 `/springdoc/springdoc-openapi`, Spring Security 7 docs, Spring Boot 4 reference, existing repo state, npm registry). Zero new "exotic" deps — every v1.2 capability is built from artifacts already on the v1.0/v1.1 classpath plus **one** new dev-time codegen output (a second OpenAPI group).
+**Domain:** Google Calendar API + Google Drive API integration layered on existing Spring Boot 4.1 + Spring AI 2.0.0 GA multi-tenant Gmail SaaS.
+**Researched:** 2026-06-17
+**Overall confidence:** HIGH on backend additions (verified via Context7 `/websites/developers_google_workspace_calendar_api`, `/websites/developers_google_workspace_drive`, `/websites/spring_io_spring-ai_reference_2_0-snapshot`, and live Maven Central index probes for `com.google.apis:google-api-services-calendar` and `com.google.apis:google-api-services-drive`). HIGH on frontend (no new runtime deps — `calendar.tsx` shadcn primitive + `react-day-picker@^10.0.1` + `date-fns@^4.4.0` already in `apps/web/package.json`).
 
-> **Scope of this document.** This is the **v1.2 delta**. The v1.0 baseline and v1.1 chat additions (Java 25 / Spring Boot 4.0.6 / Spring AI 2.0.0-M7 / PostgreSQL 17 / Redis 7 / Next.js 16.2 / React 19.2 / Tailwind 4 / shadcn/ui / TanStack Query 5 / openapi-typescript 7.13 / openapi-fetch 0.17 / Liquibase 5 / springdoc-openapi 3.0.3 / Spring Session Redis / AES-GCM at app layer / virtual threads / Micrometer + OTel agent 2.16 / `ai` 6 + `@ai-sdk/react` 3 + AI Elements) are **locked and validated** — see git history of this file before 2026-05-19 for v1.0 and v1.1. This document only catalogs what v1.2 **adds** or **changes**.
+> **Scope of this document.** This is the **v1.4 delta**. The v1.0 → v1.3 baseline (Java 25 / Spring Boot 4.1.0 GA / Spring Modulith 2.1.0 / Spring AI 2.0.0 GA / PostgreSQL 17 / Redis 7 / Next.js 16.2 / React 19.2 / Tailwind 4 / shadcn/ui / TanStack Query / openapi-typescript + openapi-fetch / Liquibase 5 / Spring Session Redis cookie / AES-GCM at app layer / `MailboxContext` ScopedValue from v1.3 / `LlmGateway` single Spring AI adapter / single bundled Google OAuth client / `google-api-services-gmail v1-rev20250331-2.0.0` / `google-auth-library-oauth2-http 1.48.0`) is **locked and validated** — see prior STACK.md revisions in git history. This document only catalogs what v1.4 **adds**.
 
-> **What v1.2 does not add or change:** no new auth provider (still single Google OAuth bundled flow, no Keycloak/Auth0); no JWT (cookie session via Spring Session Redis stays); no new database; no new queue; no new observability tool; no new LLM provider SDK; no GCP starter; no Kafka/RabbitMQ; no embedding store; no `spring-boot-starter-webflux`. **Admin RBAC is layered on top of the existing `OAuth2User` principal — no second IdP.**
-
----
-
-## TL;DR — Prescriptive v1.2 Additions
-
-**Backend — zero new runtime dependencies.** All v1.2 capabilities reuse artifacts already on the classpath:
-
-| Capability | Already on classpath, used as |
-|---|---|
-| `/admin/**` RBAC | Spring Security 7.0.5 `authorizeHttpRequests(...).requestMatchers("/admin/**").hasRole("ADMIN")` + `@PreAuthorize("hasRole('ADMIN')")` for method-level checks. **One new annotation:** `@EnableMethodSecurity` on the existing `SecurityConfig`. |
-| Admin action audit log | New Liquibase YAML changelog → `admin_audit_event` table. Same persistence stack as v1.0/v1.1 (Liquibase 5 + Spring Data JPA / JDBC). |
-| Per-provider per-feature LLM catalog | Three new Liquibase YAML changelogs (`llm_provider_catalog`, `llm_provider_model`, `llm_model_feature_capability`). No new library. |
-| Sync-from-`/models` for each provider | **Already-installed Spring AI provider starters** expose `*ModelsApi.listModels()` via their underlying clients (OpenAI starter ships `OpenAiApi`, Anthropic starter ships `AnthropicApi`, etc.). Where Spring AI does **not** expose a `/models` lister, fall back to a thin `RestClient` call in `core.llm.gateway.springai.admin` — still inside the locked single-adapter package. **No raw third-party SDKs.** |
-| AES-GCM master key encryption | **Same AES-GCM app-layer crypto already shipped in LLM-04 for BYOK** — reuse `core.crypto.AesGcmEncryptor` (or equivalent) for master keys. Keys at rest in a new `llm_provider_master_key` table; KEK from existing `ZeroMailCoreProperties` secret (rotation = new KEK version + re-wrap rows in a single Liquibase data migration + admin-issued rotation command). |
-| Test-connection per master key | Spring AI `ChatModel.call(Prompt.builder().messages(new UserMessage("ping")).build())` with token limit 1 — already on classpath. |
-| Tenant read-only views | Existing Spring Data JDBC projections (`projection/` package per CONVENTIONS.md). No new lib. |
-| Worker queue health (read-only) | Read queries against existing `outbox` + `processing_job` Postgres tables (Postgres MCP available for ops verification per Tooling section). No new lib. |
-| Promoted global LLM spend dashboard | Aggregations over the existing metadata-only spend rows already recorded by LLM-10/11. No new lib. |
-| Admin OpenAPI segregation | **Already-installed `springdoc-openapi-starter-webmvc-ui` 3.0.3** ships `GroupedOpenApi` — add two beans (`publicApi` + `adminApi`) and emit two specs. |
-
-**Backend — three architectural switches (no dep changes):**
-
-1. Add `@EnableMethodSecurity` to the existing `SecurityConfig` class.
-2. Extend the existing `OAuth2UserService` / `GoogleOAuthSuccessHandler` to attach `ROLE_ADMIN` based on a DB-backed `user.is_admin` boolean (admin elevation is a DB row, not a Google-side claim).
-3. Add a second `GroupedOpenApi` bean producing `openapi/admin-openapi.json` alongside the existing `openapi/openapi.json`.
-
-**Frontend (`apps/web/package.json`) — ZERO new runtime dependencies.** Every admin UI primitive needed in v1.2 is **already in `apps/web/components/ui/**`** (verified by directory listing on 2026-05-19): `table`, `tabs`, `dialog`, `alert-dialog`, `dropdown-menu`, `select`, `command`, `popover`, `tooltip`, `badge`, `card`, `sheet`, `sidebar`, `switch`, `chart` (Recharts wrapper), `skeleton`, `scroll-area`, `spinner`, `accordion`, `button-group`, `input-group`, `hover-card`. The only **new** shadcn primitive **likely** wanted (`data-table` patterns / pagination) is composed on top of the already-installed `table` + `button` + `select` + `input` primitives — no extra `pnpm dlx shadcn add` required for v1.2 Phase 8. **One frontend codegen change:** the `apps/web/scripts/generate-api.ts` script needs to fetch and emit **two** schema files (one per OpenAPI group), or merge both groups into the existing single schema file. See "Frontend codegen change" below for the recommended split.
+> **What v1.4 does not add or change:** no new IdP (still single Google OAuth client + bundled scopes); no new database; no new queue; no new observability tool; no new LLM provider SDK (Calendar briefing agent reuses the existing `LlmGateway` + Spring AI 2.0.0 GA `ToolCallingManager` / `ChatClient.tools()`); no vector DB (privacy ARCH-02 still bans embeddings of email content and now bans persisted attachment content too); no Microsoft Graph SDK / Outlook starter; no PDF/OCR/text-extraction library (attachment filing analyzes metadata + AI vision-capable model in-memory, not Tesseract/Tika); no second OAuth client; no incremental-authorization second consent screen.
 
 ---
 
-## What v1.2 Adds — Backend (No New Dependencies)
+## TL;DR — Prescriptive v1.4 Additions
 
-### Spring Security 7 admin RBAC pattern (HIGH — verified against Spring Security 7.0.x reference)
+**Backend — TWO new runtime dependencies, both Google API Java client artifacts in the same family already on the classpath for Gmail.**
 
-Spring Security 7.0.5 (already on classpath via Spring Boot 4.0.6) is the **same API surface** as Spring Security 6 for URL authorization. No breaking change for `authorizeHttpRequests`, `requestMatchers`, `hasRole`, `hasAuthority`, or `@PreAuthorize`. The canonical pattern is:
+| Capability | New artifact | Module pin |
+|---|---|---|
+| Google Calendar API (freebusy, events.insert, calendarList.list, events.watch later) | `com.google.apis:google-api-services-calendar:v3-rev20260517-2.0.0` | `backend/core` (`api` configuration, like the existing Gmail artifact) |
+| Google Drive API (files.create with media, files.list under `drive.file` scope, optional `permissions` for sharing) | `com.google.apis:google-api-services-drive:v3-rev20260428-2.0.0` | `backend/core` (`api` configuration) |
 
-```java
-// Inside the existing SecurityConfig.chain(...) — adds ONE requestMatchers row
-http.authorizeHttpRequests(authorize -> authorize
-        .requestMatchers(
-                "/login",
-                "/actuator/health",
-                "/actuator/health/**",
-                "/v3/api-docs/**",
-                "/v3/api-docs/admin",        // new — admin OpenAPI group
-                "/swagger-ui/**",
-                "/login/oauth2/**",
-                "/oauth2/**")
-            .permitAll()
-        .requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")  // ← only v1.2 addition
-        .anyRequest().authenticated());
+**No Spring Boot starter exists for either API and we deliberately would not use one if it did.** Google publishes only the auto-generated Discovery-style `google-api-services-*` artifacts plus the unrelated `spring-cloud-gcp-*` family — and `spring-cloud-gcp` is **explicitly banned** in CLAUDE.md ("No GCP hosting baseline — do not add `spring-cloud-gcp` starters by default"). The pattern v1.0 chose for Gmail (`google-api-services-gmail` + `google-auth-library-oauth2-http`, hand-wired `Gmail.Builder` per request) is what v1.4 replicates for Calendar and Drive. Same client transport (`NetHttpTransport`), same `GsonFactory` JSON, same `HttpCredentialsAdapter`, same AES-GCM-encrypted refresh-token storage path through the existing OAuth token store. **No transitive version conflicts** — both new artifacts pull the same `com.google.api-client:google-api-client:2.x` + `com.google.http-client:google-http-client:1.47.x` that the existing Gmail artifact already requires; verified Maven Central index 2026-06-17.
+
+**Frontend — ZERO new runtime dependencies.** Booking page rendering, weekly availability windows editor, slot picker, and meeting-brief display all compose on top of primitives **already installed** in `apps/web/components/ui/**` on 2026-06-17:
+
+| Booking / Calendar UI need | Existing primitive | Source |
+|---|---|---|
+| Public booking page date picker (visitor picks a day) | `calendar.tsx` (shadcn wrapper over `react-day-picker@^10.0.1`) | already installed |
+| Weekly availability windows editor (Mon-Sun × multiple time ranges) | `select.tsx` + `input.tsx` + `button.tsx` + `toggle.tsx` hand-composed | already installed |
+| Slot picker (post date-pick, list of 30-min slots) | `button.tsx` + `card.tsx` + `radio-group.tsx` hand-composed | already installed |
+| Timezone picker on booking page | `command.tsx` + `popover.tsx` + IANA list inlined (no `moment-timezone` runtime dep) | already installed; **Intl.supportedValuesOf("timeZone")** is the source of truth in modern browsers + Node 22 |
+| Date/time formatting + arithmetic for slot generation | `date-fns@^4.4.0` (browser) + `java.time` (backend) | already installed |
+| Filing folder picker (admin's Drive folder tree) | `command.tsx` + `popover.tsx` + recursive `Tree` from existing primitives | already installed |
+| Drive folder confidence display | `badge.tsx` + `progress.tsx` | already installed |
+| Meeting brief surface (in-app + email) | Existing `card.tsx` + `badge.tsx` + same `MailNotification` channel used by digest emails (no new email lib — Resend already pinned 4.13.0) | already installed |
+
+**Net new shadcn primitives required: zero.** Net new npm runtime deps: zero. **Verified** by `ls apps/web/components/ui/` and `grep` of `apps/web/package.json` on 2026-06-17.
+
+---
+
+## What v1.4 Adds — Backend Dependencies (Two Artifacts)
+
+### Google Calendar API Java client — `google-api-services-calendar`
+
+**Verified version (Maven Central index 2026-06-17):**
+
+```
+com.google.apis:google-api-services-calendar
+…
+  v3-rev20260225-2.0.0
+  v3-rev20260517-2.0.0   ← LATEST as of 2026-06-17
 ```
 
-**Two complementary enforcement layers (defense in depth):**
+**Pin via `libs.versions.toml`:**
 
-| Layer | Where | What it catches |
-|---|---|---|
-| URL-pattern `requestMatchers("/api/admin/**").hasRole("ADMIN")` | `SecurityConfig.chain(...)` | Any HTTP request to admin paths bypassing the controller (filter chain runs before dispatch). Fail-fast 403 at the filter. |
-| Method `@PreAuthorize("hasRole('ADMIN')")` on every admin controller / service method | `controllers/admin/**` + `application/admin/**` | Programmatic calls (Modulith events, scheduled jobs, tests) that try to invoke admin operations without going through `/api/admin/**`. Also makes intent explicit at the call site. |
+```toml
+[versions]
+calendarApi = "v3-rev20260517-2.0.0"
+driveApi    = "v3-rev20260428-2.0.0"
+# existing pins unchanged
+gmailApi = "v1-rev20250331-2.0.0"
 
-**One new annotation on the existing class — no new dependency:**
-
-```java
-@Configuration
-@EnableMethodSecurity   // ← add this for @PreAuthorize/@PostAuthorize support
-@Profile("!test")
-public class SecurityConfig { ... }
+[libraries]
+google-api-services-calendar = { module = "com.google.apis:google-api-services-calendar", version.ref = "calendarApi" }
+google-api-services-drive    = { module = "com.google.apis:google-api-services-drive",    version.ref = "driveApi" }
 ```
 
-`@EnableMethodSecurity` lives in `org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity` — already on the classpath via `spring-boot-starter-security` (no Gradle change). Spring Security 7 keeps the same name and import path; verified Context7 `/spring-projects/spring-security`. **HIGH**.
+**Consumed in `backend/core/build.gradle.kts` next to the existing Gmail line:**
 
-### How `ROLE_ADMIN` gets attached to the existing cookie session
+```kotlin
+api(libs.google.api.services.gmail)
+api(libs.google.api.services.calendar)   // ← NEW
+api(libs.google.api.services.drive)      // ← NEW
+```
 
-**Decision: admin elevation is a DB row, not a Google claim.** This keeps the bundled OAuth flow untouched (memory note "Bundle OAuth scopes (inbox-zero pattern)") and avoids granting Google control over our authorization model.
+**Module placement decision: `backend/core`, `api` configuration (not `implementation`).** Matches the existing Gmail pattern: the request/response models (`Event`, `FreeBusyRequest`, `File`, `FileList`) are referenced from `domain/`, `application/`, **and** `persistence/` packages (audit row shape mirrors a subset of `Event`), so the transitive types must stay on the consumer compile classpath. **The `Calendar.Builder` and `Drive.Builder` construction is confined to dedicated gateway packages** (`core.calendar.gateway.google` and `core.drive.gateway.google`), enforced by a new ArchUnit rule — same shape as the existing `core.llm.gateway.springai` confinement plus the v1.3 `core.gmail.gateway` confinement.
 
-**Implementation outline (no new dep):**
+**No Spring Boot autoconfiguration ships for these artifacts.** Hand-wired per-request client construction is the locked pattern (see "Why no Spring Boot starter for Google Calendar/Drive" below).
 
-1. Add a `is_admin BOOLEAN NOT NULL DEFAULT false` column to the existing `user` table via a new Liquibase YAML changelog.
-2. In the existing `GoogleOAuthSuccessHandler` (or the corresponding `OAuth2UserService` if one is added), after provisioning, look up `user.is_admin` and append `new SimpleGrantedAuthority("ROLE_ADMIN")` to the principal's authorities **alongside** the existing `ROLE_USER` (or equivalent).
-3. Spring Session Redis serializes the augmented principal automatically — the cookie session already carries arbitrary `GrantedAuthority` lists.
-4. Admin elevation/demotion lives in a Liquibase seed script (initial admin) + an admin-only API endpoint guarded by `@PreAuthorize("hasRole('ADMIN')")` (existing admins promote new ones).
+**Calendar APIs we use (mapped to existing v1.4 requirements):**
 
-**Why not Google Workspace admin claims:** the SaaS targets prosumer Gmail users, not Workspace tenants — Google's `hd` (hosted domain) claim is not a reliable signal. DB-backed elevation is faithful to the multi-tenant + BYOK model.
-
-**Why not Keycloak / Auth0:** would force a second IdP for **two** roles (`USER`, `ADMIN`); adds an entire deployment unit + cost; user has memory note rejecting "incremental authorization" detours; CLAUDE.md "Stateless JWT user sessions" is in the do-not-use list. Locked: stay on cookie + Spring Session Redis.
-
-### Master-key management for OpenAI/Anthropic/Google/DeepSeek (reuses existing AES-GCM)
-
-**Decision: reuse the AES-GCM app-layer encryptor already shipped for BYOK (LLM-04) — do NOT add a new crypto library.** The threat model and rotation requirements are identical to BYOK refresh tokens.
-
-**Pattern:**
-
-| Concern | v1.0 BYOK pattern (already shipped) | v1.2 master-key extension |
+| Use case | Calendar API call | Notes |
 |---|---|---|
-| Encryption algorithm | AES-256-GCM, 96-bit IV, 128-bit tag | **Same.** |
-| Key Encryption Key (KEK) | `ZeroMailCoreProperties.crypto.byok.kekBase64` (env-injected) | **Add** `ZeroMailCoreProperties.crypto.masterKeys.kekBase64` (env-injected) and `kekVersion` for rotation tracking. |
-| Storage | `byok_credential` table — ciphertext + IV + version | **Add** `llm_provider_master_key` table with same column shape: `(id, provider_id, ciphertext, iv, kek_version, status, created_at, rotated_at, last_tested_at, last_test_status)`. |
-| Rotation | Re-wrap row with new KEK version | **Same.** Admin UI triggers a rotation command → service decrypts under old KEK → re-encrypts under new KEK → writes `kek_version+1`. Liquibase YAML changelog only bumps `kekVersion` in config; ciphertext rotation is a runtime command, not a migration. |
-| Plaintext lifetime | Per-call buffer zeroed in `finally` | **Same.** |
-| Logging | Never logged (LLM-04 + `@Sensitive` Logback scrub) | **Same.** |
-| Test-connection | N/A (BYOK calls are per-user) | **New.** Admin clicks "Test" → server decrypts master key → builds a Spring AI `ChatModel` with that key → calls with a 1-token prompt → records `last_test_status`. Re-uses the existing `LlmGateway` adapter; no new code outside `core.llm.gateway.springai.admin`. |
+| List a connection's calendars on the **Manage calendars** screen | `calendarList.list()` | Filter `accessRole >= writer` for "destination calendar" slot. |
+| AI availability in draft reply / `propose_meeting` rule action | `freebusy.query(FreeBusyRequest)` with up to 50 calendar IDs across enabled connections | Pre-filter to **enabled** calendar IDs per `calendar_connections` ↔ `calendars` join; do NOT call `events.list` for availability — `freebusy` is metadata-only (no event titles/locations) which fits the privacy posture nicely. |
+| Booking link writes the event | `events.insert(calendarId, Event)` with `conferenceDataVersion=1` when Google Meet is the chosen location type | `createRequest.requestId = UUID` for idempotency. The locked outbound gateway boundary is widened: in addition to Gmail send via `OutboundSendGateway`, calendar writes go through a parallel `OutboundCalendarGateway` so ArchUnit can keep the "no direct provider write outside the gateway" rule. |
+| Calendar-aware triage (detect invite / cancellation / reschedule) | No new Calendar call needed — we parse the Gmail `text/calendar` part already accessible via the v1.3 Gmail client, then optionally cross-check with `events.get(calendarId, eventId)` to confirm RSVP state | The cross-check is the only Calendar **read** done from the triage hot path. |
+| AI meeting brief cron | `events.list(calendarId, timeMin, timeMax)` filtered to events with external attendees (≥1 attendee whose `email` domain ≠ connection's primary domain) | Run from `backend/worker`; the resulting attendee list seeds the agentic AI loop. Event titles/locations are processed in-memory and the **brief text** is what gets persisted (it is user-derived narrative, not raw email content — analogous to the v1.1 chat `draft_body` carve-out). |
 
-**No new crypto library.** Java's built-in `Cipher.getInstance("AES/GCM/NoPadding")` (JDK 25) is what LLM-04 already uses. **HIGH** — verified against the repo's existing `byok_credential` flow.
+**Scopes required (added to the existing single Google OAuth client):**
 
-**Pitfall (explicit):** do **NOT** introduce HashiCorp Vault, AWS KMS, or GCP KMS in v1.2. The single-VPS posture (CLAUDE.md "Distribution (v1)") and "No GCP hosting baseline" rule lock the deployment to one host — adding a managed KMS would (a) require a second deployment surface, (b) add network latency to every LLM call, (c) violate the locked "No GCP starter" rule. App-layer AES-GCM + env-injected KEK is the v1.2 design. Managed KMS is a v2+ migration.
+| Scope | Why | Sensitivity | CASA tier |
+|---|---|---|---|
+| `https://www.googleapis.com/auth/calendar.freebusy` | freebusy.query for AI availability + propose_meeting + brief seeding | **Non-sensitive** in Google's classification — no event titles, locations, or attendees returned | No CASA assessment required |
+| `https://www.googleapis.com/auth/calendar.events` | events.insert (booking write), events.get (triage RSVP cross-check), events.list (briefing cron) | **Restricted** | CASA Tier 2 (same tier as the existing Gmail scopes) |
+| `https://www.googleapis.com/auth/calendar.readonly` | calendarList.list for the **Manage calendars** screen and reading per-calendar timezones for slot rendering | **Sensitive** | Standard CASA |
 
-### Sync-from-`/models` per provider (no new SDK)
+**Drive APIs we use:**
 
-Each Spring AI provider starter already on the classpath exposes a low-level client that can list models. **The rule "no raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter" remains in force** — the list-models call **must** live inside `core.llm.gateway.springai.admin`. Where the provider starter does not expose a `listModels()` method directly, a `RestClient` (Spring 7 built-in) call to `<base-url>/v1/models` with the master key is acceptable **only inside the locked adapter package**, guarded by the existing ArchUnit rule. **MEDIUM-HIGH** — confirmed by inspecting Spring AI 2.0.0-M7's `OpenAiApi` exposure in the existing v1.0 LLM gateway; verify the Anthropic/Google starters at implementation time.
-
-| Provider | Endpoint shape | Notes |
+| Use case | Drive API call | Notes |
 |---|---|---|
-| OpenAI | `GET /v1/models` returns `{ data: [{ id, owned_by, ... }] }` | Auth: `Authorization: Bearer <key>`. |
-| OpenRouter | `GET /v1/models` — OpenAI-compatible | Use existing OpenAI starter pointed at `https://openrouter.ai/api/v1`; same endpoint shape. |
-| Anthropic | `GET /v1/models` returns `{ data: [{ id, display_name, ... }] }` | Auth: `x-api-key: <key>` + `anthropic-version: 2023-06-01`. |
-| Google GenAI | `GET https://generativelanguage.googleapis.com/v1beta/models?key=<key>` returns `{ models: [{ name, supportedGenerationMethods, ... }] }` | Auth: query param (or `x-goog-api-key` header). Different shape — see below. |
-| DeepSeek | `GET /v1/models` — OpenAI-compatible | Use the existing DeepSeek starter (OpenAI-shape adapter). |
+| Suggest folder for an incoming attachment | `files.list(q = "mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false", fields = "files(id,name,parents)")` | Limited by `drive.file` scope to files **the app has previously created or that the user explicitly picks via the Drive picker** — so the initial folder set comes from a Drive Picker-driven onboarding step where the user nominates root folders. (Inbox Zero accepted this UX trade for the same privacy reason; we keep it.) |
+| Create destination folder if one of the AI's suggestions doesn't exist yet | `files.create(File metadata with mimeType="application/vnd.google-apps.folder", parents)` | App-created folders are in-scope for `drive.file` forever — accumulates a clean "Zero Mail filed" sub-tree per workspace. |
+| File the attachment | `files.create(File metadata, AbstractInputStreamContent media)` with `media = new InputStreamContent(mimeType, gmailAttachmentInputStream)` | **CRITICAL for privacy ARCH-02:** we use `InputStreamContent` (subclass of `AbstractInputStreamContent`) NOT `FileContent` — the Gmail attachment stream is piped directly from the Gmail `users.messages.attachments.get` response through `InputStreamContent` into the Drive upload **without ever touching the filesystem or a persistent buffer**. See "In-memory attachment streaming pattern" below. |
+| Attach a file from a user-curated Drive folder to an outbound reply | `files.get(fileId).executeMediaAsInputStream()` → pipe into the Gmail MIME multipart builder | Same in-memory streaming pattern, reverse direction; routed through the existing `OutboundSendGateway`. |
 
-**Per-feature capability:** the catalog table `llm_model_feature_capability` records `(provider_id, model_id, feature)` rows where `feature ∈ {CHAT, TRIAGE, DRAFT}`. Sync-from-`/models` **proposes** discovered model IDs; admin **explicitly toggles** which features each model is enabled for. We do not auto-derive feature capability from the `/models` response because: (a) `supportedGenerationMethods` exists only on Google, (b) capability labels like "chat" vs "completion" are noisy across providers, (c) Zero Mail's three feature slots have distinct prompt/budget/safety profiles that providers don't model. Admin curation is the source of truth.
+**Scopes required:**
 
-### Admin audit table (new Liquibase changelog)
+| Scope | Why | Sensitivity | CASA tier |
+|---|---|---|---|
+| `https://www.googleapis.com/auth/drive.file` | files.create (upload + folder), files.list scoped to app-created/Picker-nominated files, files.get media download | **Non-sensitive** in Google's classification (per-file scope, app-installed) | No CASA assessment required — **this is the central reason `drive.file` is locked in over the full `drive` scope** |
+
+We deliberately **reject** the full `drive` scope (Restricted, CASA Tier 2, full filesystem access) and the `drive.readonly` scope (Restricted, CASA Tier 2). The product loss from `drive.file` (we can't enumerate the user's full folder tree on first onboarding, so the user has to point at a few root folders via the Drive Picker) is small and the CASA + trust win is large. This mirrors Inbox Zero's choice and is consistent with our locked privacy posture.
+
+### Google auth library — already on classpath
+
+`com.google.auth:google-auth-library-oauth2-http:1.48.0` (already in `libs.versions.toml`) handles refresh-token-based credential construction for **all three** Google APIs. No version bump needed; verified compatible with both new artifacts (both publish against `google-auth-library-oauth2-http >= 1.30`).
+
+### Why no Spring Boot starter for Google Calendar / Drive
+
+Three reasons — listed in order of "most blocking" first:
+
+1. **`spring-cloud-gcp-starter-*` is explicitly banned in CLAUDE.md.** Quote: *"No GCP hosting baseline — do not add `spring-cloud-gcp` starters by default. Gmail push arrives as plain HTTP POSTs to a Spring MVC controller on the VPS."* The same reasoning applies — we are not on GCP infrastructure, we don't want autoconfigured Pub/Sub publishers, and we don't want a `CredentialsProvider` chain that defaults to GCP service-account discovery (which is irrelevant on the VPS and confusing to debug).
+2. **No first-party Google "Spring Boot starter for Calendar/Drive" exists.** Google publishes `google-api-services-*` (auto-generated from Discovery) and `spring-cloud-gcp-*` (GCP-runtime helpers). There is no `spring-google-calendar-starter` and creating a thin starter would be a v2 nice-to-have, not a v1.4 requirement.
+3. **Our `MailboxContext` ScopedValue model from v1.3 already supplies per-request credentials.** The client construction is `new Calendar.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance(), new HttpCredentialsAdapter(perRequestCredentials)).setApplicationName("Zero Mail").build()` — three lines, identical shape to the v1.3 Gmail gateway. A starter would only save those three lines per request and would conceal the per-request credential injection that the multi-mailbox architecture requires.
+
+### Spring AI 2.0.0 GA for the briefing agent (tool-calling loop)
+
+The AI meeting brief generator and the AI availability tool (when the rule compiler/chat assistant asks "what slots could I propose for next Tuesday?") both need a **nested / multi-turn tool loop** — i.e. the model emits a tool call, we run it, feed the result back, the model may emit another tool call, etc. This is supported in Spring AI 2.0.0 GA out of the box.
+
+**Two execution modes — pick per call site:**
+
+| Mode | API | When to use | Iteration limit |
+|---|---|---|---|
+| **Framework-controlled** | `ChatClient.create(chatModel).prompt(...).tools(...).call().content()` (or `.stream()`) | Brief generation cron — fire-and-forget, simple prompt, no fine-grained step inspection needed | Configured by `ToolCallingChatOptions.maxIterations` (default 10 in Spring AI 2.0.0 GA — pin it explicitly to a low number, e.g. 6, for the briefing agent to bound LLM cost). |
+| **User-controlled** | `DefaultToolCallingManager.builder().build()` + `internalToolExecutionEnabled(false)` + manual `while (response.hasToolCalls()) { … }` loop | `propose_meeting` rule action — we want to enforce a hard tool-allow-list per iteration, audit each step into `triage_audit`, and respect the per-tenant LLM spend cap | Manual `for (int step = 0; step < MAX_STEPS; step++)` — gives us explicit per-step budget gates and reconciles with the existing per-call `LlmGateway` cost-and-cap pipeline (LLM-10). |
+
+**Verified via Context7 `/websites/spring_io_spring-ai_reference_2_0-snapshot`:** the `ToolCallingManager` + `internalToolExecutionEnabled(false)` pattern is documented across all four Spring AI provider chat pages (Anthropic, Bedrock, DeepSeek, Google GenAI) we already have starters for, and `MessageAggregator` is the documented streaming variant. No new dependency — `ToolCallingManager`, `DefaultToolCallingManager`, `FunctionToolCallback`, and `ToolExecutionResult` all ship in `spring-ai-core` already pulled by the existing chat-model starters. **HIGH** confidence.
+
+**Tools the briefing agent gets:**
+
+| Tool | Backed by | Returns |
+|---|---|---|
+| `searchInboxByContact(email, limit)` | v1.3 Gmail client + `MailboxContext` | Last N message metadata (subject, snippet ≤200 chars) — same `ToolOutputSanitizer` clamp the v1.1 chat tools use |
+| `getRecentMeetingsWithContact(email, limit)` | Calendar `events.list` filtered to attendee == `email` | Past meeting count, last meeting date, last meeting title |
+| `webSearch(query)` | **Optional v1.4-late** — gated behind a tenant feature flag, default OFF; if ON, routes through OpenRouter web-search-enabled models | Snippets only |
+
+Per the locked rule "Tool-call allow-list + structured schema; safety violation rejects pre-execution" (LLM-07), every tool above is registered with a JSON Schema (Spring AI auto-generates from `inputType(Class)`) and an explicit allow-list check before `ToolCallingManager.executeToolCalls(...)` runs.
+
+### In-memory attachment streaming pattern (privacy ARCH-02)
+
+The Drive filing path looks like this end-to-end **without ever touching disk or a persistent buffer**:
+
+```
+Gmail Pub/Sub push
+  → /api/internal/pubsub/gmail webhook
+  → MessageObservedEvent (Spring Modulith, in-process, AFTER_COMMIT)
+  → AttachmentFilingService.handle(event)
+      ├── For each attachment part:
+      │     InputStream gmailStream =
+      │         gmail.users().messages().attachments().get(userId, messageId, attachmentId)
+      │              .executeMediaAsInputStream();   // Gmail v1 API
+      │     // AI folder suggestion runs on METADATA only (filename, mimeType, sender,
+      │     // subject, prior filings). Attachment CONTENT is NEVER read by the AI.
+      │     FolderSuggestion suggestion = filingAi.suggest(attachmentMetadata);
+      │     File metadata = new File()
+      │         .setName(attachment.filename)
+      │         .setParents(List.of(suggestion.folderId));
+      │     drive.files()
+      │          .create(metadata, new InputStreamContent(attachment.mimeType, gmailStream))
+      │          .setFields("id, parents")
+      │          .execute();   // pipes Gmail stream directly into Drive upload
+      └── Persist ONLY metadata into document_filing:
+            (id, tenant_id, gmail_connection_id, gmail_message_id, attachment_id,
+             filename, mime_type, sha256_of_bytes,            -- hash for dedup; bytes themselves discarded
+             drive_file_id, destination_folder_id,
+             confidence, status, filed_at, audit_jsonb)
+```
+
+**Why this is ARCH-02-safe:**
+
+1. The `gmailStream` is an `InputStream`, not a `byte[]`. It is consumed exactly once by `InputStreamContent`, which forwards bytes to the Drive HTTP upload as they arrive. No `Files.write(...)`, no `ByteArrayOutputStream`, no `@Cacheable`.
+2. The AI folder suggestion runs on **metadata only** — `filename`, `mimeType`, `sender`, `subject`, optionally the user's prior filing decisions. The attachment **body** is never read by Java code, never sent to the LLM, never persisted. (Optional v1.5+: a tenant-opt-in vision model that reads the attachment in-memory for higher-accuracy filing — explicitly **out of scope** for v1.4.)
+3. The `sha256_of_bytes` column is computed by tee-ing the input stream through a `DigestInputStream` during upload. The hash is metadata (32 bytes), not content; it lets us deduplicate "the same PDF was sent twice" without re-uploading. This is consistent with the privacy posture.
+4. A new ArchUnit rule (`AttachmentBytesNotPersistedRule`) bans any persistence-layer field named `attachment_bytes`, `content_bytes`, `body_bytes`, or `*Plaintext` on `document_filing` / `attachment_source` / `filing_*` tables — same shape as the v1.2 admin audit ArchUnit rule.
+5. Logback `@Sensitive` scrub continues to apply — attachment filenames are `@Sensitive` (filenames can contain personal data: "Q4-payroll-2026-jane-doe.pdf"). Sender email stays under the existing v1.0 privacy logging convention.
+
+The same pattern reversed (`drive.files().get(fileId).executeMediaAsInputStream()` → pipe into Gmail MIME `MimeBodyPart.setDataHandler(new DataHandler(new InputStreamDataSource(...)))`) covers the **attachment_source rule** (rule attaches a Drive file to an outbound reply). The existing `OutboundSendGateway` is the single send-side boundary; we wire attachment streaming **inside** the gateway so ArchUnit's existing send-call-site rule keeps holding.
+
+---
+
+## What v1.4 Adds — Backend Persistence (New Liquibase Changelogs Only)
+
+Ten new Liquibase YAML changelogs. **No new database library; Postgres 17 + Liquibase 5.0.3 already pinned.** Naming follows the v1.3 connection convention (`gmail_connections`) — `calendar_connections` and `drive_connections` are **workspace-scoped** (matching the workspace-shared vs mailbox-isolated boundary defined in v1.3 — see Architecture for the rule).
+
+| # | Changelog | Owner module | Purpose |
+|---|---|---|---|
+| 1 | `calendar_connections` | `backend/core` (new `core.calendar` package) | `(id, tenant_id, google_account_id, google_account_email_sensitive, refresh_token_ciphertext_b64, refresh_token_iv_b64, kek_version, scopes_granted, status, connected_at, last_refreshed_at, disconnected_at, disconnect_reason)`. Same column shape as `gmail_connections` (v1.3 WSP-01) so the existing `OAuthTokenStore` + AES-GCM crypto code is reused verbatim. `status ∈ {CONNECTED, DISCONNECTED, REVOKED}`. **One CONNECTED Calendar connection per `google_account_id` per tenant** (unique index), parallel to GMA-06's global active-Gmail uniqueness rule. |
+| 2 | `calendars` | `backend/core` (`core.calendar`) | `(id, calendar_connection_id, google_calendar_id, summary, access_role, timezone, primary_flag, enabled_for_freebusy, enabled_as_booking_destination, synced_at)`. Snapshot of `calendarList.list()` per connection; `enabled_for_freebusy` defaults TRUE for the primary calendar and FALSE for others (the user opts in additional calendars). |
+| 3 | `booking_links` | `backend/core` (`core.booking`) | `(id, tenant_id, calendar_connection_id, destination_calendar_id, slug_global_unique, name, description, duration_minutes, buffer_before_minutes, buffer_after_minutes, location_type, location_payload_jsonb, status, created_at, updated_at)`. `location_type ∈ {GOOGLE_MEET, PHONE, IN_PERSON, CUSTOM}`. `status ∈ {ACTIVE, PAUSED, DELETED}`. **Global unique slug** (booking page lives at `/book/{slug}`); slug claim race resolved with Postgres unique constraint + friendly error. |
+| 4 | `booking_windows` | `backend/core` (`core.booking`) | `(id, booking_link_id, day_of_week, start_local_time, end_local_time)`. Multiple rows per `(booking_link_id, day_of_week)` for split availability (e.g. 9–12 and 14–17 on Mondays). Stored in the booking link's destination-calendar timezone (rendered for the visitor in the visitor's chosen timezone). |
+| 5 | `bookings` | `backend/core` (`core.booking`) | `(id, booking_link_id, visitor_name, visitor_email_sensitive, visitor_timezone, start_at_utc, end_at_utc, google_event_id, status, cancellation_reason, idempotency_key, created_at, cancelled_at, payload_jsonb)`. `status ∈ {CONFIRMED, CANCELLED, RESCHEDULED}`. `idempotency_key UNIQUE` for the public booking endpoint (anti-double-submit). |
+| 6 | `meeting_briefings` | `backend/core` (`core.briefing`) | `(id, tenant_id, calendar_connection_id, google_event_id, event_start_at_utc, generated_at, brief_markdown, brief_tokens_used, model_id_at_generation, delivery_channels, delivery_status_jsonb)`. `delivery_channels` is an array subset of `{EMAIL, DIGEST}`. **`brief_markdown` is persistable** (same carve-out as the v1.1 chat `draft_body` — it is AI-derived narrative authored by Zero Mail for the user, not extracted email content received from Gmail). The seed messages that produced it are NOT persisted. |
+| 7 | `drive_connections` | `backend/core` (new `core.drive` package) | Same shape as `calendar_connections`; **workspace-scoped, one CONNECTED per tenant** (Drive is a per-workspace data store, not per-mailbox). |
+| 8 | `filing_folders` | `backend/core` (`core.drive`) | `(id, drive_connection_id, google_drive_folder_id, name, parent_google_drive_folder_id, source, registered_at)`. `source ∈ {USER_PICKED, APP_CREATED}`. Onboarding nominates a few user-picked roots via the Drive Picker; subsequent app-created sub-folders inherit from those roots. |
+| 9 | `document_filings` | `backend/core` (`core.drive`) | `(id, tenant_id, gmail_connection_id, drive_connection_id, gmail_message_id, gmail_attachment_id, filename_sensitive, mime_type, sha256_of_bytes, drive_file_id, destination_folder_id, confidence, status, filed_at, audit_jsonb)`. `status ∈ {SUGGESTED, FILED, NEEDS_REVIEW, REJECTED}`. **`audit_jsonb` MUST NOT contain attachment body excerpts** — enforced by the new `AttachmentBytesNotPersistedRule` ArchUnit rule. |
+| 10 | `attachment_sources` | `backend/core` (`core.drive`) | `(id, tenant_id, name, drive_connection_id, source_folder_google_id, scope, status, created_at)`. Used by the `attach_from_source` rule action — a curated folder from which rule-triggered replies may pull attachments. `scope ∈ {WORKSPACE_SHARED, MAILBOX_ISOLATED}` — explicit per-source choice that the user makes when creating the source (default WORKSPACE_SHARED for invoice templates / signature PDFs; MAILBOX_ISOLATED for mailbox-specific stationery). |
+
+**Privacy & sensitivity columns (marked `@Sensitive`, scrubbed by Logback per FND-03):**
+- `calendar_connections.google_account_email_sensitive`
+- `calendar_connections.refresh_token_ciphertext_b64`
+- `drive_connections.google_account_email_sensitive`
+- `drive_connections.refresh_token_ciphertext_b64`
+- `bookings.visitor_email_sensitive`
+- `document_filings.filename_sensitive`
+
+**FK + cascade strategy** mirrors v1.3 — `ON DELETE CASCADE` from `calendar_connections` and `drive_connections` down to dependent rows so the existing account-deletion cleanup (AUTH-03) sweeps Calendar/Drive metadata atomically.
+
+---
+
+## How v1.4 Touches the Existing OAuth Flow (Without Breaking v1.3's Single Bundled Scope)
+
+**This is the most important integration question and the one most likely to be gotten subtly wrong.** The answer is: we deliberately **do** request the new Calendar + Drive scopes incrementally — **but only through a second, explicitly user-initiated OAuth round-trip per feature**, not through Google's "incremental authorization" auto-prompt anti-pattern that v1.3 already rejected.
+
+### What "incremental authorization" means in our context
+
+Google's "incremental authorization" is an OAuth grant flow where the client adds `include_granted_scopes=true` to a fresh `/o/oauth2/v2/auth` request that asks for new scopes; Google merges the new grant with the existing grant and returns a fresh refresh token covering the union. **It is not a separate OAuth client and not a separate IdP.** Memory note "Bundle OAuth scopes (inbox-zero pattern)" rejects the **automatic two-leg login experience** where the user signs in for `openid email profile` and is then surprised by a second consent screen at signup. It does **not** reject explicit user-initiated grant additions for **opt-in features**.
+
+### v1.4 OAuth flow decision matrix
+
+| Trigger | Scope set requested | When the user sees a consent screen | Justification |
+|---|---|---|---|
+| **First-time signup** (v1.3 behavior, unchanged) | `openid email profile` + `gmail.modify` + `gmail.send` + `gmail.compose` + `gmail.metadata` (the v1.3 bundle) | At signup — one consent screen | "Bundle OAuth scopes" — locked |
+| **Add a second Gmail mailbox** (v1.3 behavior, unchanged) | Same as above | Per the v1.3 OAuth intent split | Locked |
+| **Connect a Google Calendar account** (new in v1.4) | `openid email profile` + `calendar.events` + `calendar.freebusy` + `calendar.readonly` **+ `include_granted_scopes=true`** | Per user click on "Connect Calendar" in `/settings/calendar` | This is a feature-add the user explicitly opted into. We are NOT re-prompting for Gmail scopes; `include_granted_scopes=true` carries them forward so the merged refresh token covers everything. **Crucially, calendar consent is shown only when the user clicks "Connect Calendar".** No surprise mid-onboarding screen. |
+| **Connect Google Drive** (new in v1.4) | `openid email profile` + `drive.file` **+ `include_granted_scopes=true`** | Per user click on "Connect Drive" in `/settings/drive` | Same justification. `drive.file` is non-sensitive so the consent screen is short. |
+
+**Implementation in Spring Security OAuth2 Client (already on classpath):**
+
+We register **one additional `ClientRegistration`** in `application.yml` per added feature — `google-calendar` and `google-drive` — but **both point at the same Google OAuth client ID/secret** as the existing `google` registration. The differences are only the `scope` list and the `authorization-uri` query params. This is the same pattern v1.3 used to split the "sign in" intent from the "add mailbox" intent (GMA-07) — it is **not** a second OAuth client at Google's end, it is a Spring Security routing convenience.
 
 ```yaml
-# Liquibase YAML — illustrative shape, not literal
-- changeSet:
-    id: 20260520-01-create-admin-audit-event
-    changes:
-      - createTable:
-          tableName: admin_audit_event
-          columns:
-            - { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
-            - { name: actor_user_id, type: BIGINT, constraints: { nullable: false } }
-            - { name: action,        type: VARCHAR(64), constraints: { nullable: false } }  # e.g., CATALOG_MODEL_ENABLED, MASTER_KEY_ROTATED, TENANT_PAUSED
-            - { name: target_kind,   type: VARCHAR(64) }                                    # e.g., PROVIDER, MODEL, TENANT
-            - { name: target_id,     type: VARCHAR(128) }
-            - { name: payload_jsonb, type: JSONB }                                          # diff before/after, NEVER email content
-            - { name: created_at,    type: TIMESTAMPTZ, defaultValueComputed: NOW(), constraints: { nullable: false } }
-            - { name: ip_address,    type: VARCHAR(64) }
-            - { name: user_agent,    type: VARCHAR(512) }
+# application.yml — additive only; existing 'google' registration unchanged
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:                # existing, unchanged
+            scope: openid,email,profile,https://www.googleapis.com/auth/gmail.modify, ...
+          google-calendar:       # NEW v1.4
+            provider: google
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID}      # same client as 'google'
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+            scope:
+              - openid
+              - email
+              - profile
+              - https://www.googleapis.com/auth/calendar.events
+              - https://www.googleapis.com/auth/calendar.freebusy
+              - https://www.googleapis.com/auth/calendar.readonly
+            authorization-grant-type: authorization_code
+            redirect-uri: '{baseUrl}/login/oauth2/code/google-calendar'
+          google-drive:          # NEW v1.4
+            provider: google
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+            scope:
+              - openid
+              - email
+              - profile
+              - https://www.googleapis.com/auth/drive.file
+            authorization-grant-type: authorization_code
+            redirect-uri: '{baseUrl}/login/oauth2/code/google-drive'
 ```
 
-**Distinct from TRG-05** (triage audit) — TRG-05 records what the rules engine did to user mail; `admin_audit_event` records what operators did to configuration. They live in separate tables, separate retention windows, separate read paths.
+**A custom `OAuth2AuthorizationRequestResolver` adds `include_granted_scopes=true` + `access_type=offline` + `prompt=consent`** (the last one is needed to force return of a fresh refresh token even when scopes are merged — Google's documented behavior). This `Resolver` exists already in v1.3 for the Gmail-add flow; we extend its switch statement with the two new registration IDs and reuse the same `additionalParameters` map.
 
-### Worker queue health (read-only views)
+**Success handlers — three of them, each constructive:**
 
-No new lib. The existing `outbox` + `processing_job` Postgres tables already carry everything the admin panel needs:
+- `GoogleSignInSuccessHandler` (existing v1.0/v1.3): creates session, attaches authorities.
+- `GoogleCalendarConnectSuccessHandler` (NEW v1.4): looks up the active tenant from the session, persists `calendar_connections` row, encrypts and stores the refresh token via the **existing** `OAuthTokenStore`, fires `CalendarConnectedEvent` (Modulith application event, AFTER_COMMIT) so that `core.calendar.application.CalendarListSyncService` runs `calendarList.list()` and seeds `calendars` rows.
+- `GoogleDriveConnectSuccessHandler` (NEW v1.4): same shape, fires `DriveConnectedEvent`, no immediate sync needed (folder picker is launched from the UI on next page load).
 
-| Read | Source |
-|---|---|
-| Backlog (pending count) | `SELECT count(*) FROM outbox WHERE status = 'PENDING'` |
-| Failed (retryable) | `SELECT count(*) FROM processing_job WHERE status = 'FAILED' AND retry_count < max_retries` |
-| Failed (dead-lettered) | `SELECT count(*) FROM processing_job WHERE status = 'DEAD'` |
-| Oldest pending lag | `SELECT now() - min(created_at) FROM outbox WHERE status = 'PENDING'` |
-| Per-job-type throughput | `SELECT job_type, count(*) FROM processing_job WHERE status = 'DONE' AND completed_at > now() - interval '1 hour' GROUP BY job_type` |
+**Why this works without breaking v1.3:**
 
-All read via Spring Data JDBC projections (CONVENTIONS.md `projection/`). The Postgres MCP tools listed in CLAUDE.md ("Tooling" → Postgres MCP Pro) are for operator inspection of the same data, not for the runtime admin UI.
+- The existing `google` registration is untouched — first-time signup flow is byte-identical to v1.3.
+- The "Bundle OAuth scopes" memory note's concern was the **automatic** two-leg login (login screen → surprise "Connect Gmail" screen). v1.4's Calendar/Drive consents happen **only** when the user clicks an explicit "Connect …" button on a settings page they navigated to. No surprise.
+- `include_granted_scopes=true` is Google's documented mechanism for additive grants without re-prompting for previously-granted scopes — it is the **opposite** of what "incremental authorization" meant in the v1.3 rejection, which was a Google-side UX that interrupted login. Here it is a refresh-token-merge directive on a user-initiated screen.
+
+**What happens when a user revokes Calendar/Drive in their Google account:** the next API call returns `invalid_grant`. The existing v1.0 `DISCONNECTED` state machine (AUTH-05) is parameterized by `*_connection.status`; we set `calendar_connections.status = DISCONNECTED` and show the reconnect prompt — same UX as the Gmail reconnect.
 
 ---
 
-## What v1.2 Changes — Backend OpenAPI Segregation
+## Frontend Codegen Pipeline — Unchanged from v1.3
 
-**Problem.** All admin endpoints live under `/api/admin/**`. We do **not** want admin schemas to appear in the public OpenAPI document the frontend ships to every browser (information leakage about operator-only operations), and we **do** want a separate typed client for the admin UI so the public-facing client doesn't bloat with admin types.
+The two-spec / two-typed-client split (`apps/web/lib/api/schema.d.ts` for public + `apps/admin/src/lib/api/admin-schema.d.ts` for admin) shipped in v1.2 and is reused. v1.4 adds new endpoints under `/api/calendar/**`, `/api/booking/**`, `/api/drive/**` — all live in the **public** spec (consumed by the user-facing `apps/web`). The **public booking page** at `/book/{slug}` is also Next.js (same `apps/web`) — its `POST /api/public/bookings` endpoint is in the public spec but **scope-gated to `permitAll()`** in `SecurityConfig` (the only public-write endpoint we have, besides Pub/Sub which is OIDC-token-verified).
 
-**Solution.** `springdoc-openapi` 3.0.3 (already installed) ships `GroupedOpenApi` — a built-in mechanism for splitting one Spring app's endpoints into multiple OpenAPI documents. **Verified via Context7 `/springdoc/springdoc-openapi`** (snippet retrieved 2026-05-19):
+**No new shadcn primitives. No new npm packages.** Per the prior `ls apps/web/components/ui/` audit:
 
-```java
-// Add to the existing OpenApiConfig — does NOT replace the existing customizers,
-// it adds two new beans alongside them.
-@Bean
-GroupedOpenApi publicApi() {
-    return GroupedOpenApi.builder()
-            .group("public")
-            .displayName("Zero Mail Public API")
-            .pathsToMatch("/api/**")
-            .pathsToExclude("/api/admin/**")
-            .build();
-}
-
-@Bean
-GroupedOpenApi adminApi() {
-    return GroupedOpenApi.builder()
-            .group("admin")
-            .displayName("Zero Mail Admin API")
-            .pathsToMatch("/api/admin/**")
-            .addOperationCustomizer((operation, handlerMethod) -> {
-                operation.addTagsItem("admin");
-                return operation;
-            })
-            .build();
-}
+```
+calendar.tsx  ← already present (shadcn wrapper over react-day-picker@10)
+card.tsx      ← already present
+command.tsx   ← already present
+popover.tsx   ← already present
+radio-group.tsx
+select.tsx
+…
 ```
 
-**Generated artifact paths (springdoc 3.0.3 convention):**
-
-| URL | Content |
-|---|---|
-| `GET /v3/api-docs/public` | Public API spec (excludes `/api/admin/**`) — replaces the current default at `/v3/api-docs` for frontend codegen. |
-| `GET /v3/api-docs/admin` | Admin API spec (`/api/admin/**` only) — used by the admin UI's separate typed client. |
-| `GET /v3/api-docs` | Default merged spec (kept for compatibility; **not** consumed by frontend codegen). |
-| `GET /swagger-ui/index.html` | Swagger UI with group selector top-right (public/admin). |
-
-**Existing `OpenApiConfig.apiErrorCustomizer()` continues to apply:** the file explicitly uses `GlobalOpenApiCustomizer` precisely because of the doc-comment warning *"future grouping via `GroupedOpenApi` would silently bypass plain `OpenApiCustomizer` beans on the grouped paths."* v1.2 is the future this was anticipating. **HIGH** — confirmed by reading the existing `OpenApiConfig.java`.
-
-**Security note.** The admin spec URL must be permit-listed in `SecurityConfig` (`/v3/api-docs/admin`) so the **admin user** can fetch it for codegen — but the admin UI itself **already requires `ROLE_ADMIN`**, so the spec's existence is not a real leak even if served to anonymous users. For belt-and-braces, gate `/v3/api-docs/admin` behind `hasRole("ADMIN")` instead of `permitAll()` and run admin codegen from an authenticated admin browser session or a build-time CI secret.
+`react-day-picker@^10.0.1` and `date-fns@^4.4.0` are already pinned in `apps/web/package.json`. Memory note "Use raw shadcn primitives first" applies — wait for the rule-of-three before introducing a calendar-specific composite library.
 
 ---
 
-## What v1.2 Changes — Frontend Codegen Pipeline
-
-**Two valid approaches; pick one.**
-
-### Option A (recommended): Two schema files, one for each OpenAPI group
-
-```typescript
-// apps/web/lib/api/schema.d.ts          ← regenerated from /v3/api-docs/public
-// apps/web/lib/api/admin-schema.d.ts    ← NEW, regenerated from /v3/api-docs/admin
-```
-
-**Why.** Two typed clients with **non-overlapping types** prevents the admin DTOs from being typo-imported into the public app bundle. The public bundle size stays the same; admin bundle only ships when the admin code-splits.
-
-**Change to `apps/web/scripts/generate-api.ts`.** Today the script fetches **one** spec URL and emits **one** `.d.ts` file. v1.2 changes it to a loop over a two-entry config:
-
-```typescript
-const SPECS = [
-  { spec: process.env.API_SPEC_URL ?? 'http://localhost:8080/v3/api-docs/public', out: 'lib/api/schema.d.ts' },
-  { spec: process.env.ADMIN_SPEC_URL ?? 'http://localhost:8080/v3/api-docs/admin', out: 'lib/api/admin-schema.d.ts' },
-];
-```
-
-**Companion to `apps/web/lib/api/client.ts`.** Add an `adminClient` alongside the existing typed client:
-
-```typescript
-// apps/web/lib/api/admin-client.ts (NEW)
-import createClient from 'openapi-fetch';
-import type { paths } from './admin-schema';
-import { getBaseUrl } from './base-url';
-
-export const adminClient = createClient<paths>({ baseUrl: getBaseUrl(), credentials: 'include' });
-```
-
-**No new npm package.** `openapi-typescript` 7.13.0 and `openapi-fetch` 0.17.0 — already installed — handle both files identically.
-
-### Option B (rejected): One merged spec, manual `if (path.startsWith('/api/admin'))` segregation
-
-Bloats the public bundle with admin types, allows accidental cross-imports, and provides no real benefit. Skip.
-
----
-
-## What v1.2 Adds — Frontend (Zero New Runtime Deps)
-
-**Verified `apps/web/components/ui/**` on 2026-05-19** — admin-relevant primitives **already present**:
-
-| Admin UI need | Existing primitive | Source |
-|---|---|---|
-| Catalog table (models × features) | `table.tsx` | shadcn already installed |
-| Settings tabs (4 tabs in Phase 9) | `tabs.tsx` | shadcn already installed |
-| Master-key rotation confirm | `alert-dialog.tsx` | shadcn already installed |
-| Provider/model picker dropdown | `select.tsx` + `command.tsx` + `popover.tsx` | shadcn already installed |
-| Admin sidebar nav | `sidebar.tsx` | shadcn already installed |
-| Tenant detail "view-only" card grid | `card.tsx` + `badge.tsx` + `separator.tsx` | shadcn already installed |
-| Queue health charts | `chart.tsx` (Recharts wrapper) + `recharts@3.8.1` | already installed |
-| Toggle on/off (catalog model enabled per feature) | `switch.tsx` + `checkbox.tsx` | shadcn already installed |
-| Loading states | `skeleton.tsx` + `spinner.tsx` | shadcn already installed |
-| Admin action toasts | `sonner.tsx` (already wired via `sonner@^2.0.7`) | shadcn already installed |
-| Read-only key reveal | `input.tsx` + `button.tsx` with `eye` icon (`lucide-react` already installed) | already installed |
-| Filterable search (e.g., tenants list) | `input.tsx` + `command.tsx` | shadcn already installed |
-| Pagination | Compose from `button.tsx` + `select.tsx`; **shadcn does not ship a `pagination` primitive** — hand-compose | already installed |
-| Long lists scroll container | `scroll-area.tsx` | shadcn already installed |
-| Side-panel for tenant detail drawer | `sheet.tsx` | shadcn already installed |
-
-**Net new shadcn primitives required: zero.**
-
-**Optional (not required for Phase 8 functional scope):**
-
-| Optional primitive | When to install | Cost |
-|---|---|---|
-| `pagination` block (community shadcn-style) | If the tenants table grows beyond ~50 rows and hand-composed pagination feels too custom | `pnpm dlx shadcn@latest add pagination` — single-file primitive. |
-| `data-table` block (community block, depends on `@tanstack/react-table`) | If catalog/tenants tables need sorting + filtering + virtualization. **`@tanstack/react-table` is NOT in `apps/web/package.json` today.** | New runtime dep: `@tanstack/react-table` (~14 KB gz). **Defer until UI feedback shows hand-composed table is insufficient.** |
-
-**Recommendation: ship Phase 8 with hand-composed tables on the existing `table.tsx` primitive.** Memory note "Use raw shadcn primitives first" applies — wait for the rule-of-three before installing `@tanstack/react-table`.
-
----
-
-## What v1.2 Adds — Backend Persistence (New Liquibase Changelogs Only)
-
-Six new Liquibase YAML changelogs. **No new database library.**
-
-| Table | Owner module | Purpose |
-|---|---|---|
-| `user.is_admin` (column add) | `backend/core` (`auth` package, existing) | DB-backed admin elevation bit on the existing `user` aggregate. |
-| `admin_audit_event` | `backend/core` (new `admin` package) | Append-only operator action log. **Never** stores email content; payload diff only. |
-| `llm_provider_catalog` | `backend/core` (existing `llm` package) | One row per provider (OPENAI, ANTHROPIC, GOOGLE, DEEPSEEK, OPENROUTER). `(id, code, display_name, base_url, status, created_at, updated_at)`. |
-| `llm_provider_model` | `backend/core` (existing `llm` package) | One row per discovered model. `(id, provider_id, model_id, display_name, status, discovered_at, last_synced_at)`. `status ∈ {DISCOVERED, ENABLED, DISABLED, DEPRECATED}`. |
-| `llm_model_feature_capability` | `backend/core` (existing `llm` package) | Many-to-many between models and feature slots. `(provider_id, model_id, feature, enabled, default_for_feature)`. `feature ∈ {CHAT, TRIAGE, DRAFT}`. The "is this model offered for chat?" question is settled here, not in code. |
-| `llm_provider_master_key` | `backend/core` (existing `llm` package) | One row per provider's server-managed master key. `(id, provider_id, ciphertext_b64, iv_b64, kek_version, status, last_test_status, last_tested_at, rotated_at)`. `status ∈ {ACTIVE, ROTATING, REVOKED}`. |
-
-**Privacy & sensitivity:** `llm_provider_master_key.ciphertext_b64` is `@Sensitive` (Logback scrub). `admin_audit_event.payload_jsonb` MUST NOT include decrypted key bytes — only metadata (key id, kek version transitions, test result codes). Existing `@Sensitive` ArchUnit rule (FND-04) covers logging; payload sanitation is a code-review checklist item plus a unit test that asserts no field named `*Plaintext` / `*Decrypted` is ever written into the JSONB column.
-
----
-
-## Version Compatibility Matrix (v1.2 Delta)
+## Version Compatibility Matrix (v1.4 Delta)
 
 | Component | Version | Compatible with | Verified via |
 |---|---|---|---|
-| Spring Security 7.0.5 `authorizeHttpRequests().requestMatchers().hasRole()` | already on classpath (Spring Boot 4.0.6 transitive) | Cookie session, OAuth2 client login | Spring Security 7 reference + existing `SecurityConfig.java` |
-| Spring Security 7.0.5 `@EnableMethodSecurity` + `@PreAuthorize` | already on classpath | `prePostEnabled=true` is the default in `@EnableMethodSecurity` | Spring Security 7 reference |
-| springdoc-openapi 3.0.3 `GroupedOpenApi` | already on classpath | Spring Boot 4.0.6 (springdoc 3.x targets Boot 4.x; v2.8.x targets Boot 3.5.x) | Context7 `/springdoc/springdoc-openapi` + `gradle/libs.versions.toml` |
-| AES-GCM via JDK `Cipher` | JDK 25 (already in toolchain) | Reuses existing `core.crypto.AesGcmEncryptor` pattern from LLM-04 | Existing repo |
-| Spring Data JPA / JDBC | already on classpath | Existing `projection/` + `persistence/` packages handle read-side and aggregates | Existing repo |
-| Liquibase 5.0.2 | already on classpath | YAML changelogs only, per CLAUDE.md constraint | Existing repo |
-| `openapi-typescript` 7.13.0 | already in `apps/web/devDependencies` | Multiple specs handled by running the CLI twice; no version bump needed | `apps/web/package.json` |
-| `openapi-fetch` 0.17.0 | already in `apps/web/dependencies` | Two `createClient<paths>(...)` instances (public + admin) — no version bump needed | `apps/web/package.json` |
-| All shadcn primitives listed above | already in `apps/web/components/ui/**` | React 19.2.6 + Tailwind 4 + Base UI / Radix dependencies already present | Directory listing 2026-05-19 |
+| `com.google.apis:google-api-services-calendar` | `v3-rev20260517-2.0.0` | Existing `google-api-services-gmail v1-rev20250331-2.0.0` (same `google-api-client 2.x` transitive); JDK 25; Spring Boot 4.1.0 | Maven Central index probe 2026-06-17 |
+| `com.google.apis:google-api-services-drive` | `v3-rev20260428-2.0.0` | Same transitive set as Calendar; JDK 25; Spring Boot 4.1.0 | Maven Central index probe 2026-06-17 |
+| `com.google.auth:google-auth-library-oauth2-http` | `1.48.0` (already pinned) | Both new artifacts publish against `google-auth-library-oauth2-http >= 1.30`; no bump needed | Existing repo + Context7 Drive/Calendar Java samples |
+| Spring AI 2.0.0 GA `ChatClient.tools(...)` framework-controlled loop | `2.0.0` (already pinned) | All four chat-model starters already on classpath (OpenAI, Anthropic, Google GenAI, DeepSeek) — verified `ToolCallingManager` + `internalToolExecutionEnabled(false)` pattern documented for each | Context7 `/websites/spring_io_spring-ai_reference_2_0-snapshot` |
+| Spring AI 2.0.0 GA `DefaultToolCallingManager` for user-controlled loop | `2.0.0` (already pinned) | Same | Context7 same source |
+| Spring Security OAuth2 Client multi-`ClientRegistration` with shared `client-id` | Spring Security 7.x via Boot 4.1.0 | Pattern used in v1.3 GMA-07 for Gmail intent split; extended in v1.4 to Calendar + Drive | Existing repo (v1.3 `OAuth2AuthorizationRequestResolver`) |
+| `react-day-picker` | `^10.0.1` (already in `apps/web/package.json`) | React 19.2.5 + Next.js 16.2.4; shadcn `calendar.tsx` wrapper compatible | `apps/web/package.json` |
+| `date-fns` | `^4.4.0` (already in `apps/web/package.json`) | `react-day-picker@10`; ESM-only — already accommodated in Next.js 16 build | `apps/web/package.json` |
+| Liquibase 5.0.3 YAML | already pinned | Ten new changelogs, no schema feature outside basic types + JSONB | Existing repo |
+| AES-GCM via JDK `Cipher` | JDK 25 (already in toolchain) | Reuses existing `OAuthTokenStore` + `AesGcmEncryptor` from v1.0 (LLM-04) and v1.3 multi-Gmail token storage | Existing repo |
+| `MailboxContext` ScopedValue (v1.3) | already in place | Calendar gateway carries `CalendarConnectionContext` (parallel ScopedValue) so AUD-07 / FND-01 logging stays clean | v1.3 ArchUnit rules cover the pattern |
 
 ---
 
-## What NOT to Use in v1.2
+## What NOT to Use in v1.4
 
 | Avoid | Why | Use Instead |
 |---|---|---|
-| **Keycloak / Auth0 / Ory / FusionAuth for admin RBAC** | Adds a full second IdP for **two** roles. Memory note rejects multi-IdP detours; CLAUDE.md locks cookie+Redis session. Operational cost (separate deploy, separate failure mode, separate cert) far exceeds the one-column-plus-one-annotation alternative. | DB-backed `user.is_admin` + `SimpleGrantedAuthority("ROLE_ADMIN")` appended in the existing `GoogleOAuthSuccessHandler`. |
-| **Stateless JWT for admin sessions** | Already in CLAUDE.md "do not use" list ("Stateless JWT user sessions"). Admin uses **the same cookie** as regular users — the difference is the authority list inside the session, not the session medium. | Existing Spring Session Redis cookie. |
-| **Separate admin subdomain (`admin.zero.mail`)** | Forces a second OAuth client, a second CORS origin, and breaks `SameSite=Lax` cookie sharing. Adds complexity for no security gain vs. path-based `/admin/**` + `ROLE_ADMIN`. | Path-prefix `/admin/**` on the same origin, layered RBAC. (If isolation later proves valuable, revisit in v2 with a second cookie scope.) |
-| **HashiCorp Vault / AWS KMS / GCP KMS for master keys** | Locked: single-VPS posture; "No GCP hosting baseline"; CLAUDE.md `pgp_sym_encrypt` rejection already enforces app-layer encryption. Adds network latency to every LLM call. | Reuse existing AES-GCM app-layer pattern (LLM-04); KEK in env, rotation via re-wrap command. |
-| **`pgp_sym_encrypt` (pgcrypto) for master keys** | Same reason BYOK doesn't use it — key in DB → key leak on DB leak. Already on CLAUDE.md "do not use" list. | AES-GCM app-layer with env-injected KEK. |
-| **Raw OpenAI/Anthropic/Google Java SDKs for sync-from-`/models`** | CLAUDE.md "Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter" — locked. | Spring AI provider starter clients (already on classpath) or `RestClient` calls **inside** `core.llm.gateway.springai.admin`, gated by the existing ArchUnit confinement rule. |
-| **Spring `RestTemplate`** for `/models` HTTP calls | Spring Framework 7 deprecates `RestTemplate` in favor of `RestClient`. | `RestClient.create().get().uri(...).retrieve()` — already in Spring Framework 7. |
-| **`@tanstack/react-table` for admin tables in Phase 8** | Yet-another runtime dep for tables that may stay small for the foreseeable future. Memory note "Use raw shadcn primitives first" + "Skip de-risking spikes" — ship hand-composed first. | Hand-compose pagination/sort on existing `table.tsx` + `select.tsx`. Install `@tanstack/react-table` later if rule-of-three triggers it. |
-| **A second OAuth client (`google-admin`)** | Same pattern Phase 1.4 already rejected for Gmail scope splitting. Memory note "Bundle OAuth scopes". | One OAuth client, role appended in the success handler. |
-| **A second Spring Boot module (`backend/admin`)** | CLAUDE.md backend topology is **locked** to `backend/core + backend/api + backend/worker`. Adding a fourth module ("admin") is out of scope; admin controllers live in `backend/api` under `controllers/admin/`, admin use-case services in `backend/core` under `application/admin/`. | Package-based separation per CONVENTIONS.md `domain/`, `application/`, `projection/`. |
-| **Persisting LLM prompts/completions for admin "debug" features** | Privacy carve-out applies to user chat configuration text only — admin debugging of LLM exchanges does **not** unlock body persistence. | Use Micrometer + OTel metadata (model, tokens, latency, error class). Spring AI prompt/completion capture stays **disabled** (LLM-09). |
-| **Storing the actual decrypted key in the admin UI even momentarily** | Server-side decrypt → display once → user copies is the prevailing pattern. Storing in client memory beyond one render risks DOM/devtools leak. | Test-connection runs **server-side** (admin clicks "Test" → server uses decrypted key → returns OK/FAIL). The plaintext key never leaves the server. |
-| **OpenAPI generator (CodeGen, swagger-codegen) for the admin client** | `openapi-typescript` + `openapi-fetch` is the locked frontend pattern (CONVENTIONS.md #8). Switching generators per surface area would fragment the client model. | Reuse `openapi-typescript` 7.13.0 with two specs. |
+| **`spring-cloud-gcp-starter-pubsub` / `spring-cloud-gcp-starter-storage` / any `spring-cloud-gcp-*`** | Explicitly banned in CLAUDE.md "Hard do-not-use list" — single-VPS posture, no GCP autoconfiguration. Drags in GCP credential discovery, Pub/Sub autoconfiguration, and a `CredentialsProvider` chain none of which we want on a non-GCP host. | Hand-wired `Calendar.Builder` / `Drive.Builder` + existing `HttpCredentialsAdapter`. |
+| **`com.microsoft.graph:microsoft-graph` / MS Graph SDK / Outlook starter** | Constraint: Gmail / Google Workspace only — locked. Outlook is v2 candidate. | n/a — defer. |
+| **Full `drive` scope or `drive.readonly`** | Restricted + CASA Tier 2 + violates least-privilege; bigger consent screen → install drop-off; full access on a single privacy incident is catastrophic. | `drive.file` only — accept the Picker-based onboarding trade-off (Inbox Zero made the same choice). |
+| **`drive.metadata.readonly` to enumerate the whole folder tree** | Still Sensitive scope; only marginal product win over `drive.file` + Picker onboarding. | Drive Picker onboarding flow; record nominated roots in `filing_folders`. |
+| **`apache-tika` / `pdfbox` / `tesseract4j` for attachment text extraction** | Adds 60+ MB to the runtime image; **and** any extracted text is "raw email content received from Gmail" → cannot be persisted (ARCH-02) → cannot be re-used → has no value beyond a single in-memory LLM call we're not making anyway. Filing decision in v1.4 is **metadata-only** (filename + MIME + sender + subject). | Filename + MIME + sender + subject heuristics + AI suggestion on metadata; revisit vision-model in-memory extraction in v1.5 as opt-in only. |
+| **`opencv` / `tensorflow-java` for image classification of attachments** | Same reason as Tika — content classification of email-borne content is ARCH-02-blocked in v1.4. | Metadata-only suggestion. |
+| **A vector DB (pgvector, Pinecone, Weaviate, Qdrant)** | Privacy constraint forbids embeddings of user mail. The briefing agent's contact-history retrieval uses **structured filters** (Gmail search by `from:email`) not embeddings. | Gmail search-by-contact + Calendar `events.list` filter; bounded N most-recent. |
+| **Persisting the raw `events.list` / `freebusy` API response** | Calendar event titles / locations / attendee names are personal data under our privacy posture even though they are not "email content" strictly. Keep as in-request only. | Only `meeting_briefings.brief_markdown` (AI-derived narrative) and `bookings` (the user's own bookings, owned data) persist. |
+| **Persisting attachment bytes anywhere — including a "temporary" `attachment_blobs` table for retry** | ARCH-02 carve-out for `draft_body` does NOT extend to attachments — attachments are 100% extracted email content. The IZ `AttachmentDocument` table pattern is **rejected**. | If filing fails mid-stream, surface the failure to the user and **re-pull** the attachment from Gmail on retry. Gmail attachment retention is long; the operational cost of re-fetching on rare retries is negligible vs. the privacy gain. |
+| **A separate "incremental authorization" interstitial that intercepts signup** | Memory note "Bundle OAuth scopes" — v1.3 explicitly rejected the auto-prompt UX. | User clicks "Connect Calendar" / "Connect Drive" on an explicit settings page; consent screen shown only then. |
+| **A second Google OAuth Cloud Console client for Calendar/Drive** | Forces a second OAuth approval, a second app-name shown to the user, a second CASA assessment for the same SaaS. | Reuse the same OAuth client ID; only the `ClientRegistration` in Spring Security is split, which is a client-side routing convenience. |
+| **`@tanstack/react-table` for the bookings list / filings list / calendars list** | Same v1.2/v1.3 reasoning — memory note "Use raw shadcn primitives first"; the lists are small (single-tenant scale, few hundred rows). | Hand-compose pagination/sort on existing `table.tsx` + `select.tsx`. Revisit if a list crosses ~500 rows in real telemetry. |
+| **`luxon` / `moment-timezone` for timezone math on the booking page** | Adds 60-200 KB gz of timezone data. `Intl.supportedValuesOf("timeZone")` + `date-fns` + `date-fns-tz` (if needed) cover the booking-page math at fraction of the size. | Browser/Node native `Intl` + existing `date-fns`. If `date-fns-tz` is needed, defer until UI demands it (≤ 20 KB gz). |
+| **A new email-delivery library for the meeting-brief email** | Resend (`com.resend:resend-java:4.13.0`) already pinned in v1.0 for the daily digest. | Reuse the existing `DigestEmailSender` / Resend client. |
+| **A second `OutboundSendGateway` for calendar event writes** | We want one ArchUnit-enforced "no direct provider write outside the gateway" rule, but adding a `Calendar`-specific gateway alongside the Gmail one is the right architectural move — it is **not** a second copy of `OutboundSendGateway`. | `OutboundCalendarGateway` is a sibling, not a duplicate; same pattern, different provider. |
+| **Spring AI custom `Advisor` for the briefing agentic loop** | Advisors are for cross-cutting prompt augmentation (RAG, memory). The briefing loop's "what next?" decision lives in the model + tool schema, not in an Advisor. | `DefaultToolCallingManager` user-controlled loop OR framework-controlled `ChatClient.tools(...)` with explicit `maxIterations`. |
+| **Spring AI prompt/completion observation export** | Already disabled and locked by `LlmGatewayObservabilityTest` (privacy). v1.4 reinforces — even though briefing brief text is persistable, the **prompts** (which include past email metadata) are not. | Micrometer counters + traces, metadata labels only. |
 
 ---
 
 ## Stack Patterns by Variant
 
-**If admin endpoint reads tenant data (e.g., "list tenants", "view Gmail connection state"):**
-- Controller in `backend/api/controllers/admin/<domain>/` (e.g., `controllers/admin/tenants/`)
-- `@PreAuthorize("hasRole('ADMIN')")` on the controller class
-- Service in `backend/core/application/admin/<domain>/` returning projections from `projection/`
-- Tenant context for the **read** is still important — the admin is reading data **about** a tenant, so the response includes `tenantId` in the audit row, but the request is **not** Scoped-Values-bound to that tenant (admin operates above tenancy). Pattern: log `event=admin_read tenantId=<viewed> actorUserId=<admin>` on every read.
+**If a request hits `/api/calendar/**` and needs a Calendar API client:**
+- Controller in `backend/api/controllers/calendar/`
+- Service in `backend/core/application/calendar/`
+- `CalendarGateway` provider in `backend/core/calendar/gateway/google/` — the **only** package allowed to construct `Calendar.Builder` (new ArchUnit rule, sibling to the v1.3 Gmail rule and the v1.0 LLM rule).
+- Per-request credential injection via `MailboxContext` (when the calendar belongs to a Gmail-tenant relationship) or a new `CalendarConnectionContext` ScopedValue (when the operation is calendar-only — e.g. the booking page POST writes to `destination_calendar_id` which is bound to a `calendar_connection_id` not a `gmail_connection_id`).
 
-**If admin endpoint mutates global state (e.g., "enable model X for feature CHAT", "rotate master key for provider Y"):**
-- Same controller/service location.
-- **Write an `admin_audit_event` row in the same transaction** as the state change (`@Transactional` boundary owns both).
-- Emit a Spring Modulith event (`AdminCatalogChanged`, `MasterKeyRotated`) for cache invalidation in dependent modules (e.g., `LlmGateway` per-tenant `ChatModel` cache in Redis).
+**If a request needs to write a calendar event (booking, `propose_meeting` confirm, briefing-attendee RSVP update):**
+- Goes through `OutboundCalendarGateway.insertEvent(calendarConnectionId, calendarId, EventCommand)`.
+- The gateway computes idempotency key, sets `createRequest.requestId = idempotencyKey` so Calendar API dedupes Meet creation, writes the audit row in the same `@Transactional`, then calls `Calendar`.
+- Existing per-tenant outbound rate cap (v1.2 RACT-09) extended to count calendar writes alongside Gmail sends — single rate-limit pool per tenant; per-feature counters but one cap.
 
-**If admin endpoint mutates tenant-specific state (e.g., "pause tenant", "release ledger hold"):**
-- Same controller/service location.
-- Audit row includes `target_kind=TENANT`, `target_id=<tenantId>`.
-- The mutation **may** need to bind a Scoped Value for the tenant context if downstream services require it; emulate via `ScopedValue.where(TENANT_ID, target).run(() -> service.pauseTenant(target))`. CONVENTIONS.md tenant Scoped Values rule still holds.
+**If a request needs to read free/busy:**
+- `FreeBusyGateway.query(connectionIds, calendarIds, timeMin, timeMax)` — read-only, no audit row needed (it's a query, not a state change). Cached per-`(connectionId, day)` in Redis for 60s to amortize multiple draft-reply availability checks within one user editing session.
 
-**If admin endpoint exposes data NOT to be cached publicly:**
-- `Cache-Control: no-store, max-age=0` response header on every admin controller (cross-cutting interceptor or `@RestController` base class).
-- Existing privacy logging format (`event=admin_action`) per CONVENTIONS.md #5.
+**If the briefing cron runs:**
+- Lives in `backend/worker` (Modulith module: `briefing`).
+- Trigger: `ScheduledJob` that wakes every 5 min, queries `events.list` per connected calendar for the next 24h, picks events `start_at - now ∈ [briefing.hours_before - 5min, briefing.hours_before]` that don't yet have a `meeting_briefings` row.
+- For each picked event: run the agentic AI loop (user-controlled `ToolCallingManager` to gate budget per step), persist `meeting_briefings`, fire `MeetingBriefingReady` Modulith event for the email/digest dispatcher.
+
+**If an attachment arrives for filing:**
+- `MessageObservedEvent` (v1.0) is consumed by `AttachmentFilingService` in `backend/worker`.
+- For each attachment part: AI suggests folder (metadata only), then in-memory stream into Drive.
+- If `confidence >= HIGH`: file directly, `document_filings.status = FILED`.
+- If `confidence ∈ {LOW, MEDIUM}`: queue for review, `document_filings.status = NEEDS_REVIEW`, surface in `/filing/review`.
 
 ---
 
-## Integration Points (where v1.2 touches v1.0/v1.1)
+## Integration Points (where v1.4 touches v1.0 → v1.3)
 
-| Touch point | v1.2 change | Risk |
+| Touch point | v1.4 change | Risk |
 |---|---|---|
-| `SecurityConfig.chain(...)` (existing) | Add one `requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")` row before `.anyRequest().authenticated()`. Add class-level `@EnableMethodSecurity`. | Low — `authorizeHttpRequests` ordering is preserved (specific before generic). Existing E2E tests stay green; new E2E test covers 403 for non-admin on `/api/admin/**`. |
-| `GoogleOAuthSuccessHandler` (existing) | Look up `user.is_admin` post-provisioning; append `SimpleGrantedAuthority("ROLE_ADMIN")` to the principal's authorities. | Low — additive; existing tests still pass; new test for admin-authority attachment. |
-| `OpenApiConfig` (existing) | Add `publicApi` + `adminApi` `GroupedOpenApi` beans. The existing `GlobalOpenApiCustomizer apiErrorCustomizer` was deliberately authored to survive grouping — verified in its doc comment. | Low — grouping was anticipated when `GlobalOpenApiCustomizer` was chosen. |
-| `apps/web/scripts/generate-api.ts` | Loop over two spec URLs/paths, emit two `.d.ts` files. | Low — same CLI under the hood; one extra file. |
-| `apps/web/lib/api/` | Add `admin-schema.d.ts` (generated) + `admin-client.ts` (3-line wrapper). | Low — additive; existing public client untouched. |
-| `apps/web/components/ui/**` | Zero changes. | None. |
-| Liquibase changelogs | Six new YAML files. | Low — standard pattern. |
-| `core.llm.gateway.springai.admin` (new package, inside the locked adapter) | New service for list-models + master-key crypto + test-connection. ArchUnit rule confining vendor SDK usage **stays in force** — the new package is still inside `core.llm.gateway.springai.**`. | Low — package addition, not boundary change. |
-| `LlmGateway` per-tenant ChatModel cache (Redis, existing) | Add a cache invalidation hook for `AdminCatalogChanged` + `MasterKeyRotated` Modulith events so model swaps take effect within seconds. | Low — Spring Modulith `@ApplicationModuleListener` pattern already in use. |
-| `ArchUnit` rules | Add: `admin_audit_event.payload_jsonb` never receives `*Plaintext` / `*Decrypted` field names. Add: admin services never call rules-engine write paths (admin is read-only on tenant mail). | Low — ArchUnit is the existing enforcement layer for the same class of invariants. |
-| Logback `@Sensitive` scrub (existing) | `LlmProviderMasterKey.ciphertext` is `@Sensitive`. New entity, same annotation. | Low — additive. |
-| Micrometer + OTel agent 2.16 (existing) | New counters: `zero_mail_admin_action_total{action,actor_id}`, `zero_mail_master_key_test_total{provider,result}`, `zero_mail_catalog_sync_total{provider,result}`. | Low — additive labels. |
+| `libs.versions.toml` | Add 2 versions + 2 libraries (`calendarApi`, `driveApi`, `google-api-services-calendar`, `google-api-services-drive`). | Low — version pins independently chosen; no transitive conflict with existing Gmail artifact (verified Maven Central). |
+| `backend/core/build.gradle.kts` | Two `api(...)` lines next to the existing Gmail line. | Low — additive. |
+| `backend/api/application.yml` | Add two `ClientRegistration` entries (`google-calendar`, `google-drive`) sharing the existing client-id/secret env vars. | Low — additive; existing `google` registration untouched. |
+| Existing `OAuth2AuthorizationRequestResolver` (v1.3) | Extend its switch statement with the two new registration IDs; reuse the same `additionalParameters` map (`include_granted_scopes=true`, `access_type=offline`, `prompt=consent`). | Low — same shape as the v1.3 GMA-07 split. |
+| `OAuthTokenStore` (v1.0/v1.3) | Reused verbatim — `calendar_connections.refresh_token_ciphertext_b64` and `drive_connections.refresh_token_ciphertext_b64` are the same column shape as `gmail_connections`. No code change. | None — verified shape match. |
+| `MailboxContext` ScopedValue (v1.3) | Add sibling `CalendarConnectionContext` and `DriveConnectionContext` ScopedValues. Same binding-filter pattern. Same ArchUnit rule against `findByTenantId` bypass extended to cover the new context types. | Low — pattern is well-trodden. |
+| `OutboundSendGateway` (v1.2 RACT) | Add `OutboundCalendarGateway` sibling. The "no direct Gmail send outside the gateway" ArchUnit rule (RACT-12) gets a parallel rule for `Calendar` `events().insert/update/delete` and another for `Drive` `files().create/delete`. | Low — additive ArchUnit rules. |
+| Per-tenant outbound rate cap (v1.2 RACT-09) | Extended to count calendar writes alongside Gmail sends — single rate-limit pool per tenant; per-feature counters but one cap. Configured per Calendar feature flag. | Low — Redis-backed counter already exists; one new key namespace. |
+| `LlmGateway` + `LlmGatewayObservabilityTest` (v1.0) | Briefing agent goes through `LlmGateway` like every other LLM call. Observability test extended to cover briefing call-sites (no prompt/completion capture). | Low — additive call-sites, same gateway. |
+| Liquibase changelogs | Ten new YAML files under `backend/core/src/main/resources/db/changelog/changes/`. Append to `db.changelog-master.yaml`. | Low — standard pattern. |
+| ArchUnit rules | Add three: `CalendarBuilderConfinedToGateway`, `DriveBuilderConfinedToGateway`, `AttachmentBytesNotPersistedRule`. Sibling-shape to existing v1.0/v1.3 rules. | Low — same enforcement layer. |
+| Logback `@Sensitive` scrub (existing) | Mark the six new `@Sensitive` columns. No new code. | None — additive annotations. |
+| Micrometer + OTel (existing) | New counters: `zero_mail_calendar_event_total{op,connection_id,result}`, `zero_mail_drive_filing_total{result,confidence_bucket}`, `zero_mail_briefing_run_total{result,steps_used}`, `zero_mail_booking_created_total{slug}`. | Low — additive labels. |
+| `apps/web` | New pages: `/calendar`, `/booking-links`, `/book/[slug]` (public), `/filing/review`. Compose existing shadcn primitives — zero new deps. | Low. |
+| `apps/admin` | Read-only views of `calendar_connections`, `drive_connections`, `meeting_briefings` count, `document_filings` count per tenant. Same patterns as v1.2 admin tenant inspection. | Low. |
 
 ---
 
 ## Sources
 
 **Context7 (HIGH confidence):**
-- `/springdoc/springdoc-openapi` — `GroupedOpenApi` builder with `pathsToMatch`/`pathsToExclude`/`addOperationCustomizer`/`displayName`; multi-group split for public+admin APIs. Fetched 2026-05-19.
+- `/websites/developers_google_workspace_calendar_api` — Java client setup, `events.insert`, `events.list`, `freebusy.query` request/response shapes, `EventDateTime` timezone semantics. Fetched 2026-06-17.
+- `/websites/developers_google_workspace_drive` — Java client setup, `files.create` with `FileContent` and `InputStreamContent`, `drive.file` scope semantics, folder-as-mimeType pattern. Fetched 2026-06-17.
+- `/websites/spring_io_spring-ai_reference_2_0-snapshot` — `ChatClient.tools(...)` framework-controlled loop; `DefaultToolCallingManager` + `internalToolExecutionEnabled(false)` user-controlled loop; `MessageAggregator` streaming variant; `ToolExecutionResult` for conversation-history continuation. Fetched 2026-06-17. Pattern documented across Anthropic, Bedrock, DeepSeek, and Google GenAI chat pages — covers all four provider starters we already pin.
 
-**Spring Security 7 official reference (HIGH confidence):**
-- `https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html` — `authorizeHttpRequests().requestMatchers("/admin/**").hasRole("ADMIN")` is the current canonical pattern in 7.0.x; no breaking change from 6 to 7 for this API; deferred Authentication lookup is the 7.x improvement. Fetched 2026-05-19.
+**Maven Central index probes (HIGH confidence):**
+- `https://repo1.maven.org/maven2/com/google/apis/google-api-services-calendar/` — latest `v3-rev20260517-2.0.0`. Probed 2026-06-17.
+- `https://repo1.maven.org/maven2/com/google/apis/google-api-services-drive/` — latest `v3-rev20260428-2.0.0`. Probed 2026-06-17.
+- `https://repo1.maven.org/maven2/com/google/api-client/google-api-client/maven-metadata.xml` — current line `2.9.0` (verifies transitive compatibility with existing Gmail artifact). Probed 2026-06-17.
+- `https://repo1.maven.org/maven2/com/google/http-client/google-http-client/maven-metadata.xml` — current line `2.1.0`. Probed 2026-06-17.
 
-**Spring Framework 7 reference (already on classpath via Boot 4.0.6):**
-- `RestClient` (replaces deprecated `RestTemplate`) — used for `/models` calls inside the locked LLM adapter package when Spring AI starter does not expose a `listModels()` directly.
-
-**npm registry / existing `apps/web/package.json` (HIGH confidence):**
-- `openapi-typescript@7.13.0` and `openapi-fetch@0.17.0` already installed; both transparently support multi-spec workflows via repeated invocations.
-- All listed shadcn primitives (`table`, `tabs`, `dialog`, `alert-dialog`, `select`, `command`, `popover`, `sidebar`, `sheet`, `chart`, etc.) are present in `apps/web/components/ui/**` on the working tree at 2026-05-19.
-
-**Existing repo (HIGH confidence — single source of truth for v1.0/v1.1 baseline):**
-- `gradle/libs.versions.toml` — `springdoc = "3.0.3"`, Spring Boot 4.0.6, Spring AI 2.0.0-M7.
-- `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` — current `authorizeHttpRequests` chain; cookie session via `oauth2Login`; CSRF SPA mode; `@Order(3)` non-test profile.
-- `backend/api/src/main/java/com/zeromail/api/config/OpenApiConfig.java` — explicit use of `GlobalOpenApiCustomizer` to survive future `GroupedOpenApi` grouping (the doc comment in this file calls out v1.2 directly).
-- `apps/web/scripts/generate-api.ts` — current single-spec codegen pipeline; single-file extension is mechanically straightforward.
-- CLAUDE.md "do not use" list — JWT, Lombok, WebFlux, GCP starter, raw vendor SDKs, Kafka/RabbitMQ, pgcrypto for keys, vector DB.
-- Memory notes — bundled OAuth scopes, no parallel admin IdP detour, raw shadcn first, skip de-risking spikes, coherent milestone over interim.
+**Existing repo (HIGH confidence — single source of truth for v1.0-v1.3 baseline):**
+- `gradle/libs.versions.toml` — current pins (Spring Boot 4.1.0, Spring AI 2.0.0, Modulith 2.1.0, Liquibase 5.0.3, `google-api-services-gmail v1-rev20250331-2.0.0`, `google-auth-library-oauth2-http 1.48.0`).
+- `backend/core/build.gradle.kts` — existing `api(libs.google.api.services.gmail)` line and `implementation(libs.google.auth.library.oauth2.http)` provide the integration template.
+- `apps/web/package.json` — `react-day-picker@^10.0.1`, `date-fns@^4.4.0`, `recharts@3.8.1` already present.
+- `apps/web/components/ui/calendar.tsx`, `command.tsx`, `popover.tsx`, `radio-group.tsx`, `card.tsx` — all already present (verified `ls` 2026-06-17).
+- CLAUDE.md "Hard do-not-use list" — `spring-cloud-gcp`, vector DB, raw vendor SDKs outside the locked LLM adapter package (extended in v1.4 to Calendar/Drive gateways).
+- Memory notes — bundled OAuth scopes (extended carefully in v1.4 via user-initiated incremental grants on opt-in features, not auto-prompts), draft_body carve-out (extended in v1.4 to `meeting_briefings.brief_markdown` for the same reason), raw shadcn first, skip de-risking spikes.
 
 ---
 
-*Stack research for: Zero Mail v1.2 — admin console foundation + Settings UI on curated catalog*
-*Researched: 2026-05-19 by gsd-researcher (Context7 `/springdoc/springdoc-openapi` + Spring Security 7 reference + existing repo state)*
+*Stack research for: Zero Mail v1.4 — Google Calendar Co-Pilot + Drive Filing.*
+*Researched: 2026-06-17 by gsd-researcher (Context7 Calendar/Drive/Spring AI + Maven Central index probes + existing repo state).*

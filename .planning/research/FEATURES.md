@@ -1,499 +1,480 @@
-# Feature Research — v1.2: Admin Console Foundation + Settings UI
+# Feature Landscape — v1.4 Calendar Co-Pilot + Drive Filing
 
-**Domain:** Internal admin/support/compliance console + curated LLM catalog + Settings UI rebuilt on the curated catalog (trust-first multi-tenant SaaS, solo-operator early stage)
-**Researched:** 2026-05-19
-**Overall confidence:** HIGH for admin RBAC + audit log + tenant inspection patterns (well-trodden SaaS territory; multiple independent sources agree); MEDIUM for curated LLM catalog UX (newer pattern — primary reference LiteLLM proxy admin UI + OpenClaw/OpenRouter ergonomics + internal v1.0 `LlmGateway` shape); HIGH for Settings UI deferred reqs (already specified in v1.1 deferred list).
-**Scope:** **Only the v1.2 milestone delta.** v1.0 + v1.1 features (auth, mail ingestion, billing, LLM gateway, rules engine, triage convergence, draft replies, analytics, chat assistant + confirmation cards, send executor) are described in `PROJECT.md` "Validated" and the prior `.planning/research/FEATURES.md` revisions — **not re-researched here.**
+**Domain:** AI email assistant — Google Calendar + Google Drive integrations
+**Researched:** 2026-06-17
+**Scope:** new features only. v1.0–v1.3 capabilities (triage, draft replies, rules engine, chat assistant, admin console, multi-Gmail foundation) are taken as already shipped and are referenced as dependencies, not re-researched.
+**Reference baseline:** Inbox Zero (`../inbox-zero`) — schema and code inspected directly. Shortwave / Superhuman positioning from competitor research.
+**Confidence:** HIGH (IZ schema + handlers + AI tools directly read; product directives in PROJECT.md L53–L73 are authoritative).
 
-> Inbox Zero reference: their admin (`apps/web/app/(app)/admin/page.tsx`) is a single page gated by `isAdmin({ email })` checking `env.ADMINS` (an env-var allowlist of emails). Tools shown: `AdminUpgradeUserForm`, `AdminUserControls`, `AdminUserInfo` (email-keyed user lookup), `AdminHashEmail`, `GmailUrlConverter`, `DebugLabels`, `RegisterSSOModal`, `AdminSyncStripe`, `AdminTopSpenders`. **No** model catalog UI, **no** master-key UX, **no** tenant-level read-only inspection, **no** worker-queue panel — Inbox Zero ships those as "log into Vercel / Stripe / Postgres directly". Zero Mail's admin must go further because we're VPS-self-hosted, BYOK-by-default, and own our own LLM gateway abstraction.
+## Conventions
 
----
-
-## Executive Summary
-
-v1.2 adds **two surfaces** stacked on top of the shipped v1.0 + v1.1 backend:
-
-1. **Admin Console Foundation (Phase 8)** — a new `/admin/*` route tree gated by `ROLE_ADMIN`, with an append-only `admin_audit_event` log of every write the admin performs. The console exposes seven feature surfaces: (a) admin RBAC + audit; (b) curated LLM catalog with per-provider Sync-from-`/models` review flow; (c) AES-GCM-encrypted master-key management for the 4 platform providers; (d) tenant read-only inspection (connection state, watch expiry, pause, ledger holds/balance, spend timeline) **without any PII surface from email bodies / chat content / token bytes**; (e) worker queue health (Postgres outbox + `processing_job` stats); (f) promoted global LLM spend dashboard aggregating metadata-only across all tenants; (g) catalog/master-key plumbing that the user Settings AI tab consumes.
-
-2. **User Settings UI on curated catalog (Phase 9)** — `/settings` with 4 tabs (Personalization, Behavior, Safety Net, AI Provider/Model) carrying forward the 19 deferred v1.1 reqs (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04). The AI Provider/Model tab is the dependency hinge: it can only list models the admin has approved in the catalog, scoped per feature (chat / triage / draft).
-
-**Highest-risk feature** is (c) master-key management: an AES-GCM key for OpenAI/Anthropic/Google/DeepSeek lives in app config (or a sealed `master_key` row); rotation must re-encrypt every dependent encrypted record (BYOK secrets, future webhook secrets); a botched rotate locks every BYOK user out of LLM calls. Inbox Zero does not own this problem (no app-layer encryption beyond Auth.js sessions); we own it because of v1.0 LLM-04 (`AES-GCM BYOK encryption + per-call zeroing`).
-
-**Highest-trust risk** is (d) tenant inspection: the temptation is to ship a "view-as-user" flow because it's quick. Don't. v1 trust posture forbids admin reads of email bodies, chat content, prompts/completions, token bytes, and OAuth refresh tokens. Tenant inspection must be **read-only metadata projections only** — connection state, watch expiry, pause flag, credit balance, spend buckets, audit row counts — never the underlying PII rows.
-
-**Lowest-risk feature** is (e) worker queue health: read-only SQL aggregates over the existing `outbox` + `processing_job` tables. Reuse Postgres MCP introspection patterns; no new schema.
-
-**Curated catalog** is the architectural keystone of v1.2: it inverts the v1.0/v1.1 default of "user types a model ID, LLM gateway accepts it if Spring AI does". Phase 8 introduces `llm_catalog_model` (per-provider, per-feature, admin-toggled) and `llm_catalog_sync_run` (record of each Sync-from-`/models` invocation + diff). Phase 9's AI Provider/Model picker reads `llm_catalog_model` filtered to `{provider, feature, enabled=true}`.
-
-**For roadmap:** Phase 8 has clear internal ordering — RBAC + audit framework first (everything else depends on it) → master-key + catalog schema → Sync-from-`/models` UI → tenant inspection → queue health → spend dashboard. Phase 9 can begin once `llm_catalog_model` queryable endpoints exist (does not need Sync UI complete).
+- **Table stakes** — must ship in v1.4 for the feature to feel credible. Missing = users will say "this isn't a real calendar/drive integration."
+- **Differentiator** — competitive edge; landable inside v1.4 if cheap, otherwise carry-forward.
+- **Anti-feature** — deliberately omitted in v1.4. Each anti-feature carries an explicit reason (privacy, scope, infra, locked decision).
+- **Complexity** — S (≤ 1 phase, no new infra), M (1 phase + DB schema or external API integration), L (multi-phase, new agentic loop, or new long-running orchestration).
+- **Dependencies on v1.0–v1.3** — what this feature reuses so we do not re-invent or fork.
 
 ---
 
-## Feature Categories Overview (v1.2 only)
+## 1. Calendar — Connection Management
 
-| Category | What it covers | Backend dep | Frontend dep | Risk |
-|----------|---------------|-------------|--------------|------|
-| **ADMIN** | `/admin/*` route gate, `ROLE_ADMIN`, admin action audit log, admin navigation chrome | New `admin_audit_event` table; `user_account.role` column (enum {USER, ADMIN}); Spring Security `hasRole('ADMIN')` on `/admin/**` | New `/admin/*` layout + sidebar; admin-only nav surfaced only when role present | MEDIUM (well-trodden but role bootstrap on a fresh VPS is fiddly) |
-| **CAT** | Curated LLM catalog (per-provider × per-feature), Sync-from-`/models` flow with diff + approve, enable/disable toggles, default-model selection per feature | New `llm_catalog_model`, `llm_catalog_sync_run`, `llm_catalog_sync_diff_entry` tables; provider `/models` adapter inside the existing `LlmGateway` package | Catalog table UI per provider, model row toggle, Sync button → diff modal with checkboxes, "Set default for chat/triage/draft" per row | MEDIUM (Sync diff UX is the hard part) |
-| **MKEY** | AES-GCM master-key management for the 4 platform providers — set, rotate, test-connection, last-rotated-at; also surfaces "users on this key" count | New `provider_master_key` table (encrypted), key-rotation job (re-encrypts dependent BYOK rows under new master), `/admin/keys/{provider}/test` endpoint | Per-provider card: status pill, rotate button (with confirm dialog), test-connection button → result toast, last-rotated-at timestamp | HIGH (rotation is destructive; mistakes lock out BYOK callers) |
-| **OPS-TENANT** | Tenant read-only inspection: list/search tenants, view per-tenant connection state + watch expiry + pause + ledger balance/holds + spend-over-time + recent admin-relevant audit events | Read-side projections over existing v1.0 tables (`email_account`, `gmail_connection`, `credit_ledger_entry`, `triage_audit`, `chat_session` *counts only*); no new write tables | Tenant list table with filter, tenant detail page with health/billing/spend tabs (no email-body, no chat-content, no prompt-completion surfaces) | MEDIUM (must avoid leaking PII through analytics joins) |
-| **OPS-QUEUE** | Worker queue health: outbox lag, processing_job depth, oldest unleased age, retry distribution, failure-rate-by-job-type, dead-letter inspection | Read aggregates over existing `outbox` + `processing_job` tables (already exist from v1.0 Phase 4) | Stat cards + small charts; "oldest unleased" age in seconds; retry histogram; dead-letter table with re-queue button (with confirm) | LOW |
-| **OPS-SPEND** | Global LLM spend dashboard: aggregate metadata-only spend across all tenants, broken down by provider, feature (chat/triage/draft), and platform-vs-BYOK | Read aggregates over existing `llm_call_audit` (metadata only — never prompt/completion content) | Top-line spend cards (today / 7d / 30d), provider breakdown stacked bar, feature breakdown donut, top-N tenants table | LOW |
-| **SET-AI** | User Settings AI Provider/Model tab — picks chat / triage / draft model from admin-curated catalog; manages BYOK keys per provider; shows per-provider status | New `assistant_settings.chat_model_id / triage_model_id / draft_model_id` FK to `llm_catalog_model`; reuses v1.0 `byok_credential` | shadcn `<Select>` per feature (chat/triage/draft) populated from `/api/catalog/models?feature=...`; BYOK key management cards per provider | MEDIUM (depends on CAT) |
-| **SET-VOICE** | Personalization tab — writing style, personal instructions, signature, knowledge base CRUD, tone preset, AI output language | New columns on `assistant_settings`; new `assistant_knowledge_snippet` table (already specified in v1.1 deferred list) | Textareas + language toggle + knowledge-snippet CRUD list | LOW |
-| **SET-BEHV** | Behavior tab — auto-draft toggle, draft confidence threshold, follow-up reminders, daily digest opt-in, sensitive-data protection | 3 booleans + 1 numeric on `assistant_settings`; reuses existing daily-digest config | Switches + threshold slider | LOW |
-| **SET-SAFE** | Safety Net tab — sender VIP allow-list / never-archive / never-trash list management | Reuses existing v1.0 TRG-07..08 tables (`sender_safety_entry`) — no new schema | List, add by email/domain, remove, search | LOW |
+**Goal:** Connect one or more Google Calendar accounts (often the same Google identity as a Gmail mailbox, but allowed to differ), enable/disable specific calendars within a connection, resolve timezone for availability math, and recover from `invalid_grant`.
 
----
+**IZ baseline** (`schema.prisma` L1135–L1172): `CalendarConnection { provider, email, accessToken, refreshToken, expiresAt, isConnected, @@unique(emailAccountId, provider, email) }` with `Calendar { calendarId, name, primary, isEnabled, timezone }` children. Allows multiple Google identities per email account; each connection can enable a subset of its calendars.
 
-## ADMIN Category — RBAC + Audit Log
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| Connect multiple Google Calendar accounts via incremental OAuth | IZ already does it; users routinely have personal + work calendars on different Google identities | M | Reuse v1.3 OAuth-intent split (CONNECT_MAILBOX → CONNECT_CALENDAR). Scopes: `calendar.freebusy` (read busy windows) + `calendar.events` (write events for bookings + propose_meeting). |
+| List calendars within a connection; per-calendar `is_enabled` toggle | Users want busy time from work calendar but bookings written to personal | S | Mirror `Calendar.isEnabled`. |
+| Per-calendar timezone with workspace fallback | Slot suggestions must show user-local times | S | IZ stores `timezone` on `Calendar` plus a `TimezoneDetector.tsx` (browser-side IANA detection) that backfills the user record. |
+| Primary calendar marker | Used as default destination for booking links and `propose_meeting` writes | S | `Calendar.primary` boolean. |
+| `DISCONNECTED` state + reconnect prompt on `invalid_grant` | Parity with v1.0 AUTH-05 Gmail behavior | S | Reuse same connection-health surface. |
+| AES-GCM encryption of calendar refresh token | Privacy/security parity with Gmail OAuth tokens | S | Reuse v1.0 OAuth refresh-token AES-GCM pattern. |
+| Disconnect cascade — revoke + delete calendar connection deletes booking links bound to its calendars (set null on destination) | IZ uses `onDelete: SetNull` for `BookingLink.destinationCalendarId` | S | Avoid orphaned bookings. |
 
-### Table Stakes (Users — i.e., the admin operator — Expect These)
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| Connection-scoped UI badges in `AccountMenu` (calendar count + health) | Reinforces multi-account model from v1.3 | S | Cheap to copy the v1.3 mailbox switcher pattern. |
+| Auto-detect browser timezone on first login | Reduces a settings click | S | IZ's `TimezoneDetector.tsx` already shows the pattern. |
 
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| ADMIN-T1 | Separate `/admin/*` route tree, hidden from non-admins (no nav link, route returns 403 not 404) | Standard internal-tool pattern; surfacing admin UI to normal users invites probing | **S** | Spring Security `.requestMatchers("/admin/**").hasRole("ADMIN")`; Next.js layout returns 403 page if `role !== 'ADMIN'` |
-| ADMIN-T2 | `ROLE_ADMIN` stored on the user, not derived from an env-var email allowlist | Inbox Zero uses an env-var allowlist (`env.ADMINS`); fine for a 1-developer hobby project, but blocks adding a non-developer support operator and breaks SOC2 evidence later | **S** | New `user_account.role ENUM('USER','ADMIN')` column; default `USER`; first admin bootstrapped via Liquibase changelog targeting the founder's email |
-| ADMIN-T3 | Admin action audit log — every write the admin does (rotate key, sync catalog, disable model, re-queue job, mark tenant paused-by-admin) writes an append-only `admin_audit_event` row with `(actor_user_id, action, target_tenant_id?, target_resource, before_value, after_value, ts)` | Audit immutability is the linchpin of trust + future SOC2/CASA evidence; every admin write must be reconstructable | **M** | New `admin_audit_event` table; `INSERT`-only (no `UPDATE`/`DELETE` grants); Postgres trigger refuses non-INSERT; 90+ day retention |
-| ADMIN-T4 | Tenant-aware audit — every audit event with a tenant target carries `target_tenant_id` so we can later answer "show me every admin action on tenant X" | Multi-tenant SaaS audit baseline; needed before a tenant says "did you touch our account?" | **S** | Foreign-keyed column on `admin_audit_event`; nullable for global actions like "rotate OpenAI master key" |
-| ADMIN-T5 | Read-action visibility — every admin **read** of a tenant page (tenant detail, ledger view, spend timeline) writes a `admin_read_event` row with `(actor, target_tenant_id, surface, ts)` | Reads of tenant data are not free in a trust-first SaaS; "who looked at my account?" matters | **S** | New `admin_read_event` table; lighter retention (30 days) than write audit |
-| ADMIN-T6 | Admin can see their own recent audit log (last 50 actions) on the `/admin` landing | Self-check before doing something destructive | **S** | Read from `admin_audit_event WHERE actor_user_id = current_admin` |
-| ADMIN-T7 | Admin session is the same Spring Session Redis cookie as user session — no separate admin login | Reduces credential surface; one auth path | **S** | Already in place from v1.0 AUTH-04 |
-| ADMIN-T8 | Admin nav lives in a separate `/admin` layout, not bolted into user chrome | Visual separation reduces "I thought I was in my own account" mistakes | **S** | Next.js parallel route segment |
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| Microsoft Outlook / Office 365 Calendar | Gmail-only constraint, PROJECT.md L73 | Locked |
+| Apple iCloud / generic CalDAV | Different auth model; not in v1 ecosystem | Locked (Gmail-only) |
+| Cross-tenant shared calendars | No team feature in v1.4 (TEAM-* deferred) | Out of scope |
 
-### Differentiators
+### Dependencies on v1.0–v1.3
+- **v1.3 multi-Gmail connection model** — copy the `gmail_connections` table shape and `MailboxContext` pattern almost verbatim into `calendar_connections` / `calendars`. Reuse the OAuth intent split so login, Gmail connect, and Calendar connect are three distinct intents on the same Google OAuth registration.
+- **v1.0 OAuth refresh-token AES-GCM crypto** — same key, same field-level encryption.
+- **v1.0 AUTH-05 reconnect prompt** — reuse the DISCONNECTED state machine.
 
-| # | Feature | Value Proposition | Complexity | Notes |
-|---|---------|-------------------|------------|-------|
-| ADMIN-D1 | Audit diff view — for any audit row with `before_value` / `after_value`, render a side-by-side JSON diff in the audit log UI | Lets admin verify "what exactly did I change?" without `psql` | **M** | Reuses any small JSON-diff React component |
-| ADMIN-D2 | Audit-event filter chips (action type, tenant, date range) on `/admin/audit` | Once the table is non-trivial size, ungrouped scroll is unusable | **S** | Standard table-filter UI |
-| ADMIN-D3 | Audit-event CSV export (admin-only, audit-logged itself — exporting the log is an auditable action) | SOC2/CASA evidence; auditor wants the rows on disk | **S** | Stream CSV via `/admin/audit/export.csv`; emits `audit.exported` audit row |
-| ADMIN-D4 | "Confirm twice" pattern for destructive admin actions (rotate key, re-queue dead-letter batch, pause tenant) — typed-confirm dialog like GitHub's `Type the repo name to delete` | Prevents accidental destructive clicks in a console used rarely | **S** | Standard pattern; use shadcn `<AlertDialog>` |
-
-### Anti-Features
-
-| # | Feature | Why Requested | Why Problematic for Zero Mail | Alternative |
-|---|---------|---------------|-------------------------------|-------------|
-| ADMIN-A1 | **Admin impersonates user / "Sign in as user"** | Quick way to debug "their UI is broken" reports | **Trust violation** — impersonation grants the admin a session with the user's Gmail scope. Even if we audit it, the admin can read every email body. Cross-tenant impersonation is a recognized SaaS anti-pattern; the right pattern is to ship enough read-only diagnostics that impersonation is unnecessary | Tenant read-only inspection (OPS-TENANT-*) + better client-side error logs; revisit only if a real support load justifies it |
-| ADMIN-A2 | **Admin views tenant email bodies / chat content / prompts / completions** | "I can't help them debug their rule without seeing what email triggered it" | **Architecturally banned** by v1.0 privacy constraint (`@Sensitive` + Logback scrub + ArchUnit content-ban tests) and v1.1 chat body-ban (3-layer enforcement); any admin surface that breaks this collapses the whole privacy posture | Show metadata only — message-id, sender-domain-hashed, label transitions, audit row IDs; the user can opt-in to share a redacted reproducer separately |
-| ADMIN-A3 | **Free-form SQL console / `psql` proxy in admin UI** | "Just let me query directly when something weird happens" | Bypasses the audit log + the content-ban surface entirely; any read of the audit table itself bypasses `admin_read_event` enforcement; one accidental `SELECT body FROM ...` violates the privacy contract | Postgres MCP via JetBrains direct DB access for the solo operator (already in the dev workflow) — keeps the boundary tight |
-| ADMIN-A4 | **Editable env-var allowlist for admin emails** | Inbox Zero pattern | Tied to environment file reloads; doesn't survive multi-instance; no audit row when an admin is granted/revoked | Database-backed `user_account.role` + a separate "promote user to admin" admin action that itself emits an audit row |
-| ADMIN-A5 | **Separate admin password / 2FA layer** | "Admin should be harder to log into than user" | Adds friction without measurable gain when the solo operator's Google account already protects via 2FA; revisit when first non-developer joins | Rely on Google's 2FA; **enforce** admin role only via DB column; log admin session start |
-| ADMIN-A6 | **Generic "user management" surface (edit any tenant's name/email/etc.)** | Common in mature SaaS admin tools | We don't actually mutate tenant identity fields in v1.2 — Gmail is the source of truth for email + profile; mutating it would break sync | Keep tenant fields read-only; the only writes are admin-flagged pause / unpause / mark-for-deletion |
+**Open question:** should a Calendar connection be **workspace-shared** (any mailbox can use it) or **mailbox-isolated** (1 calendar conn per mailbox)? Recommendation: **mailbox-keyed by foreign key but workspace-readable** — write actions (events, propose_meeting) target a specific mailbox's outbound gateway, but free/busy reads can fan out across all calendar connections owned by the workspace. This mirrors v1.3's "credits shared, OAuth isolated" boundary.
 
 ---
 
-## CAT Category — Curated LLM Catalog + Sync-from-/models
+## 2. Calendar — Availability in Draft Replies
 
-### Table Stakes
+**Goal:** When the user asks the chat assistant or hits "AI draft reply" on a thread that smells like scheduling, the AI fetches free/busy across all enabled calendars and proposes 3–5 concrete slots in the reply body.
 
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| CAT-T1 | Per-provider catalog table view (OpenAI, Anthropic, Google, DeepSeek as four tabs) listing every model the admin has curated, with `{name, providerModelId, enabled, allowedFeatures: [chat?, triage?, draft?], inputCostPer1k, outputCostPer1k, contextWindow, lastSyncedAt}` | Without a curated list, the Settings UI either hardcodes models (stale) or shows every model the provider has ever published (overwhelming + paid-tier-only models break BYOK) | **M** | New `llm_catalog_model` table (PK `(providerId, providerModelId)`); seeded with the existing v1.0 default list per provider |
-| CAT-T2 | Per-feature toggle per model — a single model row has 3 independent checkboxes (chat / triage / draft) so admin can allow `gpt-5-mini` for triage but not chat | Different features have different latency / cost / quality budgets; one global toggle is too coarse | **S** | 3 boolean columns or a `allowed_features` JSONB array on `llm_catalog_model` |
-| CAT-T3 | Per-feature default model — exactly one catalog row per `(provider, feature)` is the default; the Settings UI uses this default if the user has not picked one | Users land on Settings without an opinion; we need a sane default | **S** | `is_default_for_chat / is_default_for_triage / is_default_for_draft` booleans with a partial unique index |
-| CAT-T4 | "Sync from /models" button per provider — admin clicks, backend fetches that provider's `/models` endpoint with the master key, computes a diff against the current catalog, opens a modal listing `{added, removed, changed}` model entries with per-row checkboxes to approve | Manual entry of every new GPT/Claude/Gemini release is operator toil; auto-importing without admin review is bad (vendors ship preview / deprecated / unsuitable models constantly) | **M** | New `llm_catalog_sync_run` row per click; new `llm_catalog_sync_diff_entry` rows per diff line; admin approval commits selected entries to `llm_catalog_model` |
-| CAT-T5 | Sync run history — list past Sync runs per provider with `{startedAt, actor, addedCount, removedCount, approvedCount, skippedCount}` | Audit + "did we already sync GPT-5.1?" lookup | **S** | Query `llm_catalog_sync_run` ordered desc |
-| CAT-T6 | "Disable model" emits `model.disabled` audit row and surfaces "N users currently have this as their chat/triage/draft selection" before disabling | Prevents disabling a model 200 users depend on without realizing | **M** | Join count from `assistant_settings.{chat,triage,draft}_model_id`; require admin to acknowledge before disabling |
-| CAT-T7 | Provider status pill (green/amber/red) based on last successful `/models` fetch + last successful test-connection within 24h | At-a-glance ops signal | **S** | Derived from `llm_catalog_sync_run.lastSuccessAt` and `provider_master_key.lastTestConnectionAt` |
+**IZ baseline** (`utils/ai/calendar/availability.ts`, `utils/calendar/unified-availability.ts`): a tool-call (`aiGetCalendarAvailability`) takes the thread messages, queries `getUnifiedCalendarAvailability` (fans out across all `isConnected` connections + `isEnabled` calendars), and returns `{ suggestedTimes: [{start, end}], noAvailability? }`. Output schema is `YYYY-MM-DD HH:MM` strings. Duration is **inferred from email context** by the LLM (not hard-coded). If the user has a configured booking link, the prompt is told to mention it as a fallback.
 
-### Differentiators
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| Free/busy fan-out across all enabled calendars on all connections | Otherwise a slot collides with the user's other calendar | M | Single Gmail FreeBusy API call per connection; union the busy ranges. |
+| LLM-inferred meeting duration from thread context | "30-min intro" vs "1-hour deep-dive" — hard-coding is wrong | S | Already the IZ approach; constrain via Zod/Bean Validation in tool schema. |
+| Business-hours awareness (configurable working window + days) | A 7 AM Sunday slot is offensive | S | Settings on the user record: `workingHoursStart`, `workingHoursEnd`, `workingDays[]`. |
+| Timezone-aware slot rendering — slot shown in the recipient's timezone if detected, else user's | Avoid the classic "1pm your time or mine?" trap | M | IZ shows times in user's TZ + labels. v1.4 minimum: user-TZ slots, clearly labeled. Recipient-TZ inference is differentiator. |
+| Booking-link fallback in reply text — "or use my booking link: …" | If we ship booking links (§3), this is the obvious bridge | S | IZ passes `bookingLinkAvailable` boolean into the AI tool. |
+| Tool-call surfacing inside chat assistant (`getCalendarAvailability`) | v1.1 chat already has 24 tools — this is one more | S | Add to existing chat tool catalog; tenant context already enforced. |
+| Free/busy result NEVER persisted | ARCH-02 — calendar busy times are user data extracted from Google | S | Short-lived in-memory only, like the email-body cache. |
 
-| # | Feature | Value Proposition | Complexity | Notes |
-|---|---------|-------------------|------------|-------|
-| CAT-D1 | Cost-per-1k tokens stored on each catalog row and shown in Settings AI tab next to model name (`gpt-5-mini · $0.25 / $2.00 per 1M tok`) | Users picking a model want to know cost before flipping; otherwise BYOK users overspend on Opus by accident | **M** | Pricing data is provider-published; we cache on Sync. Acknowledge it may go stale until next Sync (acceptable — pricing changes monthly at most) |
-| CAT-D2 | "Recommended for {chat/triage/draft}" badge on one model per feature per provider, distinct from "default" | Default is what we ship; recommended is editorial guidance ("for triage, we recommend gpt-5-mini for cost") | **S** | `recommended_for_{chat,triage,draft}` boolean column; admin curated |
-| CAT-D3 | Deprecation tag — if a Sync detects a model has been removed by the provider but tenants still reference it, surface as a banner "12 users on a deprecated model — pick a migration target" | Vendor model retirement causes silent failures; surfacing the count gives the admin time to migrate users | **M** | Diff entry of type `removed` + dependent count from `assistant_settings` |
-| CAT-D4 | Catalog state snapshot exposed as `/api/catalog/models?feature=chat&provider=openai` (and equivalent for triage/draft) — the **only** thing the Settings UI queries | Decouples admin curation from frontend; Settings doesn't need to know about disabled / deprecated / non-feature models | **S** | Read endpoint filtered to `enabled=true AND allowed_features ? :feature` |
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| Recipient-timezone inference from prior thread signals (signature, location, sent times) | Big UX win for international scheduling | M | IZ doesn't do this. Defer to v1.5 unless cheap. |
+| "Same-week priority" heuristic — prefer slots in the next 5 business days | More natural feel than "first available slot 8 weeks out" | S | Easy bias in the prompt; LOW effort, MED value. |
+| Round-up to next 15-min boundary | Avoids "3:07 PM" output | S | Post-processing on tool output. |
 
-### Anti-Features
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| Persisting suggested-slot history | Email content / scheduling state; ARCH-02 | Locked |
+| Auto-sending a reply with slots (no preview) | Outbound auto-send through chat already requires preview confirm (CHAT-* v1.1); rules-driven `propose_meeting` is the separate path (§6) | Decision |
+| Multi-attendee availability ("find a slot when 5 people are free") | Requires either querying others' calendars (impossible without their OAuth) or invite-and-poll (Doodle-style); huge new surface | Scope |
 
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| CAT-A1 | **Free-form "type any model ID" override in Settings UI** | "What if a user wants to try a brand-new model before admin syncs?" | Breaks the curated-catalog invariant; routes load through unknown-cost models; defeats the per-feature catalog | Users wait for admin Sync, or run BYOK with their own OpenRouter key (BYOK already supports per-call model pin via existing v1.0 LLM-02) |
-| CAT-A2 | **Auto-approve Sync diff (no admin review)** | "Save the operator a click" | Vendors ship deprecated, preview, internal-only, or paid-tier-only models in `/models` — auto-approve = silent breakage | Always require explicit admin approval of each added entry |
-| CAT-A3 | **Embedding-model curation in v1.2 catalog** | Symmetric with chat/triage/draft | Privacy constraint forbids embeddings of user mail in v1; no embedding feature exists to power | Defer to whenever embedding feature is approved (post v2) |
-| CAT-A4 | **Per-tenant model allowlist overrides ("tenant X can use Opus, tenant Y cannot")** | Enterprise-y feature | Adds a tenant-scoped layer over the catalog; multiplies UI complexity; we have no use case in v1 (solo prosumers, no enterprise sales) | Global catalog only; revisit when first enterprise customer signs |
-| CAT-A5 | **Live `/models` polling on every Settings page load** | "Always show the latest models" | Each tenant's Settings load → 4 outbound `/models` calls → rate-limit + cost; defeats catalog purpose | Catalog is the cache; admin-triggered Sync is the refresh |
-
----
-
-## MKEY Category — Master-Key Management
-
-### Table Stakes
-
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| MKEY-T1 | Per-provider master key set/view UI: 4 cards (OpenAI, Anthropic, Google, DeepSeek), each showing `{status: SET/UNSET, lastRotatedAt, lastTestedAt, encryptedKeyVersion}` — never showing the key bytes | Admin needs to verify "is OpenAI configured" without exposing the key | **S** | New `provider_master_key` table with encrypted-at-rest key blob + metadata columns |
-| MKEY-T2 | "Set / replace master key" form with masked input, submit encrypts under app-layer AES-GCM (reusing v1.0 LLM-04 crypto), writes encrypted blob + emits `master_key.set` audit row | Same crypto pattern as v1.0 BYOK; reuse don't duplicate | **M** | Same `AesGcmEncryptor` used for BYOK; new column `provider_master_key.encrypted_key BYTEA NOT NULL` |
-| MKEY-T3 | "Test connection" button per provider — backend issues a minimal `/models` GET (or `/v1/messages` ping) using the current master key, returns `{ok, latencyMs, modelsReturnedCount}`, updates `provider_master_key.lastTestedAt` | First sanity check before relying on a key; also surfaces "provider is down" vs "our key is wrong" | **S** | Already partially exists from CAT-T4 Sync flow; share the adapter |
-| MKEY-T4 | "Rotate master key" workflow: admin pastes new key → backend test-connects under new key → if pass, re-encrypts dependent rows (any platform-encrypted BYOK secrets if applicable) → swaps active key → marks old key version `RETIRED` → emits `master_key.rotated` audit row with old/new version | Rotation is the whole point of key management; without it, set-once-forever | **L** | Multi-step transactional flow; old key kept for read-only decrypt of historical encrypted columns until full re-encrypt sweep completes |
-| MKEY-T5 | Confirm-twice destructive-action dialog on rotate (typed-confirm pattern) | Botched rotate breaks every dependent LLM call | **S** | shadcn `<AlertDialog>` |
-| MKEY-T6 | Failed-rotation rollback — if any step of T4 fails (test-connect failed, re-encrypt failed mid-sweep), rollback to old active key, surface error toast, write `master_key.rotation_failed` audit row | Rotate is destructive; partial failure must not lock everyone out | **M** | Transactional rotation with explicit `RETIRED → ACTIVE` reversal step on error |
-
-### Differentiators
-
-| # | Feature | Value Proposition | Complexity | Notes |
-|---|---------|-------------------|------------|-------|
-| MKEY-D1 | "Dependents" count per master key — "12 BYOK rows / 4 webhook secrets encrypted under this key" surfaced before rotation | Tells admin the blast radius of rotation | **M** | Count via FK or per-table version column |
-| MKEY-D2 | Rotation cadence reminder — banner appears when `lastRotatedAt` > 90 days ago | Aligns with PCI/SOC2 90-day rotation guidance; opt-in not enforced in v1.2 | **S** | Frontend check on `provider_master_key.lastRotatedAt` |
-| MKEY-D3 | "Key history" mini-list per provider — last 5 versions with `{version, rotatedAt, actor}` (not key bytes) | Audit/forensics support | **S** | Reads `admin_audit_event WHERE action LIKE 'master_key.%'` |
-
-### Anti-Features
-
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| MKEY-A1 | **Show the master key bytes in any admin UI surface ("reveal once")** | "I forgot what I pasted, let me check" | A revealed-once secret in a long-running page session leaks via DOM, screenshot, accidental screen share; never worth the convenience | Admin stores key in their own password manager; UI shows only "set / unset" + `lastRotatedAt` |
-| MKEY-A2 | **Automatic key rotation on a cron** | Best practice in PCI-aligned shops | v1.2 has no key-management infrastructure (no KMS, no HSM, no Vault); automatic rotation when re-encrypt sweep can partially fail = silent prod incident at 3am | Manual rotation with banner reminder (MKEY-D2); revisit when there's actual KMS infra |
-| MKEY-A3 | **Per-tenant master key (tenant brings their own platform key)** | Symmetric with BYOK | This conflates platform credentials with tenant credentials; BYOK already covers the "user brings their own" case | Master key is platform-scoped; BYOK is tenant-scoped; keep separate |
-| MKEY-A4 | **Storing keys in DB encrypted only with the DB-level pgcrypto** | "Simpler than app-layer AES-GCM" | Already explicitly banned in CLAUDE.md ("Hard do not use" list); key-in-DB → key-leak on DB leak | App-layer AES-GCM with master from env / sealed config (already the v1.0 pattern from LLM-04) |
+### Dependencies on v1.0–v1.3
+- **v1.1 chat assistant tool catalog** — add `getCalendarAvailability` alongside existing 24 tools; same tenant safety, same Scoped Values context.
+- **v1.0 draft replies (DRFT-01..04)** — extend the system prompt to include availability tool when calendar is connected; do not branch the draft flow.
+- **v1.0 LLM-09 (no prompt/completion persistence)** — busy times stay in memory.
 
 ---
 
-## OPS-TENANT Category — Tenant Read-Only Inspection
+## 3. Calendar — Booking Links (Calendly-style)
 
-### Table Stakes
+**Goal:** Public `/book/<slug>` page where strangers can pick a time, the system writes a Google Calendar event with Google Meet link, sends invites.
 
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| OPS-TENANT-T1 | Tenant list page at `/admin/tenants` with search-by-email + filter chips (state: connected/disconnected/paused, has-balance, recently-active) + pagination | "Find tenant X" is the most common operator task | **M** | Read projection over `email_account` + `gmail_connection`; debounced search |
-| OPS-TENANT-T2 | Tenant detail page at `/admin/tenants/{tenantId}` with tabs: Overview, Health, Billing, Spend, Activity | Container for everything else | **S** | Tab layout reuses shadcn `<Tabs>` |
-| OPS-TENANT-T3 | Overview tab — tenant email (hashed for display? — decide), creation date, last sign-in, role, pause flag, watch expiry, watch renewal cadence; no identity-related write controls in v1.2 | The "is this account healthy" snapshot | **S** | Read from `user_account` + `gmail_connection` |
-| OPS-TENANT-T4 | Health tab — gmail connection state, last Pub/Sub event timestamp, watch expiry countdown, recent reconnect attempts, last sync errors (codes only, no payload bodies) | Most "my mail isn't being triaged" reports trace to connection/watch issues | **M** | Read from existing v1.0 connection-health tables |
-| OPS-TENANT-T5 | Billing tab — current credit balance, recent ledger holds (reservation ids + amounts only, never the underlying message ids), recent top-ups, stale-reservation count | Resolves "I topped up but balance didn't update" reports | **M** | Read from `credit_ledger_entry` + `credit_reservation` |
-| OPS-TENANT-T6 | Spend tab — LLM spend over the last 30 days, broken down by feature (chat/triage/draft) and provider; **metadata only** (token counts + dollar amounts; never prompts/completions) | Resolves "why did I burn $X this week" reports | **M** | Read aggregates over `llm_call_audit` (the v1.0 metadata-only audit) |
-| OPS-TENANT-T7 | Activity tab — last 50 admin actions on this tenant + last 100 triage audit row counts (counts by action: labeled/archived/drafted/sent-via-chat) | "What's been going on here recently" without exposing message contents | **M** | Read from `admin_audit_event WHERE target_tenant_id = ?` + counts from `triage_audit` |
-| OPS-TENANT-T8 | "Pause tenant" action — sets the existing v1.0 pause flag (`MAIL-06`) via an admin-side write; emits `tenant.paused_by_admin` audit row | Sometimes you need to pause a tenant whose mailbox is causing a runaway loop without waiting for them | **S** | Reuses existing pause infra; admin-action variant |
-| OPS-TENANT-T9 | "Disconnect Gmail" action — surfaces the user-side disconnect (existing AUTH-03/05 flow) on admin's behalf; explicit double-confirm | Emergency containment | **S** | Reuses existing disconnect; admin-action variant |
-| OPS-TENANT-T10 | "Delete tenant + all data" action — wraps the existing AUTH-03 cascade-delete with an admin-typed-confirm dialog + audit row | GDPR-like deletion request handled by support; reuses validated cascade | **M** | Reuses AUTH-03 cascade; admin-action variant |
+**IZ baseline** (`schema.prisma` L1174–L1246 + `app/(app)/[emailAccountId]/calendars/` UI files): `BookingLink { slug @unique, title, description, durationMinutes, slotIntervalMinutes, locationType (GOOGLE_MEET|PHONE|IN_PERSON|CUSTOM), locationValue, minimumNoticeMinutes (default 120), maxDaysAhead (default 90), timezone, destinationCalendarId }`; `BookingWindow { weekday 0–6, startMinutes, endMinutes }` for weekly recurring availability; `Booking { guestName, guestEmail, guestNote, startTime, endTime, status, providerEventId, videoConferenceLink, cancelTokenHash, idempotencyToken }` for the actual reservations.
 
-### Differentiators
+Notable IZ details:
+- `BookingLink.slug` is **globally unique** — `/book/<slug>` is single-tenant-routable.
+- `BookingLink.emailAccountId` is `@unique` — **one booking link per email account** in current IZ. Comment says "temporary: relax when we support multiple booking links per account." Worth deciding for v1.4.
+- `Booking.cancelTokenHash` enables anonymous self-service cancel/reschedule without account.
+- `Booking.idempotencyToken` + `@@unique(bookingLinkId, idempotencyToken)` prevents double-booking from repeated POST.
+- `BookingStatus = PENDING_PROVIDER_EVENT | CONFIRMED | …` — event creation in Google is async; the booking exists locally first.
 
-| # | Feature | Value Proposition | Complexity | Notes |
-|---|---------|-------------------|------------|-------|
-| OPS-TENANT-D1 | Spend-over-time sparkline on tenant Overview tab, plus comparison to that tenant's 30-day median | Visual anomaly detection | **S** | Reuses Spend tab data |
-| OPS-TENANT-D2 | "Replay last watch renewal" — admin-triggered retry of `users.watch` for a tenant whose watch expired without auto-renewal | Saves a support cycle; renewal is the common stuck state | **M** | Trigger via existing v1.0 worker job; emit audit row |
-| OPS-TENANT-D3 | Tenant deletion preview ("this will delete N rules, M audit rows, K ledger entries") before final confirm | Reduces "I clicked delete and didn't realize what would happen" | **S** | Count query before delete |
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| Public booking page at `/book/<slug>` — no auth required | Whole point of the feature | M | New Next.js route group; tenant resolved from slug; carefully scoped data (only the public booking link's fields, not email/calendar internals). |
+| Slug uniqueness + collision-safe creation | Two users picking "alex" must not collide | S | Global unique index, friendly error code on collision. |
+| Duration + slot-interval (e.g. 30-min meetings on :00 and :30) | Standard Calendly UX | S | Two ints; IZ uses `slotIntervalMinutes` distinct from `durationMinutes`. |
+| Weekly availability windows (per-weekday start/end minutes) | Standard "Mon-Fri 9-5" pattern | S | `booking_windows` child table. |
+| Minimum notice (default 2h) + max days ahead (default 90d) | Prevents 5-minute-from-now bookings and 2-year-out spam | S | IZ defaults are sensible. |
+| Location type: Google Meet | Most common; auto-add `conferenceData.createRequest` to Calendar event | M | Requires `events.insert?conferenceDataVersion=1`. |
+| Location type: phone | Common alt; store phone in `locationValue` | S | |
+| Location type: in-person | Store address in `locationValue` | S | |
+| Destination calendar — which calendar gets the event | User has work + personal; must pick | S | FK to `Calendar`. `SetNull` on calendar disconnect — link still resolvable, event write would fail until user reselects. |
+| Double-booking prevention via free/busy check at time of booking | Concurrent bookings on the same slot | M | Re-query free/busy server-side immediately before `events.insert`; reject with friendly error. |
+| Idempotency token on booking POST | Refresh/double-click safety | S | `@@unique(bookingLinkId, idempotencyToken)`. |
+| Google Meet link auto-generation | Booking page UX expects it | S | Conference data API. |
+| Self-service cancellation via tokenized URL | Standard scheduling UX; avoids inbox storm | S | Hash + opaque token in cancel URL. |
+| Timezone shown on public page; auto-detect viewer's TZ | Booker comes from anywhere | S | Browser TZ + select. |
 
-### Anti-Features
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| Multiple booking links per user (e.g. "30-min intro" + "1h deep-dive") | IZ flagged as todo; founders + sales people want both | M | Drop the `emailAccountId @unique` on `booking_link`. Naming + slug pattern. |
+| Custom branding on public page (logo, color, footer) | Lifts the page above generic Calendly | S | Optional; pull from workspace settings. |
+| Buffer between meetings | Real users don't want back-to-back | S | New int `bufferMinutes`. |
+| Question fields on booking form ("What do you want to discuss?") | Captured in `guestNote` IZ-style or expanded | S | Stretch. |
 
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| OPS-TENANT-A1 | **"View tenant inbox" / message-body access** | Quickest debugging path | Hard violation of v1 privacy posture (no body access) and CLAUDE.md "Privacy" constraint | Tenant exports their own redacted reproducer; admin works from metadata |
-| OPS-TENANT-A2 | **"View tenant chat history" / chat message content** | Symmetric with above | Hard violation of v1.1 chat body-ban (3-layer enforcement); even chat is user PII | Show counts only (chat sessions count, messages count); never content |
-| OPS-TENANT-A3 | **"View tenant prompts/completions"** | "I want to see what we sent to OpenAI on their behalf" | LLM-09 explicitly bans persistence beyond short-lived cache; nothing to view | Metadata-only LLM call audit (provider, model, tokens, latency, dollar cost) |
-| OPS-TENANT-A4 | **"View tenant OAuth refresh token / Google subject"** | "Their token must be expired" | AUTH-04 + FND-03 ban token-byte logging; refresh token is encrypted at rest under master key | Show only `{connectionState, lastSuccessfulRefreshAt, errorCode}` |
-| OPS-TENANT-A5 | **"Edit tenant settings on their behalf"** | "User asked me to change their personalization for them" | Admin writing to user-owned config is impersonation-adjacent; if needed, the user does it themselves over a support call | Read-only view + screen-share over support call |
-| OPS-TENANT-A6 | **Bulk tenant operations (bulk pause, bulk delete)** | Convenient | Multiplies blast radius; encourages "mass action" thinking | One tenant at a time in v1.2; revisit if a real ops scenario justifies |
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| Round-robin / team scheduling | No team feature in v1.4 (TEAM-* deferred) | Scope |
+| Paid bookings / Stripe integration | Big surface; not in target user's table stakes | Scope |
+| Group events / event registrations | Different product (Eventbrite-shaped) | Scope |
+| Embedded `<iframe>` widget for booker's own website | Niche; build standalone page first | Scope |
+| Booking-page localization beyond VI/EN | i18n surface already locked to VI/EN | Locked |
 
----
-
-## OPS-QUEUE Category — Worker Queue Health (Read-Only)
-
-### Table Stakes
-
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| OPS-QUEUE-T1 | Outbox lag stat — count of `outbox` rows with `processed_at IS NULL` + max age of oldest unprocessed | First indicator of "is the worker keeping up?" | **S** | Single SQL aggregate; PlanetScale postgres-queue article confirms "oldest unprocessed age" is the canonical lag metric |
-| OPS-QUEUE-T2 | `processing_job` queue depth by job type (mail-ingest, triage, draft, chat-tool, etc.) + max age of oldest unleased per type | Lets admin see which job type is starving | **S** | Group-by-type aggregate |
-| OPS-QUEUE-T3 | Retry distribution histogram per job type — "how many jobs at retry count 0/1/2/3+?" | Locates a job class stuck in a retry loop | **S** | Group-by-`retry_count` aggregate |
-| OPS-QUEUE-T4 | Failure rate per job type over the last 1h / 24h | Anomaly signal | **S** | Aggregate over `processing_job.completed_at` + `last_error_code` |
-| OPS-QUEUE-T5 | Dead-letter view — jobs at `status=FAILED_PERMANENT` (or retry exhausted) with `{jobId, type, tenantId, lastErrorCode, lastErrorAt, retryCount}` (no payload bodies) | Surfaces "we gave up on these" so admin can investigate or re-queue | **M** | Read from `processing_job` filtered to terminal failure |
-| OPS-QUEUE-T6 | Re-queue action on dead-letter row — admin-triggered reset of `retry_count` + `status` back to `READY`; emits `job.requeued` audit row; confirm-twice dialog | The only mutating action in the queue surface; gated by audit | **S** | Single `UPDATE` wrapped in audit |
-| OPS-QUEUE-T7 | Auto-refresh on the queue health page (every 10s) with a "live" indicator | The admin sits on this page during an incident; manual refresh defeats the purpose | **S** | SWR or TanStack Query `refetchInterval` |
-
-### Differentiators
-
-| # | Feature | Value Proposition | Complexity | Notes |
-|---|---------|-------------------|------------|-------|
-| OPS-QUEUE-D1 | Worker heartbeat — which worker processes are leasing jobs in the last 60s | Confirms the worker is alive vs just empty queue | **S** | Read distinct `leased_by_worker` from `processing_job` in last 60s |
-| OPS-QUEUE-D2 | Backpressure alert — banner appears at top of admin pages when oldest unleased > 5min | Surface the incident before the operator navigates to the queue page | **S** | Frontend check; can be enriched into Grafana alert in v1.3+ |
-
-### Anti-Features
-
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| OPS-QUEUE-A1 | **Worker stop/start/restart controls from the UI** | "Just let me restart the worker without SSH" | Tightly couples admin UI to deployment topology; one wrong click in prod kills ingest | Deployment surface is the right place; admin UI is read+limited-write |
-| OPS-QUEUE-A2 | **"View job payload" on a dead-letter row** | Debug a specific stuck job | Payloads carry message IDs / Gmail message refs / sometimes redacted bodies — opens the privacy can | Show error code + tenant + job type only; ask tenant for a reproducer if needed |
-| OPS-QUEUE-A3 | **Manually edit a job row** | Surgically fix a job that's stuck because of bad data | Audit + correctness nightmare; row schema is internal contract | Re-queue or delete (audit-logged); fix data via a proper migration |
+### Dependencies on v1.0–v1.3
+- **v1.0 web frontend (WEB-01)** — public booking page is a new route group; needs an unauthenticated layout that bypasses login redirect middleware. New attack surface; must be tested.
+- **v1.0 LLM-09 / privacy** — guest note may contain free text; not a privacy concern for *Zero Mail's* user (the booker typed it on a public page), but should still be sanitized.
+- **§1 Calendar connection** — booking link points to a destination calendar.
+- **v1.2 outbound gateway** — confirmation/cancel emails sent from the booking system should route through the existing outbound gateway boundary (ArchUnit-locked) **only if sent from the user's Gmail**; if sent transactionally from a system address, route through Resend like the daily digest.
 
 ---
 
-## OPS-SPEND Category — Global LLM Spend Dashboard
+## 4. Calendar — AI Meeting Briefs
 
-### Table Stakes
+**Goal:** N hours before an external meeting, generate a per-guest briefing (role, company, recent thread context, pending items) and deliver it via email + in-app daily digest.
 
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| OPS-SPEND-T1 | Top-line spend cards: total $ today, 7d, 30d (across all tenants, all providers) | The "are we burning money" snapshot | **S** | Read aggregate over `llm_call_audit.cost_usd` |
-| OPS-SPEND-T2 | Stacked bar by provider — daily spend × {openai, anthropic, google, deepseek, openrouter} over last 30 days | Quickly tells admin "which provider is the cost center" | **M** | Aggregate group-by-day, group-by-provider |
-| OPS-SPEND-T3 | Donut by feature — spend split across {chat, triage, draft} over last 30 days | Surfaces "is chat eating the budget" vs "is triage" | **S** | Aggregate group-by-feature |
-| OPS-SPEND-T4 | Platform vs BYOK split — what % of LLM calls are paid by platform credits vs paid by user BYOK key | Unit-economics signal | **S** | Boolean column on `llm_call_audit` already exists per v1.0 BILL-07 |
-| OPS-SPEND-T5 | Top-N tenants by spend (last 7d / 30d) with each row click-through to tenant detail Spend tab | Identifies outlier accounts | **S** | Aggregate + join to email_account for display name |
-| OPS-SPEND-T6 | Date-range picker (last 24h / 7d / 30d / custom) | Standard analytics affordance | **S** | Use existing shadcn date-picker primitive |
+**IZ baseline** (`utils/ai/meeting-briefs/generate-briefing.ts` + `schema.prisma` L1248–L1263): cron walks external meetings in the lookahead window, gathers context per guest (last N emails from that guest, last N meetings with that guest), runs an agentic AI loop with up to 15 steps (`MAX_AGENT_STEPS = 15`), optional Perplexity/web-search MCP tool calls, and finalizes via a structured `finalizeBriefing` tool with `guestBriefingSchema = { name, email, bullets[] }` (max 10 bullets, max 10 words each). Stores only `MeetingBriefing { calendarEventId, eventTitle, eventStartTime, guestCount, status }` — **no briefing content persisted**, only metadata.
 
-### Differentiators
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| Cron-triggered brief generation N hours before each external meeting | Whole feature mechanism | L | New worker job; runs in `backend/worker`; uses Postgres SKIP LOCKED queue (v1.0 pattern). Configurable N (default ~24h). |
+| External-meeting detection — at least one guest with a domain ≠ user's | Don't brief on solo focus blocks or internal 1:1s every day | S | Simple domain compare. |
+| Past-email-history context fan-in (N most recent threads with each guest) | The headline value — "remind me who this person is" | M | Reuses Gmail search by participant. IZ caps at 10 emails / guest. |
+| Past-meeting context (prior briefings or past calendar events with same guest) | Continuity across recurring meetings | M | Walk prior `MeetingBriefing` for guest emails. |
+| Per-guest bullet output (≤ 10 bullets, ≤ 10 words each) | Scannable in 10 seconds | S | Structured tool output; Zod schema in IZ, Spring AI structured output in v1.4. |
+| Delivery via transactional email (Resend) | Where else would it go? | S | Reuse v1.0 daily digest delivery infra. |
+| Delivery via existing in-app daily digest | Where users already look | S | Add brief block to the daily digest template. |
+| Brief content NEVER persisted (only metadata) | ARCH-02 / privacy — brief is derived from email content | S | Strictly enforce; IZ already follows this. |
+| Idempotency — `@@unique(emailAccountId, calendarEventId)` | Cron retries must not double-send | S | IZ pattern. |
+| Premium gate hook | Brief is expensive (15-step agent + optional web search) | S | Cost-tier check in the trigger; charge platform credits per brief. |
 
-| # | Feature | Value Proposition | Complexity | Notes |
-|---|---------|-------------------|------------|-------|
-| OPS-SPEND-D1 | Spend forecast — "if today's burn continues, you'll spend $X this month" | Quick decision aid for whether to raise alarm | **S** | Simple linear extrapolation from MTD |
-| OPS-SPEND-D2 | Per-model cost-per-call median + p95 — surfaces "this model has a long-tail latency cost" | Helps decide which models to deprecate from catalog | **S** | Aggregate over `llm_call_audit.{tokens_in, tokens_out, cost_usd}` |
-| OPS-SPEND-D3 | Cap-vs-actual chart — shows the configured global daily cap (from v1.0 LLM-10) vs actual daily spend | Validates the cap is reasonable | **S** | Two-line chart |
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| Optional web-search MCP tool (Perplexity / Tavily / SerpAPI) for "who is this guest" | Big quality lift when the user has never emailed the guest | M | IZ uses Perplexity + Google + OpenAI. v1.4: gate behind admin-enabled provider (BYOK or platform). Spring AI MCP client support is GA in 2.0.0. |
+| User-configurable trigger window (1h / 4h / 24h before) | Different user rhythms | S | Per-user setting. |
+| Skip generation for recurring internal meetings | Don't brief on weekly standup | S | Cheap heuristic. |
 
-### Anti-Features
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| Slack / Teams / Telegram delivery channels | No messaging-channel infra in v1.4; PROJECT.md L62 | Locked |
+| Storing brief body in DB | ARCH-02 — brief is derived email content | Locked |
+| Briefing for internal-only meetings by default | Mostly noise; opt-in if at all | UX |
+| Brief generation for **past** meetings (recap mode) | Different feature (meeting notes / recap); not in scope | Scope |
+| Multi-recipient cc'ing of brief (sharing with assistants) | Team feature; deferred | Scope |
 
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| OPS-SPEND-A1 | **Drill-down to individual prompts/completions on the spend dashboard** | "I want to know what they were asking that cost $5" | Same v1 privacy ban as everywhere else | Stop at metadata (tokens, model, latency, feature, cost); the user can self-explain via their own activity |
-| OPS-SPEND-A2 | **Real-time spend streaming (websocket)** | Cool UI | Adds infra without value; 10s refetch is more than fast enough | TanStack Query `refetchInterval` |
-| OPS-SPEND-A3 | **Spend dashboard as a public marketing page ("see how much our users save")** | Growth surface | Even aggregated, exposes our cost structure to competitors and our top tenants' relative usage to each other | Internal admin only |
+### Dependencies on v1.0–v1.3
+- **v1.0 Postgres SKIP LOCKED worker queue** — new `meeting_brief_job` row type; reuse outbox/processing_job patterns.
+- **v1.0 LLM gateway + per-tenant credit ledger** — brief is a billable LLM action; budget through BILL-05.
+- **v1.0 daily digest (ANL-03)** — block within the existing template.
+- **v1.0 LLM-05..08 sanitization** — all guest-context email content goes through sanitize + truncate before reaching the LLM. Body cache is short-lived in-memory only.
+- **v1.1 chat assistant tool patterns** — agentic loop with structured `finalizeBriefing` tool mirrors v1.1's tool-call discipline.
+- **v1.2 admin LLM catalog** — admin selects which model gets `LlmUseCase.MEETING_BRIEF`. New use case key.
 
----
-
-## SET-AI Category — Settings AI Provider/Model Tab (carries forward 4 deferred v1.1 reqs)
-
-> Reference: SET-AI-01..04 from v1.1 deferred list. All 4 carry forward unchanged in intent; v1.2 only adds the catalog dependency.
-
-### Table Stakes
-
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| SET-AI-T1 | (SET-AI-01) Per-feature provider+model picker — 3 separate selects: "Chat assistant model", "Triage model", "Draft replies model" | Each feature has different cost/quality tradeoff; one global model is too coarse | **S** | shadcn `<Select>` × 3, options from `/api/catalog/models?feature=...` |
-| SET-AI-T2 | (SET-AI-02) Provider picker drives the model dropdown — user picks "OpenAI" → model dropdown shows only OpenAI catalog models enabled for that feature | Reduces dropdown size; matches the BYOK keying model | **S** | Two-stage cascading select |
-| SET-AI-T3 | (SET-AI-03) BYOK key management cards per provider — paste/save/clear key, "Test connection" button, last-used timestamp, "currently in use for: [chat, triage]" | The "I want to pay with my own OpenAI key" path; already in v1.0 LLM-02..04, surface here | **M** | Reuses v1.0 `byok_credential` table + AES-GCM crypto |
-| SET-AI-T4 | (SET-AI-04) Per-feature "Use BYOK if available, otherwise platform credits" toggle — default `ON` when a BYOK key exists | The cost-control affordance users expect | **S** | Boolean on `assistant_settings` |
-| SET-AI-T5 | Cost-per-1k display next to each model name in dropdown | Pulled forward from CAT-D1 — users need cost signal at point of choice | **S** | Read from `llm_catalog_model.input_cost / output_cost` |
-| SET-AI-T6 | "Reset to recommended" button per feature — sets the picker back to the catalog's `recommended_for_{feature}` model | Lets users back out of a bad choice | **S** | Reads from CAT-D2 |
-
-### Differentiators
-
-| # | Feature | Value Proposition | Complexity | Notes |
-|---|---------|-------------------|------------|-------|
-| SET-AI-D1 | "Last 7d cost" hint under each picker showing what they actually spent on the current model | Real cost feedback beats theoretical pricing | **M** | Join `assistant_settings.{feature}_model_id` to per-feature spend from spend audit |
-| SET-AI-D2 | Inline deprecation banner — if the user's picked model was deprecated in CAT-D3 sync, show "this model is deprecated by the provider — please pick a new one" | Surface CAT-D3 deprecation to the user | **S** | Compare `assistant_settings.{feature}_model_id` to `llm_catalog_model.is_deprecated` |
-| SET-AI-D3 | Per-feature spend cap (daily) per user — independent of LLM-10 global cap | Cost-conscious users want to bound their own spend | **M** | New nullable column `daily_spend_cap_usd_{feature}` on `assistant_settings` |
-
-### Anti-Features
-
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| SET-AI-A1 | **Free-form model ID textbox** | "Let me type `gpt-5-pro-experimental` myself" | Defeats catalog (CAT-A1); routes unknown-cost calls | Wait for admin Sync |
-| SET-AI-A2 | **Per-rule model override in the rule editor UI** | Power-user feature | Multiplies UX surface; per-feature granularity already covers 95% of need | Defer to v2 |
-| SET-AI-A3 | **Show users the master-key bytes (or any provider-side credentials)** | "How do I know what key you're using?" | Same anti-pattern as MKEY-A1, at user surface | Show only "platform credits" vs "your BYOK key" |
-| SET-AI-A4 | **Allow user to "Sync" provider models from their own Settings page** | Symmetry with admin Sync | Outbound rate-limit + cost + every user can trigger Sync = DoS our master key | Admin-only Sync (CAT-T4) |
+**Open question:** which models get `MEETING_BRIEF`? Strong reasoner (Claude Sonnet 4 / GPT-5-class) is right for the agentic loop; cheaper model is wrong because guest context is dense. Premium-gate this behind a credit cost recommendation.
 
 ---
 
-## SET-VOICE Category — Personalization Tab (carries forward 6 deferred v1.1 reqs)
+## 5. Calendar — Calendar-aware Triage
 
-> Reference: SET-VOICE-01..06 from v1.1 deferred list. Specified in prior v1.1 FEATURES.md research; carries forward unchanged. Brief restatement below.
+**Goal:** Make sure calendar-relevant Gmail messages (invites, cancellations, reschedules) are never silently archived by an aggressive rule. Surface them prominently in the triage UI.
 
-### Table Stakes
+**IZ baseline** — IZ has `Rule.skipCalendar` (L904 in schema) as a per-rule opt-out flag, meaning "do not apply this rule to calendar invites." Calendar invites are detected via `text/calendar` MIME parts in the message. No dedicated triage UI pin.
 
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| SET-VOICE-T1 | (SET-VOICE-01) Writing-style free-text input ("formal, concise, prefer bullet points") | Drives draft + chat tone | **S** | Textarea, persisted to `assistant_settings.writing_style` |
-| SET-VOICE-T2 | (SET-VOICE-02) Personal instructions free-text input ("always sign off as 'best, Q.'") — explicit prompt-injection-hardened slot | Drives every assistant response | **M** | Textarea; sanitized + injection-hardened in the LLM gateway as v1.1 already requires |
-| SET-VOICE-T3 | (SET-VOICE-03) Email signature field with rich-text (or markdown) preview | Appended to AI drafts + chat-confirmed send | **S** | Textarea + preview |
-| SET-VOICE-T4 | (SET-VOICE-04) Knowledge-base snippet CRUD list — short user-authored facts the assistant may quote ("my work address is X", "my Zoom link is Y") | The "tell the assistant about me once, never again" affordance | **M** | New `assistant_knowledge_snippet` table; per-user list with add/edit/delete |
-| SET-VOICE-T5 | (SET-VOICE-05) Tone preset dropdown — Professional / Friendly / Direct / Custom | Quick mode-switch | **S** | Enum column |
-| SET-VOICE-T6 | (SET-VOICE-06) AI output language toggle — Vietnamese / English (Auto-detect from incoming email is the default) | Locked in v1.0 i18n direction | **S** | Enum column; respected in the LLM gateway prompt assembly |
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| Detect Google Calendar invite, accept/decline/tentative, cancellation, reschedule on incoming Gmail | These messages have predictable structure (METHOD=REQUEST/CANCEL/REPLY in iCal part) | S | Parse `text/calendar` part during ingestion. |
+| Default rule-engine guard: invites/cancellations bypass `archive`, `mark_read`, `mark_spam`, and outbound auto-send actions | Rules engine can be aggressive — user must not silently miss a cancel | S | Hard guard at the rule executor, similar to safety net. |
+| Per-rule `skip_calendar` opt-in flag in When/Then schema | Allows power users to override the default guard once they trust their rules | S | IZ's flag. |
+| Top-of-inbox surfacing in triage UI for active calendar-invite messages | User must see them | S | Triage projection: add `is_calendar_event` boolean. |
+| Auto-extract event details (title, start, end, guests) for display in triage | Improves scannability | S | Parse iCal in-memory; surface metadata, not body. |
 
-### Anti-Features
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| One-click accept/decline/tentative from triage UI | Saves a Gmail round-trip; uses `events.patch` + Gmail label | M | Optional; chat assistant can already do this with a tool. |
+| Cancellation banner — "this meeting was cancelled" with delta from the original event | High signal | S | Match REPLY/CANCEL iCal METHOD to prior REQUEST. |
 
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| SET-VOICE-A1 | **Two-way sync between personalization fields and rule-builder system prompt** | Inbox Zero pattern (their ARCHITECTURE.md flags this as messy) | Already in v1.1 anti-feature list (CHAT-A10); structured rule AST is the source of truth | One-way: chat → settings only |
-| SET-VOICE-A2 | **AI-learned writing style from sent mail** | Better tone matching | Would require persisting derived features over user mail — privacy ban | In-request tone matching only (already v1.0 DRFT-03) |
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| Auto-accepting invites based on rule | Auto-send-class risk; trust-ending bad outcome | Decision |
+| Pulling calendar invites from non-Gmail sources | Gmail-only locked | Locked |
 
----
-
-## SET-BEHV Category — Behavior Tab (carries forward 5 deferred v1.1 reqs)
-
-> Reference: SET-BEHV-01..05 from v1.1 deferred list. Carries forward unchanged.
-
-### Table Stakes
-
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| SET-BEHV-T1 | (SET-BEHV-01) Auto-draft toggle — when on, draft is saved to Gmail automatically on incoming mail matching draft-eligible rules; when off, draft is only generated on-demand | Already a v1.0 capability surfaced as a setting | **S** | Boolean on `assistant_settings` |
-| SET-BEHV-T2 | (SET-BEHV-02) Draft confidence threshold slider — only generate draft if internal confidence > threshold | Cost-control + quality-control | **S** | Numeric `[0.0..1.0]` on `assistant_settings` |
-| SET-BEHV-T3 | (SET-BEHV-03) Follow-up reminders toggle — daily-digest mode reminds about un-replied threads | Engagement loop, opt-in | **S** | Boolean on `assistant_settings` |
-| SET-BEHV-T4 | (SET-BEHV-04) Daily digest opt-in toggle — reuses v1.0 ANL-03 | Already-shipped capability, surfaced as a setting | **S** | Reuses existing daily-digest config |
-| SET-BEHV-T5 | (SET-BEHV-05) Sensitive-data protection toggle — refuses to draft replies on messages flagged sensitive (e.g., legal/health), forces user to compose manually | Trust-aware default for high-stakes mail | **M** | Boolean on `assistant_settings`; classifier hook in v1.0 LLM-05 pipeline |
-
-### Anti-Features
-
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| SET-BEHV-A1 | **"Always auto-send on confidence > X" toggle** | Logical extension of the threshold slider | Hard ban — TRG-03 + ArchUnit + grep gate enforce zero auto-send; surfacing this toggle in the UI invites trust violation | Auto-send remains forbidden; chat-preview-confirm send is the only send path |
+### Dependencies on v1.0–v1.3
+- **v1.0 triage orchestrator + safety net** — add calendar-invite detection to the safety policy.
+- **v1.0 ingestion pipeline (MAIL-01..05)** — parse `text/calendar` during projection; metadata-only persistence (event title + time, not body).
+- **v1.0/v1.2 rules engine** — add `skip_calendar` to the rule schema; emit in compiler output.
 
 ---
 
-## SET-SAFE Category — Safety Net Tab (carries forward 4 deferred v1.1 reqs)
+## 6. Calendar — Rule Action `propose_meeting`
 
-> Reference: SET-SAFE-01..04 from v1.1 deferred list. Carries forward unchanged. All read/write existing v1.0 TRG-07..08 tables.
+**Goal:** A new rule When/Then action: "When X (e.g. cold-email request for a meeting), draft a reply containing my suggested available slots." User-enabled, gated by global Auto-send rules + safety net + rate cap.
 
-### Table Stakes
+**IZ baseline** — IZ does **not** have an explicit `propose_meeting` action as a rule action; it surfaces calendar slots inside chat-driven draft replies. Adding this as a rule action is a Zero Mail-specific extension that fits v1.2's RACT-* outbound rule architecture.
 
-| # | Feature | Why Expected | Complexity | Notes |
-|---|---------|--------------|------------|-------|
-| SET-SAFE-T1 | (SET-SAFE-01) VIP allow-list — email/domain entries never archived/labeled by rules | Trust-saving "panic button" against an over-aggressive rule | **S** | Reuses `sender_safety_entry` table |
-| SET-SAFE-T2 | (SET-SAFE-02) Never-archive list — domain or address; even if a rule says archive, won't | Inbox Zero pattern; users want explicit safety overrides | **S** | Reuses safety table; type=NEVER_ARCHIVE |
-| SET-SAFE-T3 | (SET-SAFE-03) Never-trash list (n/a in v1 since rules can't trash, but ships future-proof) | Future-proofing | **S** | Reuses safety table; type=NEVER_TRASH (rule-engine guard) |
-| SET-SAFE-T4 | (SET-SAFE-04) Quick-add from triage audit — every audit row gets a "Add sender to VIP" inline action | Saves the trip back to Settings | **S** | Inline action in audit row UI |
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| New rule action `propose_meeting` in When/Then schema and rule compiler | The shape of the feature | M | Add to the action catalog (RACT-* extension). Compiler must extract via structured output, not regex (CLAUDE.md). |
+| Action behavior: fetch free/busy → AI-draft reply with 3–5 slots → route through outbound gateway | Reuses §2 availability tool + v1.2 outbound gateway | M | Single execution path. |
+| Gated by global `Auto-send rules` setting (default ON) + safety net + per-tenant outbound rate cap + idempotency + audit | All RACT-* outbound rules go through this gate; new action inherits the contract | S | No new gate logic; same architecture. |
+| Failure mode: blocked / failed actions logged as failed audit, **no fallback Gmail draft** | Product directive in CLAUDE.md (Write actions section) | S | Same as `send_reply` etc. |
+| Slot freshness — re-query free/busy at execution time, not from a stale plan | Otherwise we'd propose a slot the user already booked | S | Execute path computes; rule plan does not encode slots. |
+| Per-rule "minimum duration to propose" config (e.g. only propose if recipient asked for ≥30 min) | Prevents 10-min-meeting noise | S | Optional rule param. |
 
-### Anti-Features
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| Booking-link fallback inside `propose_meeting` reply | If the user has a booking link configured, include both inline slots and the link | S | Reuses §2 bridge. |
+| Slot count parameter (default 3) | Different user preferences | S | Rule param. |
 
-| # | Feature | Why Requested | Why Problematic | Alternative |
-|---|---------|---------------|-----------------|-------------|
-| SET-SAFE-A1 | **Block-list (rules force-archive any sender matching)** | Symmetric with allow-list | Already expressible via a normal rule; first-class block-list adds a second UI surface for the same outcome | Use a rule |
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| Auto-confirm-on-recipient-reply ("when they pick a slot, write it to calendar automatically") | Two-step autonomous loop, new safety class; deferred until v1.5+ | Scope |
+| Cross-calendar 3-way scheduling between two users of Zero Mail | Team feature | Scope |
+
+### Dependencies on v1.0–v1.3
+- **v1.2 RACT-* outbound gateway + safety gates** — `propose_meeting` is just another outbound rule action.
+- **§2 availability AI tool** — same code path.
+- **v1.0/v1.2 rule compiler** — extend NL→AST extraction to recognize "propose meeting" intent → structured action.
+- **v1.0 triage audit + undo** — same audit + 30-day undo window.
 
 ---
 
-## Feature Dependencies
+## 7. Drive — Connection Management
+
+**Goal:** Connect Google Drive on the minimal `drive.file` scope (only see/write files the app created), one connection per workspace (not per mailbox).
+
+**IZ baseline** (`schema.prisma` L1365–L1386, `utils/drive/scopes.ts`): `DriveConnection { provider, email, accessToken, refreshToken, expiresAt, isConnected, @@unique(emailAccountId, provider) }` — **one Drive per email account**, but `email` field can differ from the email account's identity (comment: "can differ from emailAccount - e.g. connect work Drive to personal email"). Scope is the deliberately narrow `drive.file` per IZ's privacy posture, which matches Zero Mail's ARCH-02.
+
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| Connect Google Drive via incremental OAuth on `drive.file` scope only | Critical privacy posture — `drive.file` only sees app-created files | M | New OAuth intent CONNECT_DRIVE on the same Google registration. |
+| Reconnect on `invalid_grant` | Same lifecycle as Gmail/Calendar | S | Reuse pattern. |
+| AES-GCM encryption of Drive refresh token | Same as Gmail | S | Same key path. |
+| Per-**workspace** connection, not per-mailbox | Drive is org-level for most users; multiple Gmail mailboxes can share one filing destination | M | **Recommendation:** keep `drive_connections` at workspace scope (one per workspace, optionally with a `mailbox_id` nullable for users who want per-mailbox isolation). This is a deliberate divergence from IZ's per-email-account model and aligns with v1.3's workspace-shared boundary. |
+| Disconnect cascades to `filing_folder` + rule attachment sources | Don't leak orphan references | S | IZ uses `onDelete: Cascade`. |
+
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| Multiple Drive connections per workspace (personal + work Drive) | Power-user feature | M | Drop the `@@unique(emailAccountId, provider)` constraint; mirror multi-Gmail. Probably defer. |
+
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| Microsoft OneDrive / SharePoint | Gmail-only ecosystem; PROJECT.md L73 explicitly defers | Locked |
+| Dropbox / Box / generic cloud | Same reason | Scope |
+| Full `drive` (or `drive.readonly`) scope | Privacy violation; CASA risk; user revolts | Locked |
+| Storing Drive file content in any DB column for any duration | ARCH-02 — would mirror IZ's persisted attachment model which we explicitly reject | Locked (PROJECT.md L66) |
+
+### Dependencies on v1.0–v1.3
+- **v1.0 OAuth refresh-token AES-GCM** — same crypto.
+- **v1.3 workspace-shared / mailbox-isolated boundary** — Drive is workspace-shared.
+- **v1.3 OAuth intent pattern** — add CONNECT_DRIVE intent.
+
+---
+
+## 8. Drive — AI Document Auto-Filing
+
+**Goal:** When an email arrives with an attachment (PDF / DOCX / image), an AI engine analyzes it in-memory, picks a destination folder based on user-defined filing prompt + listed folders, uploads via Drive API, and notifies the user.
+
+**IZ baseline** (`utils/drive/filing-engine.ts`, `utils/drive/document-extraction.ts`, `schema.prisma` L1388–L1446):
+- **Filing prompt** — `EmailAccount.filingPrompt` free-text instruction ("file invoices in /Finance, contracts in /Legal, …").
+- **Folder picker** — user maintains a list of allowed `FilingFolder { folderId, folderName, folderPath }` per Drive connection.
+- **Engine pipeline** — download attachment → extract text (PDF via `unpdf`, DOCX via `mammoth`, plaintext) capped at 10k chars / 50 pages → fetch user folders → AI `analyzeDocument` with filing prompt + folder list → produce `{ folderId, folderPath, fileId, reasoning, confidence }` → upload to Drive (`files.create` with parent folderId) → write `DocumentFiling` audit row.
+- **Confidence + user review** — `DocumentFiling.confidence` scored; if below threshold, status flips to `ASK_USER` with `wasAsked = true`, notification email asks "should I file this in X?". User correction tracked via `wasCorrected`, `correctedAt`, `originalPath`.
+- **Notifications** — confirmation email per filing (configurable: `filingConfirmationSendEmail`); optional messaging-channel notification.
+- **Reply learning** — `handle-filing-reply.ts` parses user reply ("no, file under /Receipts instead") and updates the filing.
+- **Anti-feature for Zero Mail:** IZ persists the `DocumentFiling` row including `folderPath`, `reasoning`, `confidence`. Reasoning is short and metadata-like; folder path is user-curated. **This row is acceptable to persist** (it's filing metadata, not extracted email content). What we reject is `AttachmentDocument.content` / `.summary` (L1483–L1484) which stores **extracted file content** — that violates ARCH-02. See §9.
+
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| User-configurable filing prompt (free text) | The whole intent-extraction mechanism | S | New field on user/workspace settings. |
+| Allowed-folders list — user picks specific Drive folders the AI is allowed to file into | Prevents the AI from creating folders all over the user's Drive; respects `drive.file` scope reality | M | `filing_folders` table; folder browser UI uses Drive API to list folders the app has touched. With `drive.file` scope, the user must explicitly grant per-folder access via Google Picker — UX gotcha. |
+| Document text extraction in memory only (PDF, DOCX, plaintext) | Filing requires content understanding | M | Java equivalents: PDFBox 3.x for PDF, `docx4j` or `poi-ooxml` for DOCX. Cap chars + pages identically to IZ (10k / 50). |
+| AI `analyzeDocument` call producing `{ folderId, folderPath, confidence, reasoning }` | Structured decision | M | Spring AI structured output. New `LlmUseCase.DOCUMENT_FILING`. |
+| Confidence scoring + low-confidence ASK-USER flow | Auto-filing is high-risk; users want a review path | M | Threshold configurable; default ~0.7. Low-confidence → status=ASK_USER, send notification, store decision when user responds. |
+| Upload via Drive API to selected folder | Whole point | S | `files.create` with parent. |
+| `DocumentFiling` audit row (metadata only — folderId, folderPath, confidence, reasoning, wasAsked, wasCorrected, originalPath) | Auditability + user correction tracking + dedup | S | OK to persist; this is filing metadata, not email content. |
+| **Extracted attachment text is NEVER persisted** | Hard ARCH-02 boundary; PROJECT.md L66 explicitly rejects IZ's `AttachmentDocument` model | S | Java pipeline must hold extracted text in stack-frame variables / autocloseable streams; no DB column, no log line, no cache that outlives the request. |
+| Idempotency `@@unique(emailAccountId, messageId, attachmentId)` | Pub/Sub retries | S | IZ pattern. |
+| In-app + email notification on file/ask | User must know what happened | S | Reuse digest delivery + new in-app feed. |
+| User reply to ASK-USER mail can correct the destination | Closes the loop — IZ's `handle-filing-reply.ts` pattern | M | Optional but high-quality. Inbox parsing already exists. |
+| Per-tenant LLM credit metering on each filing | This is a billable LLM call | S | Reuse BILL-02..04. |
+
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| Correction learning — feed past `originalPath`/`folderPath` corrections back into the prompt for future filings | Quality lift over time | M | Metadata-only; ARCH-02-safe. |
+| Calendar-invite attachment skip (don't try to file `.ics`) | Noise reduction | S | IZ has `isCalendarInviteAttachment` check. |
+| Multi-attachment batching (one LLM call per message, not per attachment) | Cost reduction | M | Cheaper, but harder to attribute confidence; deferred. |
+
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| **Persistent `AttachmentDocument` indexing (content + summary in DB)** | ARCH-02; PROJECT.md L66 explicit rejection of IZ's pattern | Locked |
+| RAG over filed documents | Implies embeddings + persistent content; LLM-09 / locked privacy | Locked |
+| Auto-filing into folders the user did not list | Surprises users; abuses `drive.file` semantics | Decision |
+| Auto-creating new folders without ASK-USER | High-risk Drive write; surprise factor | Decision |
+| OCR for scanned PDFs (images-only) | Big new dep (Tesseract / cloud OCR); deferred until v1.5 demand | Scope |
+
+### Dependencies on v1.0–v1.3
+- **v1.0 ingestion + projection** — extension point: per-message attachment list (metadata only) already projected; pipeline must download attachment bytes JIT.
+- **v1.0 LLM gateway + per-tenant credits** — `DOCUMENT_FILING` use case; sanitize + truncate extracted text before prompt.
+- **v1.0 LLM-09 / ARCH-02** — **hard constraint**: extracted text is short-lived stack-frame state only.
+- **v1.1 chat assistant patterns** — structured output + tool-call discipline.
+- **v1.2 admin LLM catalog** — bind `DOCUMENT_FILING` to a vision-capable or PDF-capable model (Claude Sonnet handles PDF natively).
+- **v1.3 mailbox-aware ingestion** — filing pipeline must respect `MailboxContext` so writes target the correct workspace Drive connection.
+
+**Critical implementation note for v1.4 backend:** the Java pipeline must be structured so that extracted text passes through a single method (e.g. `DocumentFilingService.fileAttachment(messageId, attachmentId)`) as a method-local `String` that is overwritten before the method returns. No field, no cache, no log line, no temp file on disk. Add an ArchUnit rule that forbids extracted text from being assigned to a class field. Optionally, wrap in `Sensitive<String>` (v1.0 FND-03) for log-scrub safety.
+
+---
+
+## 9. Drive — Attachment Source Rules
+
+**Goal:** A rule action can attach specific Drive files (curated by the user) to outbound replies. E.g. "When someone asks for the pitch deck, attach `/Sales/Pitch-Deck-Q3.pdf` to the reply."
+
+**IZ baseline** (`schema.prisma` L1448–L1491):
+- `AttachmentSource { name, type (FOLDER|FILE), sourceId, sourcePath, ruleId, driveConnectionId }` binds a rule to a Drive folder or file.
+- `AttachmentDocument { fileId, name, mimeType, summary, content, indexedAt }` — **periodically indexed snapshot of files in the source folder**, used so the AI can pick the right file at action time. **This is the ARCH-02 violation Zero Mail explicitly rejects.**
+- Action types: `Action.staticAttachments` (Json `AttachmentSourceInput[]`) holds explicit files attached to email actions.
+
+The feature splits into two modes:
+
+**Mode A (static file pin):** "always attach file X". No AI needed. Safe in v1.4.
+**Mode B (smart pick from folder):** "pick the right file from folder Y based on the email's intent". IZ does this by indexing folder content into `AttachmentDocument.content` + `.summary`, then asking the AI to pick. This is the part Zero Mail must not implement IZ-style.
+
+### Table stakes
+| Feature | Why expected | Complexity | Notes |
+|---|---|---|---|
+| Mode A: pin a specific Drive file to a rule action as a `static_attachment` | Real use case (NDA, deck, brochure) with zero privacy risk | S | Store `{ fileId, name }` in rule action JSON. At execution, download via Drive API → attach to outbound email → discard buffer. |
+| Per-rule file-size limit + Drive→Gmail size cap awareness (25MB Gmail limit) | Bounce-prevention | S | Validate at execution. |
+| Audit row recording which Drive file was attached to which outbound | RACT-* audit parity | S | Metadata only. |
+| Files attached via outbound gateway → must go through the same v1.2 ArchUnit boundary | Architectural consistency | S | Outbound gateway extension. |
+
+### Differentiator
+| Feature | Value | Complexity | Notes |
+|---|---|---|---|
+| Mode B-safe variant: "pick from folder by **filename + Drive metadata only**" (no content extraction, no embeddings) | Useful for users with `/Sales/*.pdf` and wanting the AI to pick by filename | M | AI sees folder listing `[{fileId, name, mimeType, modifiedAt}]` only — no `content`, no `summary`. ARCH-02-safe. Quality is lower than IZ but acceptable. |
+| User-curated folder allow-list separate from §8 filing folders | Separation of concerns | S | Could share `filing_folders` table or split. |
+
+### Anti-feature
+| Anti-feature | Why omit | Source |
+|---|---|---|
+| **IZ-style `AttachmentDocument.content` / `.summary` persistence** | ARCH-02; identical reason as §8 | Locked |
+| Embeddings over Drive file contents for retrieval | Locked privacy — no embeddings of user files | Locked |
+| Attaching files larger than Gmail's 25 MB inline limit without fallback | Bounce risk | UX |
+| Auto-attaching files based on rule **without** the rule being explicitly enabled for outbound | Surprise data exfil via auto-send rule | Safety |
+
+### Dependencies on v1.0–v1.3
+- **v1.2 RACT-* + outbound gateway** — attachment-bearing send/reply goes through the same gateway; new `attachments` field on the gateway request.
+- **§7 Drive connection** — required for any attachment fetch.
+- **v1.0 LLM-09 / ARCH-02** — Mode B sees filename + metadata only.
+
+---
+
+## Feature Dependencies (cross-feature graph)
 
 ```
-ADMIN (RBAC + audit framework)
-    └──required-by──> CAT (audit + admin-gated mutations)
-                        └──required-by──> SET-AI (Settings AI tab reads catalog)
-    └──required-by──> MKEY (audit + admin-gated mutations)
-                        └──required-by──> CAT Sync flow (uses master key)
-    └──required-by──> OPS-TENANT (admin-only routes + read-audit)
-    └──required-by──> OPS-QUEUE (admin-only routes + audit for re-queue)
-    └──required-by──> OPS-SPEND (admin-only routes)
+§1 Calendar connection  ──┬─→ §2 Availability ──┬─→ §3 Booking links
+                          │                     └─→ §6 propose_meeting rule action
+                          └─→ §4 Meeting briefs (needs event read)
+                          └─→ §5 Calendar-aware triage (works without §1 for iCal in Gmail, better with §1)
 
-CAT
-    └──required-by──> SET-AI (model picker reads catalog)
-
-MKEY
-    └──required-by──> CAT (Sync calls /models with master key)
-
-SET-VOICE / SET-BEHV / SET-SAFE
-    └── independent of CAT/MKEY/ADMIN — can ship in parallel once Settings page chrome exists
-
-SET-AI ──conflicts──> "user-types-any-model" anti-pattern (CAT-A1, SET-AI-A1) — must keep catalog as the only source
-
-OPS-TENANT.Spend tab ──reuses──> OPS-SPEND aggregate queries (one tenant filter)
+§7 Drive connection ──┬─→ §8 Auto-filing
+                      └─→ §9 Attachment source rules
 ```
 
-### Dependency Notes
+§1 unblocks §2, §3, §4, §6. §7 unblocks §8 and §9.
 
-- **ADMIN → everything else in v1.2:** Every other v1.2 feature lives behind `/admin/*` (catalog, master key, tenant inspection, queue, spend). RBAC + audit framework must be in place before any of those write surfaces ship — otherwise audit gaps appear in the most security-sensitive code we have.
-- **MKEY → CAT:** Sync-from-`/models` calls each provider's API using the master key. Without master-key UX, Sync is admin-config-by-environment-variable, which works but doesn't match the curated-catalog story.
-- **CAT → SET-AI:** The AI Provider/Model tab can only list models the admin has approved. SET-AI ships any time after `/api/catalog/models?feature=...` exists; doesn't need Sync UI complete.
-- **OPS-TENANT.Spend ↔ OPS-SPEND:** Same aggregate query, just with/without a tenant filter — share the read-side service.
-- **SET-VOICE / SET-BEHV / SET-SAFE are independent:** Can ship without any Phase 8 work; they're pure user-Settings additions on existing v1.0 schema (+ a few new columns on `assistant_settings` + the existing safety table). Phase 9 sequencing can in principle start these in parallel with Phase 8.
-
----
-
-## MVP Definition (v1.2 launch scope)
-
-### Launch With (v1.2 Phase 8 + Phase 9)
-
-Minimum viable admin + Settings for trust-first ops on a single-VPS deployment.
-
-**Phase 8 (Admin Console Foundation):**
-- [ ] **ADMIN-T1..T8** — RBAC + admin route gate + admin_audit_event + admin_read_event + first-admin bootstrap migration (essential foundation; everything depends on it)
-- [ ] **ADMIN-D4** — Confirm-twice pattern (cheap, hugely reduces accidental destructive clicks)
-- [ ] **CAT-T1..T7** — Curated catalog tables, per-provider × per-feature toggles, Sync-from-`/models` flow with diff modal, sync run history, disable-with-dependent-count, provider status pill
-- [ ] **MKEY-T1..T6** — Per-provider master-key set/view/test/rotate with full transactional rollback on failed rotation
-- [ ] **OPS-TENANT-T1..T10** — Tenant list + detail (Overview/Health/Billing/Spend/Activity) + pause/disconnect/delete admin actions, all read-only on PII (metadata only)
-- [ ] **OPS-QUEUE-T1..T7** — Read-only queue health stats + dead-letter view + re-queue action with confirm + 10s auto-refresh
-- [ ] **OPS-SPEND-T1..T6** — Global spend dashboard (cards + stacked bar + donut + platform/BYOK split + top-N tenants)
-
-**Phase 9 (Settings UI on curated catalog):**
-- [ ] **SET-AI-T1..T6** — Per-feature provider+model picker reading from catalog + BYOK key cards + use-BYOK-if-available toggle + cost display + reset-to-recommended
-- [ ] **SET-VOICE-T1..T6** — All 6 personalization fields incl. knowledge-base CRUD
-- [ ] **SET-BEHV-T1..T5** — All 5 behavior toggles
-- [ ] **SET-SAFE-T1..T4** — All 4 safety net surfaces wired against existing TRG-07..08
-
-### Add After Validation (v1.2.x patch milestones)
-
-- [ ] **ADMIN-D1** Audit diff JSON view — once table is non-trivial
-- [ ] **ADMIN-D2** Audit-event filter chips — once volume justifies
-- [ ] **ADMIN-D3** Audit CSV export — first time SOC2/CASA evidence is requested
-- [ ] **CAT-D1** Cost-per-1k in catalog — first user-reported "I didn't know Opus was that expensive"
-- [ ] **CAT-D2** "Recommended for" badge — first time default ≠ recommended
-- [ ] **CAT-D3** Deprecation tag — first vendor model retirement
-- [ ] **MKEY-D1** Dependents count
-- [ ] **MKEY-D2** Rotation cadence reminder banner
-- [ ] **OPS-TENANT-D1** Spend sparkline
-- [ ] **OPS-TENANT-D2** Replay last watch renewal
-- [ ] **OPS-QUEUE-D2** Backpressure global banner
-- [ ] **OPS-SPEND-D1..D3** Forecast / per-model cost stats / cap-vs-actual chart
-- [ ] **SET-AI-D1..D3** Last-7d-cost hint / deprecation banner / per-feature spend cap
-
-### Future Consideration (v1.3+)
-
-- [ ] Grafana dashboards (separate observability surface — already deferred per PROJECT.md)
-- [ ] CASA refresh evidence pipeline (SEED-012 closure)
-- [ ] Per-tenant model allowlist overrides (CAT-A4) — wait for first enterprise customer
-- [ ] Automatic key rotation on cron (MKEY-A2) — wait for KMS/Vault infra
-- [ ] Bulk tenant operations (OPS-TENANT-A6) — wait for an ops scenario that requires them
-- [ ] Real-time spend streaming (OPS-SPEND-A2) — never; 10s refetch is enough
-- [ ] Auto-approve Sync (CAT-A2) — never; admin review is the point
+Sub-orderings:
+- §2 should ship before §6 (the rule action reuses the availability tool).
+- §3 should ship after §2 (booking link is the fallback in §2's reply).
+- §5 (calendar-aware triage) is **independent** of §1 connection — it reads iCal parts on the existing Gmail ingestion. Could ship first as a quick win.
+- §9 Mode A (static pin) is much smaller than §8 and could ship as an "MVP Drive feature" before the full filing engine.
 
 ---
 
-## Feature Prioritization Matrix
+## MVP Recommendation for v1.4
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| ADMIN-T1..T8 (RBAC + audit) | HIGH (everything else depends) | MEDIUM | **P1** |
-| MKEY-T1..T6 (master keys) | HIGH (platform credits depend) | HIGH (rotation rollback) | **P1** |
-| CAT-T1..T7 (curated catalog + Sync) | HIGH (Settings AI tab depends) | MEDIUM | **P1** |
-| OPS-TENANT-T1..T10 (tenant inspection) | HIGH (first support load arrives) | MEDIUM | **P1** |
-| OPS-QUEUE-T1..T7 (queue health) | MEDIUM (incidents are rare but expensive) | LOW | **P1** |
-| OPS-SPEND-T1..T6 (global spend) | HIGH (unit economics visibility) | LOW | **P1** |
-| SET-AI-T1..T6 (AI Provider/Model tab) | HIGH (carries forward deferred req) | LOW | **P1** |
-| SET-VOICE-T1..T6 (Personalization) | HIGH (carries forward deferred req) | LOW | **P1** |
-| SET-BEHV-T1..T5 (Behavior) | MEDIUM (carries forward deferred req) | LOW | **P1** |
-| SET-SAFE-T1..T4 (Safety Net) | HIGH (trust posture surface) | LOW | **P1** |
-| ADMIN-D1..D4 (audit polish) | MEDIUM | LOW | **P2** |
-| CAT-D1..D4 (catalog polish) | MEDIUM | LOW | **P2** |
-| MKEY-D1..D3 (key UX polish) | MEDIUM | LOW | **P2** |
-| OPS-TENANT-D1..D3 (tenant polish) | LOW | LOW | **P2** |
-| OPS-QUEUE-D1..D2 (queue polish) | LOW | LOW | **P2** |
-| OPS-SPEND-D1..D3 (spend polish) | LOW | LOW | **P2** |
-| SET-AI-D1..D3 (Settings AI polish) | MEDIUM | MEDIUM | **P2** |
-| Grafana / CASA / impersonation | — | HIGH | **P3** (deferred per PROJECT.md) |
+If the milestone runs long and needs a v1.4 cut, ship in this order:
+
+1. **§5 Calendar-aware triage** — S, no calendar OAuth needed, immediate trust value.
+2. **§1 Calendar connection (multi-Google, enable/disable, timezone, reconnect)** — M, table-stakes infra.
+3. **§2 Availability in draft replies + chat tool** — M, big visible feature.
+4. **§3 Booking links (single link per user, Google Meet only, weekly windows)** — M; defer multi-link + custom branding.
+5. **§7 Drive connection (single workspace-scoped, `drive.file` only)** — M, table-stakes infra.
+6. **§9 Mode A (static attachment pin)** — S, ships the Drive integration credibly with zero ARCH-02 risk.
+7. **§6 `propose_meeting` rule action** — M, completes the calendar story.
+8. **§8 AI document auto-filing** — L, the headline Drive feature; needs the strictest ARCH-02 discipline.
+9. **§4 AI meeting briefs** — L, the most expensive feature; ship last, premium-gate.
+
+**Defer to v1.5+:** recipient-TZ inference (§2), multiple booking links (§3), custom branding (§3), one-click invite accept (§5), correction learning (§8), Mode B safe-variant attachment picker (§9). All have well-understood paths back in.
 
 ---
 
-## Competitor Feature Analysis
+## Anti-feature summary (must NOT ship in v1.4)
 
-| Feature | Inbox Zero (`../inbox-zero`) | LiteLLM Proxy Admin UI | Zero Mail v1.2 Approach |
-|---------|------------------------------|------------------------|--------------------------|
-| Admin auth | Env-var email allowlist (`env.ADMINS`) | Master-key login + virtual-key system | DB-backed `user_account.role = ADMIN`; first admin bootstrapped via Liquibase changelog |
-| Audit log | Implicit (Vercel + Stripe + Postgres logs) | Per-key + per-team usage logs | Explicit `admin_audit_event` (append-only, Postgres-triggered) + `admin_read_event` |
-| User lookup | `AdminUserInfo` email lookup form, returns user JSON | Per-user/team detail page | Tenant list + detail page (Overview / Health / Billing / Spend / Activity) — strictly metadata-only |
-| LLM catalog curation | None (every user picks from a hardcoded list) | Yes — model allowlist + per-team enabled set | Per-provider × per-feature catalog with Sync-from-`/models` diff review |
-| Master-key management | None visible | Server-managed; UI shows key fingerprint + virtual keys | Per-provider master-key set/test/rotate with transactional rollback |
-| Tenant impersonation | Not visible | Not surfaced in OSS | **Not built** — explicitly anti-feature for trust posture |
-| Spend dashboard | `AdminTopSpenders` (single sortable table) | Top spenders + per-team budgets + cap | Top-line cards + provider/feature breakdowns + top-N tenants |
-| Worker queue panel | None (Vercel handles execution) | Health panel for proxy itself | Postgres outbox + processing_job stats + dead-letter re-queue |
-| Settings model picker | Free-form provider + model with curated suggestions | Models filtered by team allowlist | Picker reads `/api/catalog/models?feature=...` — no free-form ID |
+| Anti-feature | Why | Origin |
+|---|---|---|
+| Microsoft Outlook / Office 365 / OneDrive | Gmail-only locked | PROJECT.md L73, Constraints |
+| Apple iCloud / CalDAV / Dropbox / Box | Outside Google ecosystem | Same |
+| Slack / Teams / Telegram meeting brief delivery | No messaging-channel infra in v1.4 | PROJECT.md L62 |
+| Full Drive scope (anything beyond `drive.file`) | CASA + privacy + user-trust risk | ARCH-02 + IZ parity |
+| Persistent `AttachmentDocument` content/summary | ARCH-02 | PROJECT.md L66 |
+| Embeddings over user mail or files | Locked privacy | CLAUDE.md |
+| RAG over filed documents | Implies persistent content | Same |
+| Persisting meeting brief body | Brief is derived email content | ARCH-02 |
+| Multi-attendee availability (cross-user free/busy beyond user's own calendars) | Requires others' OAuth | Scope + locked TEAM-* |
+| Round-robin team scheduling | Team feature | Scope |
+| Auto-accept calendar invite via rule | Auto-send-class trust risk | Decision |
+| Auto-create new Drive folders without ASK-USER | Surprise factor + abuses `drive.file` | Decision |
+| OCR for scanned PDFs | New dep; defer | Scope |
+| Auto-confirm-on-recipient-reply loop for `propose_meeting` | Two-step autonomous loop | Scope |
+| Localization beyond VI/EN on booking page | i18n locked | Locked |
 
 ---
 
 ## Sources
 
-- **Local Inbox Zero clone:** `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/app/(app)/admin/*` (admin page + components); `apps/web/utils/admin.ts` (`isAdmin` allowlist pattern). HIGH confidence — direct source inspection.
-- **Zero Mail prior research:** `.planning/research/FEATURES.md` revision for v1.1 (deferred Settings reqs SET-*); `.planning/PROJECT.md` (validated v1.0/v1.1 features, Active v1.2 scope, "Out of Scope" privacy constraints); `CLAUDE.md` Privacy + write-action constraints; `.planning/seeds/SEED-011-admin-support-and-compliance-console.md`. HIGH confidence — internal repository.
-- **[WorkOS — How to design RBAC for multi-tenant SaaS](https://workos.com/blog/how-to-design-multi-tenant-rbac-saas)** — tenant-aware authorization decisions, role change auditability. MEDIUM confidence (one secondary source; principles are well-trodden).
-- **[Agnite Studio — Audit Logging Design in SaaS](https://agnitestudio.com/blog/audit-logging-saas/)** — immutability, append-only design, tenant filtering, retention strategies. MEDIUM confidence.
-- **[Microsoft Learn — Multitenant identity approaches](https://learn.microsoft.com/en-us/azure/architecture/guide/multitenant/approaches/identity)** — impersonation audit requirements (log both impersonator + impersonated user). HIGH confidence (vendor docs).
-- **[Idee — Cross-tenant impersonation](https://www.getidee.com/blog/what-is-cross-tenant-impersonation)** — impersonation as recognized attack surface in multi-tenant SaaS. MEDIUM confidence.
-- **[Google Cloud KMS — Key rotation](https://cloud.google.com/kms/docs/key-rotation)** — rotate-then-retire pattern, old key kept for decrypt of historical ciphertexts. HIGH confidence (vendor docs).
-- **[Ubiq Security — Key wrapping best practices](https://dev.ubiqsecurity.com/docs/key-mgmt-best-practices)** — envelope encryption (DEK + KEK); rotate KEK without re-encrypting all data. MEDIUM confidence.
-- **[NIST SP 800-38D / AES-GCM rotation limits](https://www.crypteron.com/blog/pci-dss-key-rotations-simplified/)** (secondary citation) — ~2^32 encryption operations safety limit per key; PCI 90-day rotation cadence. MEDIUM confidence.
-- **[PlanetScale — Keeping a Postgres queue healthy](https://planetscale.com/blog/keeping-a-postgres-queue-healthy)** — oldest-unprocessed-age as canonical lag metric; vacuum/bloat concerns for high-churn queues. HIGH confidence.
-- **[Neon — Queue System using SKIP LOCKED](https://neon.com/guides/queue-system)** — `FOR UPDATE SKIP LOCKED` semantics; worker death + lock release pattern. HIGH confidence.
-- **[LiteLLM — Model Management + Proxy UI](https://docs.litellm.ai/docs/proxy/model_management)** — closest peer for curated-catalog + per-team allowlist + virtual-key admin pattern. MEDIUM confidence (vendor docs; their UI is more enterprise-y than our v1.2 needs).
-- **[LiteLLM Enterprise — model allowlists, budgets](https://docs.litellm.ai/docs/enterprise)** — per-project budgets + rate limits + model allowlists as canonical features. MEDIUM confidence.
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/prisma/schema.prisma` (L1135–L1491) — IZ Calendar, Drive, Booking, MeetingBriefing, AttachmentSource/Document data model.
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/utils/calendar/` — `unified-availability.ts`, `event-writer.ts`, `timezone-helpers.ts`, `handle-calendar-callback.ts`.
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/utils/ai/calendar/availability.ts` — `aiGetCalendarAvailability` shape, tool schema, booking-link fallback flag.
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/utils/ai/meeting-briefs/generate-briefing.ts` — agentic loop, `MAX_AGENT_STEPS=15`, structured `finalizeBriefing` tool, Perplexity/Google/OpenAI providers, MCP tools integration, guest-bullet schema.
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/utils/drive/filing-engine.ts` + `document-extraction.ts` — pipeline shape, `unpdf` + `mammoth` deps, 10k char / 50 page caps, idempotency on `(emailAccount, message, attachment)`.
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/utils/drive/handle-filing-reply.ts` — reply-learning correction loop.
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/app/(app)/[emailAccountId]/calendars/` UI tree — `BookingLinksSection`, `CalendarConnections`, `ConfigureBookingLinkDialog`, `TimezoneDetector`.
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/app/(app)/[emailAccountId]/drive/` UI tree — `AllowedFolders`, `DriveSetup`, `FilingActivity`, `FilingPreferences`, `FilingRulesForm`.
+- `.planning/PROJECT.md` L53–L73 — v1.4 milestone scope, explicit anti-features, ARCH-02 rejection of persistent attachment indexing.
+- `CLAUDE.md` Privacy + Write Actions sections — privacy scope, outbound gateway boundary, body-content ban distinguishing extracted vs user-authored content.
 
----
-
-*Feature research for: v1.2 — Admin Console Foundation + Settings UI on curated catalog*
-*Researched: 2026-05-19*
+**Confidence:** HIGH on IZ schema/code (read directly), HIGH on product directives (read directly), MEDIUM on complexity ratings (estimates based on IZ scope + v1.3 phase sizes — to be validated during phase planning).

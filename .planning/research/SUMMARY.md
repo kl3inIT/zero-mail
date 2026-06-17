@@ -1,197 +1,134 @@
-# Project Research Summary — Zero Mail v1.2
+# Research Synthesis — Zero Mail v1.4 (Calendar Co-Pilot + Drive Filing)
 
-**Project:** Zero Mail v1.2 — Admin Console Foundation (Phase 8) + Settings UI on Curated Catalog (Phase 9)
-**Domain:** Operator/admin surface + per-provider × per-feature LLM catalog + 4-tab user Settings on top of a shipped Java 25 / Spring Boot 4 / Spring Modulith / Next.js 16 multi-tenant SaaS
-**Researched:** 2026-05-19
-**Confidence:** HIGH overall
+**Synthesized:** 2026-06-17
+**Sources:** STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md, PROJECT.md
+**Overall confidence:** HIGH on backend stack additions, Modulith boundaries, ArchUnit pattern reuse, IZ schema parity, and v1.3 multi-mailbox integration seams. MEDIUM-HIGH on CASA/scope-tier mechanics, Spring AI 2.0.0 M6→GA migration churn, and `drive.file` UX trade-off. MEDIUM on booking-page abuse modeling at a new SaaS scale.
 
-## Executive Summary
+## 1. Milestone TL;DR
 
-v1.2 stacks two surfaces on the v1.0 + v1.1 baseline: a `/admin/*` console gated by `ROLE_ADMIN` (Phase 8) and a four-tab user `/settings` rebuilt on the admin-curated LLM catalog (Phase 9). The four research outputs converge: **zero new backend/frontend runtime dependencies** — every capability is built from artifacts already on the classpath (Spring Security 7.0.5, springdoc-openapi 3.0.3, AES-GCM `RefreshTokenCipher`, Liquibase 5, openapi-typescript 7.13, all shadcn/ui primitives) plus a small set of new schema, new ArchUnit gates, and one new Modulith module (`core.admin`).
+v1.4 adds **Google Calendar Co-Pilot** (multi-Google-Calendar incremental OAuth, unified free/busy in draft replies + chat tool, public Calendly-style booking links, calendar-aware triage that protects invites from aggressive rules, a `propose_meeting` rule action, and a cron-driven AI meeting brief agent) and **Google Drive Filing** (one workspace-shared Drive connection on the minimal `drive.file` scope, in-memory-only attachment auto-filing with confidence + review queue, and an `attach_from_source` rule action for curated outbound attachments) on top of the v1.3 multi-Gmail workspace baseline.
 
-The architectural keystone is a **3-table normalized catalog** (`provider_catalog`, `model_catalog`, `feature_binding`) — not JSONB — with FK + UNIQUE preventing stale-pin failures from `assistant_settings` → catalog. Master keys reuse the existing AES-GCM `RefreshTokenCipher` via a new `llm_provider_master_key` table; resolution flows through a single `ProviderMasterKeyResolver` inside `llm.gateway.springai`, preserving the locked "one adapter" boundary. Sync-from-`/models` is **async** (existing `processing_job` SKIP LOCKED + Redis debounce lease); Anthropic has no `/models` endpoint so its catalog path is manual-only. The Settings AI tab pulls from `GET /api/settings/catalog` served by a distinct `CuratedCatalogQueryService` (different DTO shape from admin endpoints) so admin schemas never leak into the public OpenAPI document — `springdoc-openapi` `GroupedOpenApi` splits `public` vs `admin` specs and the frontend codegens **two** typed clients.
+The whole milestone reuses v1.3's primitives: `MailboxContext` ScopedValue, `OAuthTokenStore` + AES-GCM, single `LlmGateway`, `OutboundSendGateway` boundary, ARCH-02 privacy invariants, Postgres `SKIP LOCKED` queue, Liquibase YAML. Net-new runtime dependencies are two Google API Java client artifacts (Calendar + Drive); the frontend ships **zero new npm deps**. The hardest invariants to preserve: (a) the v1.3 single-bundled-OAuth-scope login experience — Calendar/Drive consents fire only on explicit clicks in settings, never as a surprise during signup — and (b) ARCH-02 — attachment bytes never persisted; meeting-brief output is the same carve-out shape as v1.1 chat `draft_body` (assistant-authored summary persistable, raw email body NOT).
 
-The three highest-risk seams are (1) **master-key handling** (test-connection oracle, response-roundtrip leaks, ChatModel cache not evicted on rotation), (2) **admin session bleed** into user endpoints (one-cookie design lets a rogue `if (isAdmin) skip tenant filter` fallback collapse tenant isolation), and (3) **tenant inspection silently leaking email body / chat content** the v1.0/v1.1 privacy contract bans. Three architectural enforcement layers — `AdminContext` Scoped Value mutually exclusive with `TenantContext`, ArchUnit `AdminPathBodyBanTest`, and an `AdminResponseBodyBanFilter` failsafe — must land in sub-phase 8A **before** any tenant-inspection view ships.
+## 2. Stack Additions (net-new, ArchUnit-confined)
 
----
-
-## Stack Additions for v1.2
-
-**Backend — zero new runtime deps, three architectural switches:**
-
-- **Spring Security 7.0.5 `@EnableMethodSecurity`** (already on classpath) — method-level `@PreAuthorize("hasRole('ADMIN')")` complementing URL-pattern `requestMatchers("/api/admin/**").hasRole("ADMIN")`. Two-layer defense at filter + method boundary.
-- **DB-backed admin elevation via `users.role` column** — `ROLE_ADMIN` appended to existing `OAuth2User` authorities in `GoogleOAuthSuccessHandler`. Bundled-OAuth flow untouched; no second IdP, no Keycloak, no JWT. Cookie + Spring Session Redis stays.
-- **`springdoc-openapi 3.0.3` `GroupedOpenApi` split** — two beans (`publicApi`, `adminApi`) producing `/v3/api-docs/public` (excludes `/api/admin/**`) and `/v3/api-docs/admin`. Existing `GlobalOpenApiCustomizer` was authored anticipating this split.
-- **Master keys reuse existing AES-GCM `RefreshTokenCipher`** — same algorithm (AES-256-GCM, 96-bit IV, 128-bit tag), same KEK rotation, same `@Sensitive` Logback scrub. New `llm_provider_master_key` table mirrors `byok_credential` shape; KEK from `ZeroMailCoreProperties.crypto.masterKeys.kekBase64`. Not HashiCorp Vault, not GCP/AWS KMS (single-VPS locked), not pgcrypto (CLAUDE.md do-not-use list).
-- **Sync-from-`/models`** via Spring AI provider starter clients or `RestClient` calls confined inside `core.llm.gateway.springai.admin` — vendor-SDK confinement ArchUnit rule stays in force.
-
-**Frontend — zero new runtime deps:**
-
-- All admin primitives (`table`, `tabs`, `alert-dialog`, `select`, `command`, `popover`, `sidebar`, `sheet`, `chart`, `switch`, `skeleton`, `sonner`) already in `apps/web/components/ui/**`.
-- `apps/web/scripts/generate-api.ts` loops over two spec URLs → emits `schema.d.ts` (public) + `admin-schema.d.ts` (admin). New `admin-client.ts` is a 3-line wrapper over `openapi-fetch@0.17.0`.
-- Memory note "Use raw shadcn primitives first" → defer `@tanstack/react-table`; hand-compose tables on `table.tsx` for Phase 8.
-
-**New persistence (six Liquibase YAML changelogs):** `user.is_admin` column add, `admin_audit_event`, `llm_provider_catalog`, `llm_provider_model`, `llm_model_feature_capability`, `llm_provider_master_key`.
-
----
-
-## Feature Categories — 10 Categories
-
-| Category | Table stakes | Differentiators | Anti-features |
+| Net-new dep | Version pin | Module | ArchUnit boundary |
 |---|---|---|---|
-| **ADMIN** (RBAC + audit) | `/admin/*` 403 gate, DB-backed `ROLE_ADMIN`, append-only `admin_audit_event` + `admin_read_event`, tenant-keyed audit, confirm-twice destructive actions | Audit diff view, filter chips, CSV export | Admin-impersonate-user, SQL console, separate admin password |
-| **CAT** (curated catalog) | Per-provider × per-feature catalog (chat/triage/draft), 3-step Sync (fetch → diff → confirm), sync run history, disable-with-dependent-count, provider status pill | Cost-per-1k display, "Recommended for" badge, deprecation tag, `GET /api/settings/catalog` | Free-form model-ID override, auto-approve Sync, embedding curation, per-tenant allowlist |
-| **MKEY** (master keys) | Per-provider set/test/rotate with transactional rollback, masked display only, oracle hardening, key-history mini-list | Dependents count, 90-day rotation reminder | "Reveal key once", automatic cron rotation, per-tenant master keys |
-| **OPS-TENANT** (read-only inspection) | Tenant list + detail tabs (Overview/Health/Billing/Spend/Activity), pause/disconnect/delete admin actions, metadata-only on PII | Spend sparkline, replay-watch-renewal, deletion preview counts | View tenant inbox, chat content, prompts/completions, OAuth token, edit-on-behalf |
-| **OPS-QUEUE** (worker health) | Outbox lag + max age, `processing_job` depth by type, retry distribution, failure rate, dead-letter view + re-queue, 10s auto-refresh | Worker heartbeat, backpressure banner | Worker stop/start UI, view job payload, manually edit row |
-| **OPS-SPEND** (global dashboard) | Top-line cards (today/7d/30d), stacked bar by provider, donut by feature, platform-vs-BYOK split, top-N tenants, date-range picker | Spend forecast, per-model p50/p95, cap-vs-actual chart | Drill-down to prompts, websocket streaming, public marketing page |
-| **SET-AI** (carries SET-AI-01..04) | Per-feature provider+model picker reading catalog, BYOK key cards, use-BYOK-if-available toggle, cost-per-1k display, reset-to-recommended | Last-7d-cost hint, deprecation inline banner, per-feature spend cap | Free-form model-ID textbox, per-rule model override, show master-key bytes, user-triggered Sync |
-| **SET-VOICE** (carries SET-VOICE-01..06) | Writing style, personal instructions (injection-hardened), signature, tone preset, AI output language (VI/EN), knowledge-snippet CRUD | — | Two-way settings↔rule-prompt sync, AI-learned style from sent mail |
-| **SET-BEHV** (carries SET-BEHV-01..05) | Auto-draft toggle, draft confidence slider, follow-up reminders, daily digest opt-in, sensitive-data protection | — | "Always auto-send on confidence > X" (hard ban — TRG-03) |
-| **SET-SAFE** (carries SET-SAFE-01..04) | VIP allow-list, never-archive, never-trash (future-proof), quick-add from triage audit | — | First-class block-list (expressible as rule) |
+| `com.google.apis:google-api-services-calendar` | `v3-rev20260517-2.0.0` | `backend/core` (`api` config) | `CalendarBuilderConfinedToGateway`; `CalendarOutboundGatewayCallSiteAllowlistTest` |
+| `com.google.apis:google-api-services-drive` | `v3-rev20260428-2.0.0` | `backend/core` (`api` config) | `DriveBuilderConfinedToGateway`; `DriveUploadCallSiteAllowlistTest` (`@AllowedDriveUploadCallSite`) |
+
+**Reused (no version bump):** `google-auth-library-oauth2-http 1.48.0`; Spring AI 2.0.0 GA `ToolCallingManager`/`ChatClient.tools()`; Spring Security OAuth2 Client multi-`ClientRegistration` with shared client-id (v1.3 GMA-07 pattern).
+
+**Frontend:** zero new npm deps. `calendar.tsx` (shadcn over `react-day-picker@10`), `command.tsx`, `popover.tsx`, `radio-group.tsx`, `card.tsx`, `date-fns@4` already installed. `Intl.supportedValuesOf("timeZone")` is the IANA source.
+
+**ArchUnit rules added (9):** 3 gateway call-site allowlists (Calendar read, Calendar write, Drive write), `AttachmentBytesInMemoryOnlyTest` (composite: ArchUnit + Liquibase reader + CI grep), `MailboxScopedReadIntoWorkspaceResourceTest` (workspace-shared × mailbox-context seam), `PublicBookingChainIsolationTest`, `MeetingBriefAuditNoPromptTextTest`, `CalendarConnectionRefreshTokenAesGcmTest`, two `ModuleBoundaryTest`s, plus a new `OAuthScopeAllowListTest` that fails CI on any scope string not in the approved set (catches a typo'd `drive` or `calendar` full scope before CASA re-clock).
+
+**`spring-cloud-gcp` stays banned.** Hand-wired `Calendar.Builder` / `Drive.Builder` per request, identical shape to v1.0 `Gmail.Builder`.
+
+## 3. Feature Table Stakes
+
+### Must-ship to be credible
+
+1. Calendar connection management (multi-Google-Calendar incremental OAuth, enable/disable, primary marker, timezone, AES-GCM token, `DISCONNECTED` + reconnect, cascade delete).
+2. AI calendar availability in draft replies + chat tool (free/busy fan-out, LLM-inferred duration, business-hours-aware, free/busy never persisted).
+3. Calendar-aware triage (parse `text/calendar` invite/cancel/reschedule, guard against `archive`/`mark_read`/`mark_spam`/auto-send, top-of-inbox surface). Cheapest credibility win — ships without OAuth.
+4. Booking links — single-link, Google Meet + phone + in-person, weekly windows, DB-locked slot uniqueness, idempotency token, public `/book/{slug}` with hCaptcha.
+5. `propose_meeting` rule action — two-stage compound: `CalendarReadGateway` → existing `OutboundSendGateway` (inherits all v1.2 gates unchanged).
+6. Drive connection management (workspace-scoped, `drive.file` ONLY, Picker-driven onboarding).
+7. AI document auto-filing (in-memory `Gmail.getInputStream` → `InputStreamContent` → Drive upload; metadata-only suggestion; confidence + ASK-USER queue).
+8. Attachment-source rules — Mode A only (static file pin via Picker multi-select; raw RFC2822 through `OutboundSendGateway`).
+
+### Differentiator (ship if cheap)
+
+- "Same-week priority" slot bias (cheap prompt tweak — ship).
+- Booking-link fallback inline in `propose_meeting` reply (cheap — ship).
+- **AI meeting briefs** — headline feature but most expensive; premium-gate per-tenant per-day brief credit cap separate from LLM cap.
+- Filing correction learning (metadata-only, ARCH-02-safe).
+- Recipient-TZ inference, one-click invite accept, Mode B-safe attachment picker, multi-Drive — defer to v1.5.
+
+### Anti-features (deliberately omit)
+
+- Outlook / Office 365 / OneDrive / iCloud / CalDAV / Dropbox (Gmail/Google-only locked).
+- Full `drive` or `drive.readonly` scope (CASA Tier 2 re-clock + ARCH-02).
+- `AttachmentDocument.content`/`.summary` persistence (PROJECT.md L66 explicit rejection of IZ pattern).
+- Embeddings of user mail or Drive files; RAG; vector DB.
+- Persisted brief body column (generated at delivery time, in-memory only).
+- Slack / Teams / Telegram brief delivery (no messaging-channel infra).
+- Auto-accept invite via rule / auto-confirm-on-recipient-reply (auto-send-class trust risk).
+- Multi-attendee availability / round-robin / paid bookings / iframe widget.
+- OCR / Tika / PDFBox / docx4j for attachment text extraction (filing is metadata-only in v1.4).
+- Second Google OAuth Cloud Console client (reuse same client-id; split `ClientRegistration` only).
+- Incremental authorization auto-prompt during signup.
+- `@tanstack/react-table` for new lists (raw shadcn first).
+- Booking-page localization beyond VI/EN.
+
+## 4. Architectural Seams (top 5)
+
+1. **Multi-mailbox × workspace-shared Calendar/Drive.** Connections are workspace-shared; rules/triage are mailbox-isolated. New `WorkspaceResourceLookup` is the only legal path for a mailbox-scoped caller to read a workspace-shared connection. `MailboxScopedReadIntoWorkspaceResourceTest` ArchUnit rule fails any service that injects both `MailboxContext.required()` and a `CalendarConnectionRepository` directly. New `mailbox_calendar_preference (mailbox_id, calendar_connection_id, role ∈ {freebusy, event_write, brief_source})` disambiguates which calendar a mailbox uses — without it v1.4 leaks personal availability into work drafts.
+
+2. **OAuth bundling × incremental grants.** v1.3 `google` registration stays byte-identical. Two new `ClientRegistration`s `google-calendar` and `google-drive` share the same client-id/secret but expose dedicated `/oauth2/authorization/*` routes triggered ONLY by explicit settings clicks. `include_granted_scopes=true` + `access_type=offline` + `prompt=consent` merges grants without re-prompting Gmail. Custom `OAuth2AuthorizedClientService` routes the new registrations into `calendar_connection`/`drive_connection` tables.
+
+3. **`OutboundSendGateway` × `propose_meeting` × `CalendarOutboundGateway`.** `propose_meeting` is **two-stage compound**: stage 1 free/busy → `CalendarReadGateway`; stage 2 Gmail reply → existing `OutboundSendGateway` (inherits Auto-send, safety-net, rate cap, idempotency, audit, "blocked = failed audit, NO draft fallback"). Booking event writes + all other `events.insert` go through a **separate** `CalendarOutboundGateway` (different gates, independent quota). One-Gmail-send-call-site invariant preserved.
+
+4. **ARCH-02 × meeting briefs + Drive filing.** Two new privacy carve-outs:
+   - **Meeting brief:** assistant-authored summary persists in `meeting_brief.summary_text` (same shape as v1.1 `draft_body` carve-out). Source bodies live only in request-scoped buffer zeroed on close. `meeting_brief_audit` stores fingerprints + tokens + cost, never prompt/completion text.
+   - **Drive filing:** bytes flow `Gmail.attachments.get().executeMediaAsInputStream()` → `InputStreamContent` → `Drive.files.create` in one try-with-resources block; never hit disk, `byte[]`, or `INSERT`. `document_filing` stores filename/MIME/size/folder/confidence/sha256 — no body, no extracted text excerpt.
+
+5. **`MailboxContext` × public booking chain.** `/api/public/**` has no session. New `SecurityFilterChain` `@Order(40)` matches it (above v1.3 `@Order(50)` user chain, below v1.2 `@Order(1)` admin chain). `PublicBookingFilter` resolves slug → `tenant_id`, binds `TenantContext`, binds `MailboxContext` to `MailboxRef.SYSTEM_NONE`. Slot uniqueness enforced by Postgres `UNIQUE (destination_calendar_id, starts_at)` — Redis `booking:slot-lock` is 30s UX cushion only.
+
+## 5. Watch Out For (top 7 + fixes)
+
+| # | Pitfall | Fix |
+|---|---|---|
+| 1 | **CASA re-clock from new scopes** — `drive`/`drive.readonly` re-anchors the whole verification timeline; team thinks CASA was done but assessment is per-scope-set | `docs/oauth-scopes.md` ledger + `OAuthScopeAllowListTest` ArchUnit rule fails CI on any scope string not approved. Phase 1 demo-video checklist locks UX before submission. PROJECT.md: v1.4 does NOT unblock GA. |
+| 2 | **Spring AI M6 → GA silently breaks tool execution** — RC1 dropped the in-`ChatModel` tool loop; v1.3 `chatModel.call()` with tools stops looping mid-conversation; brief never iterates | Phase 0 before any feature work: bump to GA, migrate to `ChatClient.builder().defaultAdvisors(toolCallingAdvisor)` or explicit `DefaultToolCallingManager`, per-provider no-arg-tool smoke test, grep `PromptChatMemoryAdvisor`. |
+| 3 | **`drive.file` UX reality** — `files.list` returns empty under `drive.file`; engineers expect "browse my Drive" but the scope only sees app-created or Picker-opened files | UX is Picker-only, never Browser. ADR `docs/adr/drive-file-only.md`. CI integration test asserts empty `files.list` on a fresh connection. AI suggests folder NAMES; user Picker-creates. Attachment-source = pick files once at rule create. |
+| 4 | **Public booking abuse** — slug enumeration, bot calendar-DOS, invite-spam relay; Calendly's "CAPTCHA after 2-3/h" insufficient for a new app | hCaptcha on every submit. Slugs ≥12 chars + random suffix. `robots.txt` + `X-Robots-Tag: noindex`. DB `UNIQUE (destination_calendar_id, starts_at)` is source of truth. Per-IP (3/h), per-slug (10/h), per-attendee-email (5/day), platform-wide (1000/h) Redis token-buckets. `Idempotency-Key` required. All booking writes through `CalendarOutboundGateway` with `extendedProperties.private.zeromail_booking_id`. |
+| 5 | **Brief = extracted email content** — `meeting_brief.body_text` or pre-generated-and-stored brief silently re-opens ARCH-02; `draft_body` carve-out is USER-authored, NOT LLM-extracted-from-email | Brief generated at DELIVERY time, not schedule time. `meeting_brief.summary_text` persistable (assistant-authored narrative, parallel to v1.1 `draft_body`). Source bodies in request-scoped buffer zeroed on close. Audit = fingerprints + tokens + cost. `ToolOutputSanitizer` extended to `BriefOrchestrator`. PROJECT.md explicit third carve-out enumeration. |
+| 6 | **Attachment streaming OOMs worker JVM** — 25MB cap × N concurrent filings × shared worker pool × 4GB VPS heap | Streaming pipe: `MediaHttpDownloader` → temp file (chunked 256KB) → text-only summary → `Drive.Files.create` with `uploadType=resumable`. Dedicated bounded `FilingExecutor` (`maxConcurrent=4`). Heap-budget startup assertion. >10MB skips AI summarization. Janitor on `/tmp/zeromail-filing/`. try-with-resources mandatory. |
+| 7 | **Free/busy quota exhaustion in draft hot path** — `freebusy.query` ~600/min/user; one draft = N calendars × M LLM retries × P windows; LLM tool retries amplify silently | Two-tier cache: per-request `ConcurrentHashMap` + Redis L2 `TTL=60s` singleflighted via `SETNX`. `quotaUser=sha256(tenantId+":"+calendarId)` always set. Hard cap `calendarExpansionMax=50`. All `Freebusy.query` confined to `CalendarReadGateway` wrapper. On 429 return `{free_busy_unavailable: true}` to LLM (told to propose ranges); never auto-retry inside the tool. Per-tenant 60/min outbound free/busy rate cap. |
+
+**Honorable mentions:** brief budget runaway caps (`MAX_ITERATIONS=8`, token + wall-clock + per-day-credit caps, BYOK cost preview); multi-Gmail × workspace-Calendar cross-account leak (`mailbox_calendar_preference` + `CalendarContext` ScopedValue + `findAllCalendarsForTenant` ArchUnit ban); calendar mid-flight disable (3-state machine, Modulith event evicts cache, per-iteration status check); Liquibase changeset stacking (small append-only single-purpose changesets per Convention 10).
+
+## 6. Suggested Phase Order
+
+Reconciled ARCHITECTURE.md (A-I) and FEATURES.md MVP. Resolution: keep ARCHITECTURE's order, but lift calendar-aware triage iCal-parsing into Phase 1 (additive ingestion work, no OAuth dependency). Add explicit Phase 0 for Spring AI GA bump per Pitfall 8.
+
+| # | Phase | Goal |
+|---|---|---|
+| 0 | **Spring AI 2.0.0 M6 → GA migration** | Bump pin, migrate every embedded-tool `chatModel.call()` to `ChatClient` advisors or explicit `ToolCallingManager`, smoke-test streaming on real OpenRouter route before any feature touches LLM gateway. |
+| 1 | **Calendar OAuth + connection foundation + calendar-aware triage** | Two new `ClientRegistration`s, `calendar_connections` + `calendar_selection` + `mailbox_calendar_preference` schema, AES-GCM token reuse, scope ledger + ArchUnit allow-list, 3-state state machine, plus `text/calendar` parsing in Gmail ingestion guarded against `archive`/`mark_read`/`mark_spam`. |
+| 2 | **Calendar read gateway + AI availability in drafts + chat tool** | `CalendarReadGateway` with Redis 60s cache + singleflight + quota cap, `UnifiedAvailabilityService` workspace-unioned, draft pipeline `suggestMeetingSlots`, chat tool `getCalendarAvailability`. |
+| 3 | **Booking links + public booking page** | `booking_links` + `booking_windows` + `bookings` schema, DB-UNIQUE slot constraint, `@Order(40)` sessionless filter chain, hCaptcha, idempotency, `CalendarOutboundGateway` `events.insert` with `conferenceDataVersion=1`. |
+| 4 | **`propose_meeting` rule action** | New action in When/Then schema + compiler (structured output, no regex), `ProposeMeetingActionAdapter` orchestrates `CalendarReadGateway` → `OutboundSendGateway.sendReply`, inherits all v1.2 gates. |
+| 5 | **Drive OAuth + connection foundation + Picker onboarding** | `drive_connections` (workspace-shared, one per tenant), `drive.file`-only OAuth, Google Picker UX for `filing_folders`, ADR, semantic CI test. |
+| 6 | **AI document auto-filing engine** | `AttachmentBytesCarrier` + try-with-resources streaming, `FilingEngine` with metadata-only `AnalyzeDocumentService`, `document_filing` metadata-only schema, confidence + ASK-USER queue, `AttachmentBytesInMemoryOnlyTest`, bounded `FilingExecutor`, load test. |
+| 7 | **Attachment-source rules (Mode A static pin)** | `attachment_sources` schema, `attach_from_source` rule action, Picker multi-select editor, in-memory `Drive.files.get().executeMediaAsInputStream()` → `OutboundSendGateway` raw RFC2822, audit. |
+| 8 | **AI meeting briefs (cron + agentic loop)** | `meeting_brief` + `meeting_brief_audit` schema (NO body column), `MeetingBriefScheduler` ShedLock cron, `MeetingBriefAgent` Spring AI loop with `maxIterations=8` + token + wall-clock caps, `BriefOrchestrator` reuses `ToolOutputSanitizer`, Resend at fire time, premium credit gate. |
+
+**Dependencies:** 0 → 1 → 2 → (3, 4 parallel). 5 → 6 → 7. 8 depends on 2 + 4.
+
+## 7. Open Questions for Requirement Definition
+
+1. **Connection ownership boundary** — lock workspace-shared for both Calendar and Drive in REQUIREMENTS.md so Phase 1 doesn't relitigate.
+2. **Booking link multiplicity** — recommend ONE per user in v1.4 (defer multi-link to v1.5); confirm.
+3. **Booking link custom branding / buffer-between-meetings / question fields** — recommend defer to v1.5.
+4. **Brief default lead-time window** — recommend 24h default, tenant-configurable, no per-event override.
+5. **Premium-gating for briefs** — recommend separate per-tenant per-day brief credit cap (default 50 credits/day) on top of LLM cap.
+6. **BYOK brief cost preview** — recommend yes on first brief + tenant setting `byok_brief_daily_usd_cap` (default $5).
+7. **Calendar push notifications (`events.watch`)** — recommend OUT of v1.4 (cron polls; brief and drafts are pull-only).
+8. **Web-search MCP tool in brief loop** — recommend IN as tenant feature flag default OFF.
+9. **Attachment-source Mode B (smart pick by filename + metadata)** — recommend v1.5.
+10. **Calendar invite one-click accept/decline from triage UI** — recommend v1.5 (chat tool already covers it).
+11. **Drive multi-connection** — recommend v1.5.
+12. **Brief delivery channel default** — recommend email ON + in-app digest ON by default, each independently disable-able.
+13. **CASA timeline expectation in PROJECT.md** — write explicitly that v1.4 does NOT unblock GA; CASA refresh window opens only once Gmail + Calendar + Drive scopes are stable across one consecutive milestone.
+14. **Privacy carve-out documentation** — PROJECT.md privacy section gains explicit third carve-out enumeration (chat draft / brief summary / triage in-memory), in the SAME PR as first brief code.
 
 ---
 
-## Architecture Highlights
+### Confidence
 
-**Module placement.** `core.admin` is a **NEW top-level Modulith module**, sibling of `core.chat` and `core.llm` — **not** inside `core.llm`. Rationale: `llm` is horizontal capability (gateway); `admin` is vertical operator domain. Sub-packages follow `domain/ application/ projection/ persistence/ exception/`.
+Overall: **HIGH** (stack + architecture + IZ feature parity + ARCH-02 enforcement). MEDIUM-HIGH on Spring AI GA migration (Phase 0 mitigates) and OAuth incremental-authorization custom `OAuth2AuthorizedClientService` (most novel piece). MEDIUM on public booking abuse scale at launch.
 
-**RBAC + tenant context separation.** `AdminContext` is a separate `ScopedValue` from `TenantContext`, mutually exclusive — `TenantContext.currentOrThrow()` throws inside admin call, and vice versa. Cross-tenant admin reads route through `AdminTenantAccess.readOnly(tenantId, supplier)` which writes an `admin_audit_event` row.
-
-**Catalog shape.** Three normalized tables — `provider_catalog`, `model_catalog`, `feature_binding` (M:N model × {CHAT, TRIAGE, DRAFT}, with `enabled`, `is_default`, `is_recommended`). **Not** JSONB. FK + UNIQUE partial indexes prevent stale-pin failures from `assistant_settings.{chat|triage|draft}_model_id`.
-
-**Master-key resolution.** `ProviderMasterKeyResolver` lives inside `llm.gateway.springai` as single resolution point. Rotation emits `MasterKeyRotatedEvent` → `@ApplicationModuleListener` evicts all cached `ChatModel` instances for that provider across **every** tenant.
-
-**Read views.** Tenant projections use **Spring Data JDBC `Repository<...>`** (not `CrudRepository`). ArchUnit gate forbids body-content field names (`body|bodyHtml|snippet|payload|prompt|completion`) in admin projection DTOs.
-
-**Frontend layout.** `(admin)` is **sibling** Next.js route group of `(app)`, with own server-side `ROLE_ADMIN` gate in `layout.tsx`. Independent typed client from `admin-schema.d.ts`; admin code-splits so public bundle never ships admin types.
-
-**Three separate audit tables** — `triage_audit` (rules), `assistant_send_audit` (chat-confirmed send, v1.1), `admin_audit_event` (new). Different retention/actors/queries.
-
-**Build order — sub-phases:**
-
-- **8A** RBAC + `AdminContext` + audit primitive (foundation; everything depends)
-- **8B** Master-key management (gated behind 8A; sentinel-leak test in CI)
-- **8C** Tenant read-only views (depends on 8A — parallel with 8B; ArchUnit body-ban + response filter land first)
-- **8D** Catalog Sync flow (depends on 8B for master key)
-- **8E** Worker queue health (depends on 8A — parallel with 8C/8D)
-- **8F** Global spend dashboard (depends on 8A — parallel with 8C/8D/8E)
-- **9A** Settings chrome + tab routing (independent)
-- **9B** SET-VOICE + SET-BEHV + SET-SAFE (parallel with 9A)
-- **9C** SET-AI tab (depends on 8B + 8D)
-
----
-
-## Watch Out For (Top Pitfalls)
-
-1. **Single-cookie admin session bleeds into user endpoints.** Mitigation: ArchUnit rule forbidding admin controllers from reading `TenantContext` directly; mandatory `AdminContext.currentOrThrow()` first statement; persistent red/yellow "ADMIN MODE" chrome bar.
-
-2. **Master-key oracle via test-connection.** Mitigation: edit-session token (5-min TTL), 10 req/hour/admin rate limit, response strips provider error body (returns only enum codes `INVALID_KEY | RATE_LIMITED | NETWORK_ERROR`), `/models` HTTP client isolated from logging proxy, sentinel-leak CI test.
-
-3. **Tenant inspection leaks body/chat/prompt content.** Mitigation: `AdminPathBodyBanTest` ArchUnit blocks admin packages from `GmailClient` body-exposing methods; `AdminResponseBodyBanFilter` failsafe scrubs JSON fields named `body|bodyHtml|snippet|prompt|completion|content` >200 chars; admin paths cannot resolve tenant OAuth credentials.
-
-4. **Catalog Sync supply-chain.** Mitigation: strict per-provider JSON Schema validation; three-step flow (Fetch → Diff → Confirm); soft-delete only (`deprecated_at`); model-ID regex allow-list `^[a-zA-Z0-9._:/\-]{1,128}$`; per-feature toggles preserved across Sync; "ping completion" before enabling; Anthropic manual-only.
-
-5. **Send call-site count regresses 1 → 2+.** Mitigation: ArchUnit extended — admin packages forbidden from calling Gmail send methods entirely; grep gate stays at exactly 1; master-key test-connection uses `/models` GET, never send.
-
-6. **Audit log used as exfiltration channel OR admin edits own audit.** Mitigation: DB-level append-only Postgres trigger + app DB user has no `UPDATE`/`DELETE` grant on `admin_audit_event`; `reason VARCHAR(500)` with regex sanitizer rejecting key-prefix patterns; audit insert in separate same-request transactions; HMAC chain-hash per row with nightly verification; co-admin required to read full audit log.
-
-7. **Catalog cache race on hot path.** Mitigation: Sync diff applies atomically in transaction with `SELECT ... FOR UPDATE` on small lock table (not catalog itself); `CuratedCatalogQueryService` reads `READ COMMITTED` with short Redis ETag cache; `MASTER_KEY_ROTATED` + `CATALOG_CHANGED` Modulith events evict per-tenant `ChatModel` cache.
-
----
-
-## Implications for Roadmap
-
-### Phase 8 — Admin Console Foundation
-
-**8A: Admin foundation (RBAC + AdminContext + audit primitive)**
-Rationale: Foundation; everything depends. Delivers: `user.is_admin` + Liquibase, `@EnableMethodSecurity`, `requestMatchers("/api/admin/**").hasRole("ADMIN")`, `AdminContext` ScopedValue mutex with `TenantContext`, `admin_audit_event` + `admin_read_event` with append-only trigger + HMAC chain hash, ArchUnit rules, `GroupedOpenApi` split, `(admin)` Next.js route group. Avoids: Pitfalls 1, 3, 6.
-
-**8B: Master-key management** (depends on 8A)
-Rationale: Catalog Sync (8D) needs master keys to call `/models`. Delivers: `llm_provider_master_key` reusing `RefreshTokenCipher`, `ProviderMasterKeyResolver` inside `llm.gateway.springai`, set/test/rotate UI with edit-session token + rate limit + error-body stripping, `MasterKeyRotatedEvent` → ChatModel cache eviction, sentinel-leak CI test. Avoids: Pitfall 2.
-
-**8C: Tenant read-only views** (depends on 8A — parallel with 8B)
-Rationale: Independent of catalog/master-keys. Delivers: Tenant list + 5-tab detail, pause/disconnect/delete actions, `AdminPathBodyBanTest`, `AdminResponseBodyBanFilter`. Avoids: Pitfalls 4, 5.
-
-**8D: Catalog management + Sync flow** (depends on 8B)
-Rationale: Sync calls `/models` with master key. Delivers: `provider_catalog` + `model_catalog` + `feature_binding`, 3-step Sync with JSON Schema validation, model-ID regex allow-list, soft-delete, Anthropic manual-only, `CuratedCatalogQueryService` + `GET /api/settings/catalog`. Avoids: Pitfalls 5, 7.
-
-**8E: Worker queue health** (depends on 8A — parallel with 8C/8D)
-Read-only aggregates over existing `outbox` + `processing_job`.
-
-**8F: Global LLM spend dashboard** (depends on 8A — parallel with 8C/8D/8E)
-Read aggregates over existing `llm_call_audit` (metadata-only).
-
-### Phase 9 — Settings UI on Curated Catalog
-
-**9A: Settings chrome + tab routing** (independent)
-shadcn `<Tabs>` on single `/settings/page.tsx` route (flat-folder rule: no `/settings/ai` sub-route), query-param-driven active tab.
-
-**9B: SET-VOICE + SET-BEHV + SET-SAFE** (parallel with 9A/9C)
-15 of 19 deferred v1.1 reqs. All independent of catalog/master-keys.
-
-**9C: SET-AI tab** (depends on 8B + 8D)
-Per-feature provider+model picker from `GET /api/settings/catalog`; BYOK cards reusing v1.0 `byok_credential`; use-BYOK toggle; cost display; reset-to-recommended; deprecation banner.
-
-### Research Flags
-
-Needs deeper research (`/gsd:plan-phase --research-phase`): **8B** (master keys), **8D** (catalog Sync), **9C** (SET-AI cost display + reset UX).
-Standard patterns (skip research): **8A**, **8C**, **8E**, **8F**, **9A**, **9B**.
-
----
-
-## Open Decisions for Roadmap
-
-### Decision 1: One-filter-chain RBAC vs two-cookie split
-
-- **Architecture** recommends single `SecurityConfig` chain + `@EnableMethodSecurity` + DB-backed `user.is_admin` + one cookie.
-- **Pitfalls (Pitfall 3)** argues two cookies (`zm_session` + `zm_admin_session`), two filter chains, separate `/admin/login` OAuth round-trip, `SameSite=Strict` on admin cookie, persistent admin-mode chrome bar.
-- **Recommendation:** Start single-cookie + `AdminContext` ScopedValue + ArchUnit "no `TenantContext` in admin packages" rule (90% of safety at 20% of code); revisit two-cookie if real CSRF/impersonation vector surfaces.
-- **Resolve in:** 8A planning.
-
-### Decision 2: First-admin bootstrap mechanism
-
-- Options: (a) Liquibase changeset (rejected — Pitfall 1 forever-admin), (b) env-var `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL` with idempotent guard, (c) CLI command.
-- **Recommendation:** (b) env-var. Document in Constraints.
-- **Resolve in:** 8A planning.
-
-### Decision 3: Audit retention
-
-- STACK suggests 90+ days; FEATURES says 90d write/30d read; PITFALLS implies indefinite for trust backstop.
-- **Recommendation:** Indefinite for `admin_audit_event`; 30 days for `admin_read_event`. Revisit at first compliance milestone.
-- **Resolve in:** 8A planning.
-
-### Decision 4: Chat-session inspection scope in OPS-TENANT
-
-- Question: zero chat surface, session metadata only, or metadata + redacted tool-output summaries?
-- **Recommendation:** Session metadata only (count, last activity, model selection). Disable "Show details" with tooltip "Chat content access requires tenant-bound support ticket grant (v1.3+)."
-- **Resolve in:** 8C planning.
-
-### Decision 5: Anthropic manual-only catalog seeding cadence
-
-- Anthropic has no public `/models` endpoint.
-- **Recommendation:** Hybrid — Liquibase data seed for initial Anthropic catalog (Claude 3.5 Sonnet/Haiku, Claude 3 Opus); manual admin entry for new models. Sync button disabled on Anthropic provider page with tooltip.
-- **Resolve in:** 8D planning.
-
----
-
-## Confidence Assessment
-
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Stack | **HIGH** | Zero new runtime deps; verified via Context7 `/springdoc/springdoc-openapi` + existing classpath. |
-| Features | **HIGH** (admin/audit/tenant) / **MEDIUM** (catalog UX) | RBAC + audit well-trodden; LiteLLM is closest curated-catalog peer. |
-| Architecture | **HIGH** | Follows shipped v1.0/v1.1 conventions (CONVENTIONS.md package layout). |
-| Pitfalls | **HIGH** | Well-documented patterns (CWE-522/532/798, NIST SP 800-57, OWASP A04/A09:2021). |
-
-**Overall confidence:** **HIGH** — proceed to roadmap. Five open decisions are resolvable inside 8A/8C/8D planning; none block roadmap shape.
-
----
-
-## Sources
-
-**Primary (HIGH):** Context7 `/springdoc/springdoc-openapi`; Spring Security 7.0.x reference; Spring Framework 7 reference; existing repo (`SecurityConfig.java`, `OpenApiConfig.java`, `generate-api.ts`, `apps/web/components/ui/**`, `gradle/libs.versions.toml`); internal docs (CLAUDE.md, CONVENTIONS.md, PROJECT.md, SEED-011); npm registry.
-
-**Secondary (MEDIUM):** Local Inbox Zero clone (rejected env-var allowlist pattern); WorkOS multi-tenant RBAC; Agnite Studio audit logging; Microsoft Learn multitenant identity; LiteLLM proxy admin UI (closest peer); PlanetScale Postgres queue; Neon `SKIP LOCKED`.
-
-**Tertiary (LOW):** Idee cross-tenant impersonation; Crypteron PCI rotation cadence; Ubiq Security key wrapping.
+**Gaps:** Phase 0 success criterion needs explicit pass gate (chat streaming smoke test on OpenRouter). Picker UX + `mailbox_calendar_preference` UX surface need design in Phase 1, not deferred to Phase 2. Operator dashboard for booking-abuse counts is a v1.4 ship requirement in Phase 3.
