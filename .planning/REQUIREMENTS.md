@@ -22,7 +22,8 @@
 
 - [ ] **INFRA-01**: A single source-of-truth OAuth scope ledger lives under version control; CI fails if any production code requests a Google OAuth scope that is not in the approved set, preventing accidental introduction of restricted scopes such as `drive`, `drive.readonly`, or full `calendar`.
 - [ ] **INFRA-02**: PROJECT.md privacy section enumerates three named ARCH-02 carve-outs side-by-side — (a) v1.1 chat-assistant draft body (user-authored, persistable), (b) v1.4 meeting-brief summary (assistant-authored narrative, persistable, source bodies never persisted), and (c) v1.0 triage (in-memory at process time only) — with the legal storage shape called out per carve-out.
-- [ ] **INFRA-03**: PROJECT.md and MILESTONES.md state explicitly that v1.4 does NOT close the formal GA gate; CASA scope-verification refresh window opens only once Gmail + Calendar + Drive scopes have been stable across a consecutive milestone after v1.4.
+
+> **CASA / GA-tag note (NOT a v1.4 requirement):** The formal GA tag + CASA scope-verification refresh are already explicitly deferred via PROJECT.md "Explicitly deferred to v1.5+" and OPS-FUT-04; v1.4 inherits that deferral. No v1.4 requirement re-states this.
 
 > **Prerequisite (NOT a v1.4 requirement):** Spring AI 2.0.0 GA migration (from the v1.3 baseline pin of 2.0.0-M6, plus evaluation of new GA features such as the tool-callback search tool) is treated as **pre-v1.4 work** and handled outside this milestone via a separate discuss-then-quick-task effort. v1.4 phases assume Spring AI GA is already live before Phase 12 starts.
 
@@ -148,8 +149,68 @@
 
 ## Traceability
 
-To be filled by roadmap phase (see `.planning/ROADMAP.md`).
+Phase mapping rewritten by `gsd-roadmapper` on 2026-06-17 after the v1.4 roadmap was re-decomposed from 8 horizontal phases into **5 feature-driven phases (12-16)**, each shipping one top-level user-visible Co-Pilot capability end-to-end. INFRA-03 was removed from REQUIREMENTS.md because CASA / GA-tag deferral is already documented in PROJECT.md "Explicitly deferred to v1.5+" and OPS-FUT-04 — no v1.4 requirement should restate it. Each v1.4 requirement maps to exactly one phase in `.planning/ROADMAP.md`.
 
 | REQ-ID | Phase |
 |--------|-------|
-| (filled by gsd-roadmapper) | — |
+| INFRA-01 | Phase 12 |
+| INFRA-02 | Phase 16 |
+| CAL-CONN-01 | Phase 12 |
+| CAL-CONN-02 | Phase 12 |
+| CAL-CONN-03 | Phase 12 |
+| CAL-CONN-04 | Phase 12 |
+| CAL-CONN-05 | Phase 12 |
+| CAL-CONN-06 | Phase 12 |
+| CAL-CONN-07 | Phase 12 |
+| CAL-CONN-08 | Phase 12 |
+| CAL-TRIAGE-01 | Phase 12 |
+| CAL-TRIAGE-02 | Phase 12 |
+| CAL-TRIAGE-03 | Phase 12 |
+| CAL-TRIAGE-04 | Phase 12 |
+| CAL-AVAIL-01 | Phase 13 |
+| CAL-AVAIL-02 | Phase 13 |
+| CAL-AVAIL-03 | Phase 13 |
+| CAL-AVAIL-04 | Phase 13 |
+| CAL-AVAIL-05 | Phase 13 |
+| CAL-AVAIL-06 | Phase 13 |
+| CAL-RULE-01 | Phase 13 |
+| CAL-RULE-02 | Phase 13 |
+| CAL-RULE-03 | Phase 13 |
+| CAL-RULE-04 | Phase 13 |
+| CAL-BOOK-01 | Phase 14 |
+| CAL-BOOK-02 | Phase 14 |
+| CAL-BOOK-03 | Phase 14 |
+| CAL-BOOK-04 | Phase 14 |
+| CAL-BOOK-05 | Phase 14 |
+| CAL-BOOK-06 | Phase 14 |
+| CAL-BOOK-07 | Phase 14 |
+| CAL-BOOK-08 | Phase 14 |
+| CAL-BOOK-09 | Phase 14 |
+| DRV-CONN-01 | Phase 15 |
+| DRV-CONN-02 | Phase 15 |
+| DRV-CONN-03 | Phase 15 |
+| DRV-CONN-04 | Phase 15 |
+| DRV-CONN-05 | Phase 15 |
+| DRV-FILE-01 | Phase 15 |
+| DRV-FILE-02 | Phase 15 |
+| DRV-FILE-03 | Phase 15 |
+| DRV-FILE-04 | Phase 15 |
+| DRV-FILE-05 | Phase 15 |
+| DRV-FILE-06 | Phase 15 |
+| DRV-FILE-07 | Phase 15 |
+| DRV-FILE-08 | Phase 15 |
+| DRV-FILE-09 | Phase 15 |
+| DRV-ATCH-01 | Phase 15 |
+| DRV-ATCH-02 | Phase 15 |
+| DRV-ATCH-03 | Phase 15 |
+| DRV-ATCH-04 | Phase 15 |
+| CAL-BRIEF-01 | Phase 16 |
+| CAL-BRIEF-02 | Phase 16 |
+| CAL-BRIEF-03 | Phase 16 |
+| CAL-BRIEF-04 | Phase 16 |
+| CAL-BRIEF-05 | Phase 16 |
+| CAL-BRIEF-06 | Phase 16 |
+| CAL-BRIEF-07 | Phase 16 |
+| CAL-BRIEF-08 | Phase 16 |
+
+**Coverage:** 59/59 v1.4 requirements mapped (1 INFRA-01 + 8 CAL-CONN + 4 CAL-TRIAGE + 6 CAL-AVAIL + 4 CAL-RULE + 9 CAL-BOOK + 5 DRV-CONN + 9 DRV-FILE + 4 DRV-ATCH + 1 INFRA-02 + 8 CAL-BRIEF). No orphans, no duplicates. Per-phase totals: Phase 12 = 13, Phase 13 = 10, Phase 14 = 9, Phase 15 = 18, Phase 16 = 9 (sum = 59).

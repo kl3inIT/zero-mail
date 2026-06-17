@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Calendar Co-Pilot + Drive Filing
 status: planning
-last_updated: "2026-06-17T02:16:23.305Z"
+last_updated: "2026-06-17T04:00:00.000Z"
 last_activity: 2026-06-17
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,27 +20,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** Planning next milestone (v1.3 shipped 2026-06-16; start via `/gsd-new-milestone`).
+**Current focus:** v1.4 Calendar Co-Pilot + Drive Filing — roadmap re-decomposed 2026-06-17 into 5 feature-driven phases (12-16; 59/59 requirements mapped after INFRA-03 deletion). Begin Phase 12 via `/gsd-plan-phase 12`.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 12 — Calendar Connection + Triage Foundation (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-17 — Milestone v1.4 started
+Status: Roadmap drafted (5-phase feature-driven decomposition); ready for `/gsd-plan-phase 12`
+Last activity: 2026-06-17 — v1.4 ROADMAP.md rewritten as 5 feature-pack phases (12 Calendar Connection + Triage / 13 Calendar Intelligence / 14 Booking Links / 15 Drive Integration / 16 Meeting Briefs); REQUIREMENTS.md traceability rewritten (59/59 mapped); INFRA-03 deletion absorbed (CASA/GA-tag deferral already covered by PROJECT.md "Explicitly deferred to v1.5+" + OPS-FUT-04).
 
 ## Current Milestone Roadmap
 
-**v1.3 — Gmail Workspace Foundation** shipped 2026-06-16. Phases 10-11 complete, 43/43 requirements complete, live-verified via 11-UAT (10/10, two real Gmail mailboxes).
+**v1.4 — Calendar Co-Pilot + Drive Filing** in progress (started 2026-06-17; re-decomposed 2026-06-17). 5 phases (12-16), 59/59 requirements mapped, 0/0 plans (TBD per phase).
 
-Scope delivered: production multi-Gmail connection management, workspace-shared credits/provider/safety settings, mailbox-isolated inbox/rules/triage/audit/outbound execution, and workspace-ready foundations from SEED-005 without full team collaboration.
+Scope to deliver, organized as **5 feature packs** (one user-visible Co-Pilot capability per phase): multi-Google-Calendar incremental OAuth + calendar-aware triage; AI free/busy in draft replies + chat tool + autonomous `propose_meeting` rule action; public Calendly-style booking links + sessionless `@Order(40)` filter chain; one workspace-shared Google Drive connection on minimal `drive.file` scope + AI document auto-filing engine + Mode A static-pin attachment-source rules (largest phase by design); cron-driven AI meeting briefs with agentic loop + `BeanOutputConverter` + 3rd ARCH-02 carve-out + premium credit cap + BYOK USD cap + email-only delivery via Resend. Privacy posture preserved: attachment bytes never persisted; meeting-brief summary becomes the third explicit ARCH-02 carve-out.
 
-Archived: `.planning/milestones/v1.3-ROADMAP.md` + `.planning/milestones/v1.3-REQUIREMENTS.md`. Full framing in `.planning/PROJECT.md`. Next milestone scope is defined via `/gsd-new-milestone`.
+Reference: `.planning/ROADMAP.md` + `.planning/REQUIREMENTS.md` + `.planning/research/SUMMARY.md`. Spring AI 2.0.0 M6 → GA migration was confirmed a no-op via pre-v1.4 audit (`.planning/research/SPRING-AI-2.0-MIGRATION.md`) and is NOT a v1.4 phase.
 
 | Phase | Status | Goal |
 |-------|--------|------|
-| 10. Gmail Mailbox Foundation and Account Management | Complete | Convert one-Gmail-per-tenant into workspace-owned multi-Gmail mailbox model with shared workspace settings and isolated mailbox state. |
-| 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | Complete | Route ingestion/projection/rules/outbound/audit through active mailbox scope and surface fast mailbox switching in the app. |
+| 12. Calendar Connection + Triage Foundation | Not started | Connect Google Calendars on minimal scopes (incremental OAuth + per-mailbox preference) and pin Gmail invites/cancellations top-of-inbox guarded against destructive rules — no AI dependency. OAuth scope ledger introduced here protects every later phase. |
+| 13. Calendar Intelligence — AI Availability + propose_meeting Rule Action | Not started | Single-call-site `CalendarReadGateway` + `UnifiedAvailabilityService` 3-5 slots in AI draft replies and chat tool + autonomous two-stage `propose_meeting` rule action that inherits every v1.2 outbound gate unchanged. |
+| 14. Booking Links + Public Booking Page | Not started | One personal Calendly-style booking link on a sessionless `@Order(40)` chain with hCaptcha + idempotency + multi-bucket rate caps + DB-UNIQUE slot prevention + separate `CalendarOutboundGateway` for event writes. |
+| 15. Google Drive Integration — Connection + Filing Engine + Attachment-Source Rules | Not started | **(Largest phase — Drive ships as one feature pack by design.)** Drive OAuth on `drive.file` only + Picker UX + in-memory streaming filing engine with metadata-only AI analysis + `AttachmentBytesNotPersistedRule` ArchUnit composite + Mode A static-pin attachment-source rules through existing Gmail `OutboundSendGateway`. |
+| 16. AI Meeting Briefs — Cron + Agentic Loop | Not started | ShedLock cron + `DefaultToolCallingManager` agentic loop with per-iteration budget checks + `BeanOutputConverter` structured output; `meeting_brief.summary_text` is the third ARCH-02 carve-out; email-only delivery via Resend; premium credit cap + BYOK USD cap. |
 
 ## Performance Metrics
 
