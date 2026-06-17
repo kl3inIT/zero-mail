@@ -75,7 +75,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Gradle Node plugin** for the Next.js build (slow, fights Turborepo cache).
 - **Kafka / RabbitMQ in v1** (Pub/Sub + Postgres `SKIP LOCKED`).
 - **Stateless JWT user sessions** (cookie + Redis-backed Spring Session).
-- **Embedding store / vector DB in v1** (privacy constraint forbids embeddings of user mail).
+- **Embedding store / vector DB in v1** (privacy constraint forbids embeddings of **user mail / attachment content / chat-extracted email body**). Embeddings of dev-authored static text (e.g., tool descriptions for a Spring AI Tool-Search-Tool index, prompt templates, doc snippets) are NOT covered by this ban — they touch no user data. If/when such a feature is adopted, the `VectorStore` bean must be scoped exclusively to static dev content and ArchUnit-guarded against ingesting tenant-derived fields.
 
 <!-- GSD:stack-end -->
 
