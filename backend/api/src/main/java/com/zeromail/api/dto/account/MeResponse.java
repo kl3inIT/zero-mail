@@ -43,6 +43,7 @@ public record MeResponse(
 
     public static MeResponse from(
             CurrentUserProjection user,
+            String email,
             boolean triagePaused,
             GmailConnectionStatusExtended gmailStatus,
             String displayName,
@@ -50,7 +51,7 @@ public record MeResponse(
         return new MeResponse(
                 user.userId().toString(),
                 user.tenantId().toString(),
-                user.email(),
+                email,
                 user.onboardingStep(),
                 user.preferredLanguage(),
                 triagePaused,
@@ -62,11 +63,22 @@ public record MeResponse(
     public static MeResponse from(
             CurrentUserProjection user,
             boolean triagePaused,
+            GmailConnectionStatusExtended gmailStatus,
+            String displayName,
+            String avatarUrl) {
+        return from(user, user.email(), triagePaused, gmailStatus, displayName, avatarUrl);
+    }
+
+    public static MeResponse from(
+            CurrentUserProjection user,
+            String email,
+            boolean triagePaused,
             GmailConnectionProjection gmailConnection,
             String displayName,
             String avatarUrl) {
         return from(
                 user,
+                email,
                 triagePaused,
                 new GmailConnectionStatusExtended(
                         gmailConnection.status(),
@@ -74,5 +86,14 @@ public record MeResponse(
                         gmailConnection.googleEmail()),
                 displayName,
                 avatarUrl);
+    }
+
+    public static MeResponse from(
+            CurrentUserProjection user,
+            boolean triagePaused,
+            GmailConnectionProjection gmailConnection,
+            String displayName,
+            String avatarUrl) {
+        return from(user, user.email(), triagePaused, gmailConnection, displayName, avatarUrl);
     }
 }

@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 130-gmail-connection-profile
+      author: codex
+      changes:
+        - addColumn:
+            tableName: gmail_connections
+            columns:
+              - column:
+                  name: google_profile_name
+                  type: varchar(255)
+              - column:
+                  name: google_profile_picture_url
+                  type: text
+      rollback:
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: google_profile_picture_url
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: google_profile_name

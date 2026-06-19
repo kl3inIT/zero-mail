@@ -9,8 +9,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,6 +47,8 @@ public class TestSessionSupport {
 
     public static final String HEADER_SUBJECT = "X-Test-Subject";
     public static final String HEADER_EMAIL = "X-Test-Email";
+    public static final String HEADER_NAME = "X-Test-Name";
+    public static final String HEADER_PICTURE = "X-Test-Picture";
 
     public interface TestSessionMinter {
         /**
@@ -88,7 +90,17 @@ public class TestSessionSupport {
                     chain.doFilter(req, res);
                     return;
                 }
-                var claims = Map.<String, Object>of("sub", subject, "email", email);
+                var claims = new HashMap<String, Object>();
+                claims.put("sub", subject);
+                claims.put("email", email);
+                String name = req.getHeader(HEADER_NAME);
+                if (name != null) {
+                    claims.put("name", name);
+                }
+                String picture = req.getHeader(HEADER_PICTURE);
+                if (picture != null) {
+                    claims.put("picture", picture);
+                }
                 var idToken =
                         new OidcIdToken(
                                 "test-id-token-" + subject,

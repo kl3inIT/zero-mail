@@ -150,6 +150,8 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 Objects.requireNonNull(
                         oidcUser.getClaimAsString(StandardClaimNames.EMAIL),
                         "OIDC email is required");
+        String profileDisplayName = profileDisplayNameOf(oidcUser);
+        String profilePictureUrl = profilePictureUrlOf(oidcUser);
 
         // Load the authorized client once (all checks reuse this single load).
         OAuth2AuthorizedClient authorizedClient =
@@ -231,7 +233,12 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                         tenantId,
                         () ->
                                 gmailConnectionService.addConnection(
-                                        tenantId, email, gmailScopes, managementRefreshToken));
+                                        tenantId,
+                                        email,
+                                        gmailScopes,
+                                        managementRefreshToken,
+                                        profileDisplayName,
+                                        profilePictureUrl));
             } catch (DuplicateActiveMailboxException duplicateActiveMailbox) {
                 // The selected Google account is already CONNECTED. Translate the domain exception
                 // into an
@@ -282,7 +289,9 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                                         tenantId,
                                         targetMailboxId,
                                         gmailScopes,
-                                        managementRefreshToken));
+                                        managementRefreshToken,
+                                        profileDisplayName,
+                                        profilePictureUrl));
             } catch (DuplicateActiveMailboxException duplicateActiveMailbox) {
                 // Another active mailbox already owns this email (the disconnected target freed the
                 // partial-unique slot and an add re-used the address). Route to the failure handler
@@ -304,7 +313,12 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         // (e) Single delegation to atomic provisioning service.
         BundledProvisioningResult provisioningResult =
                 provisioningService.provisionBundledOAuth(
-                        googleSubject, email, refreshToken, gmailScopes);
+                        googleSubject,
+                        email,
+                        refreshToken,
+                        gmailScopes,
+                        profileDisplayName,
+                        profilePictureUrl);
 
         Instant loginAt = clock.instant();
         TenantActivityRequestContext requestContext = TenantActivityRequestMetadata.from(request);
@@ -490,5 +504,29 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         return locale != null && locale.toLowerCase(java.util.Locale.ROOT).startsWith("en")
                 ? "en"
                 : "vi";
+    }
+
+    private static String profileDisplayNameOf(OidcUser oidcUser) {
+        String fullName = clean(oidcUser.getFullName());
+        if (fullName != null) {
+            return fullName;
+        }
+        return clean(oidcUser.getClaimAsString(StandardClaimNames.NAME));
+    }
+
+    private static String profilePictureUrlOf(OidcUser oidcUser) {
+        String picture = clean(oidcUser.getPicture());
+        if (picture != null) {
+            return picture;
+        }
+        return clean(oidcUser.getClaimAsString(StandardClaimNames.PICTURE));
+    }
+
+    private static String clean(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
