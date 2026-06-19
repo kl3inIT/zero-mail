@@ -144,13 +144,6 @@ export function InboxPageClient() {
     canWarmUpInboxInBackground &&
     inboxQuery.isFetchingNextPage &&
     messages.length < INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT;
-  const inboxCountCaption = locale.startsWith('vi')
-    ? isInboxBackgroundWarmupActive
-      ? `\u0110ang t\u1ea3i... \u0110\u00e3 t\u1ea3i ${messages.length} email`
-      : `\u0110\u00e3 t\u1ea3i ${messages.length} email`
-    : isInboxBackgroundWarmupActive
-      ? `Loading... ${messages.length} loaded`
-      : `${messages.length} loaded`;
   const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
   // Wave 1 fallback observability — quietly log when the projection couldn't satisfy the page so
   // ops can correlate FE behaviour with the backend `event=inbox_read_fallback` log line.
@@ -297,9 +290,6 @@ export function InboxPageClient() {
                 <span className="text-sm font-medium">{t('nav.inbox')}</span>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  {inboxCountCaption}
-                </span>
                 <Button
                   type="button"
                   variant="ghost"

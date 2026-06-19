@@ -131,7 +131,9 @@ function planLabel(planCode: string): string {
 }
 
 function mailboxDisplayName(mailbox: MailboxSummary): string {
-  return mailbox.displayPurpose?.trim() || mailbox.googleEmail;
+  return (
+    mailbox.profileDisplayName?.trim() || mailbox.displayPurpose?.trim() || mailbox.googleEmail
+  );
 }
 
 // Gmail-style account avatars: a circular tinted initial per address. Colors are drawn from the
@@ -178,15 +180,13 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
   const activeMailbox = useActiveMailbox();
   const setActiveMailbox = useSetActiveMailbox();
   const logout = useLogout();
-  const email =
-    currentUser.data?.gmailConnectionStatus?.googleEmail ?? currentUser.data?.email ?? '';
+  const signedInEmail = currentUser.data?.email ?? '';
   // Prefer the real Google profile name (read transiently from the OAuth session,
   // never persisted); fall back to the email local-part, then a generic label.
-  const displayName =
+  const signedInDisplayName =
     currentUser.data?.displayName?.trim() ||
-    (email ? email.split('@')[0] : t('shell.userMenu.label'));
+    (signedInEmail ? signedInEmail.split('@')[0] : t('shell.userMenu.label'));
   const avatarUrl = currentUser.data?.avatarUrl ?? undefined;
-  const initial = (displayName || email).charAt(0).toUpperCase() || '?';
   const currentPlanLabel = billingPlans.data?.currentPlanCode
     ? planLabel(billingPlans.data.currentPlanCode)
     : t('shell.userMenu.planLoading');
@@ -200,13 +200,20 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
   );
   // The dropdown header reflects the mailbox you are CURRENTLY using (active-mailbox endpoint),
   // not the login identity. Falls back to the signed-in user only while it is still loading.
-  const headerTitle = activeMailboxData
-    ? activeMailboxData.displayPurpose?.trim() || activeMailboxData.email
-    : displayName;
-  const headerEmail = activeMailboxData?.email ?? (email || null);
-  const headerSubtitle = headerEmail && headerEmail !== headerTitle ? headerEmail : null;
-  const headerInitial = (headerTitle || headerEmail || '?').charAt(0).toUpperCase();
-  const headerAvatarColor = activeMailboxData
+  const activeAccountTitle = activeMailboxData
+    ? activeMailboxData.profileDisplayName?.trim() ||
+      activeMailboxData.displayPurpose?.trim() ||
+      activeMailboxData.email
+    : signedInDisplayName;
+  const activeAccountEmail = activeMailboxData?.email ?? (signedInEmail || null);
+  const activeAccountSubtitle =
+    activeAccountEmail && activeAccountEmail !== activeAccountTitle ? activeAccountEmail : null;
+  const activeAccountInitial =
+    (activeAccountTitle || activeAccountEmail || '?').charAt(0).toUpperCase() || '?';
+  const activeAccountAvatarUrl = activeMailboxData
+    ? (activeMailboxData.profilePictureUrl ?? undefined)
+    : avatarUrl;
+  const activeAccountAvatarColor = activeMailboxData
     ? mailboxAvatarColor(activeMailboxData.email)
     : 'bg-primary';
   const triggerClassName = cn(
@@ -227,16 +234,20 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
         }
       >
         <Avatar className={collapsed ? 'size-9' : 'size-10'}>
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt="" referrerPolicy="no-referrer" /> : null}
-          <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-            {initial}
+          {activeAccountAvatarUrl ? (
+            <AvatarImage src={activeAccountAvatarUrl} alt="" referrerPolicy="no-referrer" />
+          ) : null}
+          <AvatarFallback
+            className={cn(activeAccountAvatarColor, 'text-primary-foreground font-semibold')}
+          >
+            {activeAccountInitial}
           </AvatarFallback>
         </Avatar>
         {!collapsed && (
           <>
             <div className="min-w-0 flex-1">
-              <p className="text-sidebar-foreground truncate text-sm font-semibold capitalize">
-                {displayName}
+              <p className="text-sidebar-foreground truncate text-sm font-semibold">
+                {activeAccountTitle}
               </p>
               <p className="text-sidebar-foreground/60 truncate text-xs">{currentPlanLabel}</p>
             </div>
@@ -252,15 +263,21 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
           <DropdownMenuLabel className="font-normal" data-testid="active-mailbox-header">
             <div className="flex items-center gap-3">
               <Avatar className="ring-primary ring-offset-popover size-10 ring-2 ring-offset-2">
+                {activeAccountAvatarUrl ? (
+                  <AvatarImage src={activeAccountAvatarUrl} alt="" referrerPolicy="no-referrer" />
+                ) : null}
                 <AvatarFallback
-                  className={cn(headerAvatarColor, 'text-primary-foreground text-sm font-semibold')}
+                  className={cn(
+                    activeAccountAvatarColor,
+                    'text-primary-foreground text-sm font-semibold',
+                  )}
                 >
-                  {headerInitial}
+                  {activeAccountInitial}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <p className="min-w-0 truncate text-sm font-semibold">{headerTitle}</p>
+                  <p className="min-w-0 truncate text-sm font-semibold">{activeAccountTitle}</p>
                   <Check
                     className="text-primary size-3.5 shrink-0"
                     aria-label={t('shell.accounts.active')}
@@ -272,8 +289,8 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
                     </span>
                   )}
                 </div>
-                {headerSubtitle && (
-                  <p className="text-muted-foreground truncate text-xs">{headerSubtitle}</p>
+                {activeAccountSubtitle && (
+                  <p className="text-muted-foreground truncate text-xs">{activeAccountSubtitle}</p>
                 )}
                 <p className="text-muted-foreground truncate text-xs">{currentPlanLabel}</p>
               </div>
@@ -294,6 +311,13 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
               className="items-center gap-3 py-2"
             >
               <Avatar className="size-9">
+                {mailbox.profilePictureUrl ? (
+                  <AvatarImage
+                    src={mailbox.profilePictureUrl}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                  />
+                ) : null}
                 <AvatarFallback
                   className={cn(
                     mailboxAvatarColor(mailbox.googleEmail),

@@ -138,7 +138,7 @@ export function SettingsClient({
                 </Avatar>
                 <div className="min-w-0">
                   {accountDisplayName ? (
-                    <p className="text-foreground truncate text-sm font-medium capitalize">
+                    <p className="text-foreground truncate text-sm font-medium">
                       {accountDisplayName}
                     </p>
                   ) : null}
