@@ -61,7 +61,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useChat } from '@/features/chat/hooks/use-chat';
-import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
 import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
 import { EmailHtmlFrame, PlainEmailContent } from '@/features/inbox/components/EmailHtmlFrame';
 import { PreviewCard } from '@/features/chat/components/preview-card/preview-card';
@@ -290,6 +289,11 @@ export function InboxPageClient() {
                 <span className="text-sm font-medium">{t('nav.inbox')}</span>
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                <InboxLoadStatus
+                  count={messages.length}
+                  loading={isInboxBackgroundWarmupActive}
+                  locale={locale}
+                />
                 <Button
                   type="button"
                   variant="ghost"
@@ -338,7 +342,9 @@ export function InboxPageClient() {
                 onClear={clearLabelFilter}
               />
             </div>
-            <InboxReadStateFilter locale={locale} value={readFilter} onChange={setReadFilter} />
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <InboxReadStateFilter locale={locale} value={readFilter} onChange={setReadFilter} />
+            </div>
           </div>
           <InboxMessageList
             isPending={inboxQuery.isPending}
@@ -1480,9 +1486,6 @@ function InboxReplyComposer({
     >
       {previewSubmitted ? null : (
         <div className="bg-card overflow-hidden">
-          <div className="border-border border-b px-3 py-2">
-            <ActiveMailboxBadge className="max-w-full" />
-          </div>
           <div className="flex items-center gap-2 px-3 py-2">
             <span className="text-muted-foreground w-12 shrink-0 text-sm">
               {t('inbox.composer.to')}
@@ -2539,7 +2542,7 @@ function InboxReadStateFilter({
 
   return (
     <div
-      className="border-border bg-background mt-2 inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
+      className="border-border bg-background inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
       role="group"
       aria-label={isVietnamese ? 'Lọc trạng thái đọc' : 'Filter read state'}
       data-testid="inbox-read-state-filter"
@@ -2564,6 +2567,39 @@ function InboxReadStateFilter({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function InboxLoadStatus({
+  count,
+  loading,
+  locale,
+}: {
+  count: number;
+  loading: boolean;
+  locale: string;
+}) {
+  if (count === 0 && !loading) {
+    return null;
+  }
+  const isVietnamese = locale.startsWith('vi');
+  const formattedCount = new Intl.NumberFormat(locale).format(count);
+  const label = isVietnamese ? `${formattedCount} email` : `${formattedCount} emails`;
+  const ariaLabel = loading
+    ? isVietnamese
+      ? `Dang tai them email, ${label}`
+      : `Loading more email, ${label}`
+    : label;
+
+  return (
+    <div
+      className="border-border bg-muted/30 text-muted-foreground inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium tabular-nums"
+      aria-label={ariaLabel}
+      data-testid="inbox-load-status"
+    >
+      {loading ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
+      <span>{label}</span>
     </div>
   );
 }
