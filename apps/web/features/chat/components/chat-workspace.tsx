@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquarePlus, PanelLeftOpen } from 'lucide-react';
+import { MessageSquarePlus, PanelRightOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -42,17 +42,9 @@ export function ChatWorkspace() {
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
-      {!sidebarCollapsed && (
-        <HistorySidebar
-          activeChatId={queryChatId}
-          onSelectChat={handleSelectChat}
-          onNewChat={handleNewChat}
-          onCollapse={() => setSidebarCollapsed(true)}
-        />
-      )}
       <div className="flex min-w-0 flex-1 flex-col">
         {sidebarCollapsed && (
-          <div className="flex items-center gap-1 px-2 pt-2 md:px-3">
+          <div className="flex items-center justify-end gap-1 px-2 pt-2 md:px-3">
             <Button
               size="icon-sm"
               type="button"
@@ -60,7 +52,7 @@ export function ChatWorkspace() {
               onClick={() => setSidebarCollapsed(false)}
               aria-label={t('title')}
             >
-              <PanelLeftOpen className="size-4" />
+              <PanelRightOpen className="size-4" />
             </Button>
             <Button
               size="icon-sm"
@@ -81,6 +73,14 @@ export function ChatWorkspace() {
           onChatStarted={handleChatStarted}
         />
       </div>
+      {!sidebarCollapsed && (
+        <HistorySidebar
+          activeChatId={queryChatId}
+          onSelectChat={handleSelectChat}
+          onNewChat={handleNewChat}
+          onCollapse={() => setSidebarCollapsed(true)}
+        />
+      )}
     </div>
   );
 }

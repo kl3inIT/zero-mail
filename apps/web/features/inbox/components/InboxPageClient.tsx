@@ -295,7 +295,6 @@ export function InboxPageClient() {
                   <Inbox className="text-muted-foreground size-5" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-medium">{t('nav.inbox')}</span>
-                <ActiveMailboxBadge className="hidden max-w-56 sm:inline-flex" />
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-muted-foreground text-xs whitespace-nowrap">

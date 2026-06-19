@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquarePlus, MoreHorizontal, PanelLeftClose, Trash2 } from 'lucide-react';
+import { MessageSquarePlus, MoreHorizontal, PanelRightClose, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ export function HistorySidebar({
   const deleteChat = useSoftDeleteChat();
 
   return (
-    <aside className="bg-secondary/50 border-border hidden w-[260px] shrink-0 flex-col border-r md:flex">
+    <aside className="bg-secondary/50 border-border hidden w-[260px] shrink-0 flex-col border-l md:flex">
       <div className="border-border flex items-center justify-between gap-2 border-b p-4">
         <h2 className="text-[17px] font-semibold">{t('title')}</h2>
         <div className="flex items-center gap-1">
@@ -64,7 +64,7 @@ export function HistorySidebar({
               onClick={onCollapse}
               aria-label={t('collapse')}
             >
-              <PanelLeftClose className="size-4" />
+              <PanelRightClose className="size-4" />
             </Button>
           )}
         </div>

@@ -15,7 +15,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
 import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
 import { cn } from '@/lib/utils';
 import { ErrorCode } from '@/lib/api/error-codes';
@@ -480,7 +479,6 @@ export function RulesWorkspace() {
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{t('rules.page.title')}</h1>
-          <ActiveMailboxBadge />
         </div>
         <p className="text-muted-foreground text-sm">{t('rules.page.intro')}</p>
       </header>

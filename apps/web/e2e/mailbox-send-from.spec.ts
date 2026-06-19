@@ -10,7 +10,7 @@ test.describe('mailbox send-from provenance', () => {
     await page.setViewportSize({ width: 1280, height: 820 });
     await openMailboxRoute(page, '/needs-reply', state);
 
-    await expect(page.getByTestId('active-mailbox-scope').first()).toContainText('Support Gmail');
+    await expect(page.getByTestId('active-mailbox-scope')).toHaveCount(0);
     await page.getByTestId('needs-reply-row').first().click();
 
     const reader = page.getByTestId('needs-reply-reader');
@@ -27,7 +27,7 @@ test.describe('mailbox send-from provenance', () => {
 
     await page.goto('/rules?tab=history', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('load');
-    await expect(page.getByTestId('active-mailbox-scope').first()).toContainText('Support Gmail');
+    await expect(page.getByTestId('active-mailbox-scope')).toHaveCount(0);
     await expect(page.getByTestId('audit-mailbox-provenance')).toContainText(
       'Source: support@example.com',
     );
