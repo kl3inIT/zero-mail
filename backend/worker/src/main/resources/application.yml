@@ -64,6 +64,15 @@ spring:
     retry:
       max-attempts: 2
 zero-mail:
+  admin:
+    audit:
+      # The worker runs AdminAuditChainVerifyJob (@Scheduled 02:00 daily), which needs the
+      # admin-audit HMAC KEK to recompute the audit chain. The env var is supplied to the worker
+      # container, but unlike backend/api this module previously had no binding for it, so
+      # AdminProperties.audit.hmacKekBase64 stayed empty and the job failed every night with
+      # "zero-mail.admin.audit.hmac-kek-base64 must be configured". Bind it here (convention #9:
+      # each runnable module owns its own config values). Mirrors backend/api application.yml.
+      hmac-kek-base64: ${ZEROMAIL_ADMIN_AUDIT_HMAC_KEK_BASE64:}
   worker:
     gmail:
       pubsub:
