@@ -395,3 +395,6 @@ databaseChangeLog:
   - include:
       file: changes/134-inbox-projection-calendar-columns.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/135-calendar-tables-version-column.yaml
+      relativeToChangelogFile: true

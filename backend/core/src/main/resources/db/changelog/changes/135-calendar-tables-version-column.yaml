@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: 135-calendar-tables-version-column
+      author: zeromail
+      comment: >
+        Phase 12 W1 — adds the optimistic-lock `version` column to `calendars` and
+        `mailbox_calendar_preferences`. The W0 changesets 132 and 133 created both tables
+        with `created_at` + `updated_at` but omitted `version`, so Hibernate 7's
+        `ddl-auto: validate` boot check fails with "missing column [version]" when the
+        new JPA entities (W1) extend `AbstractTenantOwnedEntity` → `AbstractAuditableEntity`
+        which carries `@Version`. Rolling forward here per CONVENTIONS.md §10 instead of
+        editing the applied W0 changesets.
+
+        `calendar_connections` (changeset 131) already shipped the column — no edit needed.
+      changes:
+        - addColumn:
+            tableName: calendars
+            columns:
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: mailbox_calendar_preferences
+            columns:
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: mailbox_calendar_preferences
+            columnName: version
+        - dropColumn:
+            tableName: calendars
+            columnName: version
