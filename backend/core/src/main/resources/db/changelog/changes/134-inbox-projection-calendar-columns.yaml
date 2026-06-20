@@ -1,0 +1,39 @@
+databaseChangeLog:
+  - changeSet:
+      id: 134-inbox-projection-calendar-columns
+      author: zeromail
+      comment: >
+        Phase 12 W0 — extend gmail_inbox_projection with the two metadata columns the W4 calendar
+        classifier writes (D-11): message_class varchar(16) stores the IdentifiedEnum id
+        (INVITE / CANCEL / RESCHEDULE / RSVP); event_dt timestamptz stores the iCal DTSTART.
+        Both are nullable — NULL correctly means "not a calendar message" everywhere downstream
+        (no backfill required against the existing v1.3 projection rows; RESEARCH.md §Runtime
+        State Inventory confirms safety). Supporting partial index powers W4's pin-aware
+        ORDER BY (D-12) without scanning the non-calendar majority of the table.
+      changes:
+        - addColumn:
+            tableName: gmail_inbox_projection
+            columns:
+              - column:
+                  name: message_class
+                  type: varchar(16)
+              - column:
+                  name: event_dt
+                  type: timestamptz
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE INDEX idx_inbox_projection_calendar_pin
+                ON gmail_inbox_projection (tenant_id, gmail_connection_id, event_dt DESC)
+                WHERE message_class IS NOT NULL;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS idx_inbox_projection_calendar_pin;
+        - dropColumn:
+            tableName: gmail_inbox_projection
+            columnName: event_dt
+        - dropColumn:
+            tableName: gmail_inbox_projection
+            columnName: message_class

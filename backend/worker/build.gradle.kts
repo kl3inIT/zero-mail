@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.spring.ai.starter.model.google.genai)
     implementation(libs.spring.ai.starter.model.deepseek)
     implementation(libs.jtokkit)
+    implementation(libs.ical4j)
     implementation(libs.shedlock.provider.jdbc.template)
     implementation(libs.shedlock.spring)
     implementation(libs.resend.java)

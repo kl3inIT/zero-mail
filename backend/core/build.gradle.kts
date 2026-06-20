@@ -63,6 +63,7 @@ dependencies {
     api("org.springframework.security:spring-security-core")
     api("org.liquibase:liquibase-core:5.0.3")
     api(libs.google.api.services.gmail)
+    api(libs.google.api.services.calendar)
     api("net.logstash.logback:logstash-logback-encoder:9.0")
     implementation(platform(libs.spring.ai.bom))
     implementation(libs.spring.modulith.starter.jdbc)

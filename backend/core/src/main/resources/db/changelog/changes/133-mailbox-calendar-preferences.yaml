@@ -1,0 +1,87 @@
+databaseChangeLog:
+  - changeSet:
+      id: 133-mailbox-calendar-preferences
+      author: zeromail
+      comment: >
+        Phase 12 W0 — per-(mailbox, calendar, role) preference join. Roles per CAL-CONN-07 +
+        D-06 / D-07 + Q3 lock: FREEBUSY is multi-select per mailbox (a user can let multiple
+        calendars feed free/busy); EVENT_WRITE and BRIEF_SOURCE are single-select per mailbox
+        (one write destination, one brief source). Cardinality enforced at the DB layer via
+        per-role partial unique indexes (NOT a blanket uq on (mailbox_id, role) which would
+        block legitimate FREEBUSY multi-select).
+      changes:
+        - createTable:
+            tableName: mailbox_calendar_preferences
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints: { primaryKey: true, nullable: false }
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints: { nullable: false }
+              - column:
+                  name: mailbox_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_mcp_mailbox
+                    references: "gmail_connections(id)"
+                    deleteCascade: true
+              - column:
+                  name: calendar_connection_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_mcp_calendar_connection
+                    references: "calendar_connections(id)"
+                    deleteCascade: true
+              - column:
+                  name: calendar_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_mcp_calendar
+                    references: "calendars(id)"
+                    deleteCascade: true
+              - column:
+                  name: role
+                  type: varchar(32)
+                  constraints: { nullable: false }
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints: { nullable: false }
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints: { nullable: false }
+        - addUniqueConstraint:
+            tableName: mailbox_calendar_preferences
+            columnNames: mailbox_id, role, calendar_id
+            constraintName: uq_mailbox_role_calendar
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE UNIQUE INDEX uq_mailbox_event_write
+                ON mailbox_calendar_preferences (mailbox_id)
+                WHERE role = 'EVENT_WRITE';
+
+              CREATE UNIQUE INDEX uq_mailbox_brief_source
+                ON mailbox_calendar_preferences (mailbox_id)
+                WHERE role = 'BRIEF_SOURCE';
+
+              CREATE INDEX idx_mcp_mailbox_role
+                ON mailbox_calendar_preferences (mailbox_id, role);
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS idx_mcp_mailbox_role;
+              DROP INDEX IF EXISTS uq_mailbox_brief_source;
+              DROP INDEX IF EXISTS uq_mailbox_event_write;
+        - dropTable:
+            tableName: mailbox_calendar_preferences

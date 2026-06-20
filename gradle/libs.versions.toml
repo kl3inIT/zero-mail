@@ -9,6 +9,10 @@ archunit = "1.4.2"
 logstashLogback = "9.0"
 googleAuthLibrary = "1.48.0"
 gmailApi = "v1-rev20250331-2.0.0"
+# Probed Maven Central 2026-06-20 — latest dated rev on the v3 / -2.0.0 line.
+calendarApi = "v3-rev20260614-2.0.0"
+# Probed Maven Central 2026-06-20 — current GA on the 4.x line.
+ical4j = "4.2.5"
 testcontainers = "1.21.3"
 springdoc = "3.0.3"
 jsoup = "1.22.2"
@@ -40,6 +44,8 @@ jtokkit = { module = "com.knuddels:jtokkit", version.ref = "jtokkit" }
 google-re2j = { module = "com.google.re2j:re2j", version.ref = "re2j" }
 google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "googleAuthLibrary" }
 google-api-services-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "gmailApi" }
+google-api-services-calendar = { module = "com.google.apis:google-api-services-calendar", version.ref = "calendarApi" }
+ical4j = { module = "org.mnode.ical4j:ical4j", version.ref = "ical4j" }
 shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
 shedlock-spring = { module = "net.javacrumbs.shedlock:shedlock-spring", version.ref = "shedlock" }
 angus-mail = { module = "org.eclipse.angus:angus-mail", version.ref = "jakartaMail" }

@@ -383,3 +383,15 @@ databaseChangeLog:
   - include:
       file: changes/130-gmail-connection-profile.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/131-calendar-connections.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/132-calendars.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/133-mailbox-calendar-preferences.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/134-inbox-projection-calendar-columns.yaml
+      relativeToChangelogFile: true

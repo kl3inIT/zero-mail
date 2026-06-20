@@ -1,0 +1,69 @@
+databaseChangeLog:
+  - changeSet:
+      id: 132-calendars
+      author: zeromail
+      comment: >
+        Phase 12 W0 — per-connection sub-calendar rows (primary + secondary), one per item Google's
+        calendarList.list() returns at connect time. Composite uniqueness on
+        (calendar_connection_id, external_calendar_id) prevents duplicate ingest on snapshot
+        refresh. ON DELETE CASCADE from calendar_connections so disconnect cleans up everything.
+      changes:
+        - createTable:
+            tableName: calendars
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints: { primaryKey: true, nullable: false }
+              - column:
+                  name: calendar_connection_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_calendars_connection
+                    references: "calendar_connections(id)"
+                    deleteCascade: true
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints: { nullable: false }
+              - column:
+                  name: external_calendar_id
+                  type: text
+                  constraints: { nullable: false }
+              - column:
+                  name: name
+                  type: varchar(512)
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: is_primary
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints: { nullable: false }
+              - column:
+                  name: is_enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints: { nullable: false }
+              - column:
+                  name: timezone
+                  type: varchar(64)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints: { nullable: false }
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints: { nullable: false }
+        - addUniqueConstraint:
+            tableName: calendars
+            columnNames: calendar_connection_id, external_calendar_id
+            constraintName: uq_calendar_connection_external_id
+      rollback:
+        - dropTable:
+            tableName: calendars

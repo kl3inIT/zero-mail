@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 131-calendar-connections
+      author: zeromail
+      comment: >
+        Phase 12 W0 — workspace-shared Calendar connection table. Mirrors the gmail_connections
+        column shape minus polling state (no isPrimary, no watch fields, no ingestionHealth);
+        Calendar Phase 12 does not poll. CAL-CONN-06 invariant: NO gmail_connection_id column
+        (workspace-shared, NOT mailbox-isolated) — enforced by CalendarSchemaIsolationTest.
+      changes:
+        - createTable:
+            tableName: calendar_connections
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints: { primaryKey: true, nullable: false }
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints: { nullable: false }
+              - column:
+                  name: google_email
+                  type: varchar(320)
+                  constraints: { nullable: false }
+              - column:
+                  name: status
+                  type: varchar(32)
+                  constraints: { nullable: false }
+              - column:
+                  name: refresh_token_encrypted
+                  type: bytea
+              - column:
+                  name: scopes_granted
+                  type: text
+              - column:
+                  name: connected_at
+                  type: timestamptz
+              - column:
+                  name: disconnected_at
+                  type: timestamptz
+              - column:
+                  name: google_profile_name
+                  type: varchar(255)
+              - column:
+                  name: google_profile_picture_url
+                  type: text
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints: { nullable: false }
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints: { nullable: false }
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints: { nullable: false }
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE UNIQUE INDEX uq_calendar_conn_active_email
+                ON calendar_connections (tenant_id, lower(google_email))
+                WHERE status = 'CONNECTED';
+
+              CREATE INDEX idx_calendar_conn_status
+                ON calendar_connections (status);
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS idx_calendar_conn_status;
+              DROP INDEX IF EXISTS uq_calendar_conn_active_email;
+        - dropTable:
+            tableName: calendar_connections
