@@ -1,13 +1,11 @@
 'use client';
 
 import { Mail } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
 import { cn } from '@/lib/utils';
 
 export function ActiveMailboxBadge({ className }: { className?: string }) {
-  const t = useTranslations();
   const activeMailbox = useActiveMailbox();
   const mailbox = activeMailbox.data;
   if (!mailbox) return null;
@@ -23,7 +21,6 @@ export function ActiveMailboxBadge({ className }: { className?: string }) {
       data-testid="active-mailbox-scope"
     >
       <Mail className="size-3.5 shrink-0" aria-hidden="true" />
-      <span className="shrink-0 font-medium">{t('shell.accounts.active')}</span>
       <span className="text-foreground min-w-0 truncate">{label}</span>
     </div>
   );

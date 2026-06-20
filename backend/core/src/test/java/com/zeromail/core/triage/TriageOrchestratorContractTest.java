@@ -80,6 +80,21 @@ class TriageOrchestratorContractTest {
                 .contains("actionProposalMerger.merge");
     }
 
+    @Test
+    void terminal_mailbox_disconnect_is_abandoned_not_retried_forever() throws Exception {
+        // Regression guard for the 2026-06 OAuth-client-switch incident: a triage event whose
+        // source mailbox is permanently DISCONNECTED (MailboxDisconnectedException) or whose grant
+        // was revoked / issued by a mismatched client (InvalidGrantException) MUST be swallowed in
+        // the @ApplicationModuleListener so the Modulith publication COMPLETES. If it propagates it
+        // loops in TriageEventRetryJob until the attempt cap, then sits as a FAILED dead-letter
+        // forever (~1.2k events stranded this way before the fix). The catch lives in
+        // onMailMessageObserved around TenantContext.runWith and must record an abandon metric.
+        assertThat(orchestratorSource())
+                .contains("catch (MailboxDisconnectedException | InvalidGrantException")
+                .contains("triage.event.abandoned_mailbox_disconnected")
+                .contains("event=triage_event_abandoned_mailbox_disconnected");
+    }
+
     private static void assertFutureTypePresent(String futureTypeName) {
         assertThatCode(() -> Class.forName(futureTypeName))
                 .as("Future Phase 4 production type must exist: " + futureTypeName)

@@ -3540,6 +3540,88 @@
         }
       }
     },
+    "/api/referrals/campaigns/{campaignId}/end-if-expired": {
+      "post": {
+        "tags": ["referrals"],
+        "operationId": "endCampaignIfExpired",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/plan-upgrades/webhooks/sepay": {
       "post": {
         "tags": ["plan-upgrade-webhook-controller"],
@@ -10448,6 +10530,12 @@
           "displayPurpose": {
             "type": ["string", "null"]
           },
+          "profileDisplayName": {
+            "type": ["string", "null"]
+          },
+          "profilePictureUrl": {
+            "type": ["string", "null"]
+          },
           "status": {
             "type": "string"
           },
@@ -11414,10 +11502,10 @@
           "inline": {
             "type": "boolean"
           },
-          "attachment": {
+          "formData": {
             "type": "boolean"
           },
-          "formData": {
+          "attachment": {
             "type": "boolean"
           }
         }
@@ -11517,27 +11605,8 @@
             "type": "integer",
             "format": "int64"
           },
-          "ifNoneMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "contentLanguage": {
+          "origin": {
             "type": "string"
-          },
-          "contentDisposition": {
-            "$ref": "#/components/schemas/ContentDisposition"
-          },
-          "acceptCharset": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           },
           "range": {
             "type": "array",
@@ -11545,24 +11614,72 @@
               "$ref": "#/components/schemas/HttpRange"
             }
           },
+          "acceptCharset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contentDisposition": {
+            "$ref": "#/components/schemas/ContentDisposition"
+          },
+          "cacheControl": {
+            "type": "string"
+          },
+          "ifMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allow": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            },
+            "uniqueItems": true
+          },
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "accept": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "upgrade": {
+            "type": "string"
+          },
+          "etag": {
+            "type": "string"
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pragma": {
+            "type": "string"
+          },
+          "vary": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contentLanguage": {
+            "type": "string"
+          },
           "connection": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
-          "etag": {
-            "type": "string"
-          },
           "basicAuth": {
             "type": "string",
             "writeOnly": true
-          },
-          "acceptPatch": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
           },
           "acceptLanguage": {
             "type": "array",
@@ -11579,43 +11696,34 @@
               }
             }
           },
-          "accessControlMaxAge": {
-            "type": "integer",
-            "format": "int64"
-          },
           "acceptLanguageAsLocales": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
+          "accessControlMaxAge": {
+            "type": "integer",
+            "format": "int64"
           },
-          "accessControlAllowMethods": {
+          "acceptPatch": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/HttpMethod"
+              "$ref": "#/components/schemas/MediaType"
             }
           },
-          "accessControlAllowHeaders": {
+          "ifNoneMatch": {
             "type": "array",
             "items": {
               "type": "string"
             }
+          },
+          "ifUnmodifiedSince": {
+            "type": "integer",
+            "format": "int64"
           },
           "accessControlAllowCredentials": {
             "type": "boolean"
-          },
-          "accessControlRequestHeaders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "accessControlRequestMethod": {
-            "$ref": "#/components/schemas/HttpMethod"
           },
           "accessControlAllowOrigin": {
             "type": "string"
@@ -11626,42 +11734,22 @@
               "type": "string"
             }
           },
-          "ifMatch": {
+          "accessControlAllowMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            }
+          },
+          "accessControlRequestHeaders": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
-          "allow": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpMethod"
-            },
-            "uniqueItems": true
+          "accessControlRequestMethod": {
+            "$ref": "#/components/schemas/HttpMethod"
           },
-          "cacheControl": {
-            "type": "string"
-          },
-          "expires": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "origin": {
-            "type": "string"
-          },
-          "accept": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
-          },
-          "pragma": {
-            "type": "string"
-          },
-          "upgrade": {
-            "type": "string"
-          },
-          "vary": {
+          "accessControlAllowHeaders": {
             "type": "array",
             "items": {
               "type": "string"
@@ -11697,7 +11785,10 @@
             "type": "number",
             "format": "double"
           },
-          "concrete": {
+          "charset": {
+            "type": "string"
+          },
+          "wildcardType": {
             "type": "boolean"
           },
           "subtypeSuffix": {
@@ -11706,11 +11797,8 @@
           "wildcardSubtype": {
             "type": "boolean"
           },
-          "wildcardType": {
+          "concrete": {
             "type": "boolean"
-          },
-          "charset": {
-            "type": "string"
           }
         }
       },
@@ -12688,6 +12776,36 @@
         },
         "required": ["actions"]
       },
+      "ReferralLeaderboardRowResponse": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantDisplayName": {
+            "type": "string"
+          },
+          "successfulReferrals": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rank": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentTenant": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "currentTenant",
+          "rank",
+          "successfulReferrals",
+          "tenantDisplayName",
+          "tenantId"
+        ]
+      },
       "ReferralMeResponse": {
         "type": "object",
         "properties": {
@@ -12703,6 +12821,10 @@
           },
           "campaignDescription": {
             "type": "string"
+          },
+          "campaignStartsAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "campaignEndsAt": {
             "type": "string",
@@ -12729,6 +12851,23 @@
           "successfulReferrals": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalRankedTenants": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentTenant": {
+            "$ref": "#/components/schemas/ReferralLeaderboardRowResponse"
+          },
+          "leaderboard": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralLeaderboardRowResponse"
+            }
+          },
+          "snapshotAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": ["active"]
@@ -12881,6 +13020,12 @@
             "type": "string"
           },
           "displayPurpose": {
+            "type": ["string", "null"]
+          },
+          "profileDisplayName": {
+            "type": ["string", "null"]
+          },
+          "profilePictureUrl": {
             "type": ["string", "null"]
           },
           "status": {

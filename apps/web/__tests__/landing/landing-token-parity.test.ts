@@ -1,7 +1,7 @@
-// Locks the token parity contract (Phase 1.6 REQ-1.6-1, updated for purple pivot):
+// Locks the token parity contract (Phase 1.6 REQ-1.6-1):
 //  - Every supplemental token has --color-{name}: var(--{name}) in @theme inline
 //  - --accent is #EAE8F7 (light) — petclinic purple accent-soft surface
-//  - --accent is #2F2A4A in .dark
+//  - --accent is #262626 in .dark
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -39,8 +39,8 @@ describe('globals.css token parity', () => {
     expect(root).toMatch(/--accent:\s*#EAE8F7/);
   });
 
-  it('--accent is #2F2A4A in .dark', () => {
+  it('--accent is #262626 in .dark', () => {
     const dark = css.match(/\.dark\s*\{[\s\S]*?\}/)?.[0] ?? '';
-    expect(dark).toMatch(/--accent:\s*#2F2A4A/);
+    expect(dark).toMatch(/--accent:\s*#262626/);
   });
 });

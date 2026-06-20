@@ -9,6 +9,8 @@ public record ActiveMailboxResponse(
         UUID gmailConnectionId,
         String email,
         @Schema(nullable = true) String displayPurpose,
+        @Schema(nullable = true) String profileDisplayName,
+        @Schema(nullable = true) String profilePictureUrl,
         String status,
         boolean isPrimary) {
 
@@ -17,6 +19,8 @@ public record ActiveMailboxResponse(
                 gmailConnection.getId(),
                 gmailConnection.getGoogleEmail(),
                 gmailConnection.getDisplayPurpose(),
+                gmailConnection.getGoogleProfileName(),
+                gmailConnection.getGoogleProfilePictureUrl(),
                 gmailConnection.getStatus().name(),
                 gmailConnection.isPrimary());
     }

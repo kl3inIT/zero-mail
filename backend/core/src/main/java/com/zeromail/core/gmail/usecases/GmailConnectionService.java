@@ -7,6 +7,7 @@ import com.zeromail.core.gmail.exception.MailboxDisconnectedException;
 import com.zeromail.core.gmail.exception.MailboxNotOwnedException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GoogleOAuthRevokeClient;
+import com.zeromail.core.gmail.gateway.GoogleUserInfoClient;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
@@ -38,9 +39,11 @@ public class GmailConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(GmailConnectionService.class);
     private static final String DUPLICATE_ACTIVE_EMAIL_CONSTRAINT = "uq_gmail_conn_active_email";
+    private static final int PROFILE_BACKFILL_MAX_PER_REQUEST = 5;
 
     private final GmailConnectionRepository connectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
+    private final GoogleUserInfoClient googleUserInfoClient;
     private final RefreshTokenCipher refreshTokenCipher;
     private final GoogleOAuthRevokeClient googleOAuthRevokeClient;
     private final TransactionTemplate disconnectTransaction;
@@ -48,11 +51,13 @@ public class GmailConnectionService {
     public GmailConnectionService(
             GmailConnectionRepository connectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
+            GoogleUserInfoClient googleUserInfoClient,
             RefreshTokenCipher refreshTokenCipher,
             GoogleOAuthRevokeClient googleOAuthRevokeClient,
             PlatformTransactionManager transactionManager) {
         this.connectionRepository = connectionRepository;
         this.gmailApiClientFactory = gmailApiClientFactory;
+        this.googleUserInfoClient = googleUserInfoClient;
         this.refreshTokenCipher = refreshTokenCipher;
         this.googleOAuthRevokeClient = googleOAuthRevokeClient;
         this.disconnectTransaction = new TransactionTemplate(transactionManager);
@@ -136,11 +141,12 @@ public class GmailConnectionService {
                 });
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<MailboxSummaryProjection> listMailboxes(UUID tenantId) {
-        return connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
-                .map(MailboxSummaryProjection::from)
-                .toList();
+        List<GmailConnectionEntity> mailboxes =
+                connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId);
+        backfillMissingProfiles(tenantId, mailboxes);
+        return mailboxes.stream().map(MailboxSummaryProjection::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -148,6 +154,30 @@ public class GmailConnectionService {
         return connectionRepository
                 .findByTenantId(tenantId)
                 .map(gmailConnection -> new MailboxRef(tenantId, gmailConnection.getId()));
+    }
+
+    @Transactional
+    public Optional<UUID> updateMailboxProfile(
+            UUID tenantId,
+            String googleEmail,
+            String profileDisplayName,
+            String profilePictureUrl) {
+        Optional<GmailConnectionEntity> matchingConnection =
+                connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
+                        .filter(
+                                gmailConnection ->
+                                        gmailConnection
+                                                .getGoogleEmail()
+                                                .equalsIgnoreCase(googleEmail))
+                        .findFirst();
+        matchingConnection.ifPresent(
+                gmailConnection -> {
+                    if (applyProfileSnapshot(
+                            gmailConnection, profileDisplayName, profilePictureUrl)) {
+                        connectionRepository.save(gmailConnection);
+                    }
+                });
+        return matchingConnection.map(GmailConnectionEntity::getId);
     }
 
     /**
@@ -391,6 +421,17 @@ public class GmailConnectionService {
     @Transactional
     public UUID upsert(
             UUID tenantId, String googleEmail, String scopesGranted, byte[] refreshTokenEncrypted) {
+        return upsert(tenantId, googleEmail, scopesGranted, refreshTokenEncrypted, null, null);
+    }
+
+    @Transactional
+    public UUID upsert(
+            UUID tenantId,
+            String googleEmail,
+            String scopesGranted,
+            byte[] refreshTokenEncrypted,
+            String profileDisplayName,
+            String profilePictureUrl) {
         GmailConnectionEntity connection =
                 connectionRepository
                         .findByTenantId(tenantId)
@@ -406,6 +447,7 @@ public class GmailConnectionService {
         connection.setScopesGranted(scopesGranted);
         connection.setConnectedAt(Instant.now());
         connection.setDisconnectedAt(null);
+        applyProfileSnapshot(connection, profileDisplayName, profilePictureUrl);
         GmailConnectionEntity savedConnection = connectionRepository.save(connection);
         return savedConnection.getId();
     }
@@ -413,6 +455,18 @@ public class GmailConnectionService {
     @Transactional
     public UUID addConnection(
             UUID tenantId, String googleEmail, String scopesGranted, String plaintextRefreshToken) {
+        return addConnection(
+                tenantId, googleEmail, scopesGranted, plaintextRefreshToken, null, null);
+    }
+
+    @Transactional
+    public UUID addConnection(
+            UUID tenantId,
+            String googleEmail,
+            String scopesGranted,
+            String plaintextRefreshToken,
+            String profileDisplayName,
+            String profilePictureUrl) {
         assertNoActiveDuplicate(tenantId, googleEmail);
         UUID gmailConnectionId = UUID.randomUUID();
         byte[] plaintextRefreshTokenBytes = plaintextRefreshToken.getBytes(StandardCharsets.UTF_8);
@@ -428,6 +482,7 @@ public class GmailConnectionService {
             gmailConnection.setRefreshTokenEncrypted(refreshTokenEncrypted);
             gmailConnection.setScopesGranted(scopesGranted);
             gmailConnection.setConnectedAt(Instant.now());
+            applyProfileSnapshot(gmailConnection, profileDisplayName, profilePictureUrl);
             // Become primary when the tenant currently has no CONNECTED primary, so the first/only
             // connected mailbox is never left with zero primaries (which would strand every
             // "operate on primary" consumer). promoteNextPrimaryMailbox only repairs disconnects of
@@ -450,6 +505,17 @@ public class GmailConnectionService {
             UUID targetMailboxId,
             String scopesGranted,
             String plaintextRefreshToken) {
+        reconnect(tenantId, targetMailboxId, scopesGranted, plaintextRefreshToken, null, null);
+    }
+
+    @Transactional
+    public void reconnect(
+            UUID tenantId,
+            UUID targetMailboxId,
+            String scopesGranted,
+            String plaintextRefreshToken,
+            String profileDisplayName,
+            String profilePictureUrl) {
         GmailConnectionEntity gmailConnection =
                 resolveReconnectableConnectionOrThrow(tenantId, targetMailboxId);
         // Defensive 409 if another active mailbox already owns this email (the disconnected target
@@ -472,6 +538,7 @@ public class GmailConnectionService {
             gmailConnection.setScopesGranted(scopesGranted);
             gmailConnection.setConnectedAt(Instant.now());
             gmailConnection.setDisconnectedAt(null);
+            applyProfileSnapshot(gmailConnection, profileDisplayName, profilePictureUrl);
             gmailConnection.setWatchExpiresAt(null);
             gmailConnection.setWatchHistoryId(null);
             gmailConnection.setWatchRenewedAt(null);
@@ -568,6 +635,66 @@ public class GmailConnectionService {
                         });
     }
 
+    private void backfillMissingProfiles(
+            UUID tenantId, List<GmailConnectionEntity> gmailConnections) {
+        int attemptedBackfills = 0;
+        for (GmailConnectionEntity gmailConnection : gmailConnections) {
+            if (attemptedBackfills >= PROFILE_BACKFILL_MAX_PER_REQUEST) {
+                return;
+            }
+            if (!shouldBackfillProfile(gmailConnection)) {
+                continue;
+            }
+            attemptedBackfills++;
+            tryBackfillProfile(tenantId, gmailConnection);
+        }
+    }
+
+    private static boolean shouldBackfillProfile(GmailConnectionEntity gmailConnection) {
+        return gmailConnection.getStatus() == GmailConnectionStatus.CONNECTED
+                && gmailConnection.getRefreshTokenEncrypted() != null
+                && (gmailConnection.getGoogleProfileName() == null
+                        || gmailConnection.getGoogleProfilePictureUrl() == null);
+    }
+
+    private void tryBackfillProfile(UUID tenantId, GmailConnectionEntity gmailConnection) {
+        byte[] decryptedRefreshTokenBytes = null;
+        try {
+            decryptedRefreshTokenBytes =
+                    refreshTokenCipher.decrypt(
+                            gmailConnection.getRefreshTokenEncrypted(), tenantId.toString());
+            String decryptedRefreshToken =
+                    new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
+            GmailApiClientFactory.TokenRefreshResult tokenResult =
+                    gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
+            googleUserInfoClient
+                    .fetch(tokenResult.accessToken())
+                    .filter(
+                            profile ->
+                                    profile.email() == null
+                                            || profile.email()
+                                                    .equalsIgnoreCase(
+                                                            gmailConnection.getGoogleEmail()))
+                    .ifPresent(
+                            profile -> {
+                                if (applyProfileSnapshot(
+                                        gmailConnection, profile.name(), profile.picture())) {
+                                    connectionRepository.save(gmailConnection);
+                                }
+                            });
+        } catch (Exception profileBackfillFailure) {
+            log.warn(
+                    "event=gmail_profile_backfill_failed tenantId={} gmailConnectionId={} failureClass={}",
+                    tenantId,
+                    gmailConnection.getId(),
+                    profileBackfillFailure.getClass().getSimpleName());
+        } finally {
+            if (decryptedRefreshTokenBytes != null) {
+                Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
+            }
+        }
+    }
+
     private boolean tenantHasConnectedPrimary(UUID tenantId) {
         return connectionRepository.findByTenantIdOrderByIsPrimaryDesc(tenantId).stream()
                 .anyMatch(
@@ -575,6 +702,34 @@ public class GmailConnectionService {
                                 gmailConnection.isPrimary()
                                         && gmailConnection.getStatus()
                                                 == GmailConnectionStatus.CONNECTED);
+    }
+
+    private static boolean applyProfileSnapshot(
+            GmailConnectionEntity gmailConnection,
+            String profileDisplayName,
+            String profilePictureUrl) {
+        boolean changed = false;
+        String cleanProfileDisplayName = clean(profileDisplayName);
+        if (cleanProfileDisplayName != null
+                && !cleanProfileDisplayName.equals(gmailConnection.getGoogleProfileName())) {
+            gmailConnection.setGoogleProfileName(cleanProfileDisplayName);
+            changed = true;
+        }
+        String cleanProfilePictureUrl = clean(profilePictureUrl);
+        if (cleanProfilePictureUrl != null
+                && !cleanProfilePictureUrl.equals(gmailConnection.getGoogleProfilePictureUrl())) {
+            gmailConnection.setGoogleProfilePictureUrl(cleanProfilePictureUrl);
+            changed = true;
+        }
+        return changed;
+    }
+
+    private static String clean(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void assertNoActiveDuplicate(UUID tenantId, String googleEmail) {

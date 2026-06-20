@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
 import { NeedsReplyReaderPane } from '@/features/needs-reply/components/NeedsReplyReaderPane';
 import { NeedsReplyTable } from '@/features/needs-reply/components/NeedsReplyTable';
 import type { NeedsReplyBucket } from '@/features/needs-reply/api/needs-reply-api';
@@ -46,9 +45,6 @@ export function NeedsReplyPageClient() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="border-border bg-background shrink-0 border-b px-4 py-2">
-        <ActiveMailboxBadge />
-      </div>
       <div className="bg-background grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(390px,42vw)_minmax(0,1fr)] xl:grid-cols-[500px_minmax(0,1fr)]">
         <section
           className={cn(

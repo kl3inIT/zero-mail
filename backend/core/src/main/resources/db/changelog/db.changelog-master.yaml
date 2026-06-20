@@ -381,6 +381,9 @@ databaseChangeLog:
       file: changes/129-pubsub-mail-observed-tenant-fk.yaml
       relativeToChangelogFile: true
   - include:
+      file: changes/130-gmail-connection-profile.yaml
+      relativeToChangelogFile: true
+  - include:
       file: changes/130-referral-campaigns.yaml
       relativeToChangelogFile: true
   - include:

@@ -86,7 +86,18 @@ class GoogleOAuthSuccessHandlerTest {
         String email = "bundled-test@example.com";
 
         // Build OidcUser principal
-        var claims = Map.<String, Object>of("sub", subject, "email", email);
+        String profileDisplayName = "Bundled User";
+        String profilePictureUrl = "https://lh3.googleusercontent.com/bundled-user";
+        var claims =
+                Map.<String, Object>of(
+                        "sub",
+                        subject,
+                        "email",
+                        email,
+                        "name",
+                        profileDisplayName,
+                        "picture",
+                        profilePictureUrl);
         var idToken =
                 new OidcIdToken(
                         "test-token", Instant.now(), Instant.now().plusSeconds(3600), claims);
@@ -120,7 +131,13 @@ class GoogleOAuthSuccessHandlerTest {
                                 registration, token.getName(), accessToken, refreshToken));
 
         UUID provisionedTenantId = UUID.randomUUID();
-        when(provisioning.provisionBundledOAuth(anyString(), anyString(), anyString(), anyString()))
+        when(provisioning.provisionBundledOAuth(
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString()))
                 .thenReturn(
                         new OAuthProvisioningService.BundledProvisioningResult(
                                 provisionedTenantId, UUID.randomUUID(), UUID.randomUUID(), true));
@@ -134,7 +151,13 @@ class GoogleOAuthSuccessHandlerTest {
         handler.onAuthenticationSuccess(request, response, token);
 
         verify(provisioning)
-                .provisionBundledOAuth(eq(subject), eq(email), anyString(), anyString());
+                .provisionBundledOAuth(
+                        eq(subject),
+                        eq(email),
+                        anyString(),
+                        anyString(),
+                        eq(profileDisplayName),
+                        eq(profilePictureUrl));
         // First login seeds the Inbox-Zero-style default rules (enabled) for the new tenant. The
         // test OidcUser has no `locale` claim, so seeding falls back to Vietnamese (VN-first).
         verify(ruleTemplateMaterialization)
@@ -185,10 +208,16 @@ class GoogleOAuthSuccessHandlerTest {
         String initiatingEmail = "primary@example.test";
         String addedMailboxSubject = "added-mailbox-google-subject";
         String addedMailboxEmail = "added@example.test";
+        String addedMailboxName = "Added Mailbox";
+        String addedMailboxPicture = "https://lh3.googleusercontent.com/added-mailbox";
         OAuth2AuthenticationToken initiatingAuthentication =
                 authenticationToken(initiatingSubject, initiatingEmail);
         OAuth2AuthenticationToken addedMailboxAuthentication =
-                authenticationToken(addedMailboxSubject, addedMailboxEmail);
+                authenticationToken(
+                        addedMailboxSubject,
+                        addedMailboxEmail,
+                        addedMailboxName,
+                        addedMailboxPicture);
         when(userRepository.findByGoogleSubject(initiatingSubject))
                 .thenReturn(
                         Optional.of(
@@ -226,7 +255,9 @@ class GoogleOAuthSuccessHandlerTest {
                         initiatingTenantId,
                         addedMailboxEmail,
                         OAuthScopes.GMAIL_MODIFY,
-                        "added-refresh-token");
+                        "added-refresh-token",
+                        addedMailboxName,
+                        addedMailboxPicture);
         assertThat(
                         session.getAttribute(
                                 OAuthIntentSnapshot.INITIATING_SECURITY_CONTEXT_SESSION_ATTRIBUTE))
@@ -244,7 +275,20 @@ class GoogleOAuthSuccessHandlerTest {
     }
 
     private static OAuth2AuthenticationToken authenticationToken(String subject, String email) {
-        var claims = Map.<String, Object>of("sub", subject, "email", email);
+        return authenticationToken(subject, email, null, null);
+    }
+
+    private static OAuth2AuthenticationToken authenticationToken(
+            String subject, String email, String profileDisplayName, String profilePictureUrl) {
+        java.util.Map<String, Object> claims = new java.util.HashMap<>();
+        claims.put("sub", subject);
+        claims.put("email", email);
+        if (profileDisplayName != null) {
+            claims.put("name", profileDisplayName);
+        }
+        if (profilePictureUrl != null) {
+            claims.put("picture", profilePictureUrl);
+        }
         var idToken =
                 new OidcIdToken(
                         "test-token-" + subject,

@@ -61,7 +61,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useChat } from '@/features/chat/hooks/use-chat';
-import { ActiveMailboxBadge } from '@/features/mailbox/components/ActiveMailboxBadge';
 import { useActiveMailbox } from '@/features/mailbox/hooks/useActiveMailbox';
 import { EmailHtmlFrame, PlainEmailContent } from '@/features/inbox/components/EmailHtmlFrame';
 import { PreviewCard } from '@/features/chat/components/preview-card/preview-card';
@@ -144,13 +143,6 @@ export function InboxPageClient() {
     canWarmUpInboxInBackground &&
     inboxQuery.isFetchingNextPage &&
     messages.length < INBOX_BACKGROUND_WARMUP_MESSAGE_LIMIT;
-  const inboxCountCaption = locale.startsWith('vi')
-    ? isInboxBackgroundWarmupActive
-      ? `\u0110ang t\u1ea3i... \u0110\u00e3 t\u1ea3i ${messages.length} email`
-      : `\u0110\u00e3 t\u1ea3i ${messages.length} email`
-    : isInboxBackgroundWarmupActive
-      ? `Loading... ${messages.length} loaded`
-      : `${messages.length} loaded`;
   const isSyncing = inboxDataSource === 'SYNCING' && messages.length === 0;
   // Wave 1 fallback observability — quietly log when the projection couldn't satisfy the page so
   // ops can correlate FE behaviour with the backend `event=inbox_read_fallback` log line.
@@ -295,12 +287,13 @@ export function InboxPageClient() {
                   <Inbox className="text-muted-foreground size-5" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-medium">{t('nav.inbox')}</span>
-                <ActiveMailboxBadge className="hidden max-w-56 sm:inline-flex" />
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  {inboxCountCaption}
-                </span>
+                <InboxLoadStatus
+                  count={messages.length}
+                  loading={isInboxBackgroundWarmupActive}
+                  locale={locale}
+                />
                 <Button
                   type="button"
                   variant="ghost"
@@ -349,7 +342,9 @@ export function InboxPageClient() {
                 onClear={clearLabelFilter}
               />
             </div>
-            <InboxReadStateFilter locale={locale} value={readFilter} onChange={setReadFilter} />
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <InboxReadStateFilter locale={locale} value={readFilter} onChange={setReadFilter} />
+            </div>
           </div>
           <InboxMessageList
             isPending={inboxQuery.isPending}
@@ -1491,9 +1486,6 @@ function InboxReplyComposer({
     >
       {previewSubmitted ? null : (
         <div className="bg-card overflow-hidden">
-          <div className="border-border border-b px-3 py-2">
-            <ActiveMailboxBadge className="max-w-full" />
-          </div>
           <div className="flex items-center gap-2 px-3 py-2">
             <span className="text-muted-foreground w-12 shrink-0 text-sm">
               {t('inbox.composer.to')}
@@ -2550,7 +2542,7 @@ function InboxReadStateFilter({
 
   return (
     <div
-      className="border-border bg-background mt-2 inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
+      className="border-border bg-background inline-flex h-9 w-full rounded-md border p-0.5 shadow-sm sm:w-auto"
       role="group"
       aria-label={isVietnamese ? 'Lọc trạng thái đọc' : 'Filter read state'}
       data-testid="inbox-read-state-filter"
@@ -2575,6 +2567,39 @@ function InboxReadStateFilter({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function InboxLoadStatus({
+  count,
+  loading,
+  locale,
+}: {
+  count: number;
+  loading: boolean;
+  locale: string;
+}) {
+  if (count === 0 && !loading) {
+    return null;
+  }
+  const isVietnamese = locale.startsWith('vi');
+  const formattedCount = new Intl.NumberFormat(locale).format(count);
+  const label = isVietnamese ? `${formattedCount} email` : `${formattedCount} emails`;
+  const ariaLabel = loading
+    ? isVietnamese
+      ? `Dang tai them email, ${label}`
+      : `Loading more email, ${label}`
+    : label;
+
+  return (
+    <div
+      className="border-border bg-muted/30 text-muted-foreground inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium tabular-nums"
+      aria-label={ariaLabel}
+      data-testid="inbox-load-status"
+    >
+      {loading ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
+      <span>{label}</span>
     </div>
   );
 }

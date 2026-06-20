@@ -7,6 +7,7 @@ import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -136,6 +137,41 @@ class GmailConnectionServiceUpsertTest extends PostgresContainerTest {
                         });
     }
 
+    @Test
+    void updateMailboxProfile_updatesOnlyMatchingMailbox() {
+        UUID tenantId = UUID.randomUUID();
+        seedTenant(tenantId);
+        UUID primaryMailboxId =
+                insertMailbox(
+                        tenantId, "primary@example.test", GmailConnectionStatus.CONNECTED, true);
+        UUID secondaryMailboxId =
+                insertMailbox(
+                        tenantId, "secondary@example.test", GmailConnectionStatus.CONNECTED, false);
+
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            Optional<UUID> updatedMailboxId =
+                                    service.updateMailboxProfile(
+                                            tenantId,
+                                            "secondary@example.test",
+                                            "Secondary User",
+                                            "https://lh3.googleusercontent.com/secondary");
+
+                            assertThat(updatedMailboxId).contains(secondaryMailboxId);
+                            GmailConnectionEntity primaryMailbox =
+                                    repo.findById(primaryMailboxId).orElseThrow();
+                            GmailConnectionEntity secondaryMailbox =
+                                    repo.findById(secondaryMailboxId).orElseThrow();
+                            assertThat(primaryMailbox.getGoogleProfileName()).isNull();
+                            assertThat(primaryMailbox.getGoogleProfilePictureUrl()).isNull();
+                            assertThat(secondaryMailbox.getGoogleProfileName())
+                                    .isEqualTo("Secondary User");
+                            assertThat(secondaryMailbox.getGoogleProfilePictureUrl())
+                                    .isEqualTo("https://lh3.googleusercontent.com/secondary");
+                        });
+    }
+
     private void seedTenant(UUID tenantId) {
         // Pattern lifted from OnboardingStepPersistenceTest line 56 — JdbcTemplate is allowed
         // (TenantIsolationArchTests bans EntityManager.createNativeQuery only).
@@ -143,5 +179,24 @@ class GmailConnectionServiceUpsertTest extends PostgresContainerTest {
                 "INSERT INTO tenants(id, display_name) VALUES (?, ?)",
                 tenantId,
                 "test-" + tenantId);
+    }
+
+    private UUID insertMailbox(
+            UUID tenantId,
+            String googleEmail,
+            GmailConnectionStatus gmailConnectionStatus,
+            boolean primary) {
+        UUID gmailConnectionId = UUID.randomUUID();
+        jdbc.update(
+                """
+                INSERT INTO gmail_connections(id, tenant_id, google_email, status, is_primary)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                gmailConnectionId,
+                tenantId,
+                googleEmail,
+                gmailConnectionStatus.name(),
+                primary);
+        return gmailConnectionId;
     }
 }

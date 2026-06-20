@@ -42,6 +42,12 @@ public class GmailConnectionEntity extends AbstractTenantOwnedEntity {
     @Column(name = "display_purpose")
     private String displayPurpose;
 
+    @Column(name = "google_profile_name")
+    private String googleProfileName;
+
+    @Column(name = "google_profile_picture_url", columnDefinition = "text")
+    private String googleProfilePictureUrl;
+
     @Column(name = "disconnected_at")
     private Instant disconnectedAt;
 
@@ -101,6 +107,14 @@ public class GmailConnectionEntity extends AbstractTenantOwnedEntity {
         return displayPurpose;
     }
 
+    public String getGoogleProfileName() {
+        return googleProfileName;
+    }
+
+    public String getGoogleProfilePictureUrl() {
+        return googleProfilePictureUrl;
+    }
+
     public Instant getDisconnectedAt() {
         return disconnectedAt;
     }
@@ -151,6 +165,14 @@ public class GmailConnectionEntity extends AbstractTenantOwnedEntity {
 
     public void setDisplayPurpose(String displayPurpose) {
         this.displayPurpose = displayPurpose;
+    }
+
+    public void setGoogleProfileName(String googleProfileName) {
+        this.googleProfileName = googleProfileName;
+    }
+
+    public void setGoogleProfilePictureUrl(String googleProfilePictureUrl) {
+        this.googleProfilePictureUrl = googleProfilePictureUrl;
     }
 
     public void setDisconnectedAt(Instant disconnectedAt) {

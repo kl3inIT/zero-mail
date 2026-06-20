@@ -5,6 +5,8 @@ import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.domain.GmailCategory;
 import com.zeromail.core.gmail.event.MailMessageObserved;
+import com.zeromail.core.gmail.exception.InvalidGrantException;
+import com.zeromail.core.gmail.exception.MailboxDisconnectedException;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
@@ -200,6 +202,27 @@ public class TriageOrchestratorService {
         try {
             TenantContext.runWith(
                     observedEvent.tenantId(), () -> runTriageWithTransientRetry(observedEvent));
+        } catch (MailboxDisconnectedException | InvalidGrantException terminalMailboxFailure) {
+            // Terminal, non-retryable failure: the source mailbox is DISCONNECTED, or its OAuth
+            // grant was permanently revoked / was issued by a now-mismatched client (see
+            // GmailApiClientFactory#buildClientForConnection). No amount of Modulith resubmission
+            // can fetch this message until the user reconnects Gmail — and on reconnect a fresh
+            // users.watch + history sync delivers current mail, so re-triaging this stale
+            // observation is both impossible now and undesirable later (it could fire surprise
+            // actions on days-old mail, violating the "no surprise actions" product invariant).
+            // Swallow it so the event publication COMPLETES instead of looping forever in
+            // TriageEventRetryJob. (The 2026-06 OAuth-client-switch incident stranded ~1.2k events
+            // exactly this way — each retried ~30x/hour with no terminal state, holding the
+            // dead-letter alert open indefinitely.) Record an abandon metric + audit log for
+            // visibility; no email content is logged (ids only) per the privacy logging format.
+            meterRegistry.counter("triage.event.abandoned_mailbox_disconnected").increment();
+            log.warn(
+                    "event=triage_event_abandoned_mailbox_disconnected tenantId={} gmailMessageId={}"
+                            + " gmailConnectionId={} reason={}",
+                    observedEvent.tenantId(),
+                    observedEvent.gmailMessageId(),
+                    observedEvent.gmailConnectionId(),
+                    terminalMailboxFailure.getClass().getSimpleName());
         } finally {
             triageConcurrencyLimiter.release();
         }

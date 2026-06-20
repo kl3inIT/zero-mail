@@ -15,7 +15,7 @@ test.describe('mailbox-owned rules', () => {
     await page.setViewportSize({ width: 1280, height: 820 });
     await openMailboxRoute(page, '/rules', state);
 
-    await expect(page.getByTestId('active-mailbox-scope')).toContainText('Support Gmail');
+    await expect(page.getByTestId('active-mailbox-scope')).toHaveCount(0);
     await expect(page.getByText('Handle support escalations').first()).toBeVisible();
     await expect(page.getByText('Archive founder receipts')).toHaveCount(0);
 

@@ -500,6 +500,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/referrals/campaigns/{campaignId}/end-if-expired": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["endCampaignIfExpired"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plan-upgrades/webhooks/sepay": {
         parameters: {
             query?: never;
@@ -1672,6 +1688,8 @@ export interface components {
             gmailConnectionId: string;
             email: string;
             displayPurpose?: string | null;
+            profileDisplayName?: string | null;
+            profilePictureUrl?: string | null;
             status: string;
             isPrimary: boolean;
         };
@@ -1962,8 +1980,8 @@ export interface components {
             filename?: string;
             charset?: string;
             inline?: boolean;
-            attachment?: boolean;
             formData?: boolean;
+            attachment?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -2002,46 +2020,46 @@ export interface components {
             date?: number;
             /** Format: int64 */
             contentLength?: number;
-            connection?: string[];
-            /** Format: int64 */
-            ifModifiedSince?: number;
-            contentType?: components["schemas"]["MediaType"];
-            acceptPatch?: components["schemas"]["MediaType"][];
             origin?: string;
             range?: components["schemas"]["HttpRange"][];
             acceptCharset?: string[];
             contentDisposition?: components["schemas"]["ContentDisposition"];
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
             cacheControl?: string;
-            contentLanguage?: string;
-            bearerAuth?: string;
-            basicAuth?: string;
-            allow?: components["schemas"]["HttpMethod"][];
-            etag?: string;
-            accessControlRequestHeaders?: string[];
-            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
-            accessControlAllowOrigin?: string;
-            accessControlAllowHeaders?: string[];
-            accessControlAllowCredentials?: boolean;
             ifMatch?: string[];
-            accessControlExposeHeaders?: string[];
+            allow?: components["schemas"]["HttpMethod"][];
+            bearerAuth?: string;
+            accept?: components["schemas"]["MediaType"][];
+            upgrade?: string;
+            etag?: string;
+            /** Format: int64 */
+            expires?: number;
+            pragma?: string;
+            vary?: string[];
+            contentLanguage?: string;
+            connection?: string[];
+            basicAuth?: string;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
+            acceptLanguageAsLocales?: string[];
+            /** Format: int64 */
+            accessControlMaxAge?: number;
+            acceptPatch?: components["schemas"]["MediaType"][];
             ifNoneMatch?: string[];
             /** Format: int64 */
             ifUnmodifiedSince?: number;
+            accessControlAllowCredentials?: boolean;
+            accessControlAllowOrigin?: string;
+            accessControlExposeHeaders?: string[];
+            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
+            accessControlRequestHeaders?: string[];
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
+            accessControlAllowHeaders?: string[];
             /** Format: int64 */
-            accessControlMaxAge?: number;
-            acceptLanguageAsLocales?: string[];
-            accept?: components["schemas"]["MediaType"][];
-            pragma?: string;
-            /** Format: int64 */
-            expires?: number;
-            vary?: string[];
-            upgrade?: string;
+            ifModifiedSince?: number;
+            contentType?: components["schemas"]["MediaType"];
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -2491,6 +2509,8 @@ export interface components {
             gmailConnectionId: string;
             googleEmail: string;
             displayPurpose?: string | null;
+            profileDisplayName?: string | null;
+            profilePictureUrl?: string | null;
             status: string;
             isPrimary: boolean;
             /** Format: date-time */
@@ -5873,6 +5893,80 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["RuleCompileResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    endCampaignIfExpired: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquarePlus, PanelLeftOpen } from 'lucide-react';
+import { MessageSquarePlus, PanelRightOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -24,6 +24,7 @@ export function ChatWorkspace() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const activeChatId = queryChatId ?? newChatId;
   const paneKey = `${activeChatId}:${initialPrompt}`;
+  const isNewChat = !queryChatId;
 
   function handleSelectChat(chatId: string) {
     router.push(`/chat?chat=${chatId}`);
@@ -41,18 +42,20 @@ export function ChatWorkspace() {
   }
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden">
-      {!sidebarCollapsed && (
-        <HistorySidebar
-          activeChatId={queryChatId}
-          onSelectChat={handleSelectChat}
-          onNewChat={handleNewChat}
-          onCollapse={() => setSidebarCollapsed(true)}
-        />
-      )}
-      <div className="flex min-w-0 flex-1 flex-col">
+    <div className="bg-background flex h-full min-h-0 overflow-hidden">
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        {isNewChat ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-1/2 h-[560px] w-[1120px] -translate-x-1/2 -translate-y-[46%] rounded-full blur-2xl"
+            style={{
+              background:
+                'radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 24%, transparent) 0%, color-mix(in oklab, var(--accent) 78%, transparent) 42%, transparent 74%)',
+            }}
+          />
+        ) : null}
         {sidebarCollapsed && (
-          <div className="flex items-center gap-1 px-2 pt-2 md:px-3">
+          <div className="relative z-10 flex items-center justify-end gap-1 px-2 pt-2 md:px-3">
             <Button
               size="icon-sm"
               type="button"
@@ -60,7 +63,7 @@ export function ChatWorkspace() {
               onClick={() => setSidebarCollapsed(false)}
               aria-label={t('title')}
             >
-              <PanelLeftOpen className="size-4" />
+              <PanelRightOpen className="size-4" />
             </Button>
             <Button
               size="icon-sm"
@@ -73,14 +76,24 @@ export function ChatWorkspace() {
             </Button>
           </div>
         )}
-        <ConversationPane
-          key={paneKey}
-          chatId={activeChatId}
-          historyChatId={queryChatId}
-          initialPrompt={initialPrompt}
-          onChatStarted={handleChatStarted}
-        />
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+          <ConversationPane
+            key={paneKey}
+            chatId={activeChatId}
+            historyChatId={queryChatId}
+            initialPrompt={initialPrompt}
+            onChatStarted={handleChatStarted}
+          />
+        </div>
       </div>
+      {!sidebarCollapsed && (
+        <HistorySidebar
+          activeChatId={queryChatId}
+          onSelectChat={handleSelectChat}
+          onNewChat={handleNewChat}
+          onCollapse={() => setSidebarCollapsed(true)}
+        />
+      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@ test.describe('mailbox switcher', () => {
     await page.setViewportSize({ width: 1280, height: 820 });
     await openMailboxRoute(page, '/inbox', state);
 
-    await expect(page.getByTestId('active-mailbox-scope').first()).toContainText('Founder Gmail');
+    await expect(page.getByTestId('active-mailbox-scope')).toHaveCount(0);
     await expect(page.getByText('Alpha investor update')).toBeVisible();
 
     await openAccountMenu(page);
@@ -28,7 +28,7 @@ test.describe('mailbox switcher', () => {
 
     await page.getByTestId(`mailbox-switch-${MAILBOX_B_ID}`).click();
 
-    await expect(page.getByTestId('active-mailbox-scope').first()).toContainText('Support Gmail');
+    await expect(page.getByTestId('active-mailbox-scope')).toHaveCount(0);
     await expect(page.getByText('Beta support ticket')).toBeVisible();
     await expect(page.getByText('Alpha investor update')).toHaveCount(0);
     expect(state.setActiveRequests).toEqual([MAILBOX_B_ID]);
@@ -55,7 +55,7 @@ test.describe('mailbox switcher', () => {
     await expect(page.getByTestId(`mailbox-switch-${MAILBOX_B_ID}`)).toBeVisible();
     await page.getByTestId(`mailbox-switch-${MAILBOX_B_ID}`).click();
 
-    await expect(page.getByTestId('active-mailbox-scope').first()).toContainText('Support Gmail');
+    await expect(page.getByTestId('active-mailbox-scope')).toHaveCount(0);
     await expect(page.getByText('Support reply needed')).toBeVisible();
     await expect(page.getByText('Founder reply needed')).toHaveCount(0);
     expect(state.needsReplyRequests).toContain(MAILBOX_B_ID);

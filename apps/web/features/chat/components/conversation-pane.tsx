@@ -28,6 +28,7 @@ import {
 } from '@/features/chat/api/chat-api';
 import { useChat } from '@/features/chat/hooks/use-chat';
 import { useChatDetail } from '@/features/chat/hooks/use-chat-history';
+import { cn } from '@/lib/utils';
 import { PreviewCard } from './preview-card/preview-card';
 import {
   isBodySlotToolName,
@@ -212,6 +213,7 @@ export function ConversationPane({
   const currentUser = useCurrentUser();
   const [input, setInput] = useState(initialPrompt ?? '');
   const [stopped, setStopped] = useState(false);
+  const [firstTurnAnimation, setFirstTurnAnimation] = useState(false);
   const chatStartedNotifiedRef = useRef(false);
   const suggestions = [
     t('suggestion.rules'),
@@ -245,10 +247,14 @@ export function ConversationPane({
     const text = message.text.trim();
     if (!text) return;
     setStopped(false);
+    if (messages.length === 0) {
+      setFirstTurnAnimation(true);
+    }
     setInput('');
     try {
       await chat.sendMessage({ text });
     } catch (sendFailure) {
+      setFirstTurnAnimation(false);
       setInput(text);
       throw sendFailure;
     }
@@ -263,6 +269,9 @@ export function ConversationPane({
     const text = suggestion.trim();
     if (!text) return;
     setStopped(false);
+    if (messages.length === 0) {
+      setFirstTurnAnimation(true);
+    }
     setInput('');
     void chat.sendMessage({ text });
   }
@@ -292,38 +301,53 @@ export function ConversationPane({
     );
 
   const inputArea = (
-    <PromptInput
-      onSubmit={handleSubmit}
-      className="[&_[data-slot=input-group]]:bg-background [&_[data-slot=input-group]]:items-end [&_[data-slot=input-group]]:gap-2 [&_[data-slot=input-group]]:rounded-2xl [&_[data-slot=input-group]]:p-1.5 [&_[data-slot=input-group]]:shadow-sm"
-    >
-      <PromptInputTextarea
-        value={input}
-        placeholder={t('prompt.placeholder')}
-        onChange={(event) => setInput(event.currentTarget.value)}
-        className="min-h-12"
-      />
-      <PromptInputSubmit
-        aria-label={isBusy ? t('prompt.stop') : t('prompt.send')}
-        status={chat.status}
-        onStop={handleStop}
-        disabled={isBusy ? false : !input.trim()}
-        onClick={(event) => {
-          if (isBusy) {
-            event.preventDefault();
-            handleStop();
-          }
-        }}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground size-9 rounded-full disabled:cursor-not-allowed"
-      >
-        {chat.status === 'submitted' ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : chat.status === 'streaming' ? (
-          <Square className="size-4 fill-current" />
-        ) : (
-          <ArrowUp className="size-4" />
+    <div className="relative">
+      <PromptInput
+        onSubmit={handleSubmit}
+        className={cn(
+          'relative z-10 [&_[data-slot=input-group]]:h-auto [&_[data-slot=input-group]]:min-h-14 [&_[data-slot=input-group]]:items-end [&_[data-slot=input-group]]:gap-1.5 [&_[data-slot=input-group]]:rounded-[1.75rem] [&_[data-slot=input-group]]:p-1.5 [&_[data-slot=input-group]]:backdrop-blur-xl [&_[data-slot=input-group]]:transition-all',
+          isEmpty
+            ? '[&_[data-slot=input-group]]:border-border/70 [&_[data-slot=input-group]]:bg-background/90 [&_[data-slot=input-group]]:shadow-primary/15 [&_[data-slot=input-group]]:ring-primary/10 [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:border-primary/35 [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:ring-primary/20 [&_[data-slot=input-group]]:shadow-2xl [&_[data-slot=input-group]]:ring-1'
+            : '[&_[data-slot=input-group]]:border-primary/25 [&_[data-slot=input-group]]:bg-card/95 [&_[data-slot=input-group]]:shadow-primary/10 [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:border-primary/50 [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:ring-primary/20 [&_[data-slot=input-group]]:shadow-lg',
         )}
-      </PromptInputSubmit>
-    </PromptInput>
+      >
+        <PromptInputTextarea
+          value={input}
+          placeholder={t('prompt.placeholder')}
+          onChange={(event) => setInput(event.currentTarget.value)}
+          className={cn(
+            'max-h-36 min-h-11 w-full px-4 py-2.5 text-[15px] leading-6',
+            isEmpty && 'text-foreground placeholder:text-muted-foreground',
+          )}
+        />
+        <PromptInputSubmit
+          aria-label={isBusy ? t('prompt.stop') : t('prompt.send')}
+          status={chat.status}
+          onStop={handleStop}
+          disabled={isBusy ? false : !input.trim()}
+          onClick={(event) => {
+            if (isBusy) {
+              event.preventDefault();
+              handleStop();
+            }
+          }}
+          className={cn(
+            'mb-1 size-9 shrink-0 rounded-full disabled:cursor-not-allowed',
+            isEmpty
+              ? 'bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground shadow-sm'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground',
+          )}
+        >
+          {chat.status === 'submitted' ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : chat.status === 'streaming' ? (
+            <Square className="size-4 fill-current" />
+          ) : (
+            <ArrowUp className="size-4" />
+          )}
+        </PromptInputSubmit>
+      </PromptInput>
+    </div>
   );
 
   // First visit: ChatGPT/Inbox-Zero style — time-based greeting with the
@@ -331,8 +355,11 @@ export function ConversationPane({
   // conversation exists the composer drops to a sticky bottom bar.
   if (isEmpty) {
     return (
-      <section className="bg-background flex min-h-0 flex-1 flex-col" data-testid="chat-pane">
-        <div className="flex flex-1 flex-col items-center justify-center px-4">
+      <section
+        className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent"
+        data-testid="chat-pane"
+      >
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4">
           <div className="w-full max-w-[760px]">
             <h1 className="mb-6 text-center text-2xl font-light tracking-tight sm:text-3xl">
               {greeting ?? t('empty.title')}
@@ -361,7 +388,12 @@ export function ConversationPane({
   return (
     <section className="bg-background flex min-h-0 flex-1 flex-col" data-testid="chat-pane">
       <Conversation className="min-h-0 flex-1">
-        <ConversationContent className="mx-auto w-full max-w-[760px] gap-4 px-4 py-6">
+        <ConversationContent
+          className={cn(
+            'mx-auto w-full max-w-[760px] gap-4 px-4 py-6',
+            firstTurnAnimation && 'zm-chat-message-rise',
+          )}
+        >
           {messages.map((message) => {
             const hasToolPart = message.parts.some((part) => part.type.startsWith('tool-'));
             return (
@@ -383,7 +415,14 @@ export function ConversationPane({
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
-      <div className="border-border bg-card border-t px-4 py-3">
+      <div
+        className={cn('bg-background px-4 py-3', firstTurnAnimation && 'zm-chat-composer-dock')}
+        onAnimationEnd={(event) => {
+          if (event.animationName === 'zm-chat-composer-dock') {
+            setFirstTurnAnimation(false);
+          }
+        }}
+      >
         <div className="mx-auto max-w-[760px]">{inputArea}</div>
       </div>
     </section>

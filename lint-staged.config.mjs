@@ -1,11 +1,10 @@
 // Cross-platform lint-staged configuration.
 //
 // The backend/**/*.java entry is a FUNCTION that ignores the staged-files argument so
-// lint-staged does not append the staged filenames as Gradle task names; on Windows it
-// invokes gradlew.bat, elsewhere ./gradlew. lint-staged spawns commands via cross-spawn
-// without a shell, so the Gradle wrapper is referenced by an absolute path resolved from
-// this config file's own location (the repo root). The apps/web/** entries are plain
-// arrays and DO receive the staged filenames.
+// lint-staged does not append the staged filenames as Gradle task names. It invokes a
+// Node helper instead of gradlew.bat directly because lint-staged spawns commands via
+// cross-spawn without a shell, which is brittle for Windows batch wrappers.
+// The apps/web/** entries are plain arrays and DO receive the staged filenames.
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -16,8 +15,9 @@ const repoRoot = path.dirname(fileURLToPath(import.meta.url));
 // by cmd.exe). Quoted to survive any space in the repo path on other machines.
 const toForwardSlashes = (target) => target.split(path.sep).join('/');
 
-const gradlewName = process.platform === 'win32' ? 'gradlew.bat' : 'gradlew';
-const gradlew = toForwardSlashes(path.join(repoRoot, gradlewName));
+const gradleSpotlessHelper = toForwardSlashes(
+  path.join(repoRoot, 'scripts', 'lint-staged-gradle-spotless.mjs'),
+);
 
 // Node 18.20+/20.12+/22+ refuse to spawn .cmd/.bat files without a shell (the
 // CVE-2024-27980 mitigation), and lint-staged spawns commands via cross-spawn WITHOUT a
@@ -38,7 +38,7 @@ const pnpm =
     : 'pnpm';
 
 export default {
-  'backend/**/*.java': (_files) => `"${gradlew}" spotlessApply -q`,
+  'backend/**/*.java': (_files) => `"${toForwardSlashes(process.execPath)}" "${gradleSpotlessHelper}"`,
   'apps/web/**/*.{ts,tsx,js,jsx}': [
     `${pnpm} --filter web exec eslint --fix`,
     `${pnpm} --filter web exec prettier --write`,

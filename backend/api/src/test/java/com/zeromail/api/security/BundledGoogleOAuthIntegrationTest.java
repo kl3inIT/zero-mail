@@ -195,7 +195,9 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
                         org.mockito.ArgumentMatchers.any(UUID.class),
                         org.mockito.ArgumentMatchers.anyString(),
                         org.mockito.ArgumentMatchers.anyString(),
-                        org.mockito.ArgumentMatchers.any(byte[].class));
+                        org.mockito.ArgumentMatchers.any(byte[].class),
+                        org.mockito.ArgumentMatchers.nullable(String.class),
+                        org.mockito.ArgumentMatchers.nullable(String.class));
 
         var req = new MockHttpServletRequest();
         var res = new MockHttpServletResponse();

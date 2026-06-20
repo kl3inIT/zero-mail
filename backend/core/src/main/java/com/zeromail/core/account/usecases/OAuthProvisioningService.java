@@ -13,6 +13,7 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.usecases.TenantService;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +106,17 @@ public class OAuthProvisioningService {
             String email,
             String refreshTokenPlaintext,
             String grantedGmailScopes) {
+        return provisionBundledOAuth(
+                googleSubject, email, refreshTokenPlaintext, grantedGmailScopes, null, null);
+    }
+
+    public BundledProvisioningResult provisionBundledOAuth(
+            String googleSubject,
+            String email,
+            String refreshTokenPlaintext,
+            String grantedGmailScopes,
+            String profileDisplayName,
+            String profilePictureUrl) {
 
         // FAST PATH: existing user (race-safe re-read).
         var existingUser = userRepository.findByGoogleSubject(googleSubject);
@@ -113,13 +125,12 @@ public class OAuthProvisioningService {
             UUID tenantId = user.getTenantId();
             UUID userId = user.getId();
             if (refreshTokenPlaintext == null) {
-                // Reconnect with null refresh token — preserve existing envelope.
+                // Reconnect with null refresh token — preserve existing envelope while still
+                // refreshing the mailbox profile snapshot from the current Google OIDC claims.
                 log.warn("event=oauth_no_refresh_token tenantId={}", tenantId);
                 UUID gmailConnectionId =
-                        gmailConnectionService
-                                .primaryMailboxRef(tenantId)
-                                .map(MailboxRef::gmailConnectionId)
-                                .orElse(null);
+                        refreshExistingMailboxProfile(
+                                tenantId, email, profileDisplayName, profilePictureUrl);
                 return new BundledProvisioningResult(tenantId, userId, gmailConnectionId, false);
             }
             // Reconnect with new refresh token — re-encrypt + upsert in single transaction.
@@ -141,7 +152,9 @@ public class OAuthProvisioningService {
                                                                         tenantId,
                                                                         email,
                                                                         grantedGmailScopes,
-                                                                        envelope);
+                                                                        envelope,
+                                                                        profileDisplayName,
+                                                                        profilePictureUrl);
                                                         gmailConnectionService.clearForReconnect(
                                                                 new MailboxRef(
                                                                         tenantId,
@@ -208,7 +221,9 @@ public class OAuthProvisioningService {
                                                                         tenantId,
                                                                         email,
                                                                         grantedGmailScopes,
-                                                                        envelope);
+                                                                        envelope,
+                                                                        profileDisplayName,
+                                                                        profilePictureUrl);
                                                         savedUser.advanceTo(
                                                                 OnboardingStep.GMAIL_CONNECTED);
                                                         userRepository.save(savedUser);
@@ -251,5 +266,28 @@ public class OAuthProvisioningService {
             return new BundledProvisioningResult(
                     raceWinner.getTenantId(), raceWinner.getId(), gmailConnectionId, false);
         }
+    }
+
+    private UUID refreshExistingMailboxProfile(
+            UUID tenantId, String email, String profileDisplayName, String profilePictureUrl) {
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(
+                        () ->
+                                bundledTransaction.execute(
+                                        _ -> {
+                                            Optional<UUID> updatedMailboxId =
+                                                    gmailConnectionService.updateMailboxProfile(
+                                                            tenantId,
+                                                            email,
+                                                            profileDisplayName,
+                                                            profilePictureUrl);
+                                            if (updatedMailboxId.isPresent()) {
+                                                return updatedMailboxId.get();
+                                            }
+                                            return gmailConnectionService
+                                                    .primaryMailboxRef(tenantId)
+                                                    .map(MailboxRef::gmailConnectionId)
+                                                    .orElse(null);
+                                        }));
     }
 }

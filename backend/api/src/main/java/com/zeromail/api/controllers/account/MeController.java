@@ -11,6 +11,7 @@ import com.zeromail.core.tenant.usecases.TenantService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -55,6 +56,7 @@ public class MeController {
         GmailConnectionProjection gmailConnection = gmailConnectionService.currentStatus(tenantId);
         return MeResponse.from(
                 user,
+                emailOf(oidcUser, user.email()),
                 triagePaused,
                 gmailConnection,
                 displayNameOf(oidcUser),
@@ -79,6 +81,7 @@ public class MeController {
         GmailConnectionProjection gmailConnection = gmailConnectionService.currentStatus(tenantId);
         return MeResponse.from(
                 updated,
+                emailOf(oidcUser, updated.email()),
                 triagePaused,
                 gmailConnection,
                 displayNameOf(oidcUser),
@@ -92,7 +95,14 @@ public class MeController {
      * from the live session. Null-safe: returns {@code null} when the principal or claim is absent.
      */
     private static String displayNameOf(OidcUser oidcUser) {
-        return oidcUser == null ? null : oidcUser.getFullName();
+        if (oidcUser == null) {
+            return null;
+        }
+        String fullName = clean(oidcUser.getFullName());
+        if (fullName != null) {
+            return fullName;
+        }
+        return clean(oidcUser.getClaimAsString(StandardClaimNames.NAME));
     }
 
     /**
@@ -100,6 +110,33 @@ public class MeController {
      * contract as {@link #displayNameOf(OidcUser)}.
      */
     private static String avatarUrlOf(OidcUser oidcUser) {
-        return oidcUser == null ? null : oidcUser.getPicture();
+        if (oidcUser == null) {
+            return null;
+        }
+        String picture = clean(oidcUser.getPicture());
+        if (picture != null) {
+            return picture;
+        }
+        return clean(oidcUser.getClaimAsString(StandardClaimNames.PICTURE));
+    }
+
+    private static String emailOf(OidcUser oidcUser, String fallbackEmail) {
+        if (oidcUser == null) {
+            return fallbackEmail;
+        }
+        String email = clean(oidcUser.getEmail());
+        if (email != null) {
+            return email;
+        }
+        email = clean(oidcUser.getClaimAsString(StandardClaimNames.EMAIL));
+        return email == null ? fallbackEmail : email;
+    }
+
+    private static String clean(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
