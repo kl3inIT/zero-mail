@@ -6,14 +6,14 @@ current_phase: 12
 current_phase_name: Calendar Connection + Triage Foundation
 status: executing
 stopped_at: Phase 12 context gathered
-last_updated: "2026-06-20T09:41:44.013Z"
+last_updated: "2026-06-20T10:13:08.687Z"
 last_activity: 2026-06-20
 last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 ## Current Position
 
 Phase: 12 (Calendar Connection + Triage Foundation) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-06-20 — Phase 12 execution started
 
@@ -199,6 +199,7 @@ Reference: `.planning/ROADMAP.md` + `.planning/REQUIREMENTS.md` + `.planning/res
 | Phase 11 P05 | multi-session | 3 tasks | 39 code/test/generated files + 1 planning artifact |
 | Phase 12 PW0 | 20m | 3 tasks | 13 files |
 | Phase 12 PW1 | ~50 minutes | 3 tasks | 28 files |
+| Phase 12 PW2 | 30min | 3 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -401,6 +402,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 12 W0: calendarApi pinned v3-rev20260614-2.0.0 and ical4j 4.2.5 (probed Maven Central 2026-06-20)
 - [Phase ?]: Phase 12 W1: GoogleOAuthSuccessHandler dispatches to CalendarOAuthSuccessHandler at top of onAuthenticationSuccess via registrationId check — keeps SecurityConfig topology unchanged.
 - [Phase ?]: Phase 12 W1: Liquibase 135 backfills the version column on calendars + mailbox_calendar_preferences. W0's 132/133 omitted it; rolled forward per CONVENTIONS.md §10 (append-only).
+- [Phase ?]: [Phase 12 W2]: Synchronous-inline calendar snapshot ingest in CalendarOAuthSuccessHandler with try-catch wrap chosen over TransactionSynchronization/async event — with OSIV off and no @Transactional on the handler, save() auto-commits so the next call is effectively post-commit.
+- [Phase ?]: [Phase 12 W2]: UPSERT-on-reconnect in CalendarSnapshotIngestionService keyed on (calendar_connection_id, external_calendar_id, tenant_id) — Google sends stable external_calendar_id; INSERT would trip uq_calendar_connection_external_id.
+- [Phase ?]: [Phase 12 W2]: AFTER_COMMIT listener co-located inside CalendarConnectionService — publisher + consumer + eviction target all in the same Modulith module; Phase 13 free/busy cache listener subscribes separately when that module ships.
 
 ### Roadmap Evolution
 
@@ -631,7 +635,7 @@ Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 
 
 ## Session Continuity
 
-Last session: 2026-06-20T09:41:17.265Z
+Last session: 2026-06-20T10:12:34.852Z
 Stopped at: Phase 12 context gathered
 Resume file: .planning/phases/12-calendar-connection-triage-foundation/12-CONTEXT.md
 
