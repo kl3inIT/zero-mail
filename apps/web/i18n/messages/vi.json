@@ -1039,6 +1039,12 @@
     "pagination": {
       "invalid_cursor": "Đã xảy ra lỗi. Hãy thử lại."
     },
+    "referral": {
+      "campaign": {
+        "activeConflict": "Chỉ được bật một sự kiện referral trên toàn hệ thống.",
+        "bannerInvalid": "Banner phải là ảnh PNG, JPG hoặc WebP và không vượt quá 5MB."
+      }
+    },
     "rules": {
       "applyLabels": {
         "generic": "Không thể gắn nhãn lên Gmail lúc này. Kiểm tra kết nối Gmail rồi thử lại."

@@ -3,7 +3,8 @@
 // The backend/**/*.java entry is a FUNCTION that ignores the staged-files argument so
 // lint-staged does not append the staged filenames as Gradle task names. It invokes a
 // Node helper instead of gradlew.bat directly because lint-staged spawns commands via
-// cross-spawn without a shell, which is brittle for Windows batch wrappers.
+// cross-spawn without a shell, which is brittle for Windows batch wrappers. The helper
+// runs Gradle spotlessApply for backend Java files.
 // The apps/web/** entries are plain arrays and DO receive the staged filenames.
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

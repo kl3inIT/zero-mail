@@ -1039,6 +1039,12 @@
     "pagination": {
       "invalid_cursor": "Something went wrong. Try again."
     },
+    "referral": {
+      "campaign": {
+        "activeConflict": "Only one referral campaign can be active across the system.",
+        "bannerInvalid": "Banner must be a PNG, JPG, or WebP image and must not exceed 5MB."
+      }
+    },
     "rules": {
       "applyLabels": {
         "generic": "Could not apply labels in Gmail right now. Check the Gmail connection and try again."

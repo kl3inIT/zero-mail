@@ -13,6 +13,7 @@ import com.zeromail.core.support.PostgresContainerTest;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ class AdminBillingPackageQueryServiceTest extends PostgresContainerTest {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
+    @AfterEach
     void cleanRows() {
         jdbcTemplate.execute("TRUNCATE TABLE tenants RESTART IDENTITY CASCADE");
         jdbcTemplate.update(

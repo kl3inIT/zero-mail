@@ -224,8 +224,8 @@ function AddCatalogModelForm({
               {enableMutation.isPending ? 'Đang kích hoạt…' : 'Kích hoạt lại'}
             </Button>
           ) : (
-            <form.Subscribe selector={(state) => state.canSubmit}>
-              {(canSubmit: boolean) => (
+            <form.Subscribe selector={(state) => ({ canSubmit: state.canSubmit })}>
+              {({ canSubmit }: { canSubmit: boolean }) => (
                 <Button type="submit" disabled={!canSubmit || isPending}>
                   {createMutation.isPending ? 'Đang lưu + verify…' : 'Thêm'}
                 </Button>
