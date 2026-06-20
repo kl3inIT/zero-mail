@@ -62,6 +62,16 @@ public abstract class ApiPostgresTestBase {
                 "spring.security.oauth2.client.registration.google.client-secret",
                 () -> "test-google-secret");
         // Phase 01.5: google-gmail registration deleted — single bundled google registration only.
+        // Phase 12 W1: google-calendar registration auto-bound from application.yml. In the
+        // test profile, the env var fallback resolves to empty, which Boot's
+        // OAuth2ClientProperties rejects with "client id must not be empty" — supply the same
+        // shared stub credentials as the google registration (single GCP client, Pitfall 2).
+        dynamicPropertyRegistry.add(
+                "spring.security.oauth2.client.registration.google-calendar.client-id",
+                () -> "test-google-client");
+        dynamicPropertyRegistry.add(
+                "spring.security.oauth2.client.registration.google-calendar.client-secret",
+                () -> "test-google-secret");
         // Test-only AES-256 key (32 zero bytes, base64-encoded).
         dynamicPropertyRegistry.add(
                 "zero-mail.crypto.refresh-token-key-base64",

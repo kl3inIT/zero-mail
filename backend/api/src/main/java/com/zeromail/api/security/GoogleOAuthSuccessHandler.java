@@ -82,6 +82,14 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final TenantActivityRecorder tenantActivityRecorder;
     private final Clock clock;
 
+    /**
+     * Phase 12 W1 dispatch target — Calendar OAuth callbacks delegate here without touching the
+     * Gmail provisioning code path. Nullable so legacy unit tests that construct this handler
+     * without a calendar handler continue to compile; the runtime dispatch only fires when the
+     * registrationId is {@code google-calendar} so a null delegate cannot break the Gmail flow.
+     */
+    private final CalendarOAuthSuccessHandler calendarOAuthSuccessHandler;
+
     public GoogleOAuthSuccessHandler(
             OAuthProvisioningService provisioningService,
             OAuth2AuthorizedClientService authorizedClientService,
@@ -91,6 +99,29 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             TenantActivityRecorder tenantActivityRecorder,
             Clock clock,
             ApiProperties properties) {
+        this(
+                provisioningService,
+                authorizedClientService,
+                userRepository,
+                gmailConnectionService,
+                ruleTemplateMaterializationService,
+                tenantActivityRecorder,
+                clock,
+                properties,
+                null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public GoogleOAuthSuccessHandler(
+            OAuthProvisioningService provisioningService,
+            OAuth2AuthorizedClientService authorizedClientService,
+            UserRepository userRepository,
+            GmailConnectionService gmailConnectionService,
+            RuleTemplateMaterializationService ruleTemplateMaterializationService,
+            TenantActivityRecorder tenantActivityRecorder,
+            Clock clock,
+            ApiProperties properties,
+            CalendarOAuthSuccessHandler calendarOAuthSuccessHandler) {
         this.provisioningService = provisioningService;
         this.authorizedClientService = authorizedClientService;
         this.userRepository = userRepository;
@@ -100,6 +131,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 Objects.requireNonNull(
                         tenantActivityRecorder, "tenantActivityRecorder must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
+        this.calendarOAuthSuccessHandler = calendarOAuthSuccessHandler;
 
         // Validate baseUrl scheme/host at construction time so a misconfigured
         // ZEROMAIL_WEB_BASE_URL fails fast instead of silently becoming an open-redirect on
@@ -130,6 +162,16 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             @NonNull Authentication authentication)
             throws IOException, ServletException {
         OAuth2AuthenticationToken authenticationToken = (OAuth2AuthenticationToken) authentication;
+        // Phase 12 W1: registrationId-keyed dispatch. Calendar OAuth callbacks have a separate
+        // code path (calendar_connections row, no user/tenant provisioning, no Gmail seed). Run
+        // the calendar handler and return — never fall through to the Gmail bundled path because
+        // the Calendar grant has no openid/profile/email scopes to provision a user with.
+        if (calendarOAuthSuccessHandler != null
+                && CalendarOAuthSuccessHandler.CALENDAR_REGISTRATION_ID.equals(
+                        authenticationToken.getAuthorizedClientRegistrationId())) {
+            calendarOAuthSuccessHandler.onAuthenticationSuccess(request, response, authentication);
+            return;
+        }
         OAuthIntentSnapshot callbackIntentSnapshot = consumeCallbackIntentSnapshot(request);
         SecurityContext initiatingSecurityContext = consumeInitiatingSecurityContext(request);
         String oauthIntent = intentOrFirstLogin(callbackIntentSnapshot);
