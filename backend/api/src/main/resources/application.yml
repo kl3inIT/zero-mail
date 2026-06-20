@@ -41,6 +41,23 @@ spring:
               - email
               - https://www.googleapis.com/auth/gmail.modify
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          # Phase 12 W1 — second registration sharing the GCP OAuth client-id/secret with the
+          # primary `google` bundle (single GCP client per RESEARCH §Pitfall 2). URLs mirror
+          # GoogleOAuthScope.CALENDAR_FREEBUSY / CALENDAR_EVENTS / CALENDAR_READONLY; this
+          # is the ONE place the literal scope URLs live in production source by design — YAML
+          # is the wire format Spring's OAuth2 Client starter consumes, and `OAuthScopeAllowListTest`
+          # excludes YAML by file-type filter. CalendarClientRegistrationConfig boot-checks the
+          # registered scope set against the enum so a typo here fails fast.
+          google-calendar:
+            provider: google
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - https://www.googleapis.com/auth/calendar.freebusy
+              - https://www.googleapis.com/auth/calendar.events
+              - https://www.googleapis.com/auth/calendar.readonly
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/v2/auth

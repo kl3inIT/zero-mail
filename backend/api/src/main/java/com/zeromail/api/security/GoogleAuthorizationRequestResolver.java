@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.stereotype.Component;
 
 /**
@@ -35,6 +36,12 @@ import org.springframework.stereotype.Component;
  * input. Worst-case: an attacker adds it to the first-time login URL and the user sees {@code
  * prompt=consent} (extra friction, not a security regression — no persistence side effect from the
  * resolver itself).
+ *
+ * <p><b>Phase 12 W1 (CAL-CONN-01 / D-02):</b> when the resolved {@code registrationId} is {@code
+ * google-calendar}, {@code prompt=consent} is set UNCONDITIONALLY — Calendar grants must be an
+ * explicit user action every time so the user understands they are granting Calendar access
+ * (separate from their initial Gmail bundle) and so Google always re-issues a refresh token.
+ * Pitfall 7 mitigation.
  */
 @Component
 public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
@@ -43,6 +50,9 @@ public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRe
             LoggerFactory.getLogger(GoogleAuthorizationRequestResolver.class);
 
     private static final String RECONNECT_PARAMETER = "reconnect";
+
+    /** Matches {@code CalendarClientRegistrationConfig.CALENDAR_REGISTRATION_ID}. */
+    private static final String CALENDAR_REGISTRATION_ID = "google-calendar";
 
     private final DefaultOAuth2AuthorizationRequestResolver defaultAuthorizationRequestResolver;
 
@@ -77,7 +87,15 @@ public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRe
         // D-A5: prompt=consent only on reconnect path (forces re-consent + new refresh token).
         // First-time login: NO prompt — smooth UX, refresh token issued on first offline grant
         // anyway.
-        if ("true".equals(servletRequest.getParameter(RECONNECT_PARAMETER))) {
+        //
+        // Phase 12 W1 (CAL-CONN-01 / D-02): Calendar flow ALWAYS sets prompt=consent so the
+        // user explicitly grants Calendar each time and Google re-issues a fresh refresh token
+        // (Pitfall 7 mitigation). Read the registrationId from the authz request attribute the
+        // default resolver populates, not from the URL path which is not exposed at this stage.
+        Object resolvedRegistrationId =
+                authorizationRequest.getAttribute(OAuth2ParameterNames.REGISTRATION_ID);
+        boolean calendarFlow = CALENDAR_REGISTRATION_ID.equals(resolvedRegistrationId);
+        if (calendarFlow || "true".equals(servletRequest.getParameter(RECONNECT_PARAMETER))) {
             additionalParameters.put("prompt", "consent");
         }
         var authorizationRequestBuilder =
