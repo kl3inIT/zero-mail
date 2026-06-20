@@ -4,12 +4,14 @@ import com.zeromail.api.config.ApiProperties;
 import com.zeromail.core.calendar.domain.CalendarConnectionStatus;
 import com.zeromail.core.calendar.persistence.CalendarConnectionEntity;
 import com.zeromail.core.calendar.persistence.CalendarConnectionRepository;
+import com.zeromail.core.calendar.usecases.CalendarSnapshotIngestionService;
 import com.zeromail.core.oauth.token.OAuthTokenStore;
 import com.zeromail.core.oauth.token.OAuthTokenStore.RowDiscriminator;
 import com.zeromail.core.tenant.TenantContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -71,12 +73,14 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
     private final CalendarConnectionRepository calendarConnectionRepository;
     private final OAuthTokenStore oAuthTokenStore;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final CalendarSnapshotIngestionService calendarSnapshotIngestionService;
 
     public CalendarOAuthSuccessHandler(
             OAuth2AuthorizedClientService oAuth2AuthorizedClientService,
             CalendarConnectionRepository calendarConnectionRepository,
             OAuthTokenStore oAuthTokenStore,
             ApplicationEventPublisher applicationEventPublisher,
+            CalendarSnapshotIngestionService calendarSnapshotIngestionService,
             ApiProperties apiProperties) {
         this.oAuth2AuthorizedClientService =
                 Objects.requireNonNull(
@@ -87,6 +91,9 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
         this.oAuthTokenStore = Objects.requireNonNull(oAuthTokenStore, "oAuthTokenStore");
         this.applicationEventPublisher =
                 Objects.requireNonNull(applicationEventPublisher, "applicationEventPublisher");
+        this.calendarSnapshotIngestionService =
+                Objects.requireNonNull(
+                        calendarSnapshotIngestionService, "calendarSnapshotIngestionService");
 
         // Redirect target: the W3 settings page. baseUrl scheme/host already validated by
         // GoogleOAuthSuccessHandler at boot; reuse the same ApiProperties value.
@@ -154,6 +161,7 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
         Optional<CalendarConnectionEntity> existingActive =
                 calendarConnectionRepository.findActiveByTenantIdAndGoogleEmail(
                         tenantId, googleEmail);
+        UUID savedCalendarConnectionId;
         try {
             if (existingActive.isPresent()) {
                 // Re-grant of the same email — refresh the row in place so the partial-unique
@@ -167,10 +175,11 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
                 reGranted.setScopesGranted(scopesGranted);
                 reGranted.setConnectedAt(Instant.now());
                 calendarConnectionRepository.save(reGranted);
+                savedCalendarConnectionId = reGranted.getId();
                 log.info(
                         "event=calendar_oauth_regrant_success tenantId={} calendarConnectionId={}",
                         tenantId,
-                        reGranted.getId());
+                        savedCalendarConnectionId);
             } else {
                 CalendarConnectionEntity freshRow =
                         new CalendarConnectionEntity(
@@ -186,10 +195,11 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
                 freshRow.setScopesGranted(scopesGranted);
                 freshRow.setConnectedAt(Instant.now());
                 calendarConnectionRepository.save(freshRow);
+                savedCalendarConnectionId = freshRow.getId();
                 log.info(
                         "event=calendar_oauth_connect_success tenantId={} calendarConnectionId={}",
                         tenantId,
-                        freshRow.getId());
+                        savedCalendarConnectionId);
             }
         } catch (DataIntegrityViolationException constraintRace) {
             // A concurrent flow landed the row first — surface as a friendly OAuth error so the
@@ -202,7 +212,51 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
                             null));
         }
 
+        // D-06 snapshot ingest: resolve the active mailbox from the OAuth intent (stamped at
+        // /oauth2/authorization/google-calendar by W3's connect-intent endpoint) and seed
+        // sub-calendars + primary-calendar default-roles. Failure here MUST NOT break the OAuth
+        // redirect — the row save is the user's primary expected outcome (the connection card on
+        // /settings/calendar shows CONNECTED) and the snapshot can be retried on the next page
+        // load via a maintenance hook (W3+ scope). Per RESEARCH §Pitfall 8 a 403 from Workspace
+        // policy is already absorbed inside the service.
+        UUID activeMailboxId = resolveActiveMailboxIdFromSession(request);
+        try {
+            calendarSnapshotIngestionService.ingestSnapshot(
+                    tenantId, savedCalendarConnectionId, activeMailboxId);
+        } catch (IOException snapshotFailure) {
+            log.warn(
+                    "event=calendar_snapshot_ingest_failed tenantId={} calendarConnectionId={} reason={}",
+                    tenantId,
+                    savedCalendarConnectionId,
+                    snapshotFailure.getClass().getSimpleName());
+        } catch (RuntimeException snapshotFailure) {
+            log.warn(
+                    "event=calendar_snapshot_ingest_failed tenantId={} calendarConnectionId={} reason={}",
+                    tenantId,
+                    savedCalendarConnectionId,
+                    snapshotFailure.getClass().getSimpleName());
+        }
+
         super.onAuthenticationSuccess(request, response, authentication);
+    }
+
+    /**
+     * Reads the active mailbox UUID from the OAuth intent snapshot session attribute stamped by
+     * {@code IntentCarryingAuthorizationRequestRepository} at OAuth-init. Returns {@code null} when
+     * the calendar grant was initiated outside the /connect-intent flow — the snapshot service
+     * skips D-06 default-roles in that case.
+     */
+    private UUID resolveActiveMailboxIdFromSession(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object snapshotAttribute =
+                session.getAttribute(OAuthIntentSnapshot.CALLBACK_INTENT_SESSION_ATTRIBUTE);
+        if (snapshotAttribute instanceof OAuthIntentSnapshot snapshot) {
+            return snapshot.targetMailboxId();
+        }
+        return null;
     }
 
     private void removeAuthorizedClient(String principalName) {

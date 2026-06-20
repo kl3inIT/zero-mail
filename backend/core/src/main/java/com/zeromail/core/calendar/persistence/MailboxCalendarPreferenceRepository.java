@@ -47,4 +47,18 @@ public interface MailboxCalendarPreferenceRepository
                     + "AND preference.tenantId = :tenantId")
     int deleteByCalendarIdAndTenantId(
             @Param("calendarId") UUID calendarId, @Param("tenantId") UUID tenantId);
+
+    /**
+     * Bulk delete every preference row for the given mailbox — used by {@code
+     * MailboxCalendarPreferenceService.updateForMailbox} to implement replace-then-insert semantics
+     * (simplest correct cardinality given the small per-mailbox N). Tenant-scoped explicitly.
+     */
+    @Modifying
+    @Transactional
+    @Query(
+            "DELETE FROM MailboxCalendarPreferenceEntity preference "
+                    + "WHERE preference.mailboxId = :mailboxId "
+                    + "AND preference.tenantId = :tenantId")
+    int deleteByMailboxIdAndTenantId(
+            @Param("mailboxId") UUID mailboxId, @Param("tenantId") UUID tenantId);
 }
