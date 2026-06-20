@@ -9,9 +9,12 @@ import java.util.UUID;
 @Schema(
         requiredProperties = {
             "tenantId",
+            "tenantDisplayName",
             "createdAt",
             "status",
             "gmailConnectionStatus",
+            "gmailAccountCount",
+            "connectedGmailAccountCount",
             "spendBucket7d",
             "lastActivityAt",
             "lastActivityKind",
@@ -34,8 +37,12 @@ import java.util.UUID;
         })
 public record TenantListRowResponse(
         UUID tenantId,
+        String tenantDisplayName,
+        @Schema(nullable = true) String ownerEmail,
         Instant createdAt,
-        String gmailAccountEmail,
+        @Schema(nullable = true) String gmailAccountEmail,
+        int gmailAccountCount,
+        int connectedGmailAccountCount,
         @Schema(allowableValues = {"ACTIVE", "PAUSED", "DISCONNECTED"}) String status,
         @Schema(allowableValues = {"CONNECTED", "DISCONNECTED"}) String gmailConnectionStatus,
         @Schema(allowableValues = {"LOW", "MEDIUM", "HIGH"}) String spendBucket7d,
@@ -77,8 +84,12 @@ public record TenantListRowResponse(
     public static TenantListRowResponse from(TenantListRow tenantListRow) {
         return new TenantListRowResponse(
                 tenantListRow.tenantId(),
+                tenantListRow.tenantDisplayName(),
+                tenantListRow.ownerEmail(),
                 tenantListRow.createdAt(),
                 tenantListRow.gmailAccountEmail(),
+                tenantListRow.gmailAccountCount(),
+                tenantListRow.connectedGmailAccountCount(),
                 tenantListRow.status(),
                 tenantListRow.gmailConnectionStatus(),
                 tenantListRow.spendBucket7d(),

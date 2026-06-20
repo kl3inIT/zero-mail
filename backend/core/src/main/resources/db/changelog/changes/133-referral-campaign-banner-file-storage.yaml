@@ -1,0 +1,74 @@
+databaseChangeLog:
+  - changeSet:
+      id: 133-referral-campaign-banner-file-storage
+      author: zeromail
+      comment: >
+        Move referral campaign banner images out of PostgreSQL bytea storage. The API stores files
+        in the backend filesystem and keeps only the generated object key plus MIME metadata in DB.
+        Existing database blobs are intentionally discarded and must be re-uploaded.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              DROP CONSTRAINT IF EXISTS ck_referral_campaign_banner_image
+        - addColumn:
+            tableName: referral_campaign
+            columns:
+              - column:
+                  name: banner_image_object_key
+                  type: varchar(512)
+        - sql:
+            sql: >
+              UPDATE referral_campaign
+              SET banner_image_content_type = NULL,
+                  banner_image_size_bytes = NULL
+        - dropColumn:
+            tableName: referral_campaign
+            columnName: banner_image_bytes
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              ADD CONSTRAINT ck_referral_campaign_banner_file
+              CHECK (
+                (banner_image_object_key IS NULL
+                  AND banner_image_content_type IS NULL
+                  AND banner_image_size_bytes IS NULL)
+                OR
+                (banner_image_object_key IS NOT NULL
+                  AND length(trim(banner_image_object_key)) > 0
+                  AND banner_image_content_type IN ('image/jpeg', 'image/png', 'image/webp')
+                  AND banner_image_size_bytes BETWEEN 1 AND 5242880)
+              )
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              DROP CONSTRAINT IF EXISTS ck_referral_campaign_banner_file
+        - addColumn:
+            tableName: referral_campaign
+            columns:
+              - column:
+                  name: banner_image_bytes
+                  type: bytea
+        - sql:
+            sql: >
+              UPDATE referral_campaign
+              SET banner_image_bytes = NULL,
+                  banner_image_content_type = NULL,
+                  banner_image_size_bytes = NULL
+        - dropColumn:
+            tableName: referral_campaign
+            columnName: banner_image_object_key
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              ADD CONSTRAINT ck_referral_campaign_banner_image
+              CHECK (
+                (banner_image_bytes IS NULL
+                  AND banner_image_content_type IS NULL
+                  AND banner_image_size_bytes IS NULL)
+                OR
+                (banner_image_bytes IS NOT NULL
+                  AND banner_image_content_type IN ('image/jpeg', 'image/png', 'image/webp')
+                  AND banner_image_size_bytes BETWEEN 1 AND 5242880)
+              )

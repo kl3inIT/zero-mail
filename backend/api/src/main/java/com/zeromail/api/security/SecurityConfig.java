@@ -60,15 +60,20 @@ public class SecurityConfig {
             AdminBindingFilter adminBindingFilter,
             AdminResponseBodyBanFilter adminResponseBodyBanFilter,
             AdminUserDetailsService adminUserDetailsService,
-            EnrollmentSessionAuthFilter enrollmentSessionAuthFilter)
+            EnrollmentSessionAuthFilter enrollmentSessionAuthFilter,
+            AdminWebAuthnOptionsUsernameFilter adminWebAuthnOptionsUsernameFilter)
             throws Exception {
         // see docs/ops/admin-interface-freeze.md §Spring Security WebAuthn Endpoints
-        http.securityMatcher("/api/admin/**", "/webauthn/**", "/login/webauthn/**")
+        http.securityMatcher(
+                        "/api/admin/**", "/webauthn/**", "/login/webauthn", "/login/webauthn/**")
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(
                         authorizationRequests ->
                                 authorizationRequests
-                                        .requestMatchers("/webauthn/**", "/login/webauthn/**")
+                                        .requestMatchers(
+                                                "/webauthn/**",
+                                                "/login/webauthn",
+                                                "/login/webauthn/**")
                                         .permitAll()
                                         .requestMatchers(
                                                 HttpMethod.POST, "/api/admin/enrollment/session")
@@ -89,6 +94,7 @@ public class SecurityConfig {
                                         .ignoringRequestMatchers(
                                                 "/api/admin/enrollment/session",
                                                 "/webauthn/**",
+                                                "/login/webauthn",
                                                 "/login/webauthn/**"))
                 .exceptionHandling(
                         exceptionHandling ->
@@ -108,6 +114,8 @@ public class SecurityConfig {
                                         .deleteCookies("JSESSIONID"))
                 .sessionManagement(Customizer.withDefaults())
                 .addFilterAfter(enrollmentSessionAuthFilter, AnonymousAuthenticationFilter.class)
+                .addFilterAfter(
+                        adminWebAuthnOptionsUsernameFilter, AnonymousAuthenticationFilter.class)
                 .addFilterAfter(adminResponseBodyBanFilter, AuthorizationFilter.class)
                 .addFilterAfter(adminBindingFilter, AdminResponseBodyBanFilter.class);
         return http.build();
@@ -184,6 +192,7 @@ public class SecurityConfig {
                             && !path.equals("/api/integrations/telegram/webhook")
                             && !path.startsWith("/api/admin/")
                             && !path.startsWith("/webauthn/")
+                            && !path.equals("/login/webauthn")
                             && !path.startsWith("/login/webauthn/");
                 };
         http.securityMatcher(userChainMatcher)
@@ -206,6 +215,7 @@ public class SecurityConfig {
                                                 "/actuator/prometheus",
                                                 "/v3/api-docs/**",
                                                 "/swagger-ui/**",
+                                                "/r/**",
                                                 "/login/oauth2/**",
                                                 "/oauth2/**",
                                                 // Support feedback — open to unauthenticated users

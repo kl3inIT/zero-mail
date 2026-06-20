@@ -37,42 +37,89 @@ public class TenantInspectionReadRepository {
             """
                     WITH tenant_base AS (
                         SELECT t.id AS tenant_id,
+                               t.display_name AS tenant_display_name,
                                t.created_at AS created_at,
-                               gc.google_email AS gmail_account_email,
-                               COALESCE(gc.status, 'DISCONNECTED') AS gmail_connection_status,
-                               gc.updated_at AS gmail_updated_at,
+                               owner_user.email AS owner_email,
+                               selected_gmail.google_email AS gmail_account_email,
+                               COALESCE(selected_gmail.status, 'DISCONNECTED')
+                                   AS gmail_connection_status,
+                               selected_gmail.updated_at AS gmail_updated_at,
+                               COALESCE(gmail_counts.gmail_account_count, 0)
+                                   AS gmail_account_count,
+                               COALESCE(gmail_counts.connected_gmail_account_count, 0)
+                                   AS connected_gmail_account_count,
                                COALESCE(telegram.status, 'NO_CONNECTION') AS telegram_status,
                                telegram.last_active_at AS telegram_last_active_at,
                                telegram.linked_at AS telegram_linked_at,
                                CASE
                                    WHEN t.triage_paused THEN 'PAUSED'
-                                   WHEN COALESCE(gc.status, 'DISCONNECTED') = 'DISCONNECTED'
+                                   WHEN COALESCE(gmail_counts.connected_gmail_account_count, 0) = 0
                                        THEN 'DISCONNECTED'
                                    ELSE 'ACTIVE'
                                END AS status,
                                CASE
-                                   WHEN gc.tenant_id IS NULL THEN 'NO_CONNECTION'
-                                   WHEN gc.watch_expires_at IS NULL THEN 'NOT_WATCHING'
-                                   WHEN gc.watch_expires_at < NOW() THEN 'EXPIRED'
+                                   WHEN COALESCE(gmail_counts.gmail_account_count, 0) = 0
+                                       THEN 'NO_CONNECTION'
+                                   WHEN selected_gmail.watch_expires_at IS NULL THEN 'NOT_WATCHING'
+                                   WHEN selected_gmail.watch_expires_at < NOW() THEN 'EXPIRED'
                                    ELSE 'WATCHING'
                                END AS gmail_watch_status,
                                COALESCE(settings.auto_send_rules_enabled, true) AS auto_send_rules_enabled
-                         FROM tenants t
-                         LEFT JOIN gmail_connections gc ON gc.tenant_id = t.id
-                         LEFT JOIN telegram_account telegram ON telegram.tenant_id = t.id
-                         LEFT JOIN rule_automation_settings settings ON settings.tenant_id = t.id
-                    ),
-                    filtered_tenants AS (
+                          FROM tenants t
+                          LEFT JOIN LATERAL (
+                              SELECT users.email
+                              FROM users
+                              WHERE users.tenant_id = t.id
+                              ORDER BY users.created_at ASC, users.id ASC
+                              LIMIT 1
+                          ) owner_user ON TRUE
+                          LEFT JOIN LATERAL (
+                              SELECT gmail_connections.google_email,
+                                     gmail_connections.status,
+                                     gmail_connections.updated_at,
+                                     gmail_connections.watch_expires_at
+                              FROM gmail_connections
+                              WHERE gmail_connections.tenant_id = t.id
+                              ORDER BY gmail_connections.is_primary DESC,
+                                       CASE
+                                           WHEN gmail_connections.status = 'CONNECTED' THEN 0
+                                           ELSE 1
+                                       END ASC,
+                                       gmail_connections.connected_at DESC NULLS LAST,
+                                       gmail_connections.id ASC
+                              LIMIT 1
+                          ) selected_gmail ON TRUE
+                          LEFT JOIN LATERAL (
+                              SELECT COUNT(*)::int AS gmail_account_count,
+                                     (COUNT(*) FILTER (
+                                         WHERE gmail_connections.status = 'CONNECTED'
+                                     ))::int AS connected_gmail_account_count
+                              FROM gmail_connections
+                              WHERE gmail_connections.tenant_id = t.id
+                          ) gmail_counts ON TRUE
+                          LEFT JOIN telegram_account telegram ON telegram.tenant_id = t.id
+                          LEFT JOIN rule_automation_settings settings ON settings.tenant_id = t.id
+                     ),
+                     filtered_tenants AS (
                         SELECT *
                         FROM tenant_base
                          WHERE (CAST(:status AS text) IS NULL OR status = :status)
                            AND (CAST(:from AS timestamptz) IS NULL OR created_at >= :from)
                            AND (CAST(:to AS timestamptz) IS NULL OR created_at <= :to)
-                           AND (
-                               CAST(:email AS text) IS NULL
-                               OR gmail_account_email ILIKE ('%' || :email || '%')
-                           )
-                     ),
+                            AND (
+                                CAST(:email AS text) IS NULL
+                                OR tenant_display_name ILIKE ('%' || :email || '%')
+                                OR owner_email ILIKE ('%' || :email || '%')
+                                OR gmail_account_email ILIKE ('%' || :email || '%')
+                                OR tenant_id::text ILIKE ('%' || :email || '%')
+                                OR EXISTS (
+                                    SELECT 1
+                                    FROM gmail_connections search_gmail
+                                    WHERE search_gmail.tenant_id = tenant_base.tenant_id
+                                      AND search_gmail.google_email ILIKE ('%' || :email || '%')
+                                )
+                            )
+                      ),
                     rules_metrics AS (
                         SELECT filtered_tenants.tenant_id,
                                COUNT(rules.id)::int AS total_rules_count,
@@ -178,12 +225,16 @@ public class TenantInspectionReadRepository {
                             ON delivery.tenant_id = filtered_tenants.tenant_id
                         GROUP BY filtered_tenants.tenant_id
                     ),
-                    tenant_rows AS (
-                        SELECT filtered_tenants.tenant_id,
-                               filtered_tenants.created_at,
-                               filtered_tenants.gmail_account_email,
-                               filtered_tenants.status,
-                               filtered_tenants.gmail_connection_status,
+                     tenant_rows AS (
+                         SELECT filtered_tenants.tenant_id,
+                                filtered_tenants.tenant_display_name,
+                                 filtered_tenants.created_at,
+                                filtered_tenants.owner_email,
+                                 filtered_tenants.gmail_account_email,
+                                filtered_tenants.gmail_account_count,
+                                filtered_tenants.connected_gmail_account_count,
+                                 filtered_tenants.status,
+                                 filtered_tenants.gmail_connection_status,
                                CASE
                                    WHEN COALESCE(credit_metrics.reserve_7d_count, 0) >= 100 THEN 'HIGH'
                                    WHEN COALESCE(credit_metrics.reserve_7d_count, 0) >= 10 THEN 'MEDIUM'
@@ -276,7 +327,9 @@ public class TenantInspectionReadRepository {
         return namedParameterJdbcTemplate.query(
                 TENANT_ROWS_CTE
                         + """
-                        SELECT tenant_id, created_at, gmail_account_email, status,
+                        SELECT tenant_id, tenant_display_name, owner_email, created_at,
+                               gmail_account_email, gmail_account_count,
+                               connected_gmail_account_count, status,
                                gmail_connection_status,
                                spend_bucket_7d, last_activity_at, last_activity_kind,
                                total_rules_count, enabled_rules_count,
@@ -339,13 +392,20 @@ public class TenantInspectionReadRepository {
         return queryOptional(
                 """
                         SELECT t.id AS tenant_id,
+                               t.display_name AS tenant_display_name,
                                t.created_at AS created_at,
-                               gc.google_email AS gmail_account_email,
-                               COALESCE(gc.status, 'DISCONNECTED') AS gmail_connection_status,
+                               owner_user.email AS owner_email,
+                               selected_gmail.google_email AS gmail_account_email,
+                               COALESCE(gmail_counts.gmail_account_count, 0)
+                                   AS gmail_account_count,
+                               COALESCE(gmail_counts.connected_gmail_account_count, 0)
+                                   AS connected_gmail_account_count,
+                               COALESCE(selected_gmail.status, 'DISCONNECTED')
+                                   AS gmail_connection_status,
                                COALESCE(telegram.status, 'NO_CONNECTION') AS telegram_status,
                                CASE
                                    WHEN t.triage_paused THEN 'PAUSED'
-                                   WHEN COALESCE(gc.status, 'DISCONNECTED') = 'DISCONNECTED'
+                                   WHEN COALESCE(gmail_counts.connected_gmail_account_count, 0) = 0
                                        THEN 'DISCONNECTED'
                                    ELSE 'ACTIVE'
                                END AS status,
@@ -353,7 +413,7 @@ public class TenantInspectionReadRepository {
                                    COALESCE(MAX(chat.updated_at), t.created_at),
                                    COALESCE(MAX(triage.created_at), t.created_at),
                                    COALESCE(MAX(observed.observed_at), t.created_at),
-                                   COALESCE(gc.updated_at, t.created_at)
+                                   COALESCE(selected_gmail.updated_at, t.created_at)
                                 ) AS last_activity_at,
                                 COUNT(DISTINCT rules.id)::int AS rules_count,
                                 (SELECT COUNT(*)::int
@@ -370,16 +430,49 @@ public class TenantInspectionReadRepository {
                                  FROM rules enabled_rule_names
                                  WHERE enabled_rule_names.tenant_id = t.id AND enabled_rule_names.enabled)
                                     AS enabled_rule_names
-                         FROM tenants t
-                         LEFT JOIN gmail_connections gc ON gc.tenant_id = t.id
-                         LEFT JOIN telegram_account telegram ON telegram.tenant_id = t.id
-                         LEFT JOIN rules ON rules.tenant_id = t.id
+                          FROM tenants t
+                          LEFT JOIN LATERAL (
+                              SELECT users.email
+                              FROM users
+                              WHERE users.tenant_id = t.id
+                              ORDER BY users.created_at ASC, users.id ASC
+                              LIMIT 1
+                          ) owner_user ON TRUE
+                          LEFT JOIN LATERAL (
+                              SELECT gmail_connections.google_email,
+                                     gmail_connections.status,
+                                     gmail_connections.updated_at
+                              FROM gmail_connections
+                              WHERE gmail_connections.tenant_id = t.id
+                              ORDER BY gmail_connections.is_primary DESC,
+                                       CASE
+                                           WHEN gmail_connections.status = 'CONNECTED' THEN 0
+                                           ELSE 1
+                                       END ASC,
+                                       gmail_connections.connected_at DESC NULLS LAST,
+                                       gmail_connections.id ASC
+                              LIMIT 1
+                          ) selected_gmail ON TRUE
+                          LEFT JOIN LATERAL (
+                              SELECT COUNT(*)::int AS gmail_account_count,
+                                     (COUNT(*) FILTER (
+                                         WHERE gmail_connections.status = 'CONNECTED'
+                                     ))::int AS connected_gmail_account_count
+                              FROM gmail_connections
+                              WHERE gmail_connections.tenant_id = t.id
+                          ) gmail_counts ON TRUE
+                          LEFT JOIN telegram_account telegram ON telegram.tenant_id = t.id
+                          LEFT JOIN rules ON rules.tenant_id = t.id
                          LEFT JOIN chat ON chat.tenant_id = t.id
                          LEFT JOIN triage_audit triage ON triage.tenant_id = t.id
                          LEFT JOIN mail_message_observed observed ON observed.tenant_id = t.id
                          WHERE t.id = :tenantId
-                         GROUP BY t.id, t.created_at, t.triage_paused, gc.google_email, gc.status,
-                                  gc.updated_at, telegram.status
+                          GROUP BY t.id, t.display_name, t.created_at, t.triage_paused,
+                                   owner_user.email, selected_gmail.google_email,
+                                   selected_gmail.status, selected_gmail.updated_at,
+                                   gmail_counts.gmail_account_count,
+                                   gmail_counts.connected_gmail_account_count,
+                                   telegram.status
                         """,
                 parametersForTenant(tenantId),
                 TenantInspectionReadRepository::mapTenantDetailOverview);
@@ -388,21 +481,35 @@ public class TenantInspectionReadRepository {
     public Optional<TenantHealthSnapshot> findHealth(UUID tenantId) {
         return queryOptional(
                 """
-                        SELECT COALESCE(gc.status, 'NO_CONNECTION') AS token_refresh_status,
-                               gc.updated_at AS last_token_refresh_at,
+                        SELECT COALESCE(selected_gmail.status, 'NO_CONNECTION') AS token_refresh_status,
+                               selected_gmail.updated_at AS last_token_refresh_at,
                                CASE
-                                   WHEN gc.watch_expires_at IS NULL THEN 'NOT_WATCHING'
-                                   WHEN gc.watch_expires_at < NOW() THEN 'EXPIRED'
+                                   WHEN selected_gmail.watch_expires_at IS NULL THEN 'NOT_WATCHING'
+                                   WHEN selected_gmail.watch_expires_at < NOW() THEN 'EXPIRED'
                                    ELSE 'WATCHING'
                                END AS watch_status,
                                (SELECT MAX(created_at) FROM pubsub_delivery WHERE tenant_id = :tenantId)
                                    AS last_pubsub_push_at,
                                (SELECT COUNT(*)::int FROM pubsub_delivery
                                 WHERE tenant_id = :tenantId AND status = 'PENDING') AS pubsub_backlog_count
-                        FROM tenants t
-                        LEFT JOIN gmail_connections gc ON gc.tenant_id = t.id
-                        WHERE t.id = :tenantId
-                        """,
+                         FROM tenants t
+                         LEFT JOIN LATERAL (
+                             SELECT gmail_connections.status,
+                                    gmail_connections.updated_at,
+                                    gmail_connections.watch_expires_at
+                             FROM gmail_connections
+                             WHERE gmail_connections.tenant_id = t.id
+                             ORDER BY gmail_connections.is_primary DESC,
+                                      CASE
+                                          WHEN gmail_connections.status = 'CONNECTED' THEN 0
+                                          ELSE 1
+                                      END ASC,
+                                      gmail_connections.connected_at DESC NULLS LAST,
+                                      gmail_connections.id ASC
+                             LIMIT 1
+                         ) selected_gmail ON TRUE
+                         WHERE t.id = :tenantId
+                         """,
                 parametersForTenant(tenantId),
                 TenantInspectionReadRepository::mapTenantHealthSnapshot);
     }
@@ -725,9 +832,21 @@ public class TenantInspectionReadRepository {
     public String findGmailAccountEmail(UUID tenantId) {
         return namedParameterJdbcTemplate.query(
                 """
-                        SELECT gc.google_email
+                        SELECT selected_gmail.google_email
                         FROM tenants t
-                        LEFT JOIN gmail_connections gc ON gc.tenant_id = t.id
+                        LEFT JOIN LATERAL (
+                            SELECT gmail_connections.google_email
+                            FROM gmail_connections
+                            WHERE gmail_connections.tenant_id = t.id
+                            ORDER BY gmail_connections.is_primary DESC,
+                                     CASE
+                                         WHEN gmail_connections.status = 'CONNECTED' THEN 0
+                                         ELSE 1
+                                     END ASC,
+                                     gmail_connections.connected_at DESC NULLS LAST,
+                                     gmail_connections.id ASC
+                            LIMIT 1
+                        ) selected_gmail ON TRUE
                         WHERE t.id = :tenantId
                         """,
                 parametersForTenant(tenantId),
@@ -763,8 +882,12 @@ public class TenantInspectionReadRepository {
     private static TenantListRow mapTenantListRow(ResultSet resultSet) throws SQLException {
         return new TenantListRow(
                 resultSet.getObject("tenant_id", UUID.class),
+                resultSet.getString("tenant_display_name"),
+                resultSet.getString("owner_email"),
                 instantOrNull(resultSet, "created_at"),
                 resultSet.getString("gmail_account_email"),
+                resultSet.getInt("gmail_account_count"),
+                resultSet.getInt("connected_gmail_account_count"),
                 resultSet.getString("status"),
                 resultSet.getString("gmail_connection_status"),
                 resultSet.getString("spend_bucket_7d"),
@@ -811,8 +934,12 @@ public class TenantInspectionReadRepository {
             throws SQLException {
         return new TenantDetailOverview(
                 resultSet.getObject("tenant_id", UUID.class),
+                resultSet.getString("tenant_display_name"),
+                resultSet.getString("owner_email"),
                 instantOrNull(resultSet, "created_at"),
                 resultSet.getString("gmail_account_email"),
+                resultSet.getInt("gmail_account_count"),
+                resultSet.getInt("connected_gmail_account_count"),
                 resultSet.getString("status"),
                 resultSet.getString("gmail_connection_status"),
                 resultSet.getString("telegram_status"),

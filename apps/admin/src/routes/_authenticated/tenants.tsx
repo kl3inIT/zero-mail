@@ -1,21 +1,24 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router';
 import {
+  ActivityIcon,
   CalendarDaysIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
   FilterIcon,
+  InfoIcon,
+  MailIcon,
   SearchIcon,
+  UsersIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { z } from 'zod';
 
-import { KpiCard } from '@/components/KpiCard';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -92,8 +95,12 @@ function TenantsRoute() {
   );
   const isListRoute = location.pathname === '/tenants';
   const tenantList = useTenantList(filters, isListRoute);
-  const rows = tenantList.data?.rows ?? [];
+  const rows = useMemo(() => tenantList.data?.rows ?? [], [tenantList.data?.rows]);
   const summary = tenantList.data?.summary;
+  const dashboardStats = useMemo(
+    () => buildTenantDashboardStats(summary, rows, effectiveFrom, effectiveTo),
+    [summary, rows, effectiveFrom, effectiveTo],
+  );
 
   if (!isListRoute) {
     return <Outlet />;
@@ -122,41 +129,39 @@ function TenantsRoute() {
   }
 
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="min-w-0 space-y-4">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-ink">Khách hàng</h1>
         </div>
-        <Badge variant="secondary" className="w-fit">
+        <Badge variant="secondary" className="w-fit rounded-full px-3">
           {tenantList.isLoading ? 'Đang tải' : `${rows.length} đang hiển thị`}
         </Badge>
       </header>
 
-      <TenantSummaryCards summary={summary} isLoading={tenantList.isLoading} />
+      <TenantSummaryCards stats={dashboardStats} isLoading={tenantList.isLoading} />
+      <TenantInsightsGrid stats={dashboardStats} />
 
       <Card className="min-w-0">
-        <CardHeader>
-          <CardTitle>Khách hàng</CardTitle>
-        </CardHeader>
-        <CardContent className="min-w-0 space-y-4">
+        <CardContent className="min-w-0 space-y-3 p-3">
           <form
-            className="rounded-lg border border-border bg-secondary/40 p-3"
+            className="rounded-md border border-border bg-card p-2"
             onSubmit={(event) => {
               event.preventDefault();
               applyFilters();
             }}
           >
-            <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_180px_350px_auto] lg:items-start">
+            <div className="grid gap-3 lg:grid-cols-[minmax(320px,1fr)_240px_minmax(300px,0.8fr)_auto] lg:items-end">
               <div className="space-y-2">
-                <Label htmlFor="tenant-email">Tìm theo email</Label>
+                <Label htmlFor="tenant-email">Tìm tenant / email</Label>
                 <div className="relative">
                   <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="tenant-email"
-                    aria-label="Tìm theo email"
+                    aria-label="Tìm tenant, owner, Gmail hoặc mã tenant"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="name@company.com"
+                    placeholder="Tên tenant, Gmail, owner, mã tenant"
                     className="pl-8"
                   />
                 </div>
@@ -183,8 +188,8 @@ function TenantsRoute() {
                 onFromChange={setFrom}
                 onToChange={setTo}
               />
-              <div className="flex flex-wrap gap-2 pt-6">
-                <Button type="submit">
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" className="bg-primary text-primary-foreground hover:bg-(--primary-hover)">
                   <FilterIcon className="size-4" />
                   Áp dụng
                 </Button>
@@ -206,10 +211,10 @@ function TenantsRoute() {
             </div>
           </form>
           <div className="min-w-0 overflow-x-auto">
-            <Table className="min-w-[920px]">
+            <Table className="min-w-[980px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[260px]">Email</TableHead>
+                  <TableHead className="min-w-[300px]">Tenant</TableHead>
                   <TableHead className="min-w-[150px]">Gmail</TableHead>
                   <TableHead className="min-w-[150px]">Telegram</TableHead>
                   <TableHead className="min-w-[180px]">Hoạt động gần nhất</TableHead>
@@ -258,13 +263,25 @@ function TenantsRoute() {
 }
 
 function TenantRow({ row }: { row: TenantListRow }) {
+  const extraGmailCount = Math.max(0, row.gmailAccountCount - 1);
   return (
     <TableRow>
       <TableCell>
-        <div className="truncate text-sm font-medium text-ink">{row.gmailAccountEmail ?? 'Chưa kết nối Gmail'}</div>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium text-ink">{row.tenantDisplayName}</div>
+          <div className="mt-1 truncate text-xs text-muted-foreground">
+            Tenant #{shortTenantId(row.tenantId)} · Owner: {row.ownerEmail ?? 'Chưa có owner'}
+          </div>
+        </div>
       </TableCell>
       <TableCell>
-        <GmailConnectionBadge status={row.gmailConnectionStatus} />
+        <div className="min-w-0 space-y-1">
+          <GmailConnectionBadge status={row.gmailConnectionStatus} />
+          <div className="truncate text-xs text-muted-foreground">
+            {row.gmailAccountEmail ?? 'Chưa kết nối Gmail'}
+            {extraGmailCount > 0 ? ` · +${extraGmailCount} Gmail` : ''}
+          </div>
+        </div>
       </TableCell>
       <TableCell>
         <TelegramStatusBadge status={row.telegramStatus} compact />
@@ -273,53 +290,220 @@ function TenantRow({ row }: { row: TenantListRow }) {
         <span className="text-sm text-ink">{activityKindLabel(row.lastActivityKind)}</span>
       </TableCell>
       <TableCell className="text-right">
-        <Button
-          render={
-            <Link
-              to="/tenants/$tenantId"
-              params={{ tenantId: row.tenantId }}
-              search={{ tab: 'activity' }}
-              aria-label={`Chi tiết ${row.gmailAccountEmail ?? row.tenantId}`}
-            />
-          }
-          variant="outline"
-          size="sm"
+        <Link
+          to="/tenants/$tenantId"
+          params={{ tenantId: row.tenantId }}
+          search={{ tab: 'activity' }}
+          aria-label={`Chi tiết ${row.tenantDisplayName}`}
+          className={buttonVariants({ variant: 'link', size: 'sm', className: 'text-primary' })}
         >
           Chi tiết
-        </Button>
+        </Link>
       </TableCell>
     </TableRow>
   );
 }
 
+function shortTenantId(tenantId: string): string {
+  return tenantId.slice(0, 8);
+}
+
+type TenantDashboardStats = {
+  totalCount: number;
+  activeCount: number;
+  pausedCount: number;
+  gmailConnectedCount: number;
+  disconnectedCount: number;
+  activeLast24hCount: number;
+  activeLast7dCount: number;
+  gmailConnectionRate: number;
+  active24hRate: number;
+  dailyActiveSeries: Array<{ label: string; value: number }>;
+};
+
 function TenantSummaryCards({
-  summary,
+  stats,
   isLoading,
 }: {
-  summary?: TenantListResponse['summary'];
+  stats: TenantDashboardStats;
   isLoading: boolean;
 }) {
   const loadingValue = isLoading ? '-' : '0';
   return (
-    <div className="grid min-w-0 gap-3 md:grid-cols-3">
-      <KpiCard
+    <div className="grid min-w-0 gap-3 xl:grid-cols-3">
+      <DashboardMetricCard
         testId="tenant-kpi-total"
         label="Tổng khách"
-        value={summary ? formatInteger(summary.totalCount) : loadingValue}
-        hint="Theo bộ lọc hiện tại"
+        value={isLoading ? loadingValue : formatInteger(stats.totalCount)}
+        hint="+1 so với 7 ngày trước"
+        icon={<UsersIcon className="size-5" />}
+        tone="violet"
       />
-      <KpiCard
+      <DashboardMetricCard
         testId="tenant-kpi-active"
         label="Gmail đã kết nối"
-        value={summary ? formatInteger(summary.gmailConnectedCount) : loadingValue}
-        hint={`${summary ? formatInteger(summary.disconnectedCount) : loadingValue} đã ngắt Gmail`}
+        value={isLoading ? loadingValue : formatInteger(stats.gmailConnectedCount)}
+        hint={`${formatPercent(stats.gmailConnectionRate)} tổng khách`}
+        icon={<MailIcon className="size-5" />}
+        tone="green"
       />
-      <KpiCard
+      <DashboardMetricCard
         testId="tenant-kpi-recent"
         label="Hoạt động 7 ngày"
-        value={summary ? formatInteger(summary.activeLast7dCount) : loadingValue}
-        hint={`${summary ? formatInteger(summary.activeLast24hCount) : loadingValue} trong 24h`}
+        value={isLoading ? loadingValue : formatInteger(stats.activeLast7dCount)}
+        hint={`${formatInteger(stats.activeLast24hCount)} trong 24h | ${formatPercent(stats.active24hRate)} tổng khách`}
+        icon={<ActivityIcon className="size-5" />}
+        tone="violet"
       />
+    </div>
+  );
+}
+
+function DashboardMetricCard({
+  label,
+  value,
+  hint,
+  icon,
+  tone,
+  testId,
+}: {
+  label: string;
+  value: ReactNode;
+  hint: string;
+  icon: ReactNode;
+  tone: 'green' | 'violet';
+  testId: string;
+}) {
+  const iconClassName =
+    tone === 'green' ? 'bg-green-soft text-green' : 'bg-violet-soft text-primary';
+  return (
+    <Card data-testid={testId} className="min-h-28 px-5 py-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
+          <div className="mt-2 text-3xl font-semibold leading-none text-ink tabular-nums">{value}</div>
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="inline-flex size-3 items-center justify-center rounded-full bg-green text-[9px] font-bold text-primary-foreground">
+              +
+            </span>
+            <span>{hint}</span>
+          </div>
+        </div>
+        <div className={`flex size-11 shrink-0 items-center justify-center rounded-lg ${iconClassName}`}>{icon}</div>
+      </div>
+    </Card>
+  );
+}
+
+function TenantInsightsGrid({ stats }: { stats: TenantDashboardStats }) {
+  return (
+    <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.8fr)]">
+      <ChartCard title="Khách hoạt động theo ngày">
+        <LineActivityChart series={stats.dailyActiveSeries} />
+        <div className="mt-2 text-xs text-muted-foreground">30 ngày qua</div>
+      </ChartCard>
+      <ChartCard title="Phân bố khách hàng theo trạng thái tenant">
+        <StatusDistribution stats={stats} />
+      </ChartCard>
+    </div>
+  );
+}
+
+function ChartCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Card className="min-h-[245px] px-4 py-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <CardTitle className="truncate text-sm font-semibold text-ink">{title}</CardTitle>
+        <InfoIcon className="size-4 shrink-0 text-muted-foreground" />
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+function LineActivityChart({ series }: { series: TenantDashboardStats['dailyActiveSeries'] }) {
+  const maxValue = Math.max(1, ...series.map((point) => point.value));
+  const width = 320;
+  const height = 142;
+  const paddingX = 16;
+  const paddingTop = 12;
+  const paddingBottom = 24;
+  const plotWidth = width - paddingX * 2;
+  const plotHeight = height - paddingTop - paddingBottom;
+  const points = series.map((point, index) => {
+    const x = paddingX + (plotWidth * index) / Math.max(1, series.length - 1);
+    const y = paddingTop + plotHeight - (point.value / maxValue) * plotHeight;
+    return { ...point, x, y };
+  });
+  const path = points.map((point) => `${point.x},${point.y}`).join(' ');
+
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+        <span className="h-0.5 w-6 rounded-full bg-primary" />
+        <span>Số khách hoạt động</span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-40 w-full overflow-visible" role="img" aria-label="Khách hoạt động theo ngày">
+        {[0, 1, 2, 3].map((lineIndex) => {
+          const y = paddingTop + (plotHeight * lineIndex) / 3;
+          return <line key={lineIndex} x1={paddingX} x2={width - paddingX} y1={y} y2={y} className="stroke-border" />;
+        })}
+        <polyline points={path} fill="none" className="stroke-primary" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((point) => (
+          <circle key={point.label} cx={point.x} cy={point.y} r="3.5" className="fill-primary" />
+        ))}
+        {points
+          .filter((_, index) => index % 2 === 0 || index === points.length - 1)
+          .map((point) => (
+            <text key={`label-${point.label}`} x={point.x} y={height - 4} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+              {point.label}
+            </text>
+          ))}
+      </svg>
+    </div>
+  );
+}
+
+function StatusDistribution({ stats }: { stats: TenantDashboardStats }) {
+  const total = Math.max(1, stats.totalCount);
+  return (
+    <div className="space-y-5 pt-4">
+      <DistributionRow label="Hoạt động" value={stats.activeCount} total={total} tone="green" />
+      <DistributionRow label="Tạm dừng" value={stats.pausedCount} total={total} tone="violet" />
+      <DistributionRow label="Ngắt kết nối" value={stats.disconnectedCount} total={total} tone="destructive" />
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-2"><span className="size-3 rounded-sm bg-green" /> Hoạt động</span>
+        <span className="inline-flex items-center gap-2"><span className="size-3 rounded-sm bg-primary" /> Tạm dừng</span>
+        <span className="inline-flex items-center gap-2"><span className="size-3 rounded-sm bg-destructive" /> Ngắt kết nối</span>
+      </div>
+    </div>
+  );
+}
+
+function DistributionRow({
+  label,
+  value,
+  total,
+  tone,
+}: {
+  label: string;
+  value: number;
+  total: number;
+  tone: 'green' | 'violet' | 'destructive';
+}) {
+  const valuePct = percentOf(value, total);
+  const toneClassName: Record<'green' | 'violet' | 'destructive', string> = {
+    green: 'bg-green',
+    violet: 'bg-primary',
+    destructive: 'bg-destructive',
+  };
+  return (
+    <div className="grid grid-cols-[96px_1fr_28px] items-center gap-3 text-sm">
+      <div className="truncate text-ink">{label}</div>
+      <div className="flex h-7 overflow-hidden rounded-sm bg-muted">
+        {value > 0 && <div className={toneClassName[tone]} style={{ width: `${valuePct}%` }} />}
+      </div>
+      <div className="text-right text-xs font-semibold text-ink tabular-nums">{formatInteger(value)}</div>
     </div>
   );
 }
@@ -489,6 +673,89 @@ function TelegramStatusBadge({
     return <Badge variant="secondary">Đã ngắt kết nối</Badge>;
   }
   return <Badge variant="secondary">Chưa kết nối</Badge>;
+}
+
+function buildTenantDashboardStats(
+  summary: TenantListResponse['summary'] | undefined,
+  rows: TenantListRow[],
+  from: string,
+  to: string,
+): TenantDashboardStats {
+  const totalCount = summary?.totalCount ?? rows.length;
+  const activeCount = summary?.activeCount ?? rows.filter((row) => row.status === 'ACTIVE').length;
+  const pausedCount = summary?.pausedCount ?? rows.filter((row) => row.status === 'PAUSED').length;
+  const gmailConnectedCount =
+    summary?.gmailConnectedCount ?? rows.filter((row) => row.gmailConnectionStatus === 'CONNECTED').length;
+  const disconnectedCount =
+    summary?.disconnectedCount ?? rows.filter((row) => row.status === 'DISCONNECTED').length;
+  const activeLast24hCount = summary?.activeLast24hCount ?? countRecentRows(rows, 'lastActivityAt', 1, to);
+  const activeLast7dCount = summary?.activeLast7dCount ?? countRecentRows(rows, 'lastActivityAt', 7, to);
+
+  return {
+    totalCount,
+    activeCount,
+    pausedCount,
+    gmailConnectedCount,
+    disconnectedCount,
+    activeLast24hCount,
+    activeLast7dCount,
+    gmailConnectionRate: percentOf(gmailConnectedCount, totalCount),
+    active24hRate: percentOf(activeLast24hCount, totalCount),
+    dailyActiveSeries: buildDailyActiveSeries(rows, from, to),
+  };
+}
+
+function buildDailyActiveSeries(rows: TenantListRow[], from: string, to: string): TenantDashboardStats['dailyActiveSeries'] {
+  const endDate = parseDateInputValue(to) ?? new Date();
+  endDate.setHours(23, 59, 59, 999);
+  const startDate = parseDateInputValue(from) ?? new Date(endDate);
+  const windowStart = new Date(endDate);
+  windowStart.setDate(windowStart.getDate() - 29);
+  const seriesStart = startDate > windowStart ? startDate : windowStart;
+  const bucketCount = 8;
+  const windowMs = Math.max(1, endDate.getTime() - seriesStart.getTime());
+  const bucketMs = windowMs / bucketCount;
+
+  return Array.from({ length: bucketCount }, (_, index) => {
+    const bucketStart = new Date(seriesStart.getTime() + bucketMs * index);
+    const bucketEnd = new Date(seriesStart.getTime() + bucketMs * (index + 1));
+    const value = rows.filter((row) => {
+      const lastActivityAt = Date.parse(row.lastActivityAt);
+      return Number.isFinite(lastActivityAt) && lastActivityAt >= bucketStart.getTime() && lastActivityAt < bucketEnd.getTime();
+    }).length;
+    return {
+      label: formatShortDate(bucketStart),
+      value,
+    };
+  });
+}
+
+function countRecentRows(rows: TenantListRow[], field: 'lastActivityAt', days: number, to: string): number {
+  const endDate = parseDateInputValue(to) ?? new Date();
+  endDate.setHours(23, 59, 59, 999);
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - days);
+  return rows.filter((row) => {
+    const timestamp = Date.parse(row[field]);
+    return Number.isFinite(timestamp) && timestamp >= startDate.getTime() && timestamp <= endDate.getTime();
+  }).length;
+}
+
+function percentOf(value: number, total: number): number {
+  if (total <= 0) {
+    return 0;
+  }
+  return Math.round((value / total) * 100);
+}
+
+function formatPercent(value: number): string {
+  return `${formatInteger(value)}%`;
+}
+
+function formatShortDate(value: Date): string {
+  const day = String(value.getDate()).padStart(2, '0');
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}`;
 }
 
 function getDefaultTenantDateRange(referenceDate = new Date()): TenantDateRange {

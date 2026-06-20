@@ -41,3 +41,8 @@ const unauthorizedRedirectMiddleware: Middleware = {
 
 api.use(xsrfMiddleware);
 api.use(unauthorizedRedirectMiddleware);
+
+export function adminXsrfHeader(): HeadersInit | undefined {
+  const token = readXsrfCookie();
+  return token ? { 'X-XSRF-TOKEN': token } : undefined;
+}

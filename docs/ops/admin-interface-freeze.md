@@ -39,8 +39,15 @@ The stock WebAuthn endpoint surface used by Spring Security 7 is:
 - `POST /login/webauthn`
 
 The admin `securityMatcher(...)` list must include `/api/admin/**`,
-`/webauthn/**`, and `/login/webauthn/**`. The `/enroll` path is reserved for the
-admin SPA and must not be consumed by a backend servlet filter.
+`/webauthn/**`, the exact `/login/webauthn` authentication endpoint, and
+`/login/webauthn/**`. The `/enroll` path is reserved for the admin SPA and must
+not be consumed by a backend servlet filter.
+
+The admin login route posts an email to `POST /webauthn/authenticate/options`.
+Spring Security's stock options filter does not parse that request body; the
+admin chain must bind the matching ACTIVE admin as request-scoped authentication
+before the options filter runs so `allowCredentials` contains the stored passkey
+credential for that email.
 
 ## WebAuthn Repository Contracts
 

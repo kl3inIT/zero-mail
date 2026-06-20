@@ -15,6 +15,8 @@ const ERROR_MESSAGES_VI: Record<string, string> = {
     'admin.billing.package_not_found': 'Không tìm thấy gói thanh toán.',
     'admin.billing.package_code_duplicate': 'Code gói thanh toán đã tồn tại.',
     'admin.billing.package_invalid': 'Dữ liệu gói thanh toán không hợp lệ.',
+    'referral.campaign.activeConflict': 'Chỉ được bật một sự kiện referral trên toàn hệ thống.',
+    'referral.campaign.bannerInvalid': 'Banner phải là ảnh PNG, JPG hoặc WebP và không vượt quá 5MB.',
     'master_key.invalid': 'Khóa nền tảng không hợp lệ.',
     'tenant.not_found': 'Không tìm thấy khách hàng.',
     'rate_limit.exceeded': 'Bạn thao tác quá nhanh. Vui lòng chờ và thử lại.',

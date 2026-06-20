@@ -1,0 +1,262 @@
+databaseChangeLog:
+  - changeSet:
+      id: 130-referral-campaigns
+      author: zeromail
+      comment: >
+        Referral campaigns are event-based. A campaign owns tenant referral codes and successful
+        conversions. Opening a link is intentionally not persisted; only completed onboarding/login
+        conversions are recorded.
+      changes:
+        - createTable:
+            tableName: referral_campaign
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_referral_campaign
+              - column:
+                  name: name
+                  type: varchar(160)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: campaign_code
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_referral_campaign_code
+              - column:
+                  name: slug
+                  type: varchar(140)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_referral_campaign_slug
+              - column:
+                  name: description
+                  type: varchar(500)
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: starts_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ends_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: web_banner_enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: countdown_enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: leaderboard_enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: leaderboard_limit
+                  type: int
+                  defaultValueNumeric: 20
+                  constraints:
+                    nullable: false
+              - column:
+                  name: banner_image_url
+                  type: varchar(1024)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              ADD CONSTRAINT ck_referral_campaign_status
+              CHECK (status IN ('DRAFT', 'ACTIVE', 'PAUSED', 'ENDED', 'ARCHIVED'))
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              ADD CONSTRAINT ck_referral_campaign_time_range
+              CHECK (ends_at > starts_at)
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              ADD CONSTRAINT ck_referral_campaign_leaderboard_limit
+              CHECK (leaderboard_limit BETWEEN 1 AND 100)
+        - createIndex:
+            tableName: referral_campaign
+            indexName: idx_referral_campaign_status_time
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: starts_at
+              - column:
+                  name: ends_at
+        - createTable:
+            tableName: referral_code
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_referral_code
+              - column:
+                  name: campaign_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_referral_code_campaign
+                    references: referral_campaign(id)
+                    deleteCascade: true
+              - column:
+                  name: owner_tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_referral_code_owner_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: code
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_referral_code_public_code
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE referral_code
+              ADD CONSTRAINT ck_referral_code_status
+              CHECK (status IN ('ACTIVE', 'DISABLED'))
+        - addUniqueConstraint:
+            tableName: referral_code
+            constraintName: uq_referral_code_campaign_owner_tenant
+            columnNames: campaign_id, owner_tenant_id
+        - createIndex:
+            tableName: referral_code
+            indexName: idx_referral_code_campaign_owner
+            columns:
+              - column:
+                  name: campaign_id
+              - column:
+                  name: owner_tenant_id
+        - createTable:
+            tableName: referral_conversion
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_referral_conversion
+              - column:
+                  name: campaign_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_referral_conversion_campaign
+                    references: referral_campaign(id)
+                    deleteCascade: true
+              - column:
+                  name: referral_code_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_referral_conversion_code
+                    references: referral_code(id)
+                    deleteCascade: true
+              - column:
+                  name: referred_tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_referral_conversion_referred_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: qualified_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: referral_conversion
+            constraintName: uq_referral_conversion_campaign_referred_tenant
+            columnNames: campaign_id, referred_tenant_id
+        - createIndex:
+            tableName: referral_conversion
+            indexName: idx_referral_conversion_campaign_qualified
+            columns:
+              - column:
+                  name: campaign_id
+              - column:
+                  name: qualified_at
+        - createIndex:
+            tableName: referral_conversion
+            indexName: idx_referral_conversion_code
+            columns:
+              - column:
+                  name: referral_code_id
+      rollback:
+        - dropTable:
+            tableName: referral_conversion
+        - dropTable:
+            tableName: referral_code
+        - dropTable:
+            tableName: referral_campaign

@@ -108,6 +108,37 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
     }
 
     @Test
+    void tenant_list_rows_use_tenant_identity_and_do_not_duplicate_multi_mailbox_tenants() {
+        UUID tenantId = UUID.fromString("00000000-0000-4000-8000-000000009106");
+        seedTenantWithTwoConnectedMailboxes(tenantId);
+
+        TenantListPage tenantListPage =
+                tenantInspectionService.listTenants(
+                        new TenantListQuery(25, 0, null, FILTER_FROM, FILTER_TO, null));
+
+        assertThat(tenantListPage.rows()).hasSize(1);
+        TenantListRow tenantListRow = tenantListPage.rows().getFirst();
+        assertThat(tenantListRow.tenantId()).isEqualTo(tenantId);
+        assertThat(tenantListRow.tenantDisplayName()).isEqualTo("Acme Support Workspace");
+        assertThat(tenantListRow.ownerEmail()).isEqualTo("owner-" + tenantId + "@example.com");
+        assertThat(tenantListRow.gmailAccountEmail())
+                .isEqualTo("primary-" + tenantId + "@example.com");
+        assertThat(tenantListRow.gmailAccountCount()).isEqualTo(2);
+        assertThat(tenantListRow.connectedGmailAccountCount()).isEqualTo(2);
+        assertThat(tenantListPage.summary().totalCount()).isEqualTo(1);
+        assertThat(tenantListPage.summary().gmailConnectedCount()).isEqualTo(1);
+
+        var tenantDetailOverview = tenantInspectionService.getOverview(tenantId);
+        assertThat(tenantDetailOverview.tenantDisplayName()).isEqualTo("Acme Support Workspace");
+        assertThat(tenantDetailOverview.ownerEmail())
+                .isEqualTo("owner-" + tenantId + "@example.com");
+        assertThat(tenantDetailOverview.gmailAccountEmail())
+                .isEqualTo("primary-" + tenantId + "@example.com");
+        assertThat(tenantDetailOverview.gmailAccountCount()).isEqualTo(2);
+        assertThat(tenantDetailOverview.connectedGmailAccountCount()).isEqualTo(2);
+    }
+
+    @Test
     void tenant_activity_includes_new_login_events_and_legacy_operational_events() {
         UUID tenantId = UUID.fromString("00000000-0000-4000-8000-000000009103");
         seedActiveTenantWithOperations(tenantId);
@@ -358,6 +389,51 @@ class TenantInspectionReadRepositoryTest extends PostgresContainerTest {
                 tenantId,
                 "disconnected-tenant",
                 Timestamp.from(Instant.parse("2042-01-01T09:00:00Z")));
+    }
+
+    private void seedTenantWithTwoConnectedMailboxes(UUID tenantId) {
+        jdbcTemplate.update(
+                "INSERT INTO tenants(id, display_name, created_at) VALUES (?, ?, ?)",
+                tenantId,
+                "Acme Support Workspace",
+                Timestamp.from(Instant.parse("2042-01-01T11:00:00Z")));
+        jdbcTemplate.update(
+                """
+                        INSERT INTO users(
+                            id, tenant_id, google_subject, email, onboarding_step, created_at
+                        )
+                        VALUES (?, ?, ?, ?, 'GMAIL_CONNECTED', ?)
+                        """,
+                UUID.randomUUID(),
+                tenantId,
+                "subject-" + tenantId,
+                "owner-" + tenantId + "@example.com",
+                Timestamp.from(Instant.parse("2042-01-01T11:00:10Z")));
+        jdbcTemplate.update(
+                """
+                        INSERT INTO gmail_connections(
+                            id, tenant_id, google_email, status, refresh_token_encrypted,
+                            scopes_granted, connected_at, created_at, updated_at,
+                            watch_expires_at, is_primary
+                        )
+                        VALUES
+                            (?, ?, ?, 'CONNECTED', NULL, 'gmail.modify', ?, ?, ?, ?, true),
+                            (?, ?, ?, 'CONNECTED', NULL, 'gmail.modify', ?, ?, ?, ?, false)
+                        """,
+                UUID.randomUUID(),
+                tenantId,
+                "primary-" + tenantId + "@example.com",
+                Timestamp.from(Instant.parse("2042-01-01T11:01:00Z")),
+                Timestamp.from(Instant.parse("2042-01-01T11:01:00Z")),
+                Timestamp.from(Instant.parse("2042-01-01T11:01:00Z")),
+                Timestamp.from(Instant.parse("2042-01-03T00:00:00Z")),
+                UUID.randomUUID(),
+                tenantId,
+                "secondary-" + tenantId + "@example.com",
+                Timestamp.from(Instant.parse("2042-01-01T11:02:00Z")),
+                Timestamp.from(Instant.parse("2042-01-01T11:02:00Z")),
+                Timestamp.from(Instant.parse("2042-01-01T11:02:00Z")),
+                Timestamp.from(Instant.parse("2042-01-03T00:00:00Z")));
     }
 
     private void seedTriageAudit(

@@ -7,8 +7,12 @@ import java.util.UUID;
 
 public record TenantListRow(
         UUID tenantId,
+        String tenantDisplayName,
+        String ownerEmail,
         Instant createdAt,
         String gmailAccountEmail,
+        int gmailAccountCount,
+        int connectedGmailAccountCount,
         String status,
         String gmailConnectionStatus,
         String spendBucket7d,
@@ -35,6 +39,7 @@ public record TenantListRow(
 
     public TenantListRow {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(tenantDisplayName, "tenantDisplayName must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
         Objects.requireNonNull(status, "status must not be null");
         Objects.requireNonNull(gmailConnectionStatus, "gmailConnectionStatus must not be null");

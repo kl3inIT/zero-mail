@@ -22,5 +22,7 @@ loadtest/run/
 .codex-runs/
 .ssh/
 .last-deploy.txt
+.tmp-*.log
+var/
 .env
 jmix-scratch/

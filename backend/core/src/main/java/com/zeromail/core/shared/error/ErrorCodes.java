@@ -80,6 +80,10 @@ public final class ErrorCodes {
     public static final String SAFETY_NET_OBSERVATION_NOT_DELETABLE =
             "safety_net.observation_not_deletable";
     public static final String SAFETY_NET_NOT_FOUND = "safety_net.not_found";
+    public static final String REFERRAL_CAMPAIGN_ACTIVE_CONFLICT =
+            "error.referral.campaign.activeConflict";
+    public static final String REFERRAL_CAMPAIGN_BANNER_INVALID =
+            "error.referral.campaign.bannerInvalid";
 
     private ErrorCodes() {}
 }
