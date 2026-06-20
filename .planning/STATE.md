@@ -2,9 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Calendar Co-Pilot + Drive Filing
+current_phase: 12
 status: planning
-last_updated: "2026-06-17T04:00:00.000Z"
+stopped_at: Phase 12 context gathered
+last_updated: "2026-06-20T07:10:21.166Z"
 last_activity: 2026-06-17
+last_activity_desc: v1.4 ROADMAP.md rewritten as 5 feature-pack phases (12 Calendar Connection + Triage / 13 Calendar Intelligence / 14 Booking Links / 15 Drive Integration / 16 Meeting Briefs); REQUIREMENTS.md traceability rewritten (59/59 mapped); INFRA-03 deletion absorbed (CASA/GA-tag deferral already covered by PROJECT.md "Explicitly deferred to v1.5+" + OPS-FUT-04).
 progress:
   total_phases: 5
   completed_phases: 0
@@ -620,9 +623,9 @@ Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 
 
 ## Session Continuity
 
-Last session: 2026-06-09T14:49:02.559Z
-Stopped at: Completed 11-02-PLAN.md
-Resume file: None
+Last session: 2026-06-20T07:10:21.117Z
+Stopped at: Phase 12 context gathered
+Resume file: .planning/phases/12-calendar-connection-triage-foundation/12-CONTEXT.md
 
 ## Operator Next Steps
 
