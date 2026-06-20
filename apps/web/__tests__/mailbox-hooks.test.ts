@@ -15,7 +15,7 @@ type UseQueryOptionsForTest = {
 
 type UseMutationOptionsForTest = {
   mutationFn: (gmailConnectionId: string) => Promise<unknown>;
-  onSuccess?: () => Promise<void> | void;
+  onSuccess?: (data: unknown) => Promise<void> | void;
   meta?: {
     successMessage?: string;
     errorMessage?: string;
@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   listMailboxes: vi.fn(),
   mutationOptions: undefined as UseMutationOptionsForTest | undefined,
   setActiveMailbox: vi.fn(),
+  setQueryData: vi.fn(),
   useMutation: vi.fn(),
   useQuery: vi.fn(),
 }));
@@ -43,6 +44,7 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: (options: UseQueryOptionsForTest) => mocks.useQuery(options),
   useQueryClient: () => ({
     invalidateQueries: mocks.invalidateQueries,
+    setQueryData: mocks.setQueryData,
   }),
 }));
 
@@ -60,6 +62,7 @@ describe('mailbox hooks', () => {
     mocks.listMailboxes.mockResolvedValue([{ gmailConnectionId: 'mailbox-a' }]);
     mocks.setActiveMailbox.mockReset();
     mocks.setActiveMailbox.mockResolvedValue({ gmailConnectionId: 'mailbox-b' });
+    mocks.setQueryData.mockReset();
     mocks.mutationOptions = undefined;
     mocks.useMutation.mockReset();
     mocks.useMutation.mockImplementation((options: UseMutationOptionsForTest) => {
@@ -67,7 +70,7 @@ describe('mailbox hooks', () => {
       return {
         mutateAsync: async (gmailConnectionId: string) => {
           const data = await options.mutationFn(gmailConnectionId);
-          await options.onSuccess?.();
+          await options.onSuccess?.(data);
           return data;
         },
       };
@@ -103,6 +106,9 @@ describe('mailbox hooks', () => {
     await result.current.mutateAsync('mailbox-b');
 
     expect(mocks.setActiveMailbox).toHaveBeenCalledWith('mailbox-b');
+    expect(mocks.setQueryData).toHaveBeenCalledWith(mailboxQueryKeys.active(), {
+      gmailConnectionId: 'mailbox-b',
+    });
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: mailboxQueryKeys.all });
     // Switching mailbox refetches the inbox LIST only, never the open message detail/thread (which
     // belongs to the previous mailbox and would 404 under the new scope). See useSetActiveMailbox.

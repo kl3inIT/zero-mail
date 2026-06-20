@@ -18,12 +18,14 @@ import {
   ListChecks,
   LogOut,
   MailX,
+  Moon,
   Plus,
   PanelLeft,
   RefreshCw,
   Reply,
   Settings,
   Sparkles,
+  Sun,
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -432,6 +434,41 @@ function ReconnectRow({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+function SidebarThemeToggle({ collapsed }: { collapsed: boolean }) {
+  const t = useTranslations();
+  const buttonClassName = cn(
+    'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-md transition-colors',
+    collapsed && 'mx-auto',
+  );
+
+  return (
+    <>
+      <form action="/actions/theme" method="post" className="dark:hidden">
+        <input type="hidden" name="theme" value="dark" />
+        <button
+          type="submit"
+          className={buttonClassName}
+          aria-label={t('nav.themeToDark')}
+          title={t('nav.themeToDark')}
+        >
+          <Moon className="size-4" aria-hidden="true" />
+        </button>
+      </form>
+      <form action="/actions/theme" method="post" className="hidden dark:block">
+        <input type="hidden" name="theme" value="light" />
+        <button
+          type="submit"
+          className={buttonClassName}
+          aria-label={t('nav.themeToLight')}
+          title={t('nav.themeToLight')}
+        >
+          <Sun className="size-4" aria-hidden="true" />
+        </button>
+      </form>
+    </>
+  );
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
   const t = useTranslations();
@@ -482,15 +519,18 @@ export function AppSidebar() {
               ZERO MAIL
             </span>
           )}
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-md transition-colors"
-            aria-label={t('shell.sidebar.toggle')}
-            data-testid="sidebar-collapse-toggle"
-          >
-            <PanelLeft className="size-4" aria-hidden="true" />
-          </button>
+          <div className={cn('flex gap-1', isCollapsed ? 'flex-col items-center' : 'items-center')}>
+            <SidebarThemeToggle collapsed={isCollapsed} />
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-md transition-colors"
+              aria-label={t('shell.sidebar.toggle')}
+              data-testid="sidebar-collapse-toggle"
+            >
+              <PanelLeft className="size-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </SidebarHeader>
 
