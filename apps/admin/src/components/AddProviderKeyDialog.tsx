@@ -276,7 +276,7 @@ function AddProviderKeyForm({
                         {testing ? 'Đang test…' : 'Test kết nối'}
                     </Button>
                     <form.Subscribe selector={(state) => state.canSubmit}>
-                        {(canSubmit) => (
+                        {(canSubmit: boolean) => (
                             <Button
                                 type="submit"
                                 disabled={!canSubmit || testResult !== 'OK' || addMutation.isPending}

@@ -242,7 +242,6 @@ function ReferralHero({
           <div className="bg-primary text-primary-foreground absolute top-3 right-3 flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold shadow-lg sm:top-5 sm:right-5 sm:text-sm">
             <Trophy className="size-5" />
             <span className="hidden sm:inline">SỰ KIỆN ĐÃ KẾT THÚC</span>
-            <span>KẾT QUẢ CUỐI CÙNG</span>
           </div>
         ) : null}
       </section>

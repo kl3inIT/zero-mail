@@ -7,9 +7,7 @@ import {
   GiftIcon,
   ImageIcon,
   InfoIcon,
-  LineChartIcon,
   Loader2Icon,
-  MedalIcon,
   MoreVerticalIcon,
   PencilIcon,
   RefreshCwIcon,
@@ -21,7 +19,6 @@ import {
 import type { ChangeEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { KpiCard } from '@/components/KpiCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -48,7 +45,6 @@ import {
   type AdminReferralCampaignStatus,
   type AdminReferralDashboardResponse,
   type AdminReferralLeaderboardRowResponse,
-  type AdminReferralTimeSeriesPointResponse,
 } from '@/features/referrals/referrals-api';
 import {
   useCreateReferralCampaign,
@@ -100,11 +96,6 @@ type CampaignDraft = {
 
 function ReferralRoute() {
   const [manualSelectedCampaignId, setManualSelectedCampaignId] = useState<string | undefined>();
-  const [dateRangeInput, setDateRangeInput] = useState<{
-    campaignId?: string;
-    from?: string;
-    to?: string;
-  }>({});
   const [streamDashboard, setStreamDashboard] = useState<{
     key: string;
     dashboard: AdminReferralDashboardResponse;
@@ -128,11 +119,8 @@ function ReferralRoute() {
   const defaultToDateInput = selectedCampaign
     ? dateInputValue(new Date(selectedCampaign.endsAt))
     : dateInputValue(new Date());
-  const dateRangeOverrideActive = dateRangeInput.campaignId === selectedCampaign?.campaignId;
-  const fromDateInput =
-    dateRangeOverrideActive && dateRangeInput.from ? dateRangeInput.from : defaultFromDateInput;
-  const toDateInput =
-    dateRangeOverrideActive && dateRangeInput.to ? dateRangeInput.to : defaultToDateInput;
+  const fromDateInput = defaultFromDateInput;
+  const toDateInput = defaultToDateInput;
 
   const dashboardQueryInput = useMemo(
     () =>
@@ -178,22 +166,6 @@ function ReferralRoute() {
     statusMutation.mutate({ campaignId: selectedCampaign.campaignId, status });
   }
 
-  function handleFromDateChange(value: string) {
-    setDateRangeInput({
-      campaignId: selectedCampaign?.campaignId,
-      from: value,
-      to: toDateInput,
-    });
-  }
-
-  function handleToDateChange(value: string) {
-    setDateRangeInput({
-      campaignId: selectedCampaign?.campaignId,
-      from: fromDateInput,
-      to: value,
-    });
-  }
-
   return (
     <div className="min-w-0 space-y-4">
       <header className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
@@ -234,10 +206,6 @@ function ReferralRoute() {
             selectedCampaign={selectedCampaign}
             dashboard={dashboard}
             loading={campaignQuery.isLoading || dashboardQuery.isLoading}
-            fromDateInput={fromDateInput}
-            toDateInput={toDateInput}
-            onFromDateChange={handleFromDateChange}
-            onToDateChange={handleToDateChange}
           />
         </TabsContent>
 
@@ -259,18 +227,10 @@ function RealtimeSection({
   selectedCampaign,
   dashboard,
   loading,
-  fromDateInput,
-  toDateInput,
-  onFromDateChange,
-  onToDateChange,
 }: {
   selectedCampaign: AdminReferralCampaignResponse | undefined;
   dashboard: AdminReferralDashboardResponse | undefined;
   loading: boolean;
-  fromDateInput: string;
-  toDateInput: string;
-  onFromDateChange: (value: string) => void;
-  onToDateChange: (value: string) => void;
 }) {
   if (!selectedCampaign && !loading) {
     return <EmptyCampaignState />;
@@ -286,82 +246,7 @@ function RealtimeSection({
     );
   }
 
-  const topTenant = dashboard?.currentTopTenant;
-  return (
-    <div className="space-y-3">
-      <Card>
-        <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="text-primary">
-                {selectedCampaign?.campaignCode ?? 'REFERRAL'}
-              </Badge>
-              {selectedCampaign && <CampaignStatusBadge status={selectedCampaign.status} />}
-            </div>
-            <h2 className="text-ink mt-2 text-xl font-semibold">
-              {selectedCampaign?.name ?? 'Đang tải sự kiện referral'}
-            </h2>
-            <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-              {selectedCampaign?.description ||
-                'Realtime chỉ tính referral khi tenant mới đăng nhập và hoàn tất onboarding.'}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <DateInput label="Từ ngày" value={fromDateInput} onChange={onFromDateChange} />
-            <DateInput label="Đến ngày" value={toDateInput} onChange={onToDateChange} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <section className="grid gap-3 md:grid-cols-3">
-        <KpiCard
-          label="Tổng referral"
-          value={
-            loading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              formatInteger(dashboard?.totalSuccessfulReferrals ?? 0)
-            )
-          }
-          hint="Tenant mới onboard thành công"
-          sparkline={<KpiIcon icon={<GiftIcon className="size-5" />} />}
-        />
-        <KpiCard
-          label="Top hiện tại"
-          value={
-            loading ? (
-              <Skeleton className="h-8 w-28" />
-            ) : (
-              <span className="truncate text-lg">{topTenant?.tenantDisplayName ?? 'Chưa có'}</span>
-            )
-          }
-          hint={
-            topTenant
-              ? `${formatInteger(topTenant.successfulReferrals)} referral thành công`
-              : 'Chưa phát sinh leaderboard'
-          }
-          sparkline={<KpiIcon icon={<TrophyIcon className="size-5" />} />}
-          tabular={false}
-        />
-        <KpiCard
-          label="Đếm ngược"
-          value={selectedCampaign ? campaignCountdown(selectedCampaign.endsAt) : '--'}
-          hint={
-            selectedCampaign
-              ? `Kết thúc ${formatDateTime(selectedCampaign.endsAt)}`
-              : 'Chưa có sự kiện'
-          }
-          sparkline={<KpiIcon icon={<ClockIcon className="size-5" />} />}
-          tabular={false}
-        />
-      </section>
-
-      <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
-        <LeaderboardCard rows={dashboard?.leaderboard ?? []} loading={loading} />
-        <ReferralChartCard points={dashboard?.timeSeries ?? []} loading={loading} />
-      </section>
-    </div>
-  );
+  return <EmptyCampaignState />;
 }
 
 function RealtimeDashboardScreen({
@@ -1140,135 +1025,6 @@ function CampaignRoundsTable({
   );
 }
 
-function LeaderboardCard({
-  rows,
-  loading,
-}: {
-  rows: AdminReferralLeaderboardRowResponse[];
-  loading: boolean;
-}) {
-  return (
-    <Card className="min-h-[430px]">
-      <CardHeader className="flex-row items-center justify-between">
-        <div>
-          <CardTitle role="heading" aria-level={2}>
-            Leaderboard tenant
-          </CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Xếp hạng theo số tenant mới onboard thành công.
-          </p>
-        </div>
-        <MedalIcon className="text-primary size-5" />
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">Hạng</TableHead>
-              <TableHead>Tenant</TableHead>
-              <TableHead className="text-right">Referral</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading && (
-              <TableRow>
-                <TableCell colSpan={3} className="text-muted-foreground h-24 text-center">
-                  Đang tải leaderboard.
-                </TableCell>
-              </TableRow>
-            )}
-            {!loading && rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="text-muted-foreground h-24 text-center">
-                  Chưa có tenant nào giới thiệu thành công.
-                </TableCell>
-              </TableRow>
-            )}
-            {rows.map((row) => (
-              <TableRow key={row.tenantId}>
-                <TableCell>
-                  <span className="bg-primary/10 text-primary inline-flex size-8 items-center justify-center rounded-full text-sm font-semibold">
-                    {row.rank}
-                  </span>
-                </TableCell>
-                <TableCell className="min-w-0">
-                  <div className="text-ink truncate font-medium">{row.tenantDisplayName}</div>
-                  <div className="text-muted-foreground truncate text-xs">{row.tenantId}</div>
-                </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">
-                  {formatInteger(row.successfulReferrals)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ReferralChartCard({
-  points,
-  loading,
-}: {
-  points: AdminReferralTimeSeriesPointResponse[];
-  loading: boolean;
-}) {
-  const maxValue = Math.max(1, ...points.map((point) => point.successfulReferrals));
-  return (
-    <Card className="min-h-[430px]">
-      <CardHeader className="flex-row items-center justify-between">
-        <div>
-          <CardTitle role="heading" aria-level={2}>
-            Realtime chart
-          </CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Conversion qualified theo giờ trong khoảng đang chọn.
-          </p>
-        </div>
-        <LineChartIcon className="text-primary size-5" />
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-72 w-full" />
-        ) : points.length === 0 ? (
-          <div className="border-border text-muted-foreground flex h-72 items-center justify-center rounded-lg border border-dashed text-sm">
-            Chưa có dữ liệu chart.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="border-border flex h-72 items-end gap-2 border-b px-2 pt-4">
-              {points.map((point) => (
-                <div
-                  key={point.bucketStart}
-                  className="flex min-w-0 flex-1 flex-col items-center gap-2"
-                >
-                  <div
-                    className="bg-primary w-full rounded-t-md"
-                    title={`${formatHour(point.bucketStart)}: ${formatInteger(point.successfulReferrals)}`}
-                    style={{
-                      height: `${Math.max(point.successfulReferrals > 0 ? 5 : 0, (point.successfulReferrals / maxValue) * 100)}%`,
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="text-muted-foreground grid grid-cols-4 gap-2 text-xs">
-              {points
-                .filter((_, index) => index % Math.max(1, Math.ceil(points.length / 4)) === 0)
-                .map((point) => (
-                  <div key={point.bucketStart} className="truncate">
-                    {formatHour(point.bucketStart)}
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 function CampaignSelect({
   campaigns,
   selectedCampaignId,
@@ -1603,14 +1359,6 @@ function CampaignStatusBadge({ status }: { status: AdminReferralCampaignStatus }
   );
 }
 
-function KpiIcon({ icon }: { icon: ReactNode }) {
-  return (
-    <div className="bg-violet-soft text-primary flex size-10 items-center justify-center rounded-xl">
-      {icon}
-    </div>
-  );
-}
-
 function EmptyCampaignState() {
   return (
     <div className="border-border flex min-h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-8 text-center">
@@ -1744,7 +1492,7 @@ function fromLocalDateTimeValue(value: string): string {
   return new Date(value).toISOString();
 }
 
-function campaignCountdown(endsAt: string): string {
+function _campaignCountdown(endsAt: string): string {
   const remainingMilliseconds = new Date(endsAt).getTime() - Date.now();
   if (remainingMilliseconds <= 0) return 'Đã kết thúc';
   const days = Math.floor(remainingMilliseconds / 86_400_000);
@@ -1822,21 +1570,6 @@ function formatInteger(value: number): string {
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('vi-VN').format(new Date(value));
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
-
-function formatHour(value: string): string {
-  return new Intl.DateTimeFormat('vi-VN', {
-    hour: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-  }).format(new Date(value));
 }
 
 function dateCompact(date: Date): string {

@@ -1,0 +1,75 @@
+databaseChangeLog:
+  - changeSet:
+      id: 134-admin-user-hard-delete-support
+      author: zeromail
+      comment: >
+        Admin deletion is now a hard delete from admin_users. Audit rows keep actor_user_id and
+        actor_email as immutable historical data without a blocking foreign key. Mutable references
+        are allowed to clear the deleted admin id.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE admin_audit_event
+                DROP CONSTRAINT IF EXISTS admin_audit_event_actor_user_id_fkey;
+
+              ALTER TABLE admin_read_event
+                DROP CONSTRAINT IF EXISTS fk_admin_read_event_actor;
+              ALTER TABLE admin_read_event
+                ALTER COLUMN actor_user_id DROP NOT NULL;
+              ALTER TABLE admin_read_event
+                ADD CONSTRAINT fk_admin_read_event_actor
+                FOREIGN KEY (actor_user_id)
+                REFERENCES admin_users(id)
+                ON DELETE SET NULL;
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS fk_llm_provider_master_key_created_by;
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT fk_llm_provider_master_key_created_by
+                FOREIGN KEY (created_by_user_id)
+                REFERENCES admin_users(id)
+                ON DELETE SET NULL;
+
+              DO $$
+              BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zeromail_app') THEN
+                  GRANT DELETE ON admin_users TO zeromail_app;
+                END IF;
+              END;
+              $$;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zeromail_app') THEN
+                  REVOKE DELETE ON admin_users FROM zeromail_app;
+                END IF;
+              END;
+              $$;
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS fk_llm_provider_master_key_created_by;
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT fk_llm_provider_master_key_created_by
+                FOREIGN KEY (created_by_user_id)
+                REFERENCES admin_users(id);
+
+              DELETE FROM admin_read_event
+              WHERE actor_user_id IS NULL;
+              ALTER TABLE admin_read_event
+                DROP CONSTRAINT IF EXISTS fk_admin_read_event_actor;
+              ALTER TABLE admin_read_event
+                ALTER COLUMN actor_user_id SET NOT NULL;
+              ALTER TABLE admin_read_event
+                ADD CONSTRAINT fk_admin_read_event_actor
+                FOREIGN KEY (actor_user_id)
+                REFERENCES admin_users(id);
+
+              ALTER TABLE admin_audit_event
+                ADD CONSTRAINT admin_audit_event_actor_user_id_fkey
+                FOREIGN KEY (actor_user_id)
+                REFERENCES admin_users(id)
+                NOT VALID;

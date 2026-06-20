@@ -33,3 +33,15 @@ export async function revokeAdmin(adminUserId: string, reason: string): Promise<
     throw new Error('Không thể thu hồi quyền quản trị.');
   }
 }
+
+export async function deleteAdmin(adminUserId: string, reason: string): Promise<void> {
+  const { error } = await api.DELETE('/api/admin/admins/{adminUserId}', {
+    params: {
+      path: { adminUserId },
+    },
+    body: { reason },
+  });
+  if (error) {
+    throw new Error('Không thể xóa admin.');
+  }
+}

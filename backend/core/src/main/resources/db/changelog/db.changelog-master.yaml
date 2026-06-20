@@ -395,3 +395,6 @@ databaseChangeLog:
   - include:
       file: changes/133-referral-campaign-banner-file-storage.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/134-admin-user-hard-delete-support.yaml
+      relativeToChangelogFile: true

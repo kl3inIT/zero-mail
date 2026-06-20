@@ -141,7 +141,7 @@ function EditForm({
             Hủy
           </DialogClose>
           <form.Subscribe selector={(state) => state.canSubmit}>
-            {(canSubmit) => (
+            {(canSubmit: boolean) => (
               <Button type="submit" disabled={!canSubmit || updateMutation.isPending}>
                 {updateMutation.isPending ? 'Đang lưu…' : 'Lưu'}
               </Button>
