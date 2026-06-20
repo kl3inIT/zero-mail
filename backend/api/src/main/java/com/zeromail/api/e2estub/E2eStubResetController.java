@@ -36,7 +36,7 @@ public class E2eStubResetController {
     private static final String EMAIL = "e2e-stub-user-1@e2e-stub.invalid";
     private static final String REFRESH_TOKEN = "e2e-stub-refresh-token";
     private static final String GRANTED_GMAIL_SCOPES =
-            "https://www.googleapis.com/auth/gmail.modify";
+            com.zeromail.core.oauth.scope.GoogleOAuthScope.GMAIL_MODIFY.value();
     private static final String SESSION_COOKIE_NAME = "ZEROMAIL_SESSION";
     private static final String SESSION_COOKIE_VALUE = "e2e-stub-session";
     private static final int MINIMUM_LAUNCH_SMOKE_CREDITS = 10;
