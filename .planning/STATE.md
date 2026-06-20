@@ -3,16 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Calendar Co-Pilot + Drive Filing
 current_phase: 12
-status: planning
+current_phase_name: Calendar Connection + Triage Foundation
+status: executing
 stopped_at: Phase 12 context gathered
-last_updated: "2026-06-20T07:10:21.166Z"
-last_activity: 2026-06-17
-last_activity_desc: v1.4 ROADMAP.md rewritten as 5 feature-pack phases (12 Calendar Connection + Triage / 13 Calendar Intelligence / 14 Booking Links / 15 Drive Integration / 16 Meeting Briefs); REQUIREMENTS.md traceability rewritten (59/59 mapped); INFRA-03 deletion absorbed (CASA/GA-tag deferral already covered by PROJECT.md "Explicitly deferred to v1.5+" + OPS-FUT-04).
+last_updated: "2026-06-20T09:03:12.649Z"
+last_activity: 2026-06-20
+last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 6
+  completed_plans: 1
   percent: 0
 ---
 
@@ -23,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
-**Current focus:** v1.4 Calendar Co-Pilot + Drive Filing — roadmap re-decomposed 2026-06-17 into 5 feature-driven phases (12-16; 59/59 requirements mapped after INFRA-03 deletion). Begin Phase 12 via `/gsd-plan-phase 12`.
+**Current focus:** Phase 12 — Calendar Connection + Triage Foundation
 
 ## Current Position
 
-Phase: 12 — Calendar Connection + Triage Foundation (not started)
-Plan: —
-Status: Roadmap drafted (5-phase feature-driven decomposition); ready for `/gsd-plan-phase 12`
-Last activity: 2026-06-17 — v1.4 ROADMAP.md rewritten as 5 feature-pack phases (12 Calendar Connection + Triage / 13 Calendar Intelligence / 14 Booking Links / 15 Drive Integration / 16 Meeting Briefs); REQUIREMENTS.md traceability rewritten (59/59 mapped); INFRA-03 deletion absorbed (CASA/GA-tag deferral already covered by PROJECT.md "Explicitly deferred to v1.5+" + OPS-FUT-04).
+Phase: 12 (Calendar Connection + Triage Foundation) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-06-20 — Phase 12 execution started
 
 ## Current Milestone Roadmap
 
@@ -196,6 +197,7 @@ Reference: `.planning/ROADMAP.md` + `.planning/REQUIREMENTS.md` + `.planning/res
 | Phase 11 P03 | multi-session | 3 tasks | 44 files |
 | Phase 11 P04 | multi-session | 4 tasks | 53 files |
 | Phase 11 P05 | multi-session | 3 tasks | 39 code/test/generated files + 1 planning artifact |
+| Phase 12 PW0 | 20m | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -393,6 +395,9 @@ Recent decisions affecting current work:
 - [Phase 09]: Assistant knowledge updated_at remains inherited — AssistantKnowledgeMemoryEntity already extends AbstractAuditableEntity, which maps created_at, updated_at, and version from changelog 046.
 - [Phase 09]: Phase 09-02: Triage reads assistant draft settings through the TriageDraftSettings port, and sensitive-data protection is exported from llm.usecases via SensitiveDataProtectionDecider. — Broad Modulith verification exposed a triage -> chat cycle and a dependency on a non-exported llm.redaction package. Ports keep draft runtime settings available without weakening module boundaries.
 - [Phase 09]: Phase 09-02: Draft confidence threshold mapping is implemented and tested, but runtime confidence gating is deferred until auto-draft execution exposes a draft confidence score. — The current runtime path can resolve LOW/MEDIUM/HIGH thresholds but has no reliable score input to compare. Adding fake normalization would weaken behavior; future draft scoring should wire into the existing resolver.
+- [Phase ?]: Phase 12 W0: GoogleOAuthScope canonical Java ledger; source-text scan replaces ArchUnit per RESEARCH Pitfall 1
+- [Phase ?]: Phase 12 W0: OAuthTokenStore facade informational on RowDiscriminator; RefreshTokenCipher byte-identical (D-14)
+- [Phase ?]: Phase 12 W0: calendarApi pinned v3-rev20260614-2.0.0 and ical4j 4.2.5 (probed Maven Central 2026-06-20)
 
 ### Roadmap Evolution
 
@@ -623,7 +628,7 @@ Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 
 
 ## Session Continuity
 
-Last session: 2026-06-20T07:10:21.117Z
+Last session: 2026-06-20T09:03:03.402Z
 Stopped at: Phase 12 context gathered
 Resume file: .planning/phases/12-calendar-connection-triage-foundation/12-CONTEXT.md
 

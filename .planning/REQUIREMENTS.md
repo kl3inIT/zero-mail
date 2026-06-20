@@ -20,7 +20,7 @@
 
 ### Infrastructure and Privacy Foundation
 
-- [ ] **INFRA-01**: A single source-of-truth OAuth scope ledger lives under version control; CI fails if any production code requests a Google OAuth scope that is not in the approved set, preventing accidental introduction of restricted scopes such as `drive`, `drive.readonly`, or full `calendar`.
+- [x] **INFRA-01**: A single source-of-truth OAuth scope ledger lives under version control; CI fails if any production code requests a Google OAuth scope that is not in the approved set, preventing accidental introduction of restricted scopes such as `drive`, `drive.readonly`, or full `calendar`.
 - [ ] **INFRA-02**: PROJECT.md privacy section enumerates three named ARCH-02 carve-outs side-by-side — (a) v1.1 chat-assistant draft body (user-authored, persistable), (b) v1.4 meeting-brief summary (assistant-authored narrative, persistable, source bodies never persisted), and (c) v1.0 triage (in-memory at process time only) — with the legal storage shape called out per carve-out.
 
 > **CASA / GA-tag note (NOT a v1.4 requirement):** The formal GA tag + CASA scope-verification refresh are already explicitly deferred via PROJECT.md "Explicitly deferred to v1.5+" and OPS-FUT-04; v1.4 inherits that deferral. No v1.4 requirement re-states this.
@@ -31,11 +31,11 @@
 
 - [ ] **CAL-CONN-01**: User can connect one or more Google Calendar accounts to their workspace via an explicit "Connect Google Calendar" action on a settings page; consent is never requested implicitly during signup or first-login flows.
 - [ ] **CAL-CONN-02**: Calendar OAuth is registered as a separate `ClientRegistration` from the v1.3 login bundle, requests only `calendar.freebusy` + `calendar.events` + `calendar.readonly` (no full `calendar` scope, ever), shares the existing Google Cloud OAuth client, and uses `include_granted_scopes=true` + `access_type=offline` + `prompt=consent`.
-- [ ] **CAL-CONN-03**: System stores per-connection encrypted OAuth tokens via the existing AES-GCM `OAuthTokenStore`; refresh tokens are never logged, never persisted in plaintext, and never reused across connections.
+- [x] **CAL-CONN-03**: System stores per-connection encrypted OAuth tokens via the existing AES-GCM `OAuthTokenStore`; refresh tokens are never logged, never persisted in plaintext, and never reused across connections.
 - [ ] **CAL-CONN-04**: User can view all connected Google Calendar accounts with provider email, status, last sync, and per-calendar enable/disable toggles; user can disconnect a connection and the system cascade-revokes derived state (preferences, brief subscriptions, booking-link destination if applicable, audit retained).
 - [ ] **CAL-CONN-05**: Each `CalendarConnection` enumerates the calendars Google exposes for it (primary + secondary), each with a per-calendar `is_enabled` flag; only enabled calendars participate in free/busy and brief source data.
-- [ ] **CAL-CONN-06**: Calendar connections are workspace-shared (one logical row per Google account in the workspace), NOT per-mailbox; the `calendar_connection` table has no `gmail_connection_id` foreign key.
-- [ ] **CAL-CONN-07**: A `mailbox_calendar_preference (mailbox_id, calendar_connection_id, role ∈ {freebusy, event_write, brief_source})` table disambiguates which workspace-shared calendar a specific Gmail mailbox uses for each role, preventing personal-availability leakage into work-mailbox drafts.
+- [x] **CAL-CONN-06**: Calendar connections are workspace-shared (one logical row per Google account in the workspace), NOT per-mailbox; the `calendar_connection` table has no `gmail_connection_id` foreign key.
+- [x] **CAL-CONN-07**: A `mailbox_calendar_preference (mailbox_id, calendar_connection_id, role ∈ {freebusy, event_write, brief_source})` table disambiguates which workspace-shared calendar a specific Gmail mailbox uses for each role, preventing personal-availability leakage into work-mailbox drafts.
 - [ ] **CAL-CONN-08**: Calendar connection has a three-state state machine (`CONNECTED` / `DISCONNECTED` / `REVOKED`); mid-flight reads against a `DISCONNECTED` calendar fail fast and emit a Modulith event that evicts the free/busy cache.
 
 ### Calendar Availability (Draft Reply + Chat)
@@ -49,7 +49,7 @@
 
 ### Calendar-Aware Triage
 
-- [ ] **CAL-TRIAGE-01**: Gmail ingestion parses `text/calendar` MIME parts and classifies messages as `INVITE` / `CANCEL` / `RESCHEDULE` / `RSVP`; classification persists on the existing mail-projection row, no new long-term body storage.
+- [x] **CAL-TRIAGE-01**: Gmail ingestion parses `text/calendar` MIME parts and classifies messages as `INVITE` / `CANCEL` / `RESCHEDULE` / `RSVP`; classification persists on the existing mail-projection row, no new long-term body storage.
 - [ ] **CAL-TRIAGE-02**: Calendar-class messages are pinned at top-of-inbox in the web UI for a 24-hour window after the event date, with explicit "Cancellation" / "Time changed" badges.
 - [ ] **CAL-TRIAGE-03**: New tenants are seeded with a default `SystemType=CALENDAR` rule (action: `label "Calendar"`) that auto-matches messages classified as calendar-class via `isCalendarInvite` (`.ics` attachment OR `text/calendar` MIME OR `BEGIN:VCALENDAR` body marker). The Calendar rule runs as a `PRESET` match before AI matching; user-authored rules retain full action authority — no backend downgrade, no `CalendarAwareGuard`. Users may disable, edit, or delete the seeded Calendar rule like any other rule. (Revised 2026-06-20 from initial guard-downgrade design to follow Inbox Zero's proven pattern; see Phase 12 CONTEXT for rationale.)
 - [ ] **CAL-TRIAGE-04**: Calendar-aware triage ships without requiring any Calendar OAuth scope — `text/calendar` parsing is purely message-side and works for all users regardless of whether they connect Google Calendar.
@@ -116,6 +116,7 @@
 ### Deferred to v1.5+
 
 **Calendar:**
+
 - Multi booking links per user (CAL-BOOK-FUT-01)
 - Booking link custom branding / buffer-between-meetings / pre-meeting question fields (CAL-BOOK-FUT-02)
 - One-click invite accept/decline from triage UI (CAL-TRIAGE-FUT-01)
@@ -125,11 +126,13 @@
 - Web-search tool in brief loop (CAL-BRIEF-FUT-02 — gated by vendor decision)
 
 **Drive:**
+
 - Multiple Drive connections per workspace (DRV-CONN-FUT-01)
 - Attachment-source Mode B (smart pick from a curated folder by filename + Drive metadata; in-memory only) (DRV-ATCH-FUT-01)
 - AI document analysis with content extraction (would require OCR/Tika + ARCH-02 carve-out, NOT planned) (DRV-FILE-FUT-01)
 
 **GA gate (still outstanding after v1.3):**
+
 - OPS-FUT-04 — hostile-corpus aiEval suite, Grafana ops dashboards, CASA evidence refresh (now also covering Calendar + Drive scopes), LAUNCH-GO-NOGO checklist, formal GA tag.
 - VISUAL-REFRESH-01..06 — purple palette alignment of user pages; v1.4 surfaces should adopt purple as they are built, but a project-wide refresh is not scoped.
 
