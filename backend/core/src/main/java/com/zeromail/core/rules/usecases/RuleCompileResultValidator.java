@@ -451,6 +451,14 @@ public class RuleCompileResultValidator {
                         normalizedMatcher.put("deferred", deferred);
                         yield new SemanticIntentMatcher(nodeId, intent, deferred);
                     }
+                    case PRESET_CALENDAR -> {
+                        // Phase 12 W5 (CAL-TRIAGE-03): seeded system-calendar(-vi) preset matcher
+                        // — no AST arguments beyond the common fields. nodeId is the only
+                        // identity carrier; matching is structural (driven by
+                        // RuleEvaluationInput.messageClass(), not the AST).
+                        rejectUnknownFields(matcherArguments, fields(), matcherPath);
+                        yield new MatcherNode.PresetCalendarMatcher(nodeId);
+                    }
                 };
         return new ParsedMatcher(typedMatcher, normalizedMatcher);
     }

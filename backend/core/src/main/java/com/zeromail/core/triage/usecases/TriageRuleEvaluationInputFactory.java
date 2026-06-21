@@ -3,6 +3,8 @@ package com.zeromail.core.triage.usecases;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.gmail.usecases.GmailPreviewReadService;
 import com.zeromail.core.gmail.usecases.GmailPreviewReadService.GmailPreviewMessage;
+import com.zeromail.core.inbox.domain.MessageClass;
+import com.zeromail.core.inbox.usecases.InboxProjectionReadService;
 import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import java.time.Instant;
 import java.util.Optional;
@@ -13,9 +15,13 @@ import org.springframework.stereotype.Component;
 public class TriageRuleEvaluationInputFactory {
 
     private final GmailPreviewReadService gmailPreviewReadService;
+    private final InboxProjectionReadService inboxProjectionReadService;
 
-    public TriageRuleEvaluationInputFactory(GmailPreviewReadService gmailPreviewReadService) {
+    public TriageRuleEvaluationInputFactory(
+            GmailPreviewReadService gmailPreviewReadService,
+            InboxProjectionReadService inboxProjectionReadService) {
         this.gmailPreviewReadService = gmailPreviewReadService;
+        this.inboxProjectionReadService = inboxProjectionReadService;
     }
 
     public Optional<TriageRuleEvaluationInput> fetch(MailMessageObserved observedEvent) {
@@ -33,21 +39,26 @@ public class TriageRuleEvaluationInputFactory {
             String gmailMessageId,
             String gmailThreadId,
             Instant observedAt) {
+        Optional<MessageClass> messageClass =
+                inboxProjectionReadService.findMessageClass(
+                        tenantId, gmailConnectionId, gmailMessageId);
         return gmailPreviewReadService
                 .fetchTriageInput(
                         tenantId, gmailConnectionId, gmailMessageId, gmailThreadId, observedAt)
-                .map(TriageRuleEvaluationInputFactory::toTriageRuleEvaluationInput);
+                .map(previewMessage -> toTriageRuleEvaluationInput(previewMessage, messageClass));
     }
 
     public Optional<TriageRuleEvaluationInput> fetch(
             UUID tenantId, String gmailMessageId, String gmailThreadId, Instant observedAt) {
         return gmailPreviewReadService
                 .fetchTriageInput(tenantId, gmailMessageId, gmailThreadId, observedAt)
-                .map(TriageRuleEvaluationInputFactory::toTriageRuleEvaluationInput);
+                .map(
+                        previewMessage ->
+                                toTriageRuleEvaluationInput(previewMessage, Optional.empty()));
     }
 
     private static TriageRuleEvaluationInput toTriageRuleEvaluationInput(
-            GmailPreviewMessage previewMessage) {
+            GmailPreviewMessage previewMessage, Optional<MessageClass> messageClass) {
         RuleEvaluationInput ruleEvaluationInput =
                 new RuleEvaluationInput(
                         previewMessage.sanitizedSenderEmail(),
@@ -64,7 +75,8 @@ public class TriageRuleEvaluationInputFactory {
                         previewMessage.newsletterIndicatorPresent(),
                         previewMessage.autoReplyIndicatorPresent(),
                         previewMessage.sanitizedBodyEvidencePresent(),
-                        previewMessage.bodyDerivedFlags());
+                        previewMessage.bodyDerivedFlags(),
+                        messageClass);
         return new TriageRuleEvaluationInput(
                 ruleEvaluationInput,
                 previewMessage.sanitizedSenderEmail(),

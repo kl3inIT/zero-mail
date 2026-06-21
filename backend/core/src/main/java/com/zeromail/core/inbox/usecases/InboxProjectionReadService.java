@@ -2,11 +2,13 @@ package com.zeromail.core.inbox.usecases;
 
 import com.zeromail.core.inbox.domain.EncryptedField;
 import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
+import com.zeromail.core.inbox.domain.MessageClass;
 import com.zeromail.core.inbox.persistence.GmailInboxProjectionEntity;
 import com.zeromail.core.inbox.persistence.GmailInboxProjectionRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -81,6 +83,27 @@ public class InboxProjectionReadService {
         String nextCursor = nextCursorFor(rows, pageLimit);
         return new InboxProjectionPage(
                 List.copyOf(items), nextCursor, InboxProjectionDataSource.PROJECTION);
+    }
+
+    /**
+     * Phase 12 W5 (CAL-TRIAGE-03): expose the calendar {@code message_class} column to the triage
+     * rule-evaluation factory so the {@code PresetCalendarMatcher} can fire deterministically.
+     * Returns {@link Optional#empty()} when no projection row exists yet (Pub/Sub ahead of UPSERT)
+     * or when the W4 classifier has not (yet) written a classification for this message.
+     *
+     * <p>This is a single-row, single-column lookup; no decrypt, no PII surfaces. The native query
+     * already constrains by {@code (tenant_id, gmail_connection_id, gmail_message_id)} so the
+     * tenant isolation invariant holds without an extra check here.
+     */
+    @Transactional(readOnly = true)
+    public Optional<MessageClass> findMessageClass(
+            UUID tenantId, UUID gmailConnectionId, String gmailMessageId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(gmailConnectionId, "gmailConnectionId must not be null");
+        Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+        return projectionRepository
+                .findByTenantConnectionAndMessage(tenantId, gmailConnectionId, gmailMessageId)
+                .flatMap(GmailInboxProjectionEntity::getMessageClassOptional);
     }
 
     private static int effectiveLimit(int requestedLimit) {

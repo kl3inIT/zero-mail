@@ -1,5 +1,6 @@
 package com.zeromail.core.rules.domain;
 
+import com.zeromail.core.inbox.domain.MessageClass;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -23,7 +24,8 @@ public record RuleEvaluationInput(
         boolean newsletterIndicatorPresent,
         boolean autoReplyIndicatorPresent,
         Optional<Boolean> sanitizedBodyEvidencePresent,
-        Set<String> bodyDerivedFlags) {
+        Set<String> bodyDerivedFlags,
+        Optional<MessageClass> messageClass) {
 
     public RuleEvaluationInput {
         sanitizedSenderEmail = normalizeNullableText(sanitizedSenderEmail);
@@ -38,6 +40,49 @@ public record RuleEvaluationInput(
         sanitizedBodyEvidencePresent =
                 Objects.requireNonNullElseGet(sanitizedBodyEvidencePresent, Optional::empty);
         bodyDerivedFlags = copiedTextSet(bodyDerivedFlags);
+        messageClass = Objects.requireNonNullElseGet(messageClass, Optional::empty);
+    }
+
+    /**
+     * Back-compat constructor for callers built before Phase 12 W5 added the calendar {@code
+     * messageClass} field. New call sites should pass {@code messageClass} explicitly so the W5
+     * {@code PresetCalendarMatcher} can fire deterministically; legacy call sites delegate to
+     * {@code Optional.empty()} and behave exactly as before (the PRESET matcher returns NOT_MATCHED
+     * for any input without a known calendar classification).
+     */
+    public RuleEvaluationInput(
+            String sanitizedSenderEmail,
+            String sanitizedSenderDomain,
+            List<String> sanitizedToRecipientEmails,
+            List<String> sanitizedCcRecipientEmails,
+            String sanitizedSubjectExcerpt,
+            List<String> gmailLabelIds,
+            List<String> gmailCategories,
+            Instant internalDate,
+            Instant observedAt,
+            boolean hasAttachment,
+            boolean listUnsubscribePresent,
+            boolean newsletterIndicatorPresent,
+            boolean autoReplyIndicatorPresent,
+            Optional<Boolean> sanitizedBodyEvidencePresent,
+            Set<String> bodyDerivedFlags) {
+        this(
+                sanitizedSenderEmail,
+                sanitizedSenderDomain,
+                sanitizedToRecipientEmails,
+                sanitizedCcRecipientEmails,
+                sanitizedSubjectExcerpt,
+                gmailLabelIds,
+                gmailCategories,
+                internalDate,
+                observedAt,
+                hasAttachment,
+                listUnsubscribePresent,
+                newsletterIndicatorPresent,
+                autoReplyIndicatorPresent,
+                sanitizedBodyEvidencePresent,
+                bodyDerivedFlags,
+                Optional.empty());
     }
 
     public boolean hasGmailLabel(String labelId) {

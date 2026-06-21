@@ -112,6 +112,11 @@ public class RuleEvaluator {
                     evaluateAny(anyMatcher, ruleEvaluationInput, semanticOverrides);
             case MatcherNode.NotMatcher notMatcher ->
                     evaluateNot(notMatcher, ruleEvaluationInput, semanticOverrides);
+            case MatcherNode.PresetCalendarMatcher presetCalendarMatcher ->
+                    terminal(
+                            presetCalendarMatcher.nodeId(),
+                            ruleEvaluationInput.messageClass().isPresent(),
+                            "preset_calendar");
             case SemanticIntentMatcher semanticIntentMatcher ->
                     evaluateSemanticIntent(semanticIntentMatcher, semanticOverrides);
         };

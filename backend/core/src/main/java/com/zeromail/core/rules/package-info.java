@@ -18,6 +18,7 @@
             "gmail :: domain",
             "gmail :: projection",
             "gmail :: usecases",
+            "inbox :: domain",
             "mailbox",
             "onboarding",
             "onboarding :: usecases",

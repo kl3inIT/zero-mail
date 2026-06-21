@@ -42,7 +42,8 @@ class RuleAstContractTest {
                         "ALL",
                         "ANY",
                         "NOT",
-                        "SEMANTIC_INTENT");
+                        "SEMANTIC_INTENT",
+                        "PRESET_CALENDAR");
     }
 
     @Test

@@ -135,6 +135,11 @@ public class RuleAstJsonValidator {
                     throw new IllegalArgumentException("SEMANTIC_INTENT matcher must be deferred");
                 }
             }
+            case PRESET_CALENDAR ->
+                    // Phase 12 W5 (CAL-TRIAGE-03): preset matcher carries no arguments beyond the
+                    // common fields. nodeId is the only carrier of identity; deterministic match
+                    // is driven by RuleEvaluationInput.messageClass(), not by AST fields.
+                    rejectUnknownFields(matcherNode, rootMatcher, Set.of());
         }
     }
 

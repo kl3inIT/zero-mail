@@ -26,7 +26,8 @@ public enum MatcherType implements IdentifiedEnum {
     ALL,
     ANY,
     NOT,
-    SEMANTIC_INTENT;
+    SEMANTIC_INTENT,
+    PRESET_CALENDAR;
 
     @JsonValue
     @Override

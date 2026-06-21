@@ -25,6 +25,7 @@ public sealed interface MatcherNode
                 MatcherNode.AllMatcher,
                 MatcherNode.AnyMatcher,
                 MatcherNode.NotMatcher,
+                MatcherNode.PresetCalendarMatcher,
                 SemanticIntentMatcher {
 
     String nodeId();
@@ -368,6 +369,30 @@ public sealed interface MatcherNode
         @Override
         public boolean requiresBodyEvidence() {
             return child.requiresBodyEvidence();
+        }
+    }
+
+    /**
+     * Phase 12 W5 (D-09, CAL-TRIAGE-03): deterministic calendar-message matcher. Matches
+     * structurally whenever {@code RuleEvaluationInput.messageClass()} is present (i.e. the W4
+     * ical4j classifier wrote {@code gmail_inbox_projection.message_class} for this message).
+     * Carries no LLM intent — evaluation is terminal MATCHED / NOT_MATCHED, never DEFERRED. The
+     * seeded {@code system-calendar(-vi)} rule templates use this matcher so the Calendar label
+     * fires without any LLM call.
+     */
+    record PresetCalendarMatcher(String nodeId) implements MatcherNode {
+        public PresetCalendarMatcher {
+            requireText(nodeId, "nodeId");
+        }
+
+        @Override
+        public MatcherType type() {
+            return MatcherType.PRESET_CALENDAR;
+        }
+
+        @Override
+        public boolean requiresBodyEvidence() {
+            return false;
         }
     }
 

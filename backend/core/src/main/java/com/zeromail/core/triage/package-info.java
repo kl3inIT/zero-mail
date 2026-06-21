@@ -20,6 +20,7 @@
             "draft",
             "thread",
             "thread :: usecases",
+            "inbox :: domain",
             "inbox :: usecases",
             "outbound",
             "outbound :: api",

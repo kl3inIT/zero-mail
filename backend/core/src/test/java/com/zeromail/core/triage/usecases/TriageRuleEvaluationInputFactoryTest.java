@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.gmail.usecases.GmailPreviewReadService;
 import com.zeromail.core.gmail.usecases.GmailPreviewReadService.GmailPreviewMessage;
+import com.zeromail.core.inbox.usecases.InboxProjectionReadService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -26,8 +27,11 @@ class TriageRuleEvaluationInputFactoryTest {
 
     private final GmailPreviewReadService gmailPreviewReadService =
             mock(GmailPreviewReadService.class);
+    private final InboxProjectionReadService inboxProjectionReadService =
+            mock(InboxProjectionReadService.class);
     private final TriageRuleEvaluationInputFactory factory =
-            new TriageRuleEvaluationInputFactory(gmailPreviewReadService);
+            new TriageRuleEvaluationInputFactory(
+                    gmailPreviewReadService, inboxProjectionReadService);
 
     @Test
     void observed_event_fetch_uses_event_mailbox_instead_of_active_mailbox_context() {
@@ -39,6 +43,9 @@ class TriageRuleEvaluationInputFactoryTest {
                         GMAIL_THREAD_ID,
                         OBSERVED_AT))
                 .thenReturn(Optional.of(previewMessage));
+        when(inboxProjectionReadService.findMessageClass(
+                        TENANT_ID, GMAIL_CONNECTION_ID, GMAIL_MESSAGE_ID))
+                .thenReturn(Optional.empty());
 
         Optional<TriageRuleEvaluationInputFactory.TriageRuleEvaluationInput> result =
                 factory.fetch(

@@ -1128,6 +1128,7 @@ public class TriageOrchestratorService {
                             nodeId,
                             text(matcherNode, "description", "intent"),
                             booleanValue(matcherNode, "deferred"));
+            case PRESET_CALENDAR -> new MatcherNode.PresetCalendarMatcher(nodeId);
         };
     }
 
