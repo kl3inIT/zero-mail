@@ -1,6 +1,7 @@
 package com.zeromail.core.inbox.persistence;
 
 import com.zeromail.core.inbox.domain.InboxState;
+import com.zeromail.core.inbox.domain.MessageClass;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,6 +9,7 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
@@ -81,6 +83,21 @@ public class GmailInboxProjectionEntity {
 
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
+
+    /**
+     * Calendar message classification id (Phase 12 W4, D-11). NULL = not a calendar message;
+     * non-null = one of {@link MessageClass} ids written by the worker's {@code
+     * CalendarMessageClassifier} after ical4j-parsing the {@code text/calendar} MIME part.
+     */
+    @Column(name = "message_class", length = 16)
+    private String messageClass;
+
+    /**
+     * iCal {@code DTSTART} extracted by the W4 classifier (D-11). NULL when {@link #messageClass}
+     * is NULL. Drives the read-side pin window {@code now() < event_dt + 24h} (D-12).
+     */
+    @Column(name = "event_dt")
+    private Instant eventDt;
 
     @Version
     @Column(name = "version", nullable = false)
@@ -201,6 +218,51 @@ public class GmailInboxProjectionEntity {
 
     public Instant getExpiresAt() {
         return expiresAt;
+    }
+
+    /**
+     * Calendar classification id as stored in the column. NULL = not a calendar message — callers
+     * MUST check this and skip downstream pin logic when it returns NULL. Prefer {@link
+     * #getMessageClassOptional()} for typed access.
+     */
+    public String getMessageClassId() {
+        return messageClass;
+    }
+
+    /**
+     * Typed access to the calendar classification (Phase 12 W4). Returns {@link Optional#empty()}
+     * when the column is NULL (i.e. not a calendar message) — non-fail-loud at this seam because
+     * the majority of projection rows are non-calendar, and fail-loud would force every caller into
+     * try/catch.
+     */
+    public Optional<MessageClass> getMessageClassOptional() {
+        return Optional.ofNullable(messageClass).map(MessageClass::fromId);
+    }
+
+    /**
+     * iCal DTSTART for the W4-classified calendar message (D-11). Empty when the row is not a
+     * calendar message.
+     */
+    public Optional<Instant> getEventDtOptional() {
+        return Optional.ofNullable(eventDt);
+    }
+
+    /**
+     * Pair-set calendar classification + event timestamp (Phase 12 W4). Both must be non-null
+     * together — a CANCEL with NULL event_dt is meaningless (no pin window can be derived). The W4
+     * classifier validates this upstream: when ical4j returns an empty DTSTART the UPDATE is
+     * skipped entirely.
+     */
+    public void setCalendarClassification(MessageClass classification, Instant eventTimestamp) {
+        if ((classification == null) != (eventTimestamp == null)) {
+            throw new IllegalArgumentException(
+                    "MessageClass and eventDt must be set together; got messageClass="
+                            + classification
+                            + ", eventDt="
+                            + eventTimestamp);
+        }
+        this.messageClass = classification == null ? null : classification.id();
+        this.eventDt = eventTimestamp;
     }
 
     public int getVersion() {

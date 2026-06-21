@@ -2,6 +2,7 @@ package com.zeromail.core.inbox.persistence;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -98,6 +99,16 @@ public interface GmailInboxProjectionRepository
      * <p>Native query because Hibernate's {@code @TenantId} resolver only applies to JPQL — we set
      * {@code tenant_id = :tenantId} explicitly. Casts on the timestamp parameter let Postgres infer
      * the bind type when the value is null.
+     *
+     * <p><b>Phase 12 W4 (D-12) pin-aware ORDER BY:</b> the leading boolean expression {@code
+     * (message_class IS NOT NULL AND event_dt IS NOT NULL AND now() < event_dt + INTERVAL '24
+     * hours') DESC} pins calendar-class messages to the top of the page for 24h after {@code
+     * event_dt}, then falls back to the existing {@code received_at DESC, gmail_message_id DESC}
+     * keyset order. Keyset cursor pagination stays valid because the pin predicate uses a single
+     * {@code now()} invocation per query (monotonic within the page request) — the tiebreaker order
+     * remains deterministic. The W0 partial index {@code idx_inbox_projection_calendar_pin
+     * (tenant_id, gmail_connection_id, event_dt DESC) WHERE message_class IS NOT NULL} accelerates
+     * the predicate filter against the non-calendar majority of the table.
      */
     @Query(
             value =
@@ -115,7 +126,12 @@ public interface GmailInboxProjectionRepository
                               AND gmail_message_id < :beforeMessageId
                           )
                       )
-                    ORDER BY received_at DESC, gmail_message_id DESC
+                    ORDER BY
+                        (message_class IS NOT NULL
+                            AND event_dt IS NOT NULL
+                            AND now() < event_dt + INTERVAL '24 hours') DESC,
+                        received_at DESC,
+                        gmail_message_id DESC
                     LIMIT :pageLimit
                     """,
             nativeQuery = true)
@@ -153,4 +169,55 @@ public interface GmailInboxProjectionRepository
             nativeQuery = true)
     @Transactional
     int markRead(@Param("tenantId") UUID tenantId, @Param("gmailMessageId") String gmailMessageId);
+
+    /**
+     * Tenant-scoped composite-key lookup used by the Phase 12 W4 {@code CalendarMessageClassifier}
+     * to load the projection row before issuing a calendar classification UPDATE. Carries {@code
+     * tenantId} explicitly because the worker AFTER_COMMIT listener establishes {@code
+     * TenantContext} via the v1.3 mailbox-resolution path; the Hibernate {@code @TenantId} resolver
+     * opens its session AFTER the context is bound, so this native finder mirrors the upstream
+     * pattern.
+     */
+    @Query(
+            value =
+                    """
+                    SELECT * FROM gmail_inbox_projection
+                    WHERE tenant_id = :tenantId
+                      AND gmail_connection_id = :gmailConnectionId
+                      AND gmail_message_id = :gmailMessageId
+                    """,
+            nativeQuery = true)
+    Optional<GmailInboxProjectionEntity> findByTenantConnectionAndMessage(
+            @Param("tenantId") UUID tenantId,
+            @Param("gmailConnectionId") UUID gmailConnectionId,
+            @Param("gmailMessageId") String gmailMessageId);
+
+    /**
+     * Pin-targeted single-row UPDATE used by the Phase 12 W4 calendar classifier (D-11). Writes
+     * both columns together — the entity invariant {@code
+     * GmailInboxProjectionEntity#setCalendarClassification} forbids the half-set case. Returns
+     * affected-row count: 0 means the projection has no row yet for this message (Pub/Sub ahead of
+     * UPSERT) and the caller treats it as a benign no-op.
+     */
+    @Modifying
+    @Query(
+            value =
+                    """
+                    UPDATE gmail_inbox_projection
+                    SET message_class = :messageClass,
+                        event_dt = :eventDt,
+                        refreshed_at = NOW(),
+                        version = version + 1
+                    WHERE tenant_id = :tenantId
+                      AND gmail_connection_id = :gmailConnectionId
+                      AND gmail_message_id = :gmailMessageId
+                    """,
+            nativeQuery = true)
+    @Transactional
+    int updateCalendarClassification(
+            @Param("tenantId") UUID tenantId,
+            @Param("gmailConnectionId") UUID gmailConnectionId,
+            @Param("gmailMessageId") String gmailMessageId,
+            @Param("messageClass") String messageClass,
+            @Param("eventDt") Instant eventDt);
 }
