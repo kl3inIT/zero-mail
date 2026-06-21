@@ -81,12 +81,12 @@ Full details: [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md)
   4. Any rule whose evaluation would `archive`, `mark_spam`, or `delete` a calendar-class message is downgraded to `label` only, leaving a `CalendarAwareGuard` audit row with the original action + reason — protecting Gmail invites from silent loss by aggressive existing user rules.
   5. The workspace-shared / mailbox-isolated boundary holds: `calendar_connection` has no `gmail_connection_id` FK, the new `mailbox_calendar_preference (mailbox_id, calendar_connection_id, role ∈ {freebusy, event_write, brief_source})` table disambiguates which workspace-shared calendar each mailbox uses per role, refresh tokens are AES-GCM-encrypted via the existing `OAuthTokenStore` (never logged, never reused across connections), and mid-flight reads against a `DISCONNECTED` calendar fail fast emitting a Modulith event that evicts the free/busy cache.
 
-**Plans**: 3/6 plans executed
+**Plans**: 4/6 plans executed
 
 - [x] 12-W0-oauth-scope-ledger-and-token-store-PLAN.md — `GoogleOAuthScope` enum + source-text scan + `OAuthTokenStore` facade + Liquibase 131-134 schema + ical4j/calendar-API deps.
 - [x] 12-W1-calendar-oauth-and-connection-bootstrap-PLAN.md — `google-calendar` `ClientRegistration` + AuthZ resolver branch + `CalendarOAuthSuccessHandler` + `core.calendar.{domain,exception,persistence,gateway}` entities + `CalendarApiClientFactory`.
 - [x] 12-W2-calendar-connection-service-and-cascade-PLAN.md — `CalendarConnectionService` (list / disconnect cascade) + `CalendarSnapshotIngestionService` (D-06 default primary-calendar role enrollment) + `MailboxCalendarPreferenceService` + `CalendarToggleService` + `CalendarConnectionDisconnected` Modulith event + REST controllers + record DTOs.
-- [ ] 12-W3-calendar-settings-frontend-PLAN.md — `/settings/mailboxes/[mailboxId]/calendar` route + IZ-style `CalendarConnectionsPanel/CalendarConnectionCard/CalendarList` + Calendly-style `RoleAssignmentSection` + `POST /api/calendar/connect-intent` (Phase 10 attributes-based intent mailbox stamping) + Playwright e2e.
+- [x] 12-W3-calendar-settings-frontend-PLAN.md — `/settings/mailboxes/[mailboxId]/calendar` route + IZ-style `CalendarConnectionsPanel/CalendarConnectionCard/CalendarList` + Calendly-style `RoleAssignmentSection` + `POST /api/calendar/connect-intent` (Phase 10 attributes-based intent mailbox stamping) + Playwright e2e.
 - [ ] 12-W4-text-calendar-classification-and-pinning-PLAN.md — `MessageClass` enum + `gmail_inbox_projection.message_class/event_dt` columns + ical4j `CalendarPartParser` + worker `CalendarMessageClassifier` (`@TransactionalEventListener(AFTER_COMMIT)`) + pin-aware ORDER BY (derived `pin_until = event_dt + 24h`) + "Cancellation"/"Time changed" inbox badges.
 - [ ] 12-W5-preset-calendar-rule-wiring-PLAN.md — `MatcherNode.PresetCalendarMatcher` sealed-interface permit + `RuleEvaluator` PRESET branch + `RuleEvaluationInput.messageClass()` plumb + Liquibase 135 data migration of seeded `system-calendar(-vi)` template + uncustomized materialized rules from `SEMANTIC_INTENT` → `PRESET_CALENDAR` (D-09 IZ pattern).
 
@@ -170,7 +170,7 @@ Phases execute in numeric order: 12 → 13 → 14 → 15 → 16. Phase 14 may ex
 | 9. User Settings UI on Curated Catalog | v1.2 | 7/7 | Complete | 2026-05-29 |
 | 10. Gmail Mailbox Foundation and Account Management | v1.3 | 6/6 | Complete | 2026-06-09 |
 | 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 6/6 | Complete | 2026-06-15 |
-| 12. Calendar Connection + Triage Foundation | v1.4 | 3/6 | In Progress|  |
+| 12. Calendar Connection + Triage Foundation | v1.4 | 4/6 | In Progress|  |
 | 13. Calendar Intelligence — AI Availability + propose_meeting Rule Action | v1.4 | 0/TBD | Not started | - |
 | 14. Booking Links + Public Booking Page | v1.4 | 0/TBD | Not started | - |
 | 15. Google Drive Integration — Connection + Filing Engine + Attachment-Source Rules | v1.4 | 0/TBD | Not started | - |
