@@ -141,7 +141,7 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
         ReferralDashboardSnapshot julyDashboard =
                 referralDashboardQueryService.snapshot(
                         new ReferralDashboardQuery(
-                                julyCampaign.campaignId(), JULY_START, JULY_END, 20));
+                                julyCampaign.campaignId(), JULY_START, JULY_END));
 
         assertThat(julyDashboard.totalSuccessfulReferrals()).isEqualTo(1);
         assertThat(julyDashboard.activeReferrerTenants()).isEqualTo(1);
@@ -175,11 +175,11 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
         ReferralDashboardSnapshot refreshedJulyDashboard =
                 referralDashboardQueryService.snapshot(
                         new ReferralDashboardQuery(
-                                julyCampaign.campaignId(), JULY_START, JULY_END, 20));
+                                julyCampaign.campaignId(), JULY_START, JULY_END));
         ReferralDashboardSnapshot augustDashboard =
                 referralDashboardQueryService.snapshot(
                         new ReferralDashboardQuery(
-                                augustCampaign.campaignId(), AUGUST_START, AUGUST_END, 20));
+                                augustCampaign.campaignId(), AUGUST_START, AUGUST_END));
 
         assertThat(refreshedJulyDashboard.totalSuccessfulReferrals()).isEqualTo(1);
         assertThat(augustDashboard.totalSuccessfulReferrals()).isEqualTo(1);
@@ -384,7 +384,7 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
         ReferralDashboardSnapshot dashboardSnapshot =
                 referralDashboardQueryService.snapshot(
                         new ReferralDashboardQuery(
-                                pausedCampaign.campaignId(), JULY_START, JULY_END, 20));
+                                pausedCampaign.campaignId(), JULY_START, JULY_END));
         assertThat(dashboardSnapshot.totalSuccessfulReferrals()).isZero();
     }
 
@@ -414,8 +414,7 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
 
         ReferralDashboardSnapshot dashboardSnapshot =
                 referralDashboardQueryService.snapshot(
-                        new ReferralDashboardQuery(
-                                campaign.campaignId(), JULY_START, JULY_END, 20));
+                        new ReferralDashboardQuery(campaign.campaignId(), JULY_START, JULY_END));
         assertThat(dashboardSnapshot.totalSuccessfulReferrals()).isZero();
     }
 
@@ -460,7 +459,7 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
 
         ReferralTenantRankingSnapshot rankingSnapshot =
                 referralDashboardQueryService.tenantRanking(
-                        new ReferralDashboardQuery(campaign.campaignId(), JULY_START, JULY_END, 3),
+                        new ReferralDashboardQuery(campaign.campaignId(), JULY_START, JULY_END),
                         PAUSED_REFERRED_TENANT_ID);
 
         assertThat(rankingSnapshot.totalRankedTenants()).isEqualTo(2);
@@ -507,8 +506,7 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
 
         ReferralDashboardSnapshot dashboardSnapshot =
                 referralDashboardQueryService.snapshot(
-                        new ReferralDashboardQuery(
-                                campaign.campaignId(), JULY_START, JULY_END, 20));
+                        new ReferralDashboardQuery(campaign.campaignId(), JULY_START, JULY_END));
 
         assertThat(dashboardSnapshot.totalSuccessfulReferrals()).isEqualTo(1);
         assertThat(dashboardSnapshot.leaderboard().getFirst().successfulReferrals()).isEqualTo(1);
@@ -562,6 +560,51 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
     }
 
     @Test
+    void campaign_reward_configuration_round_trips_through_create_and_update() {
+        ReferralCampaignSnapshot campaign =
+                referralCampaignService.createCampaign(
+                        new ReferralCampaignCreateCommand(
+                                "Referral Reward Config Test",
+                                "REF-REWARD-CONFIG-2026",
+                                "referral-reward-config-2026",
+                                "Reward config",
+                                ReferralCampaignStatus.PAUSED,
+                                JULY_START,
+                                JULY_END,
+                                true,
+                                true,
+                                true,
+                                20,
+                                5,
+                                "Top 5 tenants receive reward instructions by email."));
+
+        assertThat(campaign.rewardRankCutoff()).isEqualTo(5);
+        assertThat(campaign.rewardNotificationText())
+                .isEqualTo("Top 5 tenants receive reward instructions by email.");
+
+        ReferralCampaignSnapshot updatedCampaign =
+                referralCampaignService.updateCampaign(
+                        campaign.campaignId(),
+                        new ReferralCampaignUpdateCommand(
+                                "Referral Reward Config Test",
+                                "REF-REWARD-CONFIG-2026",
+                                "referral-reward-config-2026",
+                                "Reward config updated",
+                                JULY_START,
+                                JULY_END,
+                                true,
+                                true,
+                                true,
+                                20,
+                                7,
+                                "Top 7 tenants receive reward instructions by email."));
+
+        assertThat(updatedCampaign.rewardRankCutoff()).isEqualTo(7);
+        assertThat(updatedCampaign.rewardNotificationText())
+                .isEqualTo("Top 7 tenants receive reward instructions by email.");
+    }
+
+    @Test
     void campaign_banner_upload_rejects_images_larger_than_five_mb() {
         ReferralCampaignSnapshot campaign =
                 referralCampaignService.createCampaign(
@@ -599,7 +642,9 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
                 true,
                 true,
                 true,
-                20);
+                20,
+                3,
+                "Top 3 tenants receive reward instructions by email.");
     }
 
     private ReferralCampaignUpdateCommand campaignUpdateCommand(
@@ -614,7 +659,9 @@ class ReferralCampaignServiceTest extends PostgresContainerTest {
                 true,
                 true,
                 true,
-                20);
+                20,
+                3,
+                "Top 3 tenants receive reward instructions by email.");
     }
 
     private void seedTenant(UUID tenantId, String displayName, Instant createdAt) {

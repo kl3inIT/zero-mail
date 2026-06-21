@@ -107,7 +107,9 @@ class OnboardingStateMachineTest extends ApiPostgresTestBase {
                                                 true,
                                                 true,
                                                 true,
-                                                20))
+                                                20,
+                                                3,
+                                                "Top 3 tenants receive reward instructions by email."))
                                 .campaignId(),
                         referrerTenantId);
 
@@ -131,10 +133,7 @@ class OnboardingStateMachineTest extends ApiPostgresTestBase {
         ReferralDashboardSnapshot dashboardSnapshot =
                 referralDashboardQueryService.snapshot(
                         new ReferralDashboardQuery(
-                                referralTenantCode.campaignId(),
-                                campaignStartsAt,
-                                campaignEndsAt,
-                                20));
+                                referralTenantCode.campaignId(), campaignStartsAt, campaignEndsAt));
 
         assertThat(dashboardSnapshot.totalSuccessfulReferrals()).isEqualTo(1);
     }

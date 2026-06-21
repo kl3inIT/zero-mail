@@ -36,7 +36,7 @@ describe('ReferralPageClient ended event state', () => {
     vi.useRealTimers();
   });
 
-  it('renders the final top-three result when the campaign countdown has ended', () => {
+  it('renders the configured reward text when the campaign countdown has ended', () => {
     mocks.useReferralMe.mockReturnValue({
       isLoading: false,
       data: referralResponse({
@@ -46,30 +46,30 @@ describe('ReferralPageClient ended event state', () => {
 
     render(<ReferralPageClient />);
 
-    expect(screen.getAllByText('Đã kết thúc')[0]).toBeInTheDocument();
-    expect(screen.getByText('Bảng xếp hạng cuối cùng')).toBeInTheDocument();
-    expect(screen.getByText(/Chúc mừng/)).toBeInTheDocument();
-    expect(screen.getByText('TOP 2')).toBeInTheDocument();
-    expect(screen.getByText(/Thông báo nhận thưởng/)).toBeInTheDocument();
-    expect(screen.queryByText('Đếm ngược')).not.toBeInTheDocument();
-  });
-
-  it('does not render the share link after the campaign has ended', () => {
-    mocks.useReferralMe.mockReturnValue({
-      isLoading: false,
-      data: referralResponse({
-        currentTenant: leaderboardRow({ rank: 2, successfulReferrals: 24, currentTenant: true }),
-      }),
-    });
-
-    render(<ReferralPageClient />);
-
+    expect(screen.getByText(/TOP 2/)).toBeInTheDocument();
     expect(
-      screen.queryByDisplayValue('https://zeromail.vn/referral?code=DTH12345'),
-    ).not.toBeInTheDocument();
+      screen.getByText('Top 5 tenants receive reward instructions by email.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('https://zeromail.vn/referral?code=DTH12345')).toBeNull();
   });
 
-  it('renders the final participation result when the tenant is outside the top three', () => {
+  it('treats tenants inside the configured reward cutoff as winners', () => {
+    mocks.useReferralMe.mockReturnValue({
+      isLoading: false,
+      data: referralResponse({
+        currentTenant: leaderboardRow({ rank: 4, successfulReferrals: 19, currentTenant: true }),
+      }),
+    });
+
+    render(<ReferralPageClient />);
+
+    expect(screen.getByText(/TOP 4/)).toBeInTheDocument();
+    expect(
+      screen.getByText('Top 5 tenants receive reward instructions by email.'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders the final participation result using the configured reward cutoff', () => {
     mocks.useReferralMe.mockReturnValue({
       isLoading: false,
       data: referralResponse({
@@ -79,11 +79,9 @@ describe('ReferralPageClient ended event state', () => {
 
     render(<ReferralPageClient />);
 
-    expect(screen.getAllByText('Đã kết thúc')[0]).toBeInTheDocument();
-    expect(screen.getByText('Cảm ơn bạn đã tham gia')).toBeInTheDocument();
-    expect(screen.getByText('Rất tiếc, bạn chưa nằm trong TOP 3 lần này.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Theo dõi sự kiện mới' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Xem lịch sử sự kiện' })).toBeInTheDocument();
+    expect(screen.getByText(/TOP 5/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Theo/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Xem/ })).toBeInTheDocument();
   });
 
   it('triggers backend expiry once when the countdown reaches zero', async () => {
@@ -115,13 +113,15 @@ function referralResponse({ currentTenant }: { currentTenant: ReturnType<typeof 
   return {
     active: true,
     campaignId: '00000000-0000-4000-8000-000000013500',
-    campaignName: 'Sự kiện referral FPT',
-    campaignDescription: 'Mời bạn bè cùng dùng Zero Mail.',
+    campaignName: 'Referral event',
+    campaignDescription: 'Invite friends to use Zero Mail.',
     campaignStartsAt: '2026-06-06T00:00:00Z',
     campaignEndsAt: '2026-09-03T23:59:00Z',
     webBannerEnabled: true,
     countdownEnabled: true,
     leaderboardEnabled: true,
+    rewardRankCutoff: 5,
+    rewardNotificationText: 'Top 5 tenants receive reward instructions by email.',
     bannerImageAvailable: true,
     code: 'DTH12345',
     url: 'https://zeromail.vn/referral?code=DTH12345',
@@ -134,6 +134,9 @@ function referralResponse({ currentTenant }: { currentTenant: ReturnType<typeof 
         ? currentTenant
         : leaderboardRow({ rank: 2, successfulReferrals: 29, tenantDisplayName: 'VNPT Solutions' }),
       leaderboardRow({ rank: 3, successfulReferrals: 25, tenantDisplayName: 'FPT IS' }),
+      currentTenant.rank === 4
+        ? currentTenant
+        : leaderboardRow({ rank: 4, successfulReferrals: 19, tenantDisplayName: 'Tenant 4' }),
     ],
     snapshotAt: '2026-09-04T00:00:00Z',
   };

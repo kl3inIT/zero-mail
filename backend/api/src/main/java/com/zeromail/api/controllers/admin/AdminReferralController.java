@@ -134,12 +134,9 @@ public class AdminReferralController {
 
     @GetMapping("/dashboard")
     public AdminReferralDashboardResponse dashboard(
-            @RequestParam UUID campaignId,
-            @RequestParam Instant from,
-            @RequestParam Instant to,
-            @RequestParam(defaultValue = "20") int leaderboardLimit) {
+            @RequestParam UUID campaignId, @RequestParam Instant from, @RequestParam Instant to) {
         AdminContext.currentOrThrow();
-        return dashboardResponse(campaignId, from, to, leaderboardLimit);
+        return dashboardResponse(campaignId, from, to);
     }
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -147,7 +144,6 @@ public class AdminReferralController {
             @RequestParam UUID campaignId,
             @RequestParam Instant from,
             @RequestParam Instant to,
-            @RequestParam(defaultValue = "20") int leaderboardLimit,
             HttpServletResponse response) {
         AdminContext.currentOrThrow();
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-transform");
@@ -171,9 +167,7 @@ public class AdminReferralController {
                         sseEmitter.send(
                                 SseEmitter.event()
                                         .name("snapshot")
-                                        .data(
-                                                dashboardResponse(
-                                                        campaignId, from, to, leaderboardLimit)));
+                                        .data(dashboardResponse(campaignId, from, to)));
                         response.flushBuffer();
                     } catch (IOException | RuntimeException streamFailure) {
                         cleanup.run();
@@ -197,10 +191,10 @@ public class AdminReferralController {
     }
 
     private AdminReferralDashboardResponse dashboardResponse(
-            UUID campaignId, Instant from, Instant to, int leaderboardLimit) {
+            UUID campaignId, Instant from, Instant to) {
         return AdminReferralDashboardResponse.from(
                 referralDashboardQueryService.snapshot(
-                        new ReferralDashboardQuery(campaignId, from, to, leaderboardLimit)));
+                        new ReferralDashboardQuery(campaignId, from, to)));
     }
 
     private static byte[] multipartBytes(MultipartFile file) {

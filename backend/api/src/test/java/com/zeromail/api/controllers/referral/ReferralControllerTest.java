@@ -69,6 +69,8 @@ class ReferralControllerTest {
                                         true,
                                         true,
                                         20,
+                                        5,
+                                        "Top 5 tenants receive reward instructions by email.",
                                         false,
                                         startsAt,
                                         endsAt)));
@@ -96,6 +98,9 @@ class ReferralControllerTest {
         assertThat(response.active()).isTrue();
         assertThat(response.code()).isNull();
         assertThat(response.url()).isNull();
+        assertThat(response.rewardRankCutoff()).isEqualTo(5);
+        assertThat(response.rewardNotificationText())
+                .isEqualTo("Top 5 tenants receive reward instructions by email.");
         then(referralCampaignService).should(never()).getOrCreateTenantCode(campaignId, tenantId);
     }
 

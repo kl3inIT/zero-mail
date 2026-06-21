@@ -26,13 +26,8 @@ export function useReferralCampaigns() {
 export function useReferralDashboard(input: ReferralDashboardQueryInput | undefined) {
   return useQuery({
     queryKey: input
-      ? referralQueryKeys.dashboard(
-          input.campaignId,
-          input.from,
-          input.to,
-          input.leaderboardLimit,
-        )
-      : referralQueryKeys.dashboard('none', 'none', 'none', 0),
+      ? referralQueryKeys.dashboard(input.campaignId, input.from, input.to)
+      : referralQueryKeys.dashboard('none', 'none', 'none'),
     queryFn: () => {
       if (!input) throw new Error('Missing referral dashboard query.');
       return fetchReferralDashboard(input);

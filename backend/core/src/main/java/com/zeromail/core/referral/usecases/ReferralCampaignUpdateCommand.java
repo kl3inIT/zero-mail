@@ -13,7 +13,9 @@ public record ReferralCampaignUpdateCommand(
         boolean webBannerEnabled,
         boolean countdownEnabled,
         boolean leaderboardEnabled,
-        int leaderboardLimit) {
+        int leaderboardLimit,
+        int rewardRankCutoff,
+        String rewardNotificationText) {
 
     public ReferralCampaignUpdateCommand {
         requireNonBlank(name, "name");
@@ -26,6 +28,14 @@ public record ReferralCampaignUpdateCommand(
         }
         if (leaderboardLimit < 1 || leaderboardLimit > 100) {
             throw new IllegalArgumentException("leaderboardLimit must be between 1 and 100");
+        }
+        if (rewardRankCutoff < 1 || rewardRankCutoff > 100) {
+            throw new IllegalArgumentException("rewardRankCutoff must be between 1 and 100");
+        }
+        requireNonBlank(rewardNotificationText, "rewardNotificationText");
+        if (rewardNotificationText.length() > 500) {
+            throw new IllegalArgumentException(
+                    "rewardNotificationText must be at most 500 characters");
         }
     }
 
