@@ -1,0 +1,19 @@
+BEGIN:VCALENDAR
+PRODID:-//Zero Mail Test Fixture//EN
+VERSION:2.0
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:test-folded-1@zeromail.test
+DTSTAMP:20260620T120000Z
+DTSTART:20260620T130000Z
+DTEND:20260620T140000Z
+SUMMARY:Test
+  Meeting With Long Subject That Was Folded Across Lines Per RFC 5545 Sect
+ ion 3.1 Continuation Begins With Space
+DESCRIPTION:Multi-line
+  description with continuation
+  that spans three folded segments.
+ORGANIZER:mailto:organizer@example.com
+ATTENDEE:mailto:attendee@example.com
+END:VEVENT
+END:VCALENDAR
