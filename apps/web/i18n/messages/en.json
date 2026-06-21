@@ -640,6 +640,10 @@
         "success": "Updated"
       }
     },
+    "badge": {
+      "cancellation": "Cancellation",
+      "timeChanged": "Time changed"
+    },
     "card": {
       "connectedSince": "Connected since {date}",
       "disconnect": "Disconnect",

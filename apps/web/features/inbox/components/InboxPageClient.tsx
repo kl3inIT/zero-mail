@@ -584,6 +584,24 @@ function InboxMessageRow({
           {message.hasAttachment ? (
             <Paperclip className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
           ) : null}
+          {message.messageClass === 'CANCEL' ? (
+            <Badge
+              variant="outline"
+              className="h-5 shrink-0 px-1.5 text-[10px]"
+              data-testid="inbox-message-cancellation-badge"
+            >
+              {t('calendar.badge.cancellation')}
+            </Badge>
+          ) : null}
+          {message.messageClass === 'RESCHEDULE' ? (
+            <Badge
+              variant="outline"
+              className="h-5 shrink-0 px-1.5 text-[10px]"
+              data-testid="inbox-message-time-changed-badge"
+            >
+              {t('calendar.badge.timeChanged')}
+            </Badge>
+          ) : null}
           <p
             className={cn(
               'min-w-0 flex-1 truncate text-sm leading-5 font-normal',

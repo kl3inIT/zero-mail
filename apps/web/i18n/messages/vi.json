@@ -640,6 +640,10 @@
         "success": "Đã cập nhật"
       }
     },
+    "badge": {
+      "cancellation": "Hủy",
+      "timeChanged": "Đổi giờ"
+    },
     "card": {
       "connectedSince": "Đã kết nối từ {date}",
       "disconnect": "Ngắt kết nối",

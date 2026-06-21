@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
  * <p><b>Per CONVENTIONS.md "Backend Code Style":</b> explicit names ({@code icsBody}, {@code
  * parseResult}, {@code classification}, {@code temporal}) — no one-letter locals.
  */
+@org.springframework.stereotype.Component
 public final class CalendarPartParser {
 
     /** 1 MB hard cap on the iCal body before parsing (Security Domain T-12-04). */

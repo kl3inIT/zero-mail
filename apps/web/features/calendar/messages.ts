@@ -127,4 +127,14 @@ export const calendarMessages = {
     vi: 'Không tải được danh sách lịch',
     en: 'Could not load calendars',
   },
+  // Phase 12 W4 (D-12 acceptance): row-level badges surfaced by the inbox MessageRow next to
+  // calendar-class rows. INVITE and RSVP rows get no badge — pinning is the affordance.
+  'calendar.badge.cancellation': {
+    vi: 'Hủy',
+    en: 'Cancellation',
+  },
+  'calendar.badge.timeChanged': {
+    vi: 'Đổi giờ',
+    en: 'Time changed',
+  },
 } as const;

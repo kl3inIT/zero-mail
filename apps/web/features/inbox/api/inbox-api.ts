@@ -3,6 +3,8 @@ import { xsrfHeader } from '@/lib/api/client';
 
 // TODO: Switch this feature to the generated OpenAPI client after
 // :backend:api:generateOpenApiDocs can run under the project JDK 25 locally.
+export type InboxMessageClass = 'INVITE' | 'CANCEL' | 'RESCHEDULE' | 'RSVP';
+
 export type GmailInboxMessageResponse = {
   gmailMessageId?: string;
   gmailThreadId?: string;
@@ -17,6 +19,11 @@ export type GmailInboxMessageResponse = {
   unread?: boolean;
   hasAttachment?: boolean;
   openInGmailUrl?: string;
+  // Phase 12 W4: calendar classification written by the worker AFTER_COMMIT classifier.
+  // Optional because the backend DTO + projection-to-response mapping ship in a follow-up
+  // commit; UI gracefully degrades when the field is absent (no badge, no pin affordance).
+  messageClass?: InboxMessageClass | null;
+  eventDt?: string | null;
 };
 
 export type GmailInboxLabelResponse = {
@@ -54,6 +61,9 @@ export type InboxMessage = {
   unread: boolean;
   hasAttachment: boolean;
   openInGmailUrl: string;
+  // Phase 12 W4: optional because the projection→DTO wiring ships separately.
+  messageClass?: InboxMessageClass | null;
+  eventDt?: string | null;
 };
 
 export type InboxLabel = {
@@ -117,6 +127,8 @@ function normalizeMessage(message: GmailInboxMessageResponse): InboxMessage | nu
     openInGmailUrl:
       message.openInGmailUrl ??
       `https://mail.google.com/mail/u/0/#inbox/${encodeURIComponent(message.gmailThreadId)}`,
+    messageClass: message.messageClass ?? null,
+    eventDt: message.eventDt ?? null,
   };
 }
 
