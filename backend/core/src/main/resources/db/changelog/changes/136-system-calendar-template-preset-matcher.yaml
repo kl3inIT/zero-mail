@@ -1,0 +1,93 @@
+databaseChangeLog:
+  - changeSet:
+      id: 136-system-calendar-template-preset-matcher
+      author: zeromail
+      comment: |
+        Phase 12 W5 (CAL-TRIAGE-03, D-09): migrate the seeded system-calendar(-vi)
+        rule template's matcher_ast from SEMANTIC_INTENT (LLM-driven) to
+        PRESET_CALENDAR (deterministic, message-side) so the Calendar label rule
+        fires WITHOUT an LLM call whenever the W4 ical4j classifier wrote
+        gmail_inbox_projection.message_class.
+
+        Two-step migration:
+          1. Rewrite the template catalog row(s) so NEW tenants seed onto PRESET.
+          2. Rewrite already-materialized rule rows that still carry the seeded
+             SEMANTIC_INTENT shape (matched by (template_key, template_version,
+             matcher_ast.type, matcher_ast.nodeId) — the durable identifier).
+             Customized rules — those whose matcher_ast nodeId or type no longer
+             matches the seed — are PRESERVED unchanged.
+
+        Idempotency: the UPDATEs filter on matcher_ast ->> 'type' = 'SEMANTIC_INTENT',
+        so a re-applied changeset against a previously-migrated row is a no-op
+        (the row's type is already 'PRESET_CALENDAR' and the WHERE excludes it).
+        No runOnChange / runAlways / preCondition tricks — idempotency-by-WHERE.
+
+        Per CLAUDE.md §10: 113-default-rule-templates-seed.yaml and
+        114-default-rule-templates-vi-seed.yaml are NOT edited (applied changesets
+        are immutable). This is a forward-only data migration.
+      changes:
+        - sql:
+            splitStatements: false
+            comment: |
+              Step 1 — migrate template catalog rows (system-calendar EN + VI).
+              Step 2 — migrate uncustomized materialized rule rows for both keys.
+              Customized rules (nodeId differs from the seed) are preserved.
+            sql: |
+              UPDATE rule_template_catalog
+              SET matcher_ast = jsonb_build_object(
+                    'schemaVersion', 'rules.v1',
+                    'type', 'PRESET_CALENDAR',
+                    'nodeId', 'system-calendar')
+              WHERE template_key = 'system-calendar'
+                AND template_version = 1
+                AND matcher_ast ->> 'type' = 'SEMANTIC_INTENT';
+
+              UPDATE rule_template_catalog
+              SET matcher_ast = jsonb_build_object(
+                    'schemaVersion', 'rules.v1',
+                    'type', 'PRESET_CALENDAR',
+                    'nodeId', 'system-calendar-vi')
+              WHERE template_key = 'system-calendar-vi'
+                AND template_version = 1
+                AND matcher_ast ->> 'type' = 'SEMANTIC_INTENT';
+
+              UPDATE rules
+              SET matcher_ast = jsonb_build_object(
+                    'schemaVersion', 'rules.v1',
+                    'type', 'PRESET_CALENDAR',
+                    'nodeId', 'system-calendar')
+              WHERE template_key = 'system-calendar'
+                AND template_version = 1
+                AND matcher_ast ->> 'type' = 'SEMANTIC_INTENT'
+                AND matcher_ast ->> 'nodeId' = 'system-calendar';
+
+              UPDATE rules
+              SET matcher_ast = jsonb_build_object(
+                    'schemaVersion', 'rules.v1',
+                    'type', 'PRESET_CALENDAR',
+                    'nodeId', 'system-calendar-vi')
+              WHERE template_key = 'system-calendar-vi'
+                AND template_version = 1
+                AND matcher_ast ->> 'type' = 'SEMANTIC_INTENT'
+                AND matcher_ast ->> 'nodeId' = 'system-calendar-vi';
+      rollback:
+        - sql:
+            splitStatements: false
+            comment: |
+              Best-effort reverse migration: flip type marker back to
+              SEMANTIC_INTENT. The intent text from the original seed (the long
+              user-facing description) is NOT restored — that string was not
+              captured in this changeset; operators who need the SEMANTIC_INTENT
+              behavior back should re-seed via 113/114 against a fresh database.
+            sql: |
+              UPDATE rule_template_catalog
+              SET matcher_ast = jsonb_set(matcher_ast, '{type}', '"SEMANTIC_INTENT"'::jsonb)
+              WHERE template_key IN ('system-calendar','system-calendar-vi')
+                AND template_version = 1
+                AND matcher_ast ->> 'type' = 'PRESET_CALENDAR';
+
+              UPDATE rules
+              SET matcher_ast = jsonb_set(matcher_ast, '{type}', '"SEMANTIC_INTENT"'::jsonb)
+              WHERE template_key IN ('system-calendar','system-calendar-vi')
+                AND template_version = 1
+                AND matcher_ast ->> 'type' = 'PRESET_CALENDAR';

@@ -398,3 +398,6 @@ databaseChangeLog:
   - include:
       file: changes/135-calendar-tables-version-column.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/136-system-calendar-template-preset-matcher.yaml
+      relativeToChangelogFile: true

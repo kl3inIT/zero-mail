@@ -72,12 +72,15 @@ class RuleTemplateMaterializationServiceTest extends PostgresContainerTest {
         assertThat(secondResult.createdCount()).isZero();
         assertThat(secondResult.skippedCount()).isEqualTo(defaultCount);
         // Every seeded default rule is ENABLED, ordered by the EN key order, and carries valid
-        // matcher/action JSON (getMatcherAst/getActionIntents validate on read).
+        // matcher/action JSON (getMatcherAst/getActionIntents validate on read). Phase 12 W5
+        // (changeset 136): system-calendar rule is now PRESET_CALENDAR (no LLM); the rest still
+        // use SEMANTIC_INTENT — so the matcher invariant is "one of the two AI-or-preset types".
         assertThat(withTenant(tenantId, () -> ruleRepository.findOrderedByTenantId(tenantId)))
                 .allSatisfy(
                         rule -> {
                             assertThat(rule.isEnabled()).isTrue();
-                            assertThat(rule.getMatcherAst()).contains("SEMANTIC_INTENT");
+                            assertThat(rule.getMatcherAst())
+                                    .containsAnyOf("SEMANTIC_INTENT", "PRESET_CALENDAR");
                             assertThat(rule.getActionIntents()).contains("label");
                         })
                 .extracting(RuleEntity::getTemplateKey)
