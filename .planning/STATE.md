@@ -4,17 +4,17 @@ milestone: v1.4
 milestone_name: Calendar Co-Pilot + Drive Filing
 current_phase: 12
 current_phase_name: Calendar Connection + Triage Foundation
-status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-06-21T18:01:53.045Z"
+status: verifying
+stopped_at: Completed 12-W5 plan; Phase 12 implementation-complete
+last_updated: "2026-06-21T18:36:24.501Z"
 last_activity: 2026-06-20
 last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 20
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 Phase: 12 (Calendar Connection + Triage Foundation) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-20 — Phase 12 execution started
 
 ## Current Milestone Roadmap
@@ -201,6 +201,7 @@ Reference: `.planning/ROADMAP.md` + `.planning/REQUIREMENTS.md` + `.planning/res
 | Phase 12 PW1 | ~50 minutes | 3 tasks | 28 files |
 | Phase 12 PW2 | 30min | 3 tasks | 25 files |
 | Phase 12 PW3 | 75 minutes | 3 tasks | 23 files |
+| Phase 12 PW5 | 50min | 2 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -408,6 +409,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 12 W2]: AFTER_COMMIT listener co-located inside CalendarConnectionService — publisher + consumer + eviction target all in the same Modulith module; Phase 13 free/busy cache listener subscribes separately when that module ships.
 - [Phase 12]: W3 — local types.ts shim used instead of regenerated schema.d.ts (dev SSH tunnel + backend not reachable in executor session); raw-fetch wrappers in calendar-api.ts mirror unsubscribe-campaign precedent. TODO comments flag the swap once regen pipeline is unblocked.
 - [Phase 12]: W3 — INTENT_CALENDAR_CONNECT added as new OAuthIntentSnapshot value (not reuse of INTENT_RECONNECT_MAILBOX) so the resolver/success-handler chain routes through calendar-specific code paths without colliding with Gmail mailbox lifecycle intents.
+- [Phase ?]: Phase 12 W5: PRESET_CALENDAR matcher landed via sealed-interface permit + Liquibase changeset 136 (forward-only migration; 113/114 seeds untouched). CAL-TRIAGE-03 closed — calendar rule fires deterministically without LLM call.
 
 ### Roadmap Evolution
 
@@ -638,9 +640,9 @@ Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 
 
 ## Session Continuity
 
-Last session: 2026-06-21T18:01:53.033Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-calendar-connection-triage-foundation/12-CONTEXT.md
+Last session: 2026-06-21T18:36:24.486Z
+Stopped at: Completed 12-W5 plan; Phase 12 implementation-complete
+Resume file: None
 
 ## Operator Next Steps
 
