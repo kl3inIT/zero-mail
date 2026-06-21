@@ -19,7 +19,9 @@ import java.time.Instant;
             "webBannerEnabled",
             "countdownEnabled",
             "leaderboardEnabled",
-            "leaderboardLimit"
+            "leaderboardLimit",
+            "rewardRankCutoff",
+            "rewardNotificationText"
         })
 public record AdminReferralCampaignUpdateRequest(
         @NotBlank @Size(max = 160) String name,
@@ -31,7 +33,9 @@ public record AdminReferralCampaignUpdateRequest(
         @NotNull Boolean webBannerEnabled,
         @NotNull Boolean countdownEnabled,
         @NotNull Boolean leaderboardEnabled,
-        @NotNull @Min(1) @Max(100) Integer leaderboardLimit) {
+        @NotNull @Min(1) @Max(100) Integer leaderboardLimit,
+        @NotNull @Min(1) @Max(100) Integer rewardRankCutoff,
+        @NotBlank @Size(max = 500) String rewardNotificationText) {
 
     public ReferralCampaignUpdateCommand toCommand() {
         return new ReferralCampaignUpdateCommand(
@@ -44,6 +48,8 @@ public record AdminReferralCampaignUpdateRequest(
                 Boolean.TRUE.equals(webBannerEnabled),
                 Boolean.TRUE.equals(countdownEnabled),
                 Boolean.TRUE.equals(leaderboardEnabled),
-                leaderboardLimit);
+                leaderboardLimit,
+                rewardRankCutoff,
+                rewardNotificationText);
     }
 }

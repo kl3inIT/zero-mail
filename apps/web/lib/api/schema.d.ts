@@ -1979,9 +1979,9 @@ export interface components {
             name?: string;
             filename?: string;
             charset?: string;
-            inline?: boolean;
-            formData?: boolean;
             attachment?: boolean;
+            formData?: boolean;
+            inline?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -2020,46 +2020,46 @@ export interface components {
             date?: number;
             /** Format: int64 */
             contentLength?: number;
-            origin?: string;
-            range?: components["schemas"]["HttpRange"][];
-            acceptCharset?: string[];
-            contentDisposition?: components["schemas"]["ContentDisposition"];
-            cacheControl?: string;
-            ifMatch?: string[];
-            allow?: components["schemas"]["HttpMethod"][];
-            bearerAuth?: string;
+            vary?: string[];
             accept?: components["schemas"]["MediaType"][];
+            origin?: string;
             upgrade?: string;
-            etag?: string;
+            allow?: components["schemas"]["HttpMethod"][];
             /** Format: int64 */
             expires?: number;
             pragma?: string;
-            vary?: string[];
-            contentLanguage?: string;
-            connection?: string[];
+            ifMatch?: string[];
+            etag?: string;
+            ifNoneMatch?: string[];
+            /** Format: int64 */
+            ifUnmodifiedSince?: number;
+            accessControlAllowCredentials?: boolean;
+            accessControlExposeHeaders?: string[];
+            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
+            accessControlAllowHeaders?: string[];
+            accessControlAllowOrigin?: string;
+            accessControlRequestHeaders?: string[];
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
             basicAuth?: string;
+            /** Format: int64 */
+            accessControlMaxAge?: number;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
             acceptLanguageAsLocales?: string[];
-            /** Format: int64 */
-            accessControlMaxAge?: number;
             acceptPatch?: components["schemas"]["MediaType"][];
-            ifNoneMatch?: string[];
-            /** Format: int64 */
-            ifUnmodifiedSince?: number;
-            accessControlAllowCredentials?: boolean;
-            accessControlAllowOrigin?: string;
-            accessControlExposeHeaders?: string[];
-            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
-            accessControlRequestHeaders?: string[];
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
-            accessControlAllowHeaders?: string[];
+            contentLanguage?: string;
+            contentDisposition?: components["schemas"]["ContentDisposition"];
+            acceptCharset?: string[];
+            connection?: string[];
             /** Format: int64 */
             ifModifiedSince?: number;
             contentType?: components["schemas"]["MediaType"];
+            range?: components["schemas"]["HttpRange"][];
+            cacheControl?: string;
+            bearerAuth?: string;
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -2072,8 +2072,8 @@ export interface components {
             /** Format: double */
             qualityValue?: number;
             charset?: string;
-            wildcardType?: boolean;
             subtypeSuffix?: string;
+            wildcardType?: boolean;
             wildcardSubtype?: boolean;
             concrete?: boolean;
         };
@@ -2435,6 +2435,9 @@ export interface components {
             webBannerEnabled?: boolean;
             countdownEnabled?: boolean;
             leaderboardEnabled?: boolean;
+            /** Format: int32 */
+            rewardRankCutoff?: number;
+            rewardNotificationText?: string;
             bannerImageAvailable?: boolean;
             code?: string;
             url?: string;

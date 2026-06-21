@@ -1,0 +1,48 @@
+databaseChangeLog:
+  - changeSet:
+      id: 135-referral-campaign-reward-config
+      author: zeromail
+      comment: >
+        Referral campaigns configure which leaderboard ranks receive rewards and the notification
+        text shown to eligible tenants after an event ends.
+      changes:
+        - addColumn:
+            tableName: referral_campaign
+            columns:
+              - column:
+                  name: reward_rank_cutoff
+                  type: int
+                  defaultValueNumeric: 3
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reward_notification_text
+                  type: varchar(500)
+                  defaultValue: "Thông báo nhận thưởng sẽ được gửi qua email."
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              ADD CONSTRAINT ck_referral_campaign_reward_rank_cutoff
+              CHECK (reward_rank_cutoff BETWEEN 1 AND 100)
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              ADD CONSTRAINT ck_referral_campaign_reward_notification_text
+              CHECK (length(trim(reward_notification_text)) > 0)
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              DROP CONSTRAINT IF EXISTS ck_referral_campaign_reward_notification_text
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              DROP CONSTRAINT IF EXISTS ck_referral_campaign_reward_rank_cutoff
+        - dropColumn:
+            tableName: referral_campaign
+            columnName: reward_notification_text
+        - dropColumn:
+            tableName: referral_campaign
+            columnName: reward_rank_cutoff

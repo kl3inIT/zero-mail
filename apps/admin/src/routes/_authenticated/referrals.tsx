@@ -91,7 +91,8 @@ type CampaignDraft = {
   webBannerEnabled: boolean;
   countdownEnabled: boolean;
   leaderboardEnabled: boolean;
-  leaderboardLimit: number;
+  rewardRankCutoff: number;
+  rewardNotificationText: string;
 };
 
 function ReferralRoute() {
@@ -129,13 +130,12 @@ function ReferralRoute() {
             campaignId: selectedCampaign.campaignId,
             from: startOfDateInput(fromDateInput).toISOString(),
             to: endOfDateInput(toDateInput).toISOString(),
-            leaderboardLimit: selectedCampaign.leaderboardLimit,
           }
         : undefined,
     [fromDateInput, selectedCampaign, toDateInput],
   );
   const dashboardStreamKey = dashboardQueryInput
-    ? `${dashboardQueryInput.campaignId}:${dashboardQueryInput.from}:${dashboardQueryInput.to}:${dashboardQueryInput.leaderboardLimit}`
+    ? `${dashboardQueryInput.campaignId}:${dashboardQueryInput.from}:${dashboardQueryInput.to}`
     : undefined;
   const dashboardQuery = useReferralDashboard(dashboardQueryInput);
   const dashboard =
@@ -461,7 +461,6 @@ function RealtimeLeaderboardCard({
   rows: AdminReferralLeaderboardRowResponse[];
   loading: boolean;
 }) {
-  const visibleRows = rows.slice(0, 20);
   return (
     <Card className="min-h-[470px]">
       <CardHeader className="px-6">
@@ -470,9 +469,9 @@ function RealtimeLeaderboardCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="px-6">
-        <div className="border-border overflow-hidden rounded-xl border">
+        <div className="border-border max-h-[360px] overflow-y-auto rounded-xl border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-card sticky top-0 z-10">
               <TableRow className="bg-muted/30">
                 <TableHead className="w-24 px-6">Hạng</TableHead>
                 <TableHead>Tenant</TableHead>
@@ -487,14 +486,14 @@ function RealtimeLeaderboardCard({
                   </TableCell>
                 </TableRow>
               )}
-              {!loading && visibleRows.length === 0 && (
+              {!loading && rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={3} className="text-muted-foreground h-72 text-center">
                     Chưa có tenant nào giới thiệu thành công.
                   </TableCell>
                 </TableRow>
               )}
-              {visibleRows.map((row) => (
+              {rows.map((row) => (
                 <TableRow
                   key={row.tenantId}
                   className={row.rank === 1 ? 'bg-primary/5 hover:bg-primary/5' : undefined}
@@ -516,9 +515,6 @@ function RealtimeLeaderboardCard({
               ))}
             </TableBody>
           </Table>
-        </div>
-        <div className="text-muted-foreground pt-5 text-center text-sm">
-          Hiển thị top 20 tenant có số referral cao nhất
         </div>
       </CardContent>
     </Card>
@@ -663,7 +659,9 @@ function CampaignSettingsWorkspace({
           webBannerEnabled: nextDraft.webBannerEnabled,
           countdownEnabled: nextDraft.countdownEnabled,
           leaderboardEnabled: nextDraft.leaderboardEnabled,
-          leaderboardLimit: nextDraft.leaderboardLimit,
+          leaderboardLimit: campaign.leaderboardLimit,
+          rewardRankCutoff: nextDraft.rewardRankCutoff,
+          rewardNotificationText: nextDraft.rewardNotificationText.trim(),
         },
       },
       {
@@ -890,18 +888,31 @@ function CampaignInfoCard({
           />
         </div>
         <NumberField
-          id="referral-limit"
-          label="Số tenant hiển thị top"
-          value={draft.leaderboardLimit}
+          id="referral-reward-rank-cutoff"
+          label="Top được nhận quà"
+          value={draft.rewardRankCutoff}
           min={1}
           max={100}
           onChange={(value, persistImmediately) =>
             onDraftChange({
               ...draft,
-              leaderboardLimit: clampNumber(value, 1, 100),
+              rewardRankCutoff: clampNumber(value, 1, 100),
             }, persistImmediately)
           }
         />
+        <div className="space-y-2">
+          <Label htmlFor="referral-reward-notification">Thông báo nhận quà</Label>
+          <Textarea
+            id="referral-reward-notification"
+            value={draft.rewardNotificationText}
+            maxLength={500}
+            onChange={(event) =>
+              onDraftChange({ ...draft, rewardNotificationText: event.target.value })
+            }
+            onBlur={onSave}
+            className="min-h-24 resize-y"
+          />
+        </div>
         <div className="text-muted-foreground flex justify-end text-xs">
           {saving ? 'Đang lưu thay đổi...' : 'Tự lưu khi rời trường nhập'}
         </div>
@@ -1402,7 +1413,9 @@ function createDefaultCampaign(): AdminReferralCampaignCreateRequest {
     webBannerEnabled: true,
     countdownEnabled: true,
     leaderboardEnabled: true,
-    leaderboardLimit: 10,
+    leaderboardLimit: 100,
+    rewardRankCutoff: 3,
+    rewardNotificationText: 'Thông báo nhận thưởng sẽ được gửi qua email.',
   };
 }
 
@@ -1417,7 +1430,8 @@ function draftFromCampaign(campaign: AdminReferralCampaignResponse): CampaignDra
     webBannerEnabled: campaign.webBannerEnabled,
     countdownEnabled: campaign.countdownEnabled,
     leaderboardEnabled: campaign.leaderboardEnabled,
-    leaderboardLimit: campaign.leaderboardLimit,
+    rewardRankCutoff: campaign.rewardRankCutoff,
+    rewardNotificationText: campaign.rewardNotificationText,
   };
 }
 

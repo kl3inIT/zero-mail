@@ -39,6 +39,8 @@ const timeFormatter = new Intl.DateTimeFormat('vi-VN', {
   minute: '2-digit',
   hour12: false,
 });
+const DEFAULT_REWARD_RANK_CUTOFF = 3;
+const DEFAULT_REWARD_NOTIFICATION_TEXT = 'Thông báo nhận thưởng sẽ được gửi qua email.';
 
 export function ReferralPageClient() {
   const referralQuery = useReferralMe();
@@ -50,6 +52,9 @@ export function ReferralPageClient() {
   const countdown = useCountdown(referral?.campaignEndsAt);
   const eventEnded = Boolean(referral?.campaignEndsAt && countdown.complete);
   const currentTenant = referral?.currentTenant;
+  const rewardRankCutoff = rewardRankCutoffValue(referral?.rewardRankCutoff);
+  const rewardNotificationText =
+    referral?.rewardNotificationText?.trim() || DEFAULT_REWARD_NOTIFICATION_TEXT;
   const leaderboardRows = useMemo(
     () => buildLeaderboardRows(referral?.leaderboard ?? [], currentTenant),
     [currentTenant, referral?.leaderboard],
@@ -129,6 +134,8 @@ export function ReferralPageClient() {
             <FinalResultPanel
               currentTenant={currentTenant}
               successfulReferrals={referral.successfulReferrals ?? 0}
+              rewardRankCutoff={rewardRankCutoff}
+              rewardNotificationText={rewardNotificationText}
               onFollowNewEvents={() => void referralQuery.refetch()}
               onViewEventHistory={() =>
                 document
@@ -393,18 +400,24 @@ function CurrentRankPanel({
 function FinalResultPanel({
   currentTenant,
   successfulReferrals,
+  rewardRankCutoff,
+  rewardNotificationText,
   onFollowNewEvents,
   onViewEventHistory,
 }: {
   currentTenant: ReferralLeaderboardRow | undefined;
   successfulReferrals: number;
+  rewardRankCutoff: number;
+  rewardNotificationText: string;
   onFollowNewEvents: () => void;
   onViewEventHistory: () => void;
 }) {
-  const isTopThree =
-    currentTenant !== undefined && currentTenant.rank <= 3 && currentTenant.successfulReferrals > 0;
+  const isRewardEligible =
+    currentTenant !== undefined &&
+    currentTenant.rank <= rewardRankCutoff &&
+    currentTenant.successfulReferrals > 0;
 
-  if (isTopThree) {
+  if (isRewardEligible) {
     return (
       <section className="border-border bg-card overflow-hidden rounded-2xl border shadow-sm">
         <div className="relative grid min-h-80 gap-6 p-5 sm:grid-cols-[220px_1fr] sm:p-7">
@@ -428,7 +441,7 @@ function FinalResultPanel({
                 <Mail className="size-5" />
               </span>
               <div>
-                <div className="font-bold">Thông báo nhận thưởng đã được gửi qua email</div>
+                <div className="font-bold">{rewardNotificationText}</div>
                 <div className="text-sm text-emerald-800">
                   Vui lòng kiểm tra email đã đăng ký để xem hướng dẫn nhận thưởng.
                 </div>
@@ -452,7 +465,7 @@ function FinalResultPanel({
           </div>
           <div className="space-y-3">
             <p className="text-foreground text-2xl font-bold">
-              Rất tiếc, bạn chưa nằm trong TOP 3 lần này.
+              Rất tiếc, bạn chưa nằm trong TOP {rewardRankCutoff} lần này.
             </p>
             <p className="text-muted-foreground max-w-xl text-base">
               Bạn vẫn có thể xem kết quả cuối cùng và theo dõi các sự kiện tiếp theo.
@@ -795,6 +808,13 @@ function formatEndedAt(endsAt: string): string {
 
 function formatInteger(value: number): string {
   return integerFormatter.format(value);
+}
+
+function rewardRankCutoffValue(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_REWARD_RANK_CUTOFF;
+  }
+  return Math.max(1, Math.min(100, Math.trunc(value)));
 }
 
 function padNumber(value: number): string {

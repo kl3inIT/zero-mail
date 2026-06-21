@@ -18,6 +18,8 @@ public record ReferralCampaignSnapshot(
         boolean countdownEnabled,
         boolean leaderboardEnabled,
         int leaderboardLimit,
+        int rewardRankCutoff,
+        String rewardNotificationText,
         boolean bannerImageAvailable,
         Instant createdAt,
         Instant updatedAt) {
@@ -30,6 +32,7 @@ public record ReferralCampaignSnapshot(
         Objects.requireNonNull(status, "status must not be null");
         Objects.requireNonNull(startsAt, "startsAt must not be null");
         Objects.requireNonNull(endsAt, "endsAt must not be null");
+        Objects.requireNonNull(rewardNotificationText, "rewardNotificationText must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
         Objects.requireNonNull(updatedAt, "updatedAt must not be null");
     }

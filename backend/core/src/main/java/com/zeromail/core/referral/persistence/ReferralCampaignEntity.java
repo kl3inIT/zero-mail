@@ -54,6 +54,12 @@ public class ReferralCampaignEntity extends AbstractEntity {
     @Column(name = "leaderboard_limit", nullable = false)
     private int leaderboardLimit;
 
+    @Column(name = "reward_rank_cutoff", nullable = false)
+    private int rewardRankCutoff;
+
+    @Column(name = "reward_notification_text", nullable = false, length = 500)
+    private String rewardNotificationText;
+
     @Column(name = "banner_image_object_key", length = 512)
     private String bannerImageObjectKey;
 
@@ -98,6 +104,8 @@ public class ReferralCampaignEntity extends AbstractEntity {
                 countdownEnabled,
                 leaderboardEnabled,
                 leaderboardLimit,
+                rewardRankCutoff,
+                rewardNotificationText,
                 hasBannerImage(),
                 createdAt,
                 updatedAt);
@@ -160,6 +168,8 @@ public class ReferralCampaignEntity extends AbstractEntity {
         this.countdownEnabled = command.countdownEnabled();
         this.leaderboardEnabled = command.leaderboardEnabled();
         this.leaderboardLimit = command.leaderboardLimit();
+        this.rewardRankCutoff = command.rewardRankCutoff();
+        this.rewardNotificationText = command.rewardNotificationText();
     }
 
     private void apply(ReferralCampaignUpdateCommand command) {
@@ -173,5 +183,7 @@ public class ReferralCampaignEntity extends AbstractEntity {
         this.countdownEnabled = command.countdownEnabled();
         this.leaderboardEnabled = command.leaderboardEnabled();
         this.leaderboardLimit = command.leaderboardLimit();
+        this.rewardRankCutoff = command.rewardRankCutoff();
+        this.rewardNotificationText = command.rewardNotificationText();
     }
 }

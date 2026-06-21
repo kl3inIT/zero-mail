@@ -19,6 +19,8 @@ public record ReferralMeResponse(
         Boolean webBannerEnabled,
         Boolean countdownEnabled,
         Boolean leaderboardEnabled,
+        Integer rewardRankCutoff,
+        String rewardNotificationText,
         Boolean bannerImageAvailable,
         String code,
         String url,
@@ -35,7 +37,7 @@ public record ReferralMeResponse(
     public static ReferralMeResponse inactive() {
         return new ReferralMeResponse(
                 false, null, null, null, null, null, null, null, null, null, null, null, null, null,
-                null, null, null);
+                null, null, null, null, null);
     }
 
     public static ReferralMeResponse active(
@@ -47,6 +49,8 @@ public record ReferralMeResponse(
             boolean webBannerEnabled,
             boolean countdownEnabled,
             boolean leaderboardEnabled,
+            int rewardRankCutoff,
+            String rewardNotificationText,
             boolean bannerImageAvailable,
             String code,
             String url,
@@ -63,6 +67,8 @@ public record ReferralMeResponse(
                 webBannerEnabled,
                 countdownEnabled,
                 leaderboardEnabled,
+                rewardRankCutoff,
+                rewardNotificationText,
                 bannerImageAvailable,
                 code,
                 url,

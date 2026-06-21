@@ -66,7 +66,6 @@ public class ReferralDashboardReadRepository {
                    AND conversion.qualified_at < :to
                  GROUP BY referral_code.owner_tenant_id, tenants.display_name
                  ORDER BY successful_referrals DESC, tenants.display_name ASC
-                 LIMIT :leaderboardLimit
                 """,
                 parameters(referralDashboardQuery),
                 (resultSet, _) ->
@@ -100,8 +99,7 @@ public class ReferralDashboardReadRepository {
                            ROW_NUMBER() OVER (
                                ORDER BY tenant_scores.successful_referrals DESC,
                                         tenant_scores.tenant_display_name ASC
-                           )::int AS rank,
-                           COUNT(*) OVER ()::int AS total_ranked_tenants
+                           )::int AS rank
                       FROM tenant_scores
                 )
                 SELECT tenant_id,
@@ -109,9 +107,6 @@ public class ReferralDashboardReadRepository {
                        successful_referrals,
                        rank
                   FROM ranked_tenants
-                 WHERE rank <= :leaderboardLimit
-                    OR tenant_id = :ownerTenantId
-                    OR rank = total_ranked_tenants
                  ORDER BY rank ASC
                 """,
                 parameters(referralDashboardQuery).addValue("ownerTenantId", ownerTenantId),
@@ -194,7 +189,6 @@ public class ReferralDashboardReadRepository {
         return new MapSqlParameterSource()
                 .addValue("campaignId", referralDashboardQuery.campaignId())
                 .addValue("from", Timestamp.from(referralDashboardQuery.from()))
-                .addValue("to", Timestamp.from(referralDashboardQuery.to()))
-                .addValue("leaderboardLimit", referralDashboardQuery.leaderboardLimit());
+                .addValue("to", Timestamp.from(referralDashboardQuery.to()));
     }
 }

@@ -18,6 +18,8 @@ import java.util.UUID;
             "countdownEnabled",
             "leaderboardEnabled",
             "leaderboardLimit",
+            "rewardRankCutoff",
+            "rewardNotificationText",
             "bannerImageAvailable",
             "createdAt",
             "updatedAt"
@@ -35,6 +37,8 @@ public record AdminReferralCampaignResponse(
         boolean countdownEnabled,
         boolean leaderboardEnabled,
         int leaderboardLimit,
+        int rewardRankCutoff,
+        String rewardNotificationText,
         boolean bannerImageAvailable,
         Instant createdAt,
         Instant updatedAt) {
@@ -53,6 +57,8 @@ public record AdminReferralCampaignResponse(
                 snapshot.countdownEnabled(),
                 snapshot.leaderboardEnabled(),
                 snapshot.leaderboardLimit(),
+                snapshot.rewardRankCutoff(),
+                snapshot.rewardNotificationText(),
                 snapshot.bannerImageAvailable(),
                 snapshot.createdAt(),
                 snapshot.updatedAt());

@@ -1303,6 +1303,9 @@ export interface components {
             leaderboardEnabled: boolean;
             /** Format: int32 */
             leaderboardLimit: number;
+            /** Format: int32 */
+            rewardRankCutoff: number;
+            rewardNotificationText: string;
         };
         AdminReferralCampaignResponse: {
             /** Format: uuid */
@@ -1322,6 +1325,9 @@ export interface components {
             leaderboardEnabled: boolean;
             /** Format: int32 */
             leaderboardLimit: number;
+            /** Format: int32 */
+            rewardRankCutoff: number;
+            rewardNotificationText: string;
             bannerImageAvailable: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -1383,6 +1389,9 @@ export interface components {
             leaderboardEnabled: boolean;
             /** Format: int32 */
             leaderboardLimit: number;
+            /** Format: int32 */
+            rewardRankCutoff: number;
+            rewardNotificationText: string;
         };
         RequeueRequest: {
             reason: string;
@@ -7466,7 +7475,6 @@ export interface operations {
                 campaignId: string;
                 from: string;
                 to: string;
-                leaderboardLimit?: number;
             };
             header?: never;
             path?: never;
@@ -7545,7 +7553,6 @@ export interface operations {
                 campaignId: string;
                 from: string;
                 to: string;
-                leaderboardLimit?: number;
             };
             header?: never;
             path?: never;

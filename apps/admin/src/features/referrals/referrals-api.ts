@@ -28,7 +28,6 @@ export type ReferralDashboardQueryInput = {
   campaignId: string;
   from: string;
   to: string;
-  leaderboardLimit: number;
 };
 
 export type ReferralDashboardStreamSubscription = {
@@ -65,7 +64,6 @@ function toDashboardQuery(input: ReferralDashboardQueryInput): DashboardQuery {
     campaignId: input.campaignId,
     from: input.from,
     to: input.to,
-    leaderboardLimit: input.leaderboardLimit,
   };
 }
 
@@ -151,7 +149,6 @@ export function subscribeReferralDashboard(
   url.searchParams.set('campaignId', input.campaignId);
   url.searchParams.set('from', input.from);
   url.searchParams.set('to', input.to);
-  url.searchParams.set('leaderboardLimit', String(input.leaderboardLimit));
 
   const eventSource = new EventSource(url.toString(), { withCredentials: true });
   eventSource.addEventListener('dashboard', (event) => {

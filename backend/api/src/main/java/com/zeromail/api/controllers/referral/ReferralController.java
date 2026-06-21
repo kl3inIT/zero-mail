@@ -81,8 +81,7 @@ public class ReferralController {
                         new ReferralDashboardQuery(
                                 referralPageCampaign.campaignId(),
                                 referralPageCampaign.startsAt(),
-                                referralPageCampaign.endsAt(),
-                                referralPageCampaign.leaderboardLimit()),
+                                referralPageCampaign.endsAt()),
                         ownerTenantId);
         return ReferralMeResponse.active(
                 referralPageCampaign.campaignId(),
@@ -93,6 +92,8 @@ public class ReferralController {
                 referralPageCampaign.webBannerEnabled(),
                 referralPageCampaign.countdownEnabled(),
                 referralPageCampaign.leaderboardEnabled(),
+                referralPageCampaign.rewardRankCutoff(),
+                referralPageCampaign.rewardNotificationText(),
                 referralPageCampaign.bannerImageAvailable(),
                 referralCode,
                 referralUrl,
