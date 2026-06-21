@@ -37,7 +37,7 @@ public class ReferralRedirectController {
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
-    @GetMapping("/r/{code}")
+    @GetMapping({"/r/{code}", "/api/r/{code}"})
     public ResponseEntity<Void> acceptReferral(
             @PathVariable String code, HttpServletRequest request, HttpServletResponse response) {
         Instant acceptedAt = clock.instant();

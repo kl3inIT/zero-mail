@@ -216,6 +216,7 @@ public class SecurityConfig {
                                                 "/v3/api-docs/**",
                                                 "/swagger-ui/**",
                                                 "/r/**",
+                                                "/api/r/**",
                                                 "/login/oauth2/**",
                                                 "/oauth2/**",
                                                 // Support feedback — open to unauthenticated users
