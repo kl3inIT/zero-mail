@@ -50,9 +50,9 @@
 ### Calendar-Aware Triage
 
 - [x] **CAL-TRIAGE-01**: Gmail ingestion parses `text/calendar` MIME parts and classifies messages as `INVITE` / `CANCEL` / `RESCHEDULE` / `RSVP`; classification persists on the existing mail-projection row, no new long-term body storage.
-- [ ] **CAL-TRIAGE-02**: Calendar-class messages are pinned at top-of-inbox in the web UI for a 24-hour window after the event date, with explicit "Cancellation" / "Time changed" badges.
+- [x] **CAL-TRIAGE-02**: Calendar-class messages are pinned at top-of-inbox in the web UI for a 24-hour window after the event date, with explicit "Cancellation" / "Time changed" badges.
 - [ ] **CAL-TRIAGE-03**: New tenants are seeded with a default `SystemType=CALENDAR` rule (action: `label "Calendar"`) that auto-matches messages classified as calendar-class via `isCalendarInvite` (`.ics` attachment OR `text/calendar` MIME OR `BEGIN:VCALENDAR` body marker). The Calendar rule runs as a `PRESET` match before AI matching; user-authored rules retain full action authority — no backend downgrade, no `CalendarAwareGuard`. Users may disable, edit, or delete the seeded Calendar rule like any other rule. (Revised 2026-06-20 from initial guard-downgrade design to follow Inbox Zero's proven pattern; see Phase 12 CONTEXT for rationale.)
-- [ ] **CAL-TRIAGE-04**: Calendar-aware triage ships without requiring any Calendar OAuth scope — `text/calendar` parsing is purely message-side and works for all users regardless of whether they connect Google Calendar.
+- [x] **CAL-TRIAGE-04**: Calendar-aware triage ships without requiring any Calendar OAuth scope — `text/calendar` parsing is purely message-side and works for all users regardless of whether they connect Google Calendar.
 
 ### Booking Links (Calendly-style, 1 per user)
 
