@@ -625,6 +625,60 @@
     "publishedOn": "Đăng ngày {date}",
     "updatedOn": "Cập nhật {date}"
   },
+  "calendar": {
+    "actions": {
+      "disconnect": {
+        "error": "Không ngắt được — thử lại",
+        "success": "Đã ngắt kết nối lịch"
+      },
+      "preference": {
+        "error": "Không lưu được vai trò lịch",
+        "success": "Đã lưu vai trò lịch"
+      },
+      "toggle": {
+        "error": "Không cập nhật được",
+        "success": "Đã cập nhật"
+      }
+    },
+    "card": {
+      "connectedSince": "Đã kết nối từ {date}",
+      "disconnect": "Ngắt kết nối",
+      "menuLabel": "Tuỳ chọn kết nối",
+      "statusConnected": "Đã kết nối",
+      "statusDisconnected": "Đã ngắt"
+    },
+    "connectIntent": {
+      "error": "Không bắt đầu được — thử lại"
+    },
+    "empty": {
+      "body": "Kết nối Google Calendar để Zero Mail biết khung giờ rảnh của bạn, gợi ý thời gian họp và soạn email với ngữ cảnh lịch.",
+      "connectCta": "Kết nối Google Calendar",
+      "heading": "Chưa kết nối Google Calendar"
+    },
+    "error": {
+      "loadFailed": "Không tải được danh sách lịch"
+    },
+    "list": {
+      "empty": "Chưa có lịch con nào được phơi ra.",
+      "heading": "Lịch con ({count})",
+      "timezone": "Múi giờ: {tz}",
+      "toggleLabel": "Bật / tắt lịch {name}"
+    },
+    "roles": {
+      "briefSourceHelper": "Chọn duy nhất một lịch — meeting brief sẽ kéo dữ liệu từ đây.",
+      "briefSourceLabel": "Nguồn meeting brief",
+      "eventWriteHelper": "Chọn duy nhất một lịch — sự kiện do Zero Mail tạo sẽ rơi vào đây.",
+      "eventWriteLabel": "Tạo sự kiện vào",
+      "freebusyHelper": "Chọn nhiều lịch — Zero Mail gom rảnh/bận từ tất cả các lịch bạn chọn.",
+      "freebusyLabel": "Kiểm tra xung đột bằng",
+      "heading": "Vai trò theo lịch",
+      "intro": "Chọn lịch nào được dùng để kiểm tra xung đột, tạo sự kiện và làm nguồn cho meeting brief — riêng cho hộp thư này.",
+      "placeholderNone": "Chưa chọn",
+      "save": "Lưu vai trò"
+    },
+    "subtitle": "Kết nối Google Calendar để AI gợi ý khung giờ rảnh và đặt lịch giúp bạn.",
+    "title": "Lịch"
+  },
   "chat": {
     "empty": {
       "body": "Hỏi về inbox, quy tắc, hoặc soạn email — Zero Mail chỉ gửi sau khi bạn xác nhận.",

@@ -625,6 +625,60 @@
     "publishedOn": "Published {date}",
     "updatedOn": "Updated {date}"
   },
+  "calendar": {
+    "actions": {
+      "disconnect": {
+        "error": "Could not disconnect — try again",
+        "success": "Calendar disconnected"
+      },
+      "preference": {
+        "error": "Could not save calendar roles",
+        "success": "Calendar roles saved"
+      },
+      "toggle": {
+        "error": "Could not update",
+        "success": "Updated"
+      }
+    },
+    "card": {
+      "connectedSince": "Connected since {date}",
+      "disconnect": "Disconnect",
+      "menuLabel": "Connection options",
+      "statusConnected": "Connected",
+      "statusDisconnected": "Disconnected"
+    },
+    "connectIntent": {
+      "error": "Could not start connect flow"
+    },
+    "empty": {
+      "body": "Connect Google Calendar so Zero Mail knows your free time, suggests meeting slots, and drafts emails with calendar context.",
+      "connectCta": "Connect Google Calendar",
+      "heading": "No Google Calendar connected"
+    },
+    "error": {
+      "loadFailed": "Could not load calendars"
+    },
+    "list": {
+      "empty": "No sub-calendars exposed yet.",
+      "heading": "Sub-calendars ({count})",
+      "timezone": "Time zone: {tz}",
+      "toggleLabel": "Enable / disable {name}"
+    },
+    "roles": {
+      "briefSourceHelper": "Single-select — meeting briefs pull data from here.",
+      "briefSourceLabel": "Use for meeting briefs",
+      "eventWriteHelper": "Single-select — events Zero Mail creates land here.",
+      "eventWriteLabel": "Add events to",
+      "freebusyHelper": "Multi-select — Zero Mail merges free/busy from every calendar you pick.",
+      "freebusyLabel": "Check for conflicts using",
+      "heading": "Per-role assignments",
+      "intro": "Pick which calendars are used to check conflicts, create events, and seed meeting briefs — for this mailbox only.",
+      "placeholderNone": "Not set",
+      "save": "Save assignments"
+    },
+    "subtitle": "Connect Google Calendar to let AI suggest free slots and schedule meetings for you.",
+    "title": "Calendar"
+  },
   "chat": {
     "empty": {
       "body": "Ask about your inbox, rules, or draft email — Zero Mail sends only after confirmation.",
