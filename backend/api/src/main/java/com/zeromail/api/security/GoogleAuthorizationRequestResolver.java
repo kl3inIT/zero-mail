@@ -149,6 +149,10 @@ public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRe
             case OAuthIntentSnapshot.INTENT_ADD_MAILBOX -> true;
             case OAuthIntentSnapshot.INTENT_RECONNECT_MAILBOX ->
                     pendingIntentSnapshot.targetMailboxId() != null;
+            // Phase 12 W3 (CAL-CONN-01 / D-06): calendar connect-intent carries the active mailbox
+            // so CalendarOAuthSuccessHandler can seed default-role rows for that mailbox only.
+            case OAuthIntentSnapshot.INTENT_CALENDAR_CONNECT ->
+                    pendingIntentSnapshot.targetMailboxId() != null;
             default -> false;
         };
     }
