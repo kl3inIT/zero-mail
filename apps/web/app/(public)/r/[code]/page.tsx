@@ -9,5 +9,5 @@ export default async function PublicReferralRedirectPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  redirect(getPublicApiUrl(`/r/${encodeURIComponent(code)}` as `/${string}`) as Route);
+  redirect(getPublicApiUrl(`/api/r/${encodeURIComponent(code)}` as `/${string}`) as Route);
 }
