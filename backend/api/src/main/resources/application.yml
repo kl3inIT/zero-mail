@@ -111,6 +111,10 @@ zero-mail:
   api:
     web:
       base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
+    referral:
+      # HMAC secret for URL-carried referral attribution tokens. Production may supply a dedicated
+      # value; fallback keeps existing deployments working because Google OAuth is already required.
+      attribution-token-signing-secret: ${ZERO_MAIL_REFERRAL_ATTRIBUTION_TOKEN_SIGNING_SECRET:${GOOGLE_OAUTH_CLIENT_SECRET:}}
     cors:
       # JHipster-style dev CORS config for separated frontend/API ports.
       allowed-origins: "${ZEROMAIL_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5174}"

@@ -155,7 +155,8 @@ class OAuthIntentRoutingTest {
 
     private static OAuth2AuthorizationRequestResolver googleResolver() {
         return new GoogleAuthorizationRequestResolver(
-                new InMemoryClientRegistrationRepository(clientRegistration()));
+                new InMemoryClientRegistrationRepository(clientRegistration()),
+                new ReferralAttributionTokenCodec("test-referral-signing-secret"));
     }
 
     private static MockHttpServletRequest authorizationRequest() {

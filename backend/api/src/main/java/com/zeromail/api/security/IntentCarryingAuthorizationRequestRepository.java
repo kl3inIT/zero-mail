@@ -3,6 +3,7 @@ package com.zeromail.api.security;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,8 +47,10 @@ public class IntentCarryingAuthorizationRequestRepository
             return null;
         }
 
-        OAuthIntentSnapshot intentSnapshot = snapshotFrom(removedAuthorizationRequest);
-        if (intentSnapshot == null) {
+        OAuthIntentSnapshot intentSnapshot = intentSnapshotFrom(removedAuthorizationRequest);
+        ReferralAttributionSnapshot referralAttributionSnapshot =
+                referralAttributionSnapshotFrom(removedAuthorizationRequest).orElse(null);
+        if (intentSnapshot == null && referralAttributionSnapshot == null) {
             return removedAuthorizationRequest;
         }
 
@@ -56,17 +59,25 @@ public class IntentCarryingAuthorizationRequestRepository
             return removedAuthorizationRequest;
         }
 
-        session.setAttribute(
-                OAuthIntentSnapshot.CALLBACK_INTENT_SESSION_ATTRIBUTE,
-                new OAuthIntentSnapshot(
-                        intentSnapshot.intent(),
-                        intentSnapshot.targetMailboxId(),
-                        intentSnapshot.initiatingTenantId()));
-        log.info("event=oauth_intent_captured");
+        if (intentSnapshot != null) {
+            session.setAttribute(
+                    OAuthIntentSnapshot.CALLBACK_INTENT_SESSION_ATTRIBUTE,
+                    new OAuthIntentSnapshot(
+                            intentSnapshot.intent(),
+                            intentSnapshot.targetMailboxId(),
+                            intentSnapshot.initiatingTenantId()));
+            log.info("event=oauth_intent_captured");
+        }
+        if (referralAttributionSnapshot != null) {
+            session.setAttribute(
+                    ReferralAttributionSnapshot.CALLBACK_SESSION_ATTRIBUTE,
+                    referralAttributionSnapshot);
+            log.info("event=referral_attribution_oauth_captured");
+        }
         return removedAuthorizationRequest;
     }
 
-    private static OAuthIntentSnapshot snapshotFrom(
+    private static OAuthIntentSnapshot intentSnapshotFrom(
             OAuth2AuthorizationRequest authorizationRequest) {
         Object intentValue =
                 authorizationRequest.getAttributes().get(OAuthIntentSnapshot.ATTRIBUTE_INTENT);
@@ -87,6 +98,11 @@ public class IntentCarryingAuthorizationRequestRepository
                                 .getAttributes()
                                 .get(OAuthIntentSnapshot.ATTRIBUTE_TARGET_MAILBOX_ID));
         return new OAuthIntentSnapshot(intent, targetMailboxId, initiatingTenantId);
+    }
+
+    private static Optional<ReferralAttributionSnapshot> referralAttributionSnapshotFrom(
+            OAuth2AuthorizationRequest authorizationRequest) {
+        return ReferralAttributionSnapshot.fromAttributes(authorizationRequest.getAttributes());
     }
 
     private static UUID uuidAttribute(Object attributeValue) {

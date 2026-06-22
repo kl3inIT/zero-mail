@@ -358,24 +358,48 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             HttpServletResponse response,
             UUID tenantId,
             Instant qualifiedAt) {
-        ReferralAttributionCookie.read(request)
-                .ifPresent(
-                        referralAttribution -> {
-                            try {
-                                referralCampaignService.qualifyConversion(
-                                        referralAttribution.code(),
-                                        tenantId,
-                                        referralAttribution.attributedAt(),
-                                        qualifiedAt);
-                            } catch (RuntimeException referralQualificationFailure) {
-                                log.warn(
-                                        "event=referral_qualification_failed tenantId={} failureClass={}",
-                                        tenantId,
-                                        referralQualificationFailure.getClass().getSimpleName());
-                            } finally {
-                                ReferralAttributionCookie.clear(response, request.isSecure());
-                            }
-                        });
+        Optional<ReferralAttributionSnapshot> referralAttribution =
+                consumeCallbackReferralAttribution(request)
+                        .or(
+                                () ->
+                                        ReferralAttributionCookie.read(request)
+                                                .map(ReferralAttributionSnapshot::from));
+        referralAttribution.ifPresent(
+                attribution -> {
+                    try {
+                        referralCampaignService.qualifyConversion(
+                                attribution.code(),
+                                tenantId,
+                                attribution.attributedAt(),
+                                qualifiedAt);
+                    } catch (RuntimeException referralQualificationFailure) {
+                        log.warn(
+                                "event=referral_qualification_failed tenantId={} failureClass={}",
+                                tenantId,
+                                referralQualificationFailure.getClass().getSimpleName());
+                    } finally {
+                        ReferralAttributionCookie.clear(response, request.isSecure());
+                    }
+                });
+    }
+
+    private Optional<ReferralAttributionSnapshot> consumeCallbackReferralAttribution(
+            HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return Optional.empty();
+        }
+        Object referralAttributionValue =
+                session.getAttribute(ReferralAttributionSnapshot.CALLBACK_SESSION_ATTRIBUTE);
+        session.removeAttribute(ReferralAttributionSnapshot.CALLBACK_SESSION_ATTRIBUTE);
+        if (referralAttributionValue == null) {
+            return Optional.empty();
+        }
+        if (referralAttributionValue instanceof ReferralAttributionSnapshot referralAttribution) {
+            return Optional.of(referralAttribution);
+        }
+        log.warn("event=referral_attribution_invalid");
+        return Optional.empty();
     }
 
     private OAuthIntentSnapshot consumeCallbackIntentSnapshot(HttpServletRequest request) {
