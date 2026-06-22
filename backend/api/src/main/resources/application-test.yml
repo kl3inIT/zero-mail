@@ -70,6 +70,8 @@ zero-mail:
     inbox-projection-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
     inbox-projection-sender-hash-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
   api:
+    referral:
+      attribution-token-signing-secret: test-referral-signing-secret
     gmail:
       pubsub:
         push-audience-url: https://test.example/internal/pubsub/gmail

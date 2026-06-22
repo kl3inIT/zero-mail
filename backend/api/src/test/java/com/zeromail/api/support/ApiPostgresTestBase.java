@@ -61,6 +61,9 @@ public abstract class ApiPostgresTestBase {
         dynamicPropertyRegistry.add(
                 "spring.security.oauth2.client.registration.google.client-secret",
                 () -> "test-google-secret");
+        dynamicPropertyRegistry.add(
+                "zero-mail.api.referral.attribution-token-signing-secret",
+                () -> "test-referral-signing-secret");
         // Phase 01.5: google-gmail registration deleted — single bundled google registration only.
         // Test-only AES-256 key (32 zero bytes, base64-encoded).
         dynamicPropertyRegistry.add(
