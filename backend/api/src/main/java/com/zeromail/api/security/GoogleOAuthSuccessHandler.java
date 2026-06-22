@@ -9,6 +9,7 @@ import com.zeromail.core.admin.tenant.usecases.TenantActivityRecorder;
 import com.zeromail.core.admin.tenant.usecases.TenantActivityRequestContext;
 import com.zeromail.core.gmail.exception.DuplicateActiveMailboxException;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.referral.usecases.ReferralCampaignService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
 import com.zeromail.core.tenant.TenantContext;
 import jakarta.servlet.ServletException;
@@ -79,6 +80,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final UserRepository userRepository;
     private final GmailConnectionService gmailConnectionService;
     private final RuleTemplateMaterializationService ruleTemplateMaterializationService;
+    private final ReferralCampaignService referralCampaignService;
     private final TenantActivityRecorder tenantActivityRecorder;
     private final Clock clock;
 
@@ -88,6 +90,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             UserRepository userRepository,
             GmailConnectionService gmailConnectionService,
             RuleTemplateMaterializationService ruleTemplateMaterializationService,
+            ReferralCampaignService referralCampaignService,
             TenantActivityRecorder tenantActivityRecorder,
             Clock clock,
             ApiProperties properties) {
@@ -96,6 +99,9 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         this.userRepository = userRepository;
         this.gmailConnectionService = gmailConnectionService;
         this.ruleTemplateMaterializationService = ruleTemplateMaterializationService;
+        this.referralCampaignService =
+                Objects.requireNonNull(
+                        referralCampaignService, "referralCampaignService must not be null");
         this.tenantActivityRecorder =
                 Objects.requireNonNull(
                         tenantActivityRecorder, "tenantActivityRecorder must not be null");
@@ -325,6 +331,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         recordLoginActivity(provisioningResult, requestContext, loginAt);
         TenantActivitySessionAttributes.storeLogin(
                 request.getSession(true), provisioningResult.tenantId(), loginAt);
+        qualifyReferralIfPresent(request, response, provisioningResult.tenantId(), loginAt);
 
         // (f) First-login only: seed the Inbox-Zero-style default rules (enabled) so the new tenant
         // lands on a populated Rules page. Best-effort and post-commit — the materialization
@@ -344,6 +351,31 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         super.onAuthenticationSuccess(request, response, authentication);
+    }
+
+    private void qualifyReferralIfPresent(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            UUID tenantId,
+            Instant qualifiedAt) {
+        ReferralAttributionCookie.read(request)
+                .ifPresent(
+                        referralAttribution -> {
+                            try {
+                                referralCampaignService.qualifyConversion(
+                                        referralAttribution.code(),
+                                        tenantId,
+                                        referralAttribution.attributedAt(),
+                                        qualifiedAt);
+                            } catch (RuntimeException referralQualificationFailure) {
+                                log.warn(
+                                        "event=referral_qualification_failed tenantId={} failureClass={}",
+                                        tenantId,
+                                        referralQualificationFailure.getClass().getSimpleName());
+                            } finally {
+                                ReferralAttributionCookie.clear(response, request.isSecure());
+                            }
+                        });
     }
 
     private OAuthIntentSnapshot consumeCallbackIntentSnapshot(HttpServletRequest request) {

@@ -14,7 +14,9 @@ import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import com.zeromail.core.admin.tenant.usecases.TenantActivityRecorder;
 import com.zeromail.core.admin.tenant.usecases.TenantActivityRequestContext;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.referral.usecases.ReferralCampaignService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
+import jakarta.servlet.http.Cookie;
 import java.lang.reflect.RecordComponent;
 import java.net.URI;
 import java.time.Clock;
@@ -69,6 +71,7 @@ class GoogleOAuthSuccessHandlerTest {
         var authorizedClients = mock(OAuth2AuthorizedClientService.class);
         var userRepo = mock(UserRepository.class);
         var ruleTemplateMaterialization = mock(RuleTemplateMaterializationService.class);
+        var referralCampaignService = mock(ReferralCampaignService.class);
         var tenantActivityRecorder = mock(TenantActivityRecorder.class);
 
         var handler =
@@ -78,6 +81,7 @@ class GoogleOAuthSuccessHandlerTest {
                         userRepo,
                         mock(GmailConnectionService.class),
                         ruleTemplateMaterialization,
+                        referralCampaignService,
                         tenantActivityRecorder,
                         Clock.systemUTC(),
                         PROPS);
@@ -146,6 +150,9 @@ class GoogleOAuthSuccessHandlerTest {
         request.addHeader("X-Forwarded-For", "203.0.113.17, 10.0.0.12");
         request.addHeader("CF-IPCity", "Ha Noi");
         request.addHeader("CF-IPCountry", "VN");
+        String referralCode = "ZME9XXKQX1ZL8K";
+        Instant attributedAt = Instant.parse("2026-06-22T00:00:00.123Z");
+        request.setCookies(referralCookie(referralCode, attributedAt));
         var response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(request, response, token);
@@ -170,6 +177,18 @@ class GoogleOAuthSuccessHandlerTest {
                         eq(provisionedTenantId),
                         requestContextCaptor.capture(),
                         occurredAtCaptor.capture());
+        verify(referralCampaignService)
+                .qualifyConversion(
+                        eq(referralCode),
+                        eq(provisionedTenantId),
+                        eq(attributedAt),
+                        eq(occurredAtCaptor.getValue()));
+        assertThat(response.getHeaders("Set-Cookie"))
+                .anySatisfy(
+                        setCookie -> {
+                            assertThat(setCookie).contains(ReferralAttributionCookie.COOKIE_NAME);
+                            assertThat(setCookie).contains("Max-Age=0");
+                        });
         assertThat(
                         Arrays.stream(TenantActivityRequestContext.class.getRecordComponents())
                                 .map(RecordComponent::getName))
@@ -191,6 +210,7 @@ class GoogleOAuthSuccessHandlerTest {
         var userRepository = mock(UserRepository.class);
         var gmailConnectionService = mock(GmailConnectionService.class);
         var ruleTemplateMaterialization = mock(RuleTemplateMaterializationService.class);
+        var referralCampaignService = mock(ReferralCampaignService.class);
         var tenantActivityRecorder = mock(TenantActivityRecorder.class);
         var handler =
                 new GoogleOAuthSuccessHandler(
@@ -199,6 +219,7 @@ class GoogleOAuthSuccessHandlerTest {
                         userRepository,
                         gmailConnectionService,
                         ruleTemplateMaterialization,
+                        referralCampaignService,
                         tenantActivityRecorder,
                         Clock.systemUTC(),
                         PROPS);
@@ -315,6 +336,17 @@ class GoogleOAuthSuccessHandlerTest {
         var refreshToken = new OAuth2RefreshToken(refreshTokenValue, Instant.now());
         return new OAuth2AuthorizedClient(
                 clientRegistration(), authenticationToken.getName(), accessToken, refreshToken);
+    }
+
+    private static Cookie referralCookie(String referralCode, Instant attributedAt) {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        ReferralAttributionCookie.write(response, referralCode, attributedAt, false);
+        String setCookie = response.getHeader("Set-Cookie");
+        String cookiePrefix = ReferralAttributionCookie.COOKIE_NAME + "=";
+        int cookieStart = setCookie.indexOf(cookiePrefix) + cookiePrefix.length();
+        int cookieEnd = setCookie.indexOf(';', cookieStart);
+        return new Cookie(
+                ReferralAttributionCookie.COOKIE_NAME, setCookie.substring(cookieStart, cookieEnd));
     }
 
     private static ClientRegistration clientRegistration() {
