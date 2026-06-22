@@ -92,6 +92,10 @@ services:
     mem_reservation: 1g
     # Keep Java out of swap. Host swap stays as a system-level safety net only.
     memswap_limit: 1500m
+    volumes:
+      - type: bind
+        source: ${ZERO_MAIL_REFERRAL_BANNER_STORAGE_HOST_DIRECTORY:-../var/referral-banners}
+        target: /app/var/referral-banners
     networks:
       - zeromail-proxy
       - zeromail-internal
