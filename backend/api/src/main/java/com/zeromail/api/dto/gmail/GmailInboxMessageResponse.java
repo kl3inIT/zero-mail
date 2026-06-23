@@ -1,10 +1,12 @@
 package com.zeromail.api.dto.gmail;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.zeromail.core.gmail.usecases.RecentInboxReadService.RecentInboxMessage;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(
         requiredProperties = {
             "gmailMessageId",
@@ -34,7 +36,25 @@ public record GmailInboxMessageResponse(
         List<GmailInboxLabelResponse> labels,
         boolean unread,
         boolean hasAttachment,
-        String openInGmailUrl) {
+        String openInGmailUrl,
+        @Schema(
+                        description =
+                                "Calendar classification when this message is a"
+                                        + " text/calendar invite/cancel/reschedule/RSVP — populated by"
+                                        + " the worker AFTER_COMMIT classifier (W4). NULL for"
+                                        + " non-calendar messages and for rows served from the"
+                                        + " live-Gmail fallback before backfill completes.",
+                        allowableValues = {"INVITE", "CANCEL", "RESCHEDULE", "RSVP"},
+                        nullable = true)
+                String messageClass,
+        @Schema(
+                        description =
+                                "Calendar event datetime extracted from VEVENT DTSTART when"
+                                        + " messageClass is non-null. NULL when messageClass is NULL."
+                                        + " Drives the 24-hour top-of-inbox pin window (W4).",
+                        nullable = true,
+                        format = "date-time")
+                Instant eventDt) {
 
     public GmailInboxMessageResponse {
         to = List.copyOf(to);
@@ -57,6 +77,8 @@ public record GmailInboxMessageResponse(
                 message.labels().stream().map(GmailInboxLabelResponse::from).toList(),
                 message.unread(),
                 message.hasAttachment(),
-                "https://mail.google.com/mail/u/0/#inbox/" + message.gmailThreadId());
+                "https://mail.google.com/mail/u/0/#inbox/" + message.gmailThreadId(),
+                message.messageClass() == null ? null : message.messageClass().id(),
+                message.eventDt());
     }
 }
