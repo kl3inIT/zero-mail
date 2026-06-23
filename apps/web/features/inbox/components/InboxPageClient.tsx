@@ -516,7 +516,11 @@ function InboxMessageList({
   );
 }
 
-function InboxMessageRow({
+// Exported for the Phase 12 G1 calendar-badge unit test: rendering the full virtualized page in
+// jsdom yields no rows (the scroll container measures 0px, so the virtualizer returns no items),
+// so the CANCEL/RESCHEDULE Badge branches below are exercised by rendering this row directly. The
+// branch logic is unchanged.
+export function InboxMessageRow({
   message,
   active,
   locale,
