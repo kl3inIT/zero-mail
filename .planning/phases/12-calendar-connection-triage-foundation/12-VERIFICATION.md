@@ -1,11 +1,22 @@
 ---
 phase: 12-calendar-connection-triage-foundation
 verified: 2026-06-22T00:00:00Z
-status: gaps_found
-score: 12/13 must-haves verified
+reverified: 2026-06-23T00:00:00Z
+status: passed
+score: 13/13 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
-gaps:
+resolution: >-
+  CAL-TRIAGE-02 (the single FAILED truth, SC3b) was closed by gap plan 12-G1 on 2026-06-23.
+  Independently re-verified against the codebase: apps/web/lib/api/schema.d.ts now carries
+  messageClass (grep=2) + eventDt (grep=1) on GmailInboxMessageResponse (was 0); the DTO + from(...)
+  mapper expose both fields with @Schema(allowableValues); apps/web/features/inbox/api/inbox-api.ts
+  derives InboxMessageClass from the generated schema (hand-typed union deleted); the badge Vitest is
+  3/3 green; InboxProjectionPinningTest stays green with the ORDER BY pin predicate unchanged.
+  Root cause of the prior regen block was a latent W1 regression (the google-calendar ClientRegistration
+  was added without matching hermetic emit args in backend/api/build.gradle.kts) — fixed in commit e6f67581.
+  The 4 human_verification items below remain live-system checks tracked for /gsd-verify-work.
+gaps_resolved:
   - truth: "CAL-TRIAGE-02 — Calendar-class messages are pinned at top-of-inbox in the web UI for a 24-hour window after the event date, with explicit 'Cancellation' / 'Time changed' badges."
     status: partial
     reason: >-

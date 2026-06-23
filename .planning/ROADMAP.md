@@ -172,7 +172,7 @@ Phases execute in numeric order: 12 → 13 → 14 → 15 → 16. Phase 14 may ex
 | 9. User Settings UI on Curated Catalog | v1.2 | 7/7 | Complete | 2026-05-29 |
 | 10. Gmail Mailbox Foundation and Account Management | v1.3 | 6/6 | Complete | 2026-06-09 |
 | 11. Mailbox-Scoped Ingestion, Automation, UI, and Verification | v1.3 | 6/6 | Complete | 2026-06-15 |
-| 12. Calendar Connection + Triage Foundation | v1.4 | 7/7 | Complete   | 2026-06-21 |
+| 12. Calendar Connection + Triage Foundation | v1.4 | 7/7 | Complete    | 2026-06-21 |
 | 13. Calendar Intelligence — AI Availability + propose_meeting Rule Action | v1.4 | 0/TBD | Not started | - |
 | 14. Booking Links + Public Booking Page | v1.4 | 0/TBD | Not started | - |
 | 15. Google Drive Integration — Connection + Filing Engine + Attachment-Source Rules | v1.4 | 0/TBD | Not started | - |
