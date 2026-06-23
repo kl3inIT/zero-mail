@@ -1,35 +1,16 @@
 import { getApiUrl } from '@/lib/api/base-url';
 import { xsrfHeader } from '@/lib/api/client';
+import type { components } from '@/lib/api/schema';
 
-// TODO: Switch this feature to the generated OpenAPI client after
-// :backend:api:generateOpenApiDocs can run under the project JDK 25 locally.
-export type InboxMessageClass = 'INVITE' | 'CANCEL' | 'RESCHEDULE' | 'RSVP';
+// Phase 12 G1: the inbox wire shapes are generated from the backend OpenAPI doc — the calendar
+// classification (messageClass + eventDt) now ships on GmailInboxMessageResponse with a closed
+// enum, so the generated type is the single source of truth. NonNullable strips the wire null so
+// the closed enum (used by the badge switch in InboxPageClient) stays exhaustive; the UI
+// view-model keeps its own nullable messageClass for non-calendar rows.
+export type GmailInboxMessageResponse = components['schemas']['GmailInboxMessageResponse'];
+export type InboxMessageClass = NonNullable<GmailInboxMessageResponse['messageClass']>;
 
-export type GmailInboxMessageResponse = {
-  gmailMessageId?: string;
-  gmailThreadId?: string;
-  subject?: string;
-  snippet?: string;
-  from?: string;
-  to?: string[];
-  cc?: string[];
-  receivedAt?: string;
-  labelIds?: string[];
-  labels?: GmailInboxLabelResponse[];
-  unread?: boolean;
-  hasAttachment?: boolean;
-  openInGmailUrl?: string;
-  // Phase 12 W4: calendar classification written by the worker AFTER_COMMIT classifier.
-  // Optional because the backend DTO + projection-to-response mapping ship in a follow-up
-  // commit; UI gracefully degrades when the field is absent (no badge, no pin affordance).
-  messageClass?: InboxMessageClass | null;
-  eventDt?: string | null;
-};
-
-export type GmailInboxLabelResponse = {
-  id?: string;
-  name?: string;
-};
+export type GmailInboxLabelResponse = components['schemas']['GmailInboxLabelResponse'];
 
 export type InboxDataSource = 'PROJECTION' | 'LIVE_GMAIL' | 'SYNCING';
 
@@ -61,7 +42,8 @@ export type InboxMessage = {
   unread: boolean;
   hasAttachment: boolean;
   openInGmailUrl: string;
-  // Phase 12 W4: optional because the projection→DTO wiring ships separately.
+  // Nullable for non-calendar rows (and live-Gmail-fallback rows before backfill populates the
+  // projection); a non-null value drives the inbox calendar badge.
   messageClass?: InboxMessageClass | null;
   eventDt?: string | null;
 };
@@ -138,7 +120,7 @@ function normalizeLabels(
 ): InboxLabel[] {
   if (labels?.length) {
     return labels
-      .filter((label): label is { id: string; name?: string } => Boolean(label.id))
+      .filter((label) => Boolean(label.id))
       .map((label) => ({ id: label.id, name: label.name ?? label.id }));
   }
   return labelIds.map((labelId) => ({ id: labelId, name: labelId }));

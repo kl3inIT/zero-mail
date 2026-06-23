@@ -788,6 +788,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/calendar/connect-intent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prepare Google Calendar OAuth round-trip for the given mailbox
+         * @description Stamps the active mailboxId on Spring Session so the OAuth success handler can seed default role rows for that mailbox only. Returns the canonical authorization URL the browser then navigates to.
+         */
+        post: operations["prepareConnect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/byok/test-connection": {
         parameters: {
             query?: never;
@@ -884,6 +904,41 @@ export interface paths {
         patch: operations["updateLanguage"];
         trace?: never;
     };
+    "/api/calendar/mailboxes/{mailboxId}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List per-role calendar assignments for a mailbox */
+        get: operations["list_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Replace per-role calendar assignments for a mailbox */
+        patch: operations["update_2"];
+        trace?: never;
+    };
+    "/api/calendar/calendars/{calendarId}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle a sub-calendar's is_enabled flag */
+        patch: operations["toggleEnabled"];
+        trace?: never;
+    };
     "/api/unsubscribe/stats/timeline": {
         parameters: {
             query?: never;
@@ -971,7 +1026,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -987,7 +1042,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1275,7 +1330,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_5"];
+        get: operations["list_6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1419,7 +1474,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_6"];
+        get: operations["list_7"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendar/mailboxes/{mailboxId}/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Calendar connections for the given mailbox */
+        get: operations["listConnectionsForMailbox"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1519,6 +1591,23 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendar/connections/{calendarConnectionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disconnect a Calendar connection */
+        delete: operations["disconnect_3"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1956,46 +2045,46 @@ export interface components {
             date?: number;
             /** Format: int64 */
             contentLength?: number;
-            connection?: string[];
-            /** Format: int64 */
-            ifModifiedSince?: number;
-            contentType?: components["schemas"]["MediaType"];
-            ifMatch?: string[];
-            origin?: string;
-            range?: components["schemas"]["HttpRange"][];
-            contentDisposition?: components["schemas"]["ContentDisposition"];
-            acceptCharset?: string[];
-            bearerAuth?: string;
-            contentLanguage?: string;
-            etag?: string;
-            allow?: components["schemas"]["HttpMethod"][];
-            cacheControl?: string;
-            ifNoneMatch?: string[];
-            /** Format: int64 */
-            ifUnmodifiedSince?: number;
-            accept?: components["schemas"]["MediaType"][];
-            vary?: string[];
-            /** Format: int64 */
-            expires?: number;
-            upgrade?: string;
-            pragma?: string;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
-            acceptPatch?: components["schemas"]["MediaType"][];
+            basicAuth?: string;
             /** Format: int64 */
             accessControlMaxAge?: number;
+            /** Format: int64 */
+            ifUnmodifiedSince?: number;
             acceptLanguageAsLocales?: string[];
-            basicAuth?: string;
-            accessControlExposeHeaders?: string[];
+            acceptPatch?: components["schemas"]["MediaType"][];
+            acceptCharset?: string[];
+            contentDisposition?: components["schemas"]["ContentDisposition"];
+            contentLanguage?: string;
+            ifNoneMatch?: string[];
             accessControlRequestHeaders?: string[];
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
+            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
             accessControlAllowHeaders?: string[];
             accessControlAllowOrigin?: string;
-            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
             accessControlAllowCredentials?: boolean;
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
+            accessControlExposeHeaders?: string[];
+            etag?: string;
+            bearerAuth?: string;
+            range?: components["schemas"]["HttpRange"][];
+            allow?: components["schemas"]["HttpMethod"][];
+            vary?: string[];
+            pragma?: string;
+            origin?: string;
+            ifMatch?: string[];
+            accept?: components["schemas"]["MediaType"][];
+            /** Format: int64 */
+            expires?: number;
+            upgrade?: string;
+            connection?: string[];
+            cacheControl?: string;
+            /** Format: int64 */
+            ifModifiedSince?: number;
+            contentType?: components["schemas"]["MediaType"];
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -2007,11 +2096,11 @@ export interface components {
             };
             /** Format: double */
             qualityValue?: number;
-            charset?: string;
-            concrete?: boolean;
-            wildcardSubtype?: boolean;
-            wildcardType?: boolean;
             subtypeSuffix?: string;
+            wildcardType?: boolean;
+            wildcardSubtype?: boolean;
+            concrete?: boolean;
+            charset?: string;
         };
         BankTransferIntentResponse: {
             /** Format: uuid */
@@ -2102,6 +2191,13 @@ export interface components {
         ConfirmActionResponseDto: {
             state: string;
         };
+        CalendarConnectIntentRequest: {
+            /** Format: uuid */
+            mailboxId: string;
+        };
+        CalendarConnectIntentResponse: {
+            authorizationUrl: string;
+        };
         ByokTestConnectionResponse: {
             /** @enum {string} */
             result: "OK" | "INVALID_KEY" | "RATE_LIMITED" | "NETWORK_ERROR" | "TIMEOUT";
@@ -2159,6 +2255,28 @@ export interface components {
             displayName?: string | null;
             /** @description Google profile picture URL. Read transiently from the OAuth session principal on each request — never persisted to the database (privacy). */
             avatarUrl?: string | null;
+        };
+        UpdateMailboxCalendarPreferenceRequest: {
+            freebusyCalendarIds: string[];
+            /** Format: uuid */
+            eventWriteCalendarId?: string | null;
+            /** Format: uuid */
+            briefSourceCalendarId?: string | null;
+        };
+        MailboxCalendarPreferenceResponse: {
+            id: string;
+            mailboxId: string;
+            calendarConnectionId: string;
+            calendarId: string;
+            /** @enum {string} */
+            role: "FREEBUSY" | "EVENT_WRITE" | "BRIEF_SOURCE";
+        };
+        UpdateCalendarEnabledRequest: {
+            enabled: boolean;
+        };
+        CalendarToggleResponse: {
+            /** Format: int32 */
+            preferencesRemoved: number;
         };
         SenderTimelineEntryResponse: {
             /** Format: date */
@@ -2441,6 +2559,16 @@ export interface components {
             unread: boolean;
             hasAttachment: boolean;
             openInGmailUrl: string;
+            /**
+             * @description Calendar classification when this message is a text/calendar invite/cancel/reschedule/RSVP — populated by the worker AFTER_COMMIT classifier (W4). NULL for non-calendar messages and for rows served from the live-Gmail fallback before backfill completes.
+             * @enum {string|null}
+             */
+            messageClass?: "INVITE" | "CANCEL" | "RESCHEDULE" | "RSVP" | null;
+            /**
+             * Format: date-time
+             * @description Calendar event datetime extracted from VEVENT DTSTART when messageClass is non-null. NULL when messageClass is NULL. Drives the 24-hour top-of-inbox pin window (W4).
+             */
+            eventDt?: string | null;
         };
         GmailInboxPageResponse: {
             items: components["schemas"]["GmailInboxMessageResponse"][];
@@ -2566,6 +2694,28 @@ export interface components {
             updatedAt: string;
             /** Format: int32 */
             messageCount: number;
+        };
+        CalendarConnectionResponse: {
+            id: string;
+            googleEmail: string;
+            /** @enum {string} */
+            status: "CONNECTED" | "DISCONNECTED" | "REVOKED";
+            /** Format: date-time */
+            connectedAt?: string | null;
+            /** Format: date-time */
+            disconnectedAt?: string | null;
+            googleProfileName?: string | null;
+            googleProfilePictureUrl?: string | null;
+            calendars: components["schemas"]["CalendarSubResponse"][];
+            preferences: components["schemas"]["MailboxCalendarPreferenceResponse"][];
+        };
+        CalendarSubResponse: {
+            id: string;
+            externalCalendarId: string;
+            name: string;
+            isPrimary: boolean;
+            isEnabled: boolean;
+            timezone?: string | null;
         };
         ActionMixResponse: {
             actionType: string;
@@ -7521,6 +7671,84 @@ export interface operations {
             };
         };
     };
+    prepareConnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarConnectIntentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CalendarConnectIntentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     testConnection: {
         parameters: {
             query?: never;
@@ -8353,6 +8581,242 @@ export interface operations {
             };
         };
     };
+    list_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mailboxId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MailboxCalendarPreferenceResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mailboxId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMailboxCalendarPreferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MailboxCalendarPreferenceResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    toggleEnabled: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                calendarId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCalendarEnabledRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CalendarToggleResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     timeline: {
         parameters: {
             query: {
@@ -8742,7 +9206,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: {
                 limit?: number;
@@ -8822,7 +9286,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_5: {
         parameters: {
             query: {
                 bucket: string;
@@ -10171,7 +10635,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_6: {
         parameters: {
             query?: {
                 cursor?: string;
@@ -10925,7 +11389,7 @@ export interface operations {
             };
         };
     };
-    list_6: {
+    list_7: {
         parameters: {
             query?: {
                 pageSize?: number;
@@ -10944,6 +11408,82 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ChatHistoryListResponseDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    listConnectionsForMailbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mailboxId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CalendarConnectionResponse"][];
                 };
             };
             /** @description Bad Request */
@@ -11378,6 +11918,80 @@ export interface operations {
             header?: never;
             path: {
                 suppressionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    disconnect_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                calendarConnectionId: string;
             };
             cookie?: never;
         };

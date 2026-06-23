@@ -5390,6 +5390,96 @@
         }
       }
     },
+    "/api/calendar/connect-intent": {
+      "post": {
+        "tags": ["calendar"],
+        "summary": "Prepare Google Calendar OAuth round-trip for the given mailbox",
+        "description": "Stamps the active mailboxId on Spring Session so the OAuth success handler can seed default role rows for that mailbox only. Returns the canonical authorization URL the browser then navigates to.",
+        "operationId": "prepareConnect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarConnectIntentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarConnectIntentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/byok/test-connection": {
       "post": {
         "tags": ["byok"],
@@ -6285,6 +6375,300 @@
         }
       }
     },
+    "/api/calendar/mailboxes/{mailboxId}/preferences": {
+      "get": {
+        "tags": ["calendar"],
+        "summary": "List per-role calendar assignments for a mailbox",
+        "operationId": "list_3",
+        "parameters": [
+          {
+            "name": "mailboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MailboxCalendarPreferenceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["calendar"],
+        "summary": "Replace per-role calendar assignments for a mailbox",
+        "operationId": "update_2",
+        "parameters": [
+          {
+            "name": "mailboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMailboxCalendarPreferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MailboxCalendarPreferenceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendar/calendars/{calendarId}/enabled": {
+      "patch": {
+        "tags": ["calendar"],
+        "summary": "Toggle a sub-calendar\u0027s is_enabled flag",
+        "operationId": "toggleEnabled",
+        "parameters": [
+          {
+            "name": "calendarId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCalendarEnabledRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarToggleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/unsubscribe/stats/timeline": {
       "get": {
         "tags": ["cleanup"],
@@ -6826,7 +7210,7 @@
     "/api/triage/audit": {
       "get": {
         "tags": ["triage"],
-        "operationId": "list_3",
+        "operationId": "list_4",
         "parameters": [
           {
             "name": "limit",
@@ -6950,7 +7334,7 @@
     "/api/threads": {
       "get": {
         "tags": ["thread-inbox"],
-        "operationId": "list_4",
+        "operationId": "list_5",
         "parameters": [
           {
             "name": "bucket",
@@ -8469,7 +8853,7 @@
     "/api/gmail/inbox": {
       "get": {
         "tags": ["gmail-inbox"],
-        "operationId": "list_5",
+        "operationId": "list_6",
         "parameters": [
           {
             "name": "cursor",
@@ -9332,7 +9716,7 @@
     "/api/chat/history": {
       "get": {
         "tags": ["Chat"],
-        "operationId": "list_6",
+        "operationId": "list_7",
         "parameters": [
           {
             "name": "pageSize",
@@ -9362,6 +9746,99 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ChatHistoryListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendar/mailboxes/{mailboxId}/connections": {
+      "get": {
+        "tags": ["calendar"],
+        "summary": "List Calendar connections for the given mailbox",
+        "operationId": "listConnectionsForMailbox",
+        "parameters": [
+          {
+            "name": "mailboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarConnectionResponse"
+                  }
                 }
               }
             }
@@ -9836,6 +10313,89 @@
         "parameters": [
           {
             "name": "suppressionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendar/connections/{calendarConnectionId}": {
+      "delete": {
+        "tags": ["calendar"],
+        "summary": "Disconnect a Calendar connection",
+        "operationId": "disconnect_3",
+        "parameters": [
+          {
+            "name": "calendarConnectionId",
             "in": "path",
             "required": true,
             "schema": {
@@ -11277,95 +11837,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "connection": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifModifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "contentType": {
-            "$ref": "#/components/schemas/MediaType"
-          },
-          "ifMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "origin": {
-            "type": "string"
-          },
-          "range": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpRange"
-            }
-          },
-          "contentDisposition": {
-            "$ref": "#/components/schemas/ContentDisposition"
-          },
-          "acceptCharset": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "bearerAuth": {
-            "type": "string",
-            "writeOnly": true
-          },
-          "contentLanguage": {
-            "type": "string"
-          },
-          "etag": {
-            "type": "string"
-          },
-          "allow": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HttpMethod"
-            },
-            "uniqueItems": true
-          },
-          "cacheControl": {
-            "type": "string"
-          },
-          "ifNoneMatch": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ifUnmodifiedSince": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "accept": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
-          },
-          "vary": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "expires": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "upgrade": {
-            "type": "string"
-          },
-          "pragma": {
-            "type": "string"
-          },
           "acceptLanguage": {
             "type": "array",
             "items": {
@@ -11381,13 +11852,15 @@
               }
             }
           },
-          "acceptPatch": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaType"
-            }
+          "basicAuth": {
+            "type": "string",
+            "writeOnly": true
           },
           "accessControlMaxAge": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ifUnmodifiedSince": {
             "type": "integer",
             "format": "int64"
           },
@@ -11397,11 +11870,25 @@
               "type": "string"
             }
           },
-          "basicAuth": {
-            "type": "string",
-            "writeOnly": true
+          "acceptPatch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
           },
-          "accessControlExposeHeaders": {
+          "acceptCharset": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contentDisposition": {
+            "$ref": "#/components/schemas/ContentDisposition"
+          },
+          "contentLanguage": {
+            "type": "string"
+          },
+          "ifNoneMatch": {
             "type": "array",
             "items": {
               "type": "string"
@@ -11413,8 +11900,11 @@
               "type": "string"
             }
           },
-          "accessControlRequestMethod": {
-            "$ref": "#/components/schemas/HttpMethod"
+          "accessControlAllowMethods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpMethod"
+            }
           },
           "accessControlAllowHeaders": {
             "type": "array",
@@ -11425,14 +11915,84 @@
           "accessControlAllowOrigin": {
             "type": "string"
           },
-          "accessControlAllowMethods": {
+          "accessControlAllowCredentials": {
+            "type": "boolean"
+          },
+          "accessControlRequestMethod": {
+            "$ref": "#/components/schemas/HttpMethod"
+          },
+          "accessControlExposeHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "etag": {
+            "type": "string"
+          },
+          "bearerAuth": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HttpRange"
+            }
+          },
+          "allow": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HttpMethod"
+            },
+            "uniqueItems": true
+          },
+          "vary": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           },
-          "accessControlAllowCredentials": {
-            "type": "boolean"
+          "pragma": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "ifMatch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accept": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaType"
+            }
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "upgrade": {
+            "type": "string"
+          },
+          "connection": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cacheControl": {
+            "type": "string"
+          },
+          "ifModifiedSince": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/MediaType"
           }
         }
       },
@@ -11457,19 +12017,19 @@
             "type": "number",
             "format": "double"
           },
-          "charset": {
+          "subtypeSuffix": {
             "type": "string"
           },
-          "concrete": {
+          "wildcardType": {
             "type": "boolean"
           },
           "wildcardSubtype": {
             "type": "boolean"
           },
-          "wildcardType": {
+          "concrete": {
             "type": "boolean"
           },
-          "subtypeSuffix": {
+          "charset": {
             "type": "string"
           }
         }
@@ -11690,6 +12250,25 @@
         },
         "required": ["state"]
       },
+      "CalendarConnectIntentRequest": {
+        "type": "object",
+        "properties": {
+          "mailboxId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["mailboxId"]
+      },
+      "CalendarConnectIntentResponse": {
+        "type": "object",
+        "properties": {
+          "authorizationUrl": {
+            "type": "string"
+          }
+        },
+        "required": ["authorizationUrl"]
+      },
       "ByokTestConnectionResponse": {
         "type": "object",
         "properties": {
@@ -11862,6 +12441,68 @@
           "triagePaused",
           "userId"
         ]
+      },
+      "UpdateMailboxCalendarPreferenceRequest": {
+        "type": "object",
+        "properties": {
+          "freebusyCalendarIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "eventWriteCalendarId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "briefSourceCalendarId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          }
+        },
+        "required": ["freebusyCalendarIds"]
+      },
+      "MailboxCalendarPreferenceResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mailboxId": {
+            "type": "string"
+          },
+          "calendarConnectionId": {
+            "type": "string"
+          },
+          "calendarId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["FREEBUSY", "EVENT_WRITE", "BRIEF_SOURCE"]
+          }
+        },
+        "required": ["calendarConnectionId", "calendarId", "id", "mailboxId", "role"]
+      },
+      "UpdateCalendarEnabledRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": ["enabled"]
+      },
+      "CalendarToggleResponse": {
+        "type": "object",
+        "properties": {
+          "preferencesRemoved": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": ["preferencesRemoved"]
       },
       "SenderTimelineEntryResponse": {
         "type": "object",
@@ -12694,6 +13335,16 @@
           },
           "openInGmailUrl": {
             "type": "string"
+          },
+          "messageClass": {
+            "type": ["string", "null"],
+            "description": "Calendar classification when this message is a text/calendar invite/cancel/reschedule/RSVP — populated by the worker AFTER_COMMIT classifier (W4). NULL for non-calendar messages and for rows served from the live-Gmail fallback before backfill completes.",
+            "enum": ["INVITE", "CANCEL", "RESCHEDULE", "RSVP"]
+          },
+          "eventDt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Calendar event datetime extracted from VEVENT DTSTART when messageClass is non-null. NULL when messageClass is NULL. Drives the 24-hour top-of-inbox pin window (W4)."
           }
         },
         "required": [
@@ -13042,6 +13693,72 @@
           }
         },
         "required": ["id", "messageCount", "title", "updatedAt"]
+      },
+      "CalendarConnectionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "googleEmail": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["CONNECTED", "DISCONNECTED", "REVOKED"]
+          },
+          "connectedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "disconnectedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "googleProfileName": {
+            "type": ["string", "null"]
+          },
+          "googleProfilePictureUrl": {
+            "type": ["string", "null"]
+          },
+          "calendars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarSubResponse"
+            }
+          },
+          "preferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MailboxCalendarPreferenceResponse"
+            }
+          }
+        },
+        "required": ["calendars", "googleEmail", "id", "preferences", "status"]
+      },
+      "CalendarSubResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalCalendarId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "timezone": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["externalCalendarId", "id", "isEnabled", "isPrimary", "name"]
       },
       "ActionMixResponse": {
         "type": "object",

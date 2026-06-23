@@ -106,6 +106,11 @@ openApi {
                 // Phase 01.5: single bundled google registration (google-gmail deleted).
                 "--spring.security.oauth2.client.registration.google.client-id=openapi-emit",
                 "--spring.security.oauth2.client.registration.google.client-secret=openapi-emit",
+                // Phase 12 W1: second `google-calendar` registration shares the GCP client but
+                // binds its own client-id/secret — the OpenAPI emit boot fails fast ("Client id of
+                // registration 'google-calendar' must not be empty") without these dummy values.
+                "--spring.security.oauth2.client.registration.google-calendar.client-id=openapi-emit",
+                "--spring.security.oauth2.client.registration.google-calendar.client-secret=openapi-emit",
                 // Provide a 32-byte AES-GCM key (base64) so RefreshTokenCipher beans initialize.
                 "--zero-mail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
                 "--zero-mail.crypto.inbox-projection-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
