@@ -20,6 +20,7 @@ import com.zeromail.core.gmail.exception.MailboxNotOwnedException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
+import com.zeromail.core.inbox.domain.MessageClass;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateId;
 import com.zeromail.core.inbox.persistence.GmailInboxSyncStateRepository;
 import com.zeromail.core.inbox.usecases.InboxBackfillEnqueuer;
@@ -412,7 +413,9 @@ public class RecentInboxReadService {
                             projectionItem.labelIds(),
                             labelsFor(projectionItem.labelIds(), labelNamesById),
                             projectionItem.unread(),
-                            projectionItem.hasAttachment()));
+                            projectionItem.hasAttachment(),
+                            projectionItem.messageClass().orElse(null),
+                            projectionItem.eventDt().orElse(null)));
         }
         return List.copyOf(recentInboxMessages);
     }
@@ -825,7 +828,12 @@ public class RecentInboxReadService {
                 labelIds,
                 labelsFor(labelIds, labelNamesById),
                 labelIds.contains("UNREAD"),
-                hasAttachment(payload));
+                hasAttachment(payload),
+                // live-Gmail path has no projection columns — messageClass + eventDt are null here;
+                // calendar badges activate once backfill populates the projection
+                // (message_class / event_dt). Never infer classification from live message content.
+                null,
+                null);
     }
 
     private static List<RecentInboxLabel> labelsFor(
@@ -1130,7 +1138,9 @@ public class RecentInboxReadService {
             List<String> labelIds,
             List<RecentInboxLabel> labels,
             boolean unread,
-            boolean hasAttachment) {
+            boolean hasAttachment,
+            MessageClass messageClass,
+            Instant eventDt) {
 
         public RecentInboxMessage {
             to = List.copyOf(to);

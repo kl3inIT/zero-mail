@@ -3,6 +3,8 @@ package com.zeromail.core.inbox.usecases;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.inbox.domain.InboxProjectionDataSource;
+import com.zeromail.core.inbox.domain.MessageClass;
+import com.zeromail.core.inbox.persistence.GmailInboxProjectionRepository;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Duration;
@@ -31,6 +33,7 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
 
     @Autowired InboxProjectionReadService inboxProjectionReadService;
     @Autowired InboxProjectionWriteService inboxProjectionWriteService;
+    @Autowired GmailInboxProjectionRepository projectionRepository;
     @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
@@ -94,6 +97,70 @@ class InboxProjectionReadServiceTest extends PostgresContainerTest {
         assertThat(item.cc()).isEmpty();
         assertThat(item.labels()).isEmpty();
         assertThat(page.dataSource()).isEqualTo(InboxProjectionDataSource.PROJECTION);
+    }
+
+    @Test
+    void findInboxPage_carriesMessageClassAndEventDt() {
+        // Phase 12 G1 (CAL-TRIAGE-02): prove the projection -> InboxProjectionMessage map threads
+        // W4's calendar columns through the read service's toInboxProjectionMessage mapper, so the
+        // downstream DTO + inbox Badge stop seeing an always-empty messageClass. Seed a plain row
+        // via the production write service, then apply the W4 classifier's calendar update, then
+        // read it back through the service.
+        UUID tenantId = seedTenant();
+        String gmailMessageId = "190000000000ca01";
+        Instant receivedAt = Instant.parse("2026-06-20T08:00:00Z");
+        Instant eventTimestamp = Instant.parse("2026-06-25T15:00:00Z");
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> seedRow(tenantId, gmailMessageId, receivedAt));
+        int updated =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        projectionRepository.updateCalendarClassification(
+                                                tenantId,
+                                                GMAIL_CONNECTION_ID,
+                                                gmailMessageId,
+                                                MessageClass.CANCEL.id(),
+                                                eventTimestamp));
+        assertThat(updated).isEqualTo(1);
+
+        InboxProjectionPage page =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
+
+        assertThat(page.items()).hasSize(1);
+        InboxProjectionMessage item = page.items().get(0);
+        assertThat(item.messageClass()).contains(MessageClass.CANCEL);
+        assertThat(item.eventDt()).contains(eventTimestamp);
+    }
+
+    @Test
+    void findInboxPage_nonCalendarRowHasEmptyClassificationPair() {
+        // The pair-set invariant: a plain (non-calendar) row reads back as both-empty, never a
+        // half-populated messageClass-without-eventDt.
+        UUID tenantId = seedTenant();
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () ->
+                                seedRow(
+                                        tenantId,
+                                        "190000000000ca02",
+                                        Instant.parse("2026-06-20T08:00:00Z")));
+
+        InboxProjectionPage page =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        inboxProjectionReadService.fetchInboxPage(
+                                                tenantId, GMAIL_CONNECTION_ID, null, 20));
+
+        assertThat(page.items()).hasSize(1);
+        InboxProjectionMessage item = page.items().get(0);
+        assertThat(item.messageClass()).isEmpty();
+        assertThat(item.eventDt()).isEmpty();
     }
 
     @Test

@@ -72,7 +72,9 @@ class BackfillNeedsReplyServiceTest {
                             List.of("INBOX"),
                             List.of(),
                             false,
-                            false));
+                            false,
+                            null,
+                            null));
         }
         return List.copyOf(messages);
     }

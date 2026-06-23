@@ -270,7 +270,9 @@ class RecentInboxReadServiceOrchestratorTest {
                             List.of("INBOX"),
                             List.of(),
                             false,
-                            false));
+                            false,
+                            java.util.Optional.empty(),
+                            java.util.Optional.empty()));
         }
         return List.copyOf(rows);
     }

@@ -162,7 +162,9 @@ public class InboxProjectionReadService {
                 rowLabelIds,
                 List.of(),
                 row.isUnread(),
-                row.isHasAttachment());
+                row.isHasAttachment(),
+                row.getMessageClassOptional(),
+                row.getEventDtOptional());
     }
 
     /**
