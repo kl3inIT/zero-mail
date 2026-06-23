@@ -6,14 +6,14 @@ current_phase: 12
 current_phase_name: Calendar Connection + Triage Foundation
 status: verifying
 stopped_at: Completed 12-W5 plan; Phase 12 implementation-complete
-last_updated: "2026-06-21T18:36:24.501Z"
+last_updated: "2026-06-23T16:23:00.030Z"
 last_activity: 2026-06-20
 last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 20
 ---
 
@@ -441,6 +441,7 @@ Recent decisions affecting current work:
 - **Refresh-token key rotation drill** (Phase 2C or dedicated security-ceremony phase) — verification protocol: deploy v2 key alongside v1 in the deployment secret source (current VPS baseline: Docker secrets / systemd credentials / locked-down env files; future production options may include GCP Secret Manager, AWS Secrets Manager, or HashiCorp Vault); verify multi-version decrypt path reads `key_version` byte from envelope and selects correct key; rotate v1 → v2 + re-encrypt all rows; verify v1 envelopes still decrypt during overlap window. Per CLAUDE.md TL;DR ("No GCP hosting baseline; do not add spring-cloud-gcp starters by default"), the drill must be deployment-source-agnostic.
 - **Production cookie `secure: true` profile override + `REFRESH_TOKEN_KEY_BASE64` deployment secret resolution** (Phase 6 launch hardening) — verification protocol: assert `application-prod.yml` overrides `server.servlet.session.cookie.secure: true`; assert `REFRESH_TOKEN_KEY_BASE64` resolves successfully from the configured deployment secret source in prod profile (Docker secret / systemd credential / env file mounted via the VPS deployment pipeline; possible future production options: GCP Secret Manager, AWS Secrets Manager, HashiCorp Vault); assert app fails-fast at boot if the secret is missing (no fallback to plain env-var in prod). Per CLAUDE.md TL;DR, no GCP-specific resolution is required by default.
 - Phase 08 8A final verification found pre-existing public API test drift from db38a7be: legacy tests still call /me and /tenant routes while production controllers map /api/**; admin gates pass, cleanup deferred in phase deferred-items.md.
+- 12-G1 CAL-TRIAGE-02 gated on dev SSH tunnel (localhost:5555 down) for OpenAPI regen. Resume signal: tunnel up.
 
 ### Quick Tasks Completed
 
@@ -640,7 +641,7 @@ Items acknowledged and deferred at v1.2 milestone close on 2026-06-01. All v1.2 
 
 ## Session Continuity
 
-Last session: 2026-06-21T18:36:24.486Z
+Last session: 2026-06-23T16:23:00.015Z
 Stopped at: Completed 12-W5 plan; Phase 12 implementation-complete
 Resume file: None
 
