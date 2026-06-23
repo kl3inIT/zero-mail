@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { MessageCircle } from 'lucide-react';
+import { CalendarDays, MessageCircle } from 'lucide-react';
 
 import { SectionHeader } from '@/features/ai/components/SectionHeader';
+import { CalendarIntegrationCard } from '@/features/calendar/components/CalendarIntegrationCard';
 import { TelegramIntegrationCard } from '@/features/telegram/components/TelegramIntegrationCard';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -27,6 +28,16 @@ export default async function IntegrationsPage() {
             </h1>
             <p className="text-muted-foreground text-sm">{t('integrations.description')}</p>
           </header>
+
+          <section className="space-y-4" aria-labelledby="integration-calendar">
+            <SectionHeader
+              id="integration-calendar"
+              title={t('calendar.title')}
+              helperText={t('calendar.integration.helper')}
+              icon={CalendarDays}
+            />
+            <CalendarIntegrationCard />
+          </section>
 
           <section className="space-y-4" aria-labelledby="integration-telegram">
             <SectionHeader

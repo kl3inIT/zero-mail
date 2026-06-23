@@ -137,4 +137,37 @@ export const calendarMessages = {
     vi: 'Đổi giờ',
     en: 'Time changed',
   },
+  // Phase 12 G2 (UAT-1 nav gap): the calendar settings route had no navigation entry.
+  // Surfaced as a section on the /integrations hub (already in the sidebar).
+  'calendar.integration.helper': {
+    vi: 'Kết nối Google Calendar để Zero Mail kiểm tra lịch rảnh và soạn email kèm ngữ cảnh lịch.',
+    en: 'Connect Google Calendar so Zero Mail can check availability and draft emails with calendar context.',
+  },
+  'calendar.integration.manageCta': {
+    vi: 'Quản lý lịch',
+    en: 'Manage calendars',
+  },
+  'calendar.integration.connectedSummary': {
+    vi: '{count} đã kết nối',
+    en: '{count} connected',
+  },
+  'calendar.integration.notConnected': {
+    vi: 'Chưa kết nối',
+    en: 'Not connected',
+  },
+  'calendar.integration.noMailbox': {
+    vi: 'Kết nối hộp thư Gmail trước để thêm lịch.',
+    en: 'Connect a Gmail mailbox first to add a calendar.',
+  },
+  // Backend error-code localization (ErrorCodes.java: error.calendar.*). W1/W2 added the
+  // exceptions but never localized them on the frontend, so the i18n backend-coverage check
+  // flagged them. Mapped via lib/api/errors.ts#normalizeCode: error.calendar.X -> errors.calendar.X.
+  'errors.calendar.connection.not_found': {
+    vi: 'Không tìm thấy kết nối lịch.',
+    en: 'Calendar connection not found.',
+  },
+  'errors.calendar.disconnected': {
+    vi: 'Lịch này đã ngắt kết nối. Kết nối lại để tiếp tục.',
+    en: 'This calendar is disconnected. Reconnect it to continue.',
+  },
 } as const;

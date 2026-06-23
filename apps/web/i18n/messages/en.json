@@ -662,6 +662,13 @@
     "error": {
       "loadFailed": "Could not load calendars"
     },
+    "integration": {
+      "connectedSummary": "{count} connected",
+      "helper": "Connect Google Calendar so Zero Mail can check availability and draft emails with calendar context.",
+      "manageCta": "Manage calendars",
+      "noMailbox": "Connect a Gmail mailbox first to add a calendar.",
+      "notConnected": "Not connected"
+    },
     "list": {
       "empty": "No sub-calendars exposed yet.",
       "heading": "Sub-calendars ({count})",
@@ -1042,6 +1049,12 @@
       "body": "Please try again. If the problem persists, reload the page or sign in again.",
       "reset": "Try again",
       "title": "Something went wrong"
+    },
+    "calendar": {
+      "connection": {
+        "not_found": "Calendar connection not found."
+      },
+      "disconnected": "This calendar is disconnected. Reconnect it to continue."
     },
     "cleanup": {
       "campaign": {

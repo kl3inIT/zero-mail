@@ -662,6 +662,13 @@
     "error": {
       "loadFailed": "Không tải được danh sách lịch"
     },
+    "integration": {
+      "connectedSummary": "{count} đã kết nối",
+      "helper": "Kết nối Google Calendar để Zero Mail kiểm tra lịch rảnh và soạn email kèm ngữ cảnh lịch.",
+      "manageCta": "Quản lý lịch",
+      "noMailbox": "Kết nối hộp thư Gmail trước để thêm lịch.",
+      "notConnected": "Chưa kết nối"
+    },
     "list": {
       "empty": "Chưa có lịch con nào được phơi ra.",
       "heading": "Lịch con ({count})",
@@ -1042,6 +1049,12 @@
       "body": "Vui lòng thử lại. Nếu lỗi tiếp tục xảy ra, hãy tải lại trang hoặc đăng nhập lại.",
       "reset": "Thử lại",
       "title": "Đã xảy ra lỗi"
+    },
+    "calendar": {
+      "connection": {
+        "not_found": "Không tìm thấy kết nối lịch."
+      },
+      "disconnected": "Lịch này đã ngắt kết nối. Kết nối lại để tiếp tục."
     },
     "cleanup": {
       "campaign": {
