@@ -27,10 +27,12 @@ services:
     container_name: zeromail-worker
     restart: unless-stopped
     env_file: ../.env
-    mem_limit: 1g
-    mem_reservation: 700m
+    # Heap is MaxRAMPercentage=75% of mem_limit. At 1g the worker heap capped at ~750m and ran
+    # against the ceiling (OOM/JPA crash on 2026-06-21); 2g lifts the heap cap to ~1.5g.
+    mem_limit: 2g
+    mem_reservation: 1g
     # Keep Java out of swap. Host swap stays as a system-level safety net only.
-    memswap_limit: 1g
+    memswap_limit: 2g
     networks:
       - zeromail-internal
     healthcheck:
@@ -88,10 +90,12 @@ services:
     container_name: zeromail-api
     restart: unless-stopped
     env_file: ../.env
-    mem_limit: 1500m
+    # Heap is MaxRAMPercentage=75% of mem_limit; 2g lifts the heap cap to ~1.5g (was ~1.1g at
+    # 1500m, with the container already running at ~65%).
+    mem_limit: 2g
     mem_reservation: 1g
     # Keep Java out of swap. Host swap stays as a system-level safety net only.
-    memswap_limit: 1500m
+    memswap_limit: 2g
     volumes:
       - type: bind
         source: ${ZERO_MAIL_REFERRAL_BANNER_STORAGE_HOST_DIRECTORY:-../var/referral-banners}
