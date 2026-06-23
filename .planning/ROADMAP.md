@@ -81,9 +81,9 @@ Full details: [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md)
   4. Any rule whose evaluation would `archive`, `mark_spam`, or `delete` a calendar-class message is downgraded to `label` only, leaving a `CalendarAwareGuard` audit row with the original action + reason — protecting Gmail invites from silent loss by aggressive existing user rules.
   5. The workspace-shared / mailbox-isolated boundary holds: `calendar_connection` has no `gmail_connection_id` FK, the new `mailbox_calendar_preference (mailbox_id, calendar_connection_id, role ∈ {freebusy, event_write, brief_source})` table disambiguates which workspace-shared calendar each mailbox uses per role, refresh tokens are AES-GCM-encrypted via the existing `OAuthTokenStore` (never logged, never reused across connections), and mid-flight reads against a `DISCONNECTED` calendar fail fast emitting a Modulith event that evicts the free/busy cache.
 
-**Plans**: 6/7 plans complete (12-G1 gated on dev SSH tunnel for OpenAPI regen)
+**Plans**: 7/7 plans complete
 
-- [ ] 12-G1-cal-triage-02-badge-wiring-PLAN.md — backend chain + DTO + Vitest/Playwright shipped (99afa8c0, c8a6b3d9, b91cf47e); OpenAPI regen + `inbox-api.ts` dedup + REQUIREMENTS.md CAL-TRIAGE-02 flip BLOCKED on dev SSH tunnel (localhost:5555 down). Resume signal: "tunnel up".
+- [x] 12-G1-cal-triage-02-badge-wiring-PLAN.md — CAL-TRIAGE-02 closed: backend chain + DTO + build.gradle.kts emit fix + schema.d.ts regen + inbox-api.ts dedup + Task 4 calendar swap + Vitest/Playwright proof (99afa8c0, c8a6b3d9, b91cf47e, e6f67581, a6c0e2b4).
 
 - [x] 12-W0-oauth-scope-ledger-and-token-store-PLAN.md — `GoogleOAuthScope` enum + source-text scan + `OAuthTokenStore` facade + Liquibase 131-134 schema + ical4j/calendar-API deps.
 - [x] 12-W1-calendar-oauth-and-connection-bootstrap-PLAN.md — `google-calendar` `ClientRegistration` + AuthZ resolver branch + `CalendarOAuthSuccessHandler` + `core.calendar.{domain,exception,persistence,gateway}` entities + `CalendarApiClientFactory`.
