@@ -30,6 +30,7 @@ public class SpringAiProviderChatClientFactory {
     static final String ANTHROPIC_FORMAT = "ANTHROPIC_FORMAT";
     static final String GOOGLE_FORMAT = "GOOGLE_FORMAT";
     private static final String DEEPSEEK_PROVIDER_ID = "DEEPSEEK";
+    private static final String OPENAI_PROVIDER_ID = "OPENAI";
     private static final int ANTHROPIC_DEFAULT_MAX_TOKENS = 512;
 
     private final LlmProperties llmProperties;
@@ -110,7 +111,8 @@ public class SpringAiProviderChatClientFactory {
                 if (DEEPSEEK_PROVIDER_ID.equals(providerId)) {
                     yield deepSeekOptions(model, temperature, toolChoiceRequired);
                 }
-                yield openAiOptions(model, temperature, maxTokens, toolChoiceRequired, source);
+                yield openAiOptions(
+                        providerId, model, temperature, maxTokens, toolChoiceRequired, source);
             }
             case ANTHROPIC_FORMAT ->
                     anthropicOptions(model, temperature, maxTokens, toolChoiceRequired, source);
@@ -127,7 +129,13 @@ public class SpringAiProviderChatClientFactory {
             String plaintextApiKey) {
         return OpenAiChatModel.builder()
                 .options(
-                        openAiOptions(model, temperature, maxTokens, false, credential.source())
+                        openAiOptions(
+                                        credential.providerId(),
+                                        model,
+                                        temperature,
+                                        maxTokens,
+                                        false,
+                                        credential.source())
                                 .apiKey(plaintextApiKey)
                                 .baseUrl(credential.baseUrl())
                                 .build())
@@ -135,6 +143,7 @@ public class SpringAiProviderChatClientFactory {
     }
 
     private OpenAiChatOptions.Builder openAiOptions(
+            String providerId,
             String model,
             double temperature,
             Integer maxTokens,
@@ -149,7 +158,16 @@ public class SpringAiProviderChatClientFactory {
             chatOptionsBuilder.toolChoice(OpenAiToolChoiceOptions.required());
         }
         if (maxTokens != null) {
-            chatOptionsBuilder.maxTokens(maxTokens);
+            // Native OpenAI rejects the legacy `max_tokens` field for its newer (reasoning) models
+            // such as the gpt-5.x family and requires `max_completion_tokens`. OpenAI-compatible
+            // gateways (OpenRouter, 9router) still expect `max_tokens`, so only the native OpenAI
+            // provider switches fields. `max_completion_tokens` is accepted by every current native
+            // OpenAI chat model, so it is safe for non-reasoning models too.
+            if (OPENAI_PROVIDER_ID.equals(providerId)) {
+                chatOptionsBuilder.maxCompletionTokens(maxTokens);
+            } else {
+                chatOptionsBuilder.maxTokens(maxTokens);
+            }
         }
         return chatOptionsBuilder;
     }
