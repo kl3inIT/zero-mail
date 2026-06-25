@@ -217,6 +217,13 @@ public class SecurityConfig {
                                                 "/swagger-ui/**",
                                                 "/r/**",
                                                 "/api/r/**",
+                                                // Public referral banner for the marketing landing
+                                                // page (logged-out visitors). Exposes only
+                                                // admin-published campaign copy + banner image via
+                                                // ReferralPublicController — never tenant data,
+                                                // codes, or leaderboard rows.
+                                                "/api/referrals/active-campaign",
+                                                "/api/referrals/active-campaign/**",
                                                 "/login/oauth2/**",
                                                 "/oauth2/**",
                                                 // Support feedback — open to unauthenticated users

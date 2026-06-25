@@ -6,9 +6,12 @@ import { redirect } from 'next/navigation';
 import { getCurrentUserCached } from '@/features/account/api/account-api';
 import Features from '@/features/landing/components/Features';
 import Hero from '@/features/landing/components/Hero';
+import { LandingAbout } from '@/features/landing/components/LandingAbout';
+import { LandingPartnership } from '@/features/landing/components/LandingPartnership';
 import Testimonials from '@/features/landing/components/Testimonials';
 import FAQ from '@/features/landing/components/FAQ';
 import Contact from '@/features/landing/components/Contact';
+import { LandingReferralSection } from '@/features/referrals/components/LandingReferralSection';
 import { ONBOARDING_BYPASS_ROUTE, shouldShowBetaOnboarding } from '@/features/onboarding/config';
 
 /**
@@ -59,7 +62,10 @@ export default async function LandingPage() {
   return (
     <>
       <Hero />
+      <LandingReferralSection />
       <Features />
+      <LandingAbout />
+      <LandingPartnership />
       <Testimonials />
       <FAQ />
       <Contact />
