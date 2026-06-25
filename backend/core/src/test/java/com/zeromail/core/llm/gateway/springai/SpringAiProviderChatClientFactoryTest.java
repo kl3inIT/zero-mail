@@ -43,6 +43,10 @@ class SpringAiProviderChatClientFactoryTest {
 
         assertThat(options.getMaxCompletionTokens()).isEqualTo(2048);
         assertThat(options.getMaxTokens()).isNull();
+        // Reasoning models also reject a non-default temperature, so the native OpenAI provider
+        // must
+        // omit it entirely.
+        assertThat(options.getTemperature()).isNull();
     }
 
     @Test
@@ -66,6 +70,8 @@ class SpringAiProviderChatClientFactoryTest {
 
         assertThat(options.getMaxTokens()).isEqualTo(2048);
         assertThat(options.getMaxCompletionTokens()).isNull();
+        // Gateways honor an explicit temperature, so it must be preserved for them.
+        assertThat(options.getTemperature()).isEqualTo(0.2);
     }
 
     @Test
