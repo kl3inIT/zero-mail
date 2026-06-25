@@ -33,6 +33,7 @@ class AdminChainCookieIsolationTest {
         assertThat(securityConfig)
                 .contains("\"/api/admin/**\"")
                 .contains("\"/webauthn/**\"")
+                .contains("\"/login/webauthn\"")
                 .contains("\"/login/webauthn/**\"");
         assertThat(securityConfig).doesNotContain("EnrollmentTokenGate");
         assertThat(securityConfig).doesNotContain("\"/enroll\"");

@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminRoleGrantService {
 
     private static final int USER_HANDLE_BYTES = 32;
+    private static final UUID SYSTEM_ADMIN_USER_ID =
+            UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final String ADMIN_ENROLLMENT_BASE_URL =
             "https://admin.zeromail.vn/enroll?token=";
     private static final Pattern ADMIN_EMAIL_PATTERN =
@@ -109,6 +112,40 @@ public class AdminRoleGrantService {
                 reason,
                 requestIp,
                 requestId);
+    }
+
+    @Transactional
+    public void delete(UUID adminUserId, String reason, String requestIp, UUID requestId) {
+        UUID requiredAdminUserId =
+                Objects.requireNonNull(adminUserId, "adminUserId must not be null");
+        if (SYSTEM_ADMIN_USER_ID.equals(requiredAdminUserId)) {
+            throw new AdminAuthException("System admin user cannot be deleted");
+        }
+        String requiredReason = requireReason(reason);
+        AdminUserEntity adminUser =
+                adminUserRepository
+                        .findById(requiredAdminUserId)
+                        .orElseThrow(() -> new AdminAuthException("Admin user not found"));
+        adminAuditWriter.append(
+                AdminAuditAction.ADMIN_DELETED,
+                "admin_user",
+                adminUser.getId(),
+                "{\"email\":\""
+                        + adminUser.getEmail()
+                        + "\",\"status\":\""
+                        + adminUser.getStatus().id()
+                        + "\"}",
+                null,
+                requiredReason,
+                requestIp,
+                requestId);
+        try {
+            adminUserRepository.delete(adminUser);
+            adminUserRepository.flush();
+        } catch (DataIntegrityViolationException dataIntegrityViolationException) {
+            throw new AdminAuthException(
+                    "Admin user cannot be deleted because related records still reference it");
+        }
     }
 
     private AdminUserEntity createPendingAdmin(String normalizedEmail) {

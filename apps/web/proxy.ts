@@ -62,11 +62,12 @@ function buildCsp(nonce: string): string {
   const connectExtras = [apiOrigin, isDev ? 'ws:' : '', isDev ? 'http://localhost:*' : '']
     .filter(Boolean)
     .join(' ');
+  const imageExtras = [apiOrigin, isDev ? 'http://localhost:*' : ''].filter(Boolean).join(' ');
   const directives = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    `img-src 'self' data: blob: https:${imageExtras ? ` ${imageExtras}` : ''}`,
     "font-src 'self' data:",
     `connect-src 'self'${connectExtras ? ` ${connectExtras}` : ''}`,
     "form-action 'self'",

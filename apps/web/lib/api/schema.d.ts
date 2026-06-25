@@ -500,6 +500,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/referrals/campaigns/{campaignId}/end-if-expired": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["endCampaignIfExpired"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plan-upgrades/webhooks/sepay": {
         parameters: {
             query?: never;
@@ -1172,6 +1188,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/referrals/me/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/referrals/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/referrals/campaigns/{campaignId}/banner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["campaignBanner"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plan-upgrades/plans": {
         parameters: {
             query?: never;
@@ -1211,7 +1275,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["me"];
+        get: operations["me_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1915,9 +1979,9 @@ export interface components {
             name?: string;
             filename?: string;
             charset?: string;
-            inline?: boolean;
             attachment?: boolean;
             formData?: boolean;
+            inline?: boolean;
         };
         HttpHeaders: {
             empty?: boolean;
@@ -1956,46 +2020,46 @@ export interface components {
             date?: number;
             /** Format: int64 */
             contentLength?: number;
-            connection?: string[];
-            /** Format: int64 */
-            ifModifiedSince?: number;
-            contentType?: components["schemas"]["MediaType"];
-            ifMatch?: string[];
+            vary?: string[];
+            accept?: components["schemas"]["MediaType"][];
             origin?: string;
-            range?: components["schemas"]["HttpRange"][];
-            contentDisposition?: components["schemas"]["ContentDisposition"];
-            acceptCharset?: string[];
-            bearerAuth?: string;
-            contentLanguage?: string;
-            etag?: string;
+            upgrade?: string;
             allow?: components["schemas"]["HttpMethod"][];
-            cacheControl?: string;
+            /** Format: int64 */
+            expires?: number;
+            pragma?: string;
+            ifMatch?: string[];
+            etag?: string;
             ifNoneMatch?: string[];
             /** Format: int64 */
             ifUnmodifiedSince?: number;
-            accept?: components["schemas"]["MediaType"][];
-            vary?: string[];
+            accessControlAllowCredentials?: boolean;
+            accessControlExposeHeaders?: string[];
+            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
+            accessControlAllowHeaders?: string[];
+            accessControlAllowOrigin?: string;
+            accessControlRequestHeaders?: string[];
+            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
+            basicAuth?: string;
             /** Format: int64 */
-            expires?: number;
-            upgrade?: string;
-            pragma?: string;
+            accessControlMaxAge?: number;
             acceptLanguage?: {
                 range?: string;
                 /** Format: double */
                 weight?: number;
             }[];
-            acceptPatch?: components["schemas"]["MediaType"][];
-            /** Format: int64 */
-            accessControlMaxAge?: number;
             acceptLanguageAsLocales?: string[];
-            basicAuth?: string;
-            accessControlExposeHeaders?: string[];
-            accessControlRequestHeaders?: string[];
-            accessControlRequestMethod?: components["schemas"]["HttpMethod"];
-            accessControlAllowHeaders?: string[];
-            accessControlAllowOrigin?: string;
-            accessControlAllowMethods?: components["schemas"]["HttpMethod"][];
-            accessControlAllowCredentials?: boolean;
+            acceptPatch?: components["schemas"]["MediaType"][];
+            contentLanguage?: string;
+            contentDisposition?: components["schemas"]["ContentDisposition"];
+            acceptCharset?: string[];
+            connection?: string[];
+            /** Format: int64 */
+            ifModifiedSince?: number;
+            contentType?: components["schemas"]["MediaType"];
+            range?: components["schemas"]["HttpRange"][];
+            cacheControl?: string;
+            bearerAuth?: string;
         };
         HttpMethod: unknown;
         HttpRange: unknown;
@@ -2008,10 +2072,10 @@ export interface components {
             /** Format: double */
             qualityValue?: number;
             charset?: string;
-            concrete?: boolean;
-            wildcardSubtype?: boolean;
-            wildcardType?: boolean;
             subtypeSuffix?: string;
+            wildcardType?: boolean;
+            wildcardSubtype?: boolean;
+            concrete?: boolean;
         };
         BankTransferIntentResponse: {
             /** Format: uuid */
@@ -2347,6 +2411,44 @@ export interface components {
         };
         RuleCatalogActionsResponse: {
             actions: components["schemas"]["RuleCatalogActionDescriptorResponse"][];
+        };
+        ReferralLeaderboardRowResponse: {
+            /** Format: uuid */
+            tenantId: string;
+            tenantDisplayName: string;
+            /** Format: int32 */
+            successfulReferrals: number;
+            /** Format: int32 */
+            rank: number;
+            currentTenant: boolean;
+        };
+        ReferralMeResponse: {
+            active: boolean;
+            /** Format: uuid */
+            campaignId?: string;
+            campaignName?: string;
+            campaignDescription?: string;
+            /** Format: date-time */
+            campaignStartsAt?: string;
+            /** Format: date-time */
+            campaignEndsAt?: string;
+            webBannerEnabled?: boolean;
+            countdownEnabled?: boolean;
+            leaderboardEnabled?: boolean;
+            /** Format: int32 */
+            rewardRankCutoff?: number;
+            rewardNotificationText?: string;
+            bannerImageAvailable?: boolean;
+            code?: string;
+            url?: string;
+            /** Format: int32 */
+            successfulReferrals?: number;
+            /** Format: int32 */
+            totalRankedTenants?: number;
+            currentTenant?: components["schemas"]["ReferralLeaderboardRowResponse"];
+            leaderboard?: components["schemas"]["ReferralLeaderboardRowResponse"][];
+            /** Format: date-time */
+            snapshotAt?: string;
         };
         BillingPlanListResponse: {
             /**
@@ -5794,6 +5896,80 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["RuleCompileResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    endCampaignIfExpired: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {
@@ -9727,6 +9903,230 @@ export interface operations {
             };
         };
     };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReferralMeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    me_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReferralMeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    campaignBanner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     plans: {
         parameters: {
             query?: never;
@@ -9877,7 +10277,7 @@ export interface operations {
             };
         };
     };
-    me: {
+    me_2: {
         parameters: {
             query?: never;
             header?: never;

@@ -383,3 +383,21 @@ databaseChangeLog:
   - include:
       file: changes/130-gmail-connection-profile.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/130-referral-campaigns.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/131-referral-single-active-campaign.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/132-referral-campaign-banner-bytes.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/133-referral-campaign-banner-file-storage.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/134-admin-user-hard-delete-support.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/135-referral-campaign-reward-config.yaml
+      relativeToChangelogFile: true

@@ -5,6 +5,7 @@
             "tenant :: usecases",
             "config",
             "billing :: persistence",
+            "billing :: usecases",
             "gmail",
             "gmail :: usecases",
             "llm :: domain",

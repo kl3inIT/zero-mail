@@ -9,18 +9,25 @@ import java.util.UUID;
 @Schema(
         requiredProperties = {
             "tenantId",
+            "tenantDisplayName",
             "createdAt",
             "status",
             "gmailConnectionStatus",
             "telegramStatus",
+            "gmailAccountCount",
+            "connectedGmailAccountCount",
             "rulesCount",
             "enabledRulesCount",
             "enabledRuleNames"
         })
 public record TenantDetailResponse(
         UUID tenantId,
+        String tenantDisplayName,
+        @Schema(nullable = true) String ownerEmail,
         Instant createdAt,
-        String gmailAccountEmail,
+        @Schema(nullable = true) String gmailAccountEmail,
+        int gmailAccountCount,
+        int connectedGmailAccountCount,
         @Schema(allowableValues = {"ACTIVE", "PAUSED", "DISCONNECTED"}) String status,
         @Schema(allowableValues = {"CONNECTED", "DISCONNECTED"}) String gmailConnectionStatus,
         @Schema(allowableValues = {"CONNECTED", "BLOCKED", "DISCONNECTED", "NO_CONNECTION"})
@@ -33,8 +40,12 @@ public record TenantDetailResponse(
     public static TenantDetailResponse from(TenantDetailOverview tenantDetailOverview) {
         return new TenantDetailResponse(
                 tenantDetailOverview.tenantId(),
+                tenantDetailOverview.tenantDisplayName(),
+                tenantDetailOverview.ownerEmail(),
                 tenantDetailOverview.createdAt(),
                 tenantDetailOverview.gmailAccountEmail(),
+                tenantDetailOverview.gmailAccountCount(),
+                tenantDetailOverview.connectedGmailAccountCount(),
                 tenantDetailOverview.status(),
                 tenantDetailOverview.gmailConnectionStatus(),
                 tenantDetailOverview.telegramStatus(),

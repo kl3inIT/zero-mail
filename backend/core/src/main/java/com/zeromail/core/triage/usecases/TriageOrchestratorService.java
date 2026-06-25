@@ -2,6 +2,7 @@ package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.domain.ReservationId;
+import com.zeromail.core.billing.exception.InsufficientCreditsException;
 import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.domain.GmailCategory;
 import com.zeromail.core.gmail.event.MailMessageObserved;
@@ -223,6 +224,24 @@ public class TriageOrchestratorService {
                     observedEvent.gmailMessageId(),
                     observedEvent.gmailConnectionId(),
                     terminalMailboxFailure.getClass().getSimpleName());
+        } catch (InsufficientCreditsException _) {
+            // Terminal, non-retryable, EXPECTED business condition: the tenant's prepaid balance is
+            // exhausted, so no triage credit can be reserved for this message (deterministic,
+            // semantic-eval, draft, or needs-reply reservation throws this). Like a disconnected
+            // mailbox, this is NOT a bug and cannot succeed on Modulith resubmission — a tenant can
+            // stay out of credit for days, so letting it fail would (a) spam the async ERROR
+            // handler
+            // and churn the event ~30x/hour until top-up, and (b) eventually fire surprise actions
+            // on days-old mail once they refill, violating the "no surprise actions" invariant.
+            // Swallow it so the event publication COMPLETES instead of looping; record an abandon
+            // metric + privacy-safe audit log (ids only) for visibility.
+            meterRegistry.counter("triage.event.abandoned_insufficient_credits").increment();
+            log.warn(
+                    "event=triage_event_abandoned_insufficient_credits tenantId={}"
+                            + " gmailMessageId={} gmailConnectionId={}",
+                    observedEvent.tenantId(),
+                    observedEvent.gmailMessageId(),
+                    observedEvent.gmailConnectionId());
         } finally {
             triageConcurrencyLimiter.release();
         }

@@ -100,6 +100,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/referrals/campaigns/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateCampaign"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/referrals/campaigns/{campaignId}/banner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["campaignBanner"];
+        put: operations["updateCampaignBanner"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/master-keys/{provider}": {
         parameters: {
             query?: never;
@@ -254,6 +286,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["createExample"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/referrals/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["campaigns"];
+        put?: never;
+        post: operations["createCampaign"];
         delete?: never;
         options?: never;
         head?: never;
@@ -596,6 +644,22 @@ export interface paths {
         patch: operations["updateActionDescriptorEnabled"];
         trace?: never;
     };
+    "/api/admin/referrals/campaigns/{campaignId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateCampaignStatus"];
+        trace?: never;
+    };
     "/api/admin/master-keys/{provider}/keys/{keyId}": {
         parameters: {
             query?: never;
@@ -642,6 +706,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["reopen"];
+        trace?: never;
+    };
+    "/api/admin/billing-packages/features/{featureCode}/plans/{planCode}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updatePlanFeaturePermissionEnabled"];
+        trace?: never;
+    };
+    "/api/admin/billing-packages/features/{featureCode}/credit-cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateFeatureCreditCost"];
         trace?: never;
     };
     "/api/admin/tenants/{tenantId}/spend": {
@@ -836,6 +932,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/referrals/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["streamDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/referrals/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["dashboard_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/queue/jobs": {
         parameters: {
             query?: never;
@@ -876,6 +1004,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["health_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["overview_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/overview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["overview_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -980,6 +1140,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/billing-packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["overview_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/billing-packages/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["overview_4"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/audit/events": {
         parameters: {
             query?: never;
@@ -1023,6 +1215,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/admins/{adminUserId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteAdmin"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1081,6 +1289,51 @@ export interface components {
             items: components["schemas"]["RuleCatalogActionOrderEntryRequest"][];
             reason: string;
         };
+        AdminReferralCampaignUpdateRequest: {
+            name: string;
+            campaignCode: string;
+            slug: string;
+            description?: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            webBannerEnabled: boolean;
+            countdownEnabled: boolean;
+            leaderboardEnabled: boolean;
+            /** Format: int32 */
+            leaderboardLimit: number;
+            /** Format: int32 */
+            rewardRankCutoff: number;
+            rewardNotificationText: string;
+        };
+        AdminReferralCampaignResponse: {
+            /** Format: uuid */
+            campaignId: string;
+            name: string;
+            campaignCode: string;
+            slug: string;
+            description?: string;
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "PAUSED" | "ENDED" | "ARCHIVED";
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            webBannerEnabled: boolean;
+            countdownEnabled: boolean;
+            leaderboardEnabled: boolean;
+            /** Format: int32 */
+            leaderboardLimit: number;
+            /** Format: int32 */
+            rewardRankCutoff: number;
+            rewardNotificationText: string;
+            bannerImageAvailable: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         MasterKeySetRequest: {
             plaintextKey: string;
             /** @enum {string} */
@@ -1119,6 +1372,26 @@ export interface components {
             /** Format: uuid */
             targetId?: string;
             targetKey?: string;
+        };
+        AdminReferralCampaignCreateRequest: {
+            name: string;
+            campaignCode: string;
+            slug: string;
+            description?: string;
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "PAUSED" | "ENDED" | "ARCHIVED";
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            webBannerEnabled: boolean;
+            countdownEnabled: boolean;
+            leaderboardEnabled: boolean;
+            /** Format: int32 */
+            leaderboardLimit: number;
+            /** Format: int32 */
+            rewardRankCutoff: number;
+            rewardNotificationText: string;
         };
         RequeueRequest: {
             reason: string;
@@ -1248,12 +1521,23 @@ export interface components {
             enabled: boolean;
             reason: string;
         };
+        AdminReferralCampaignStatusUpdateRequest: {
+            /** @enum {string} */
+            status: "DRAFT" | "ACTIVE" | "PAUSED" | "ENDED" | "ARCHIVED";
+        };
         UpdateProviderKeyRequest: {
             label?: string;
             baseUrl?: string;
         };
         FeedbackResolveRequest: {
             adminNotes?: string;
+        };
+        AdminBillingFeaturePermissionUpdateRequest: {
+            enabled: boolean;
+        };
+        AdminBillingFeatureCreditCostUpdateRequest: {
+            /** Format: int32 */
+            fixedCreditCost: number;
         };
         TenantSpendResponse: {
             /** Format: int32 */
@@ -1271,9 +1555,15 @@ export interface components {
         TenantDetailResponse: {
             /** Format: uuid */
             tenantId: string;
+            tenantDisplayName: string;
+            ownerEmail?: string | null;
             /** Format: date-time */
             createdAt: string;
-            gmailAccountEmail?: string;
+            gmailAccountEmail?: string | null;
+            /** Format: int32 */
+            gmailAccountCount: number;
+            /** Format: int32 */
+            connectedGmailAccountCount: number;
             /** @enum {string} */
             status: "ACTIVE" | "PAUSED" | "DISCONNECTED";
             /** @enum {string} */
@@ -1359,9 +1649,15 @@ export interface components {
         TenantListRowResponse: {
             /** Format: uuid */
             tenantId: string;
+            tenantDisplayName: string;
+            ownerEmail?: string | null;
             /** Format: date-time */
             createdAt: string;
-            gmailAccountEmail?: string;
+            gmailAccountEmail?: string | null;
+            /** Format: int32 */
+            gmailAccountCount: number;
+            /** Format: int32 */
+            connectedGmailAccountCount: number;
             /** @enum {string} */
             status: "ACTIVE" | "PAUSED" | "DISCONNECTED";
             /** @enum {string} */
@@ -1546,6 +1842,40 @@ export interface components {
         RuleCatalogActionsAdminResponse: {
             actions: components["schemas"]["RuleCatalogActionDescriptorAdminResponse"][];
         };
+        SseEmitter: {
+            /** Format: int64 */
+            timeout?: number;
+        };
+        AdminReferralDashboardResponse: {
+            campaign: components["schemas"]["AdminReferralCampaignResponse"];
+            /** Format: int32 */
+            totalSuccessfulReferrals: number;
+            /** Format: int32 */
+            activeReferrerTenants: number;
+            currentTopTenant?: components["schemas"]["AdminReferralLeaderboardRowResponse"];
+            leaderboard: components["schemas"]["AdminReferralLeaderboardRowResponse"][];
+            timeSeries: components["schemas"]["AdminReferralTimeSeriesPointResponse"][];
+            /** Format: date-time */
+            snapshotAt: string;
+        };
+        AdminReferralLeaderboardRowResponse: {
+            /** Format: uuid */
+            tenantId: string;
+            tenantDisplayName: string;
+            /** Format: int32 */
+            successfulReferrals: number;
+            /** Format: int32 */
+            rank: number;
+        };
+        AdminReferralTimeSeriesPointResponse: {
+            /** Format: date-time */
+            bucketStart: string;
+            /** Format: int32 */
+            successfulReferrals: number;
+        };
+        AdminReferralCampaignListResponse: {
+            campaigns: components["schemas"]["AdminReferralCampaignResponse"][];
+        };
         JobPageResponse: {
             rows: components["schemas"]["JobRowResponse"][];
             nextCursor?: string;
@@ -1636,6 +1966,116 @@ export interface components {
             attemptsBucket: number;
             /** Format: int32 */
             rowCount: number;
+        };
+        AdminOverviewActionDistributionResponse: {
+            key: string;
+            label: string;
+            /** Format: int32 */
+            count: number;
+        };
+        AdminOverviewAlertResponse: {
+            key: string;
+            severity: string;
+            title: string;
+            detail: string;
+            /** Format: int32 */
+            count: number;
+            timeLabel: string;
+        };
+        AdminOverviewDailyActivityPointResponse: {
+            date: string;
+            /** Format: int32 */
+            observedEmailCount: number;
+            /** Format: int32 */
+            triageActionCount: number;
+            /** Format: int32 */
+            failedTriageActionCount: number;
+        };
+        AdminOverviewKpisResponse: {
+            /** Format: int32 */
+            totalTenants: number;
+            /** Format: int32 */
+            gmailConnectedTenants: number;
+            /** Format: int32 */
+            activeLast7dTenants: number;
+            /** Format: int32 */
+            observedEmailCount: number;
+            /** Format: int32 */
+            triageActionCount: number;
+            /** Format: int32 */
+            failedTriageActionCount: number;
+            /** Format: int32 */
+            outboundActionCount: number;
+            /** Format: int32 */
+            blockedOutboundActionCount: number;
+            /** Format: int32 */
+            llmCallCount: number;
+            /** Format: int64 */
+            llmChargedCredits: number;
+            llmCostUsd: number;
+            /** Format: int32 */
+            gmailUnhealthyTenants: number;
+            /** Format: int32 */
+            pubsubBacklogCount: number;
+            /** Format: int32 */
+            deadLetterJobCount: number;
+            /** Format: int32 */
+            lowCreditTenantCount: number;
+        };
+        AdminOverviewRangeResponse: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+        };
+        AdminOverviewResponse: {
+            range: components["schemas"]["AdminOverviewRangeResponse"];
+            kpis: components["schemas"]["AdminOverviewKpisResponse"];
+            successRate: components["schemas"]["AdminOverviewSuccessRateResponse"];
+            dailyActivity: components["schemas"]["AdminOverviewDailyActivityPointResponse"][];
+            actionDistribution: components["schemas"]["AdminOverviewActionDistributionResponse"][];
+            topActivityTenants: components["schemas"]["AdminOverviewTopActivityTenantResponse"][];
+            topSpendTenants: components["schemas"]["AdminOverviewTopSpendTenantResponse"][];
+            alerts: components["schemas"]["AdminOverviewAlertResponse"][];
+            /** Format: date-time */
+            snapshotAt: string;
+        };
+        AdminOverviewSuccessRateResponse: {
+            /** Format: double */
+            successRatePercent: number;
+            /** Format: double */
+            failureRatePercent: number;
+        };
+        AdminOverviewTopActivityTenantResponse: {
+            /** Format: uuid */
+            tenantId: string;
+            tenantDisplayName: string;
+            ownerEmail?: string;
+            primaryEmail?: string;
+            /** Format: int32 */
+            observedEmailCount: number;
+            /** Format: int32 */
+            triageActionCount: number;
+            /** Format: int32 */
+            failedTriageActionCount: number;
+            /** Format: int32 */
+            outboundActionCount: number;
+            /** Format: int32 */
+            blockedOutboundActionCount: number;
+            /** Format: double */
+            failureRatePercent: number;
+        };
+        AdminOverviewTopSpendTenantResponse: {
+            /** Format: uuid */
+            tenantId: string;
+            tenantDisplayName: string;
+            ownerEmail?: string;
+            primaryEmail?: string;
+            /** Format: int32 */
+            llmCallCount: number;
+            /** Format: int64 */
+            chargedCredits: number;
+            totalCostUsd: number;
         };
         /** @description Authenticated admin's identity, returned by GET /api/admin/me. */
         AdminMeResponse: {
@@ -1772,6 +2212,68 @@ export interface components {
         FeatureDefaultMatrixResponse: {
             /** @description All configured (feature, tier) bindings. */
             bindings?: components["schemas"]["FeatureDefaultBinding"][];
+        };
+        AdminBillingFeaturePermissionResponse: {
+            featureCode: string;
+            displayName: string;
+            description?: string;
+            /** @enum {string} */
+            category: "TRIAGE" | "COMPOSE" | "RULES" | "CLEANUP" | "INTERNAL";
+            /** Format: int32 */
+            fixedCreditCost: number;
+            unitLabel: string;
+            /** Format: int32 */
+            sortOrder: number;
+            planPermissions: components["schemas"]["AdminBillingPlanPermissionResponse"][];
+        };
+        AdminBillingPackageResponse: {
+            plans: components["schemas"]["AdminBillingPlanResponse"][];
+            featurePermissions: components["schemas"]["AdminBillingFeaturePermissionResponse"][];
+            paymentHistory: components["schemas"]["AdminBillingPaymentResponse"][];
+            /** Format: date-time */
+            snapshotAt: string;
+        };
+        AdminBillingPaymentResponse: {
+            paymentId: string;
+            /** Format: uuid */
+            tenantId: string;
+            customerDisplayName: string;
+            customerEmail?: string;
+            planCode: string;
+            periodLabel: string;
+            /** Format: int64 */
+            amountVnd: number;
+            currency: string;
+            paymentMethod: string;
+            transactionCode: string;
+            /** @enum {string} */
+            status: "PAID" | "PENDING" | "EXPIRED" | "VOIDED";
+            /** Format: date-time */
+            paidAt?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminBillingPlanPermissionResponse: {
+            planCode: string;
+            enabled: boolean;
+        };
+        AdminBillingPlanResponse: {
+            /** Format: uuid */
+            planId: string;
+            code: string;
+            displayName: string;
+            /** Format: int32 */
+            tierRank: number;
+            /** @enum {string} */
+            billingCycle: "NONE" | "MONTH";
+            currency: string;
+            /** Format: int64 */
+            priceVnd: number;
+            /** Format: int32 */
+            monthlyCreditAllowance: number;
+            active: boolean;
+            /** Format: int32 */
+            sortOrder: number;
         };
         AdminAuditEventResponse: {
             /** Format: uuid */
@@ -2268,6 +2770,245 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    updateCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminReferralCampaignUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminReferralCampaignResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    campaignBanner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    updateCampaignBanner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminReferralCampaignResponse"];
+                };
             };
             /** @description Bad Request */
             400: {
@@ -3344,6 +4085,158 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleCatalogMutationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    campaigns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminReferralCampaignListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    createCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminReferralCampaignCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminReferralCampaignResponse"];
                 };
             };
             /** @description Bad Request */
@@ -5109,6 +6002,86 @@ export interface operations {
             };
         };
     };
+    updateCampaignStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminReferralCampaignStatusUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminReferralCampaignResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     revokeKey: {
         parameters: {
             query?: never;
@@ -5351,6 +6324,163 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    updatePlanFeaturePermissionEnabled: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                featureCode: string;
+                planCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminBillingFeaturePermissionUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    updateFeatureCreditCost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                featureCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminBillingFeatureCreditCostUpdateRequest"];
+            };
+        };
         responses: {
             /** @description No Content */
             204: {
@@ -6339,6 +7469,162 @@ export interface operations {
             };
         };
     };
+    streamDashboard: {
+        parameters: {
+            query: {
+                campaignId: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["SseEmitter"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    dashboard_1: {
+        parameters: {
+            query: {
+                campaignId: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminReferralDashboardResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     jobs: {
         parameters: {
             query?: {
@@ -6510,6 +7796,160 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["QueueHealthResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    overview_1: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminOverviewResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    overview_2: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminOverviewResponse"];
                 };
             };
             /** @description Bad Request */
@@ -7019,6 +8459,154 @@ export interface operations {
             };
         };
     };
+    overview_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBillingPackageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    overview_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBillingPackageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     events: {
         parameters: {
             query?: {
@@ -7200,6 +8788,84 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["AdminUserSummaryResponse"][];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    deleteAdmin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                adminUserId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeAdminRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

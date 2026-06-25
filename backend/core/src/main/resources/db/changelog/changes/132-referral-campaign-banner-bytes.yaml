@@ -1,0 +1,57 @@
+databaseChangeLog:
+  - changeSet:
+      id: 132-referral-campaign-banner-bytes
+      author: zeromail
+      comment: >
+        Store referral campaign banner images directly on referral_campaign instead of persisting a
+        URL. Admin uploads replace the binary blob; API responses expose only availability plus a
+        banner download endpoint.
+      changes:
+        - dropColumn:
+            tableName: referral_campaign
+            columnName: banner_image_url
+        - addColumn:
+            tableName: referral_campaign
+            columns:
+              - column:
+                  name: banner_image_bytes
+                  type: bytea
+              - column:
+                  name: banner_image_content_type
+                  type: varchar(80)
+              - column:
+                  name: banner_image_size_bytes
+                  type: int
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              ADD CONSTRAINT ck_referral_campaign_banner_image
+              CHECK (
+                (banner_image_bytes IS NULL
+                  AND banner_image_content_type IS NULL
+                  AND banner_image_size_bytes IS NULL)
+                OR
+                (banner_image_bytes IS NOT NULL
+                  AND banner_image_content_type IN ('image/jpeg', 'image/png', 'image/webp')
+                  AND banner_image_size_bytes BETWEEN 1 AND 5242880)
+              )
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE referral_campaign
+              DROP CONSTRAINT IF EXISTS ck_referral_campaign_banner_image
+        - dropColumn:
+            tableName: referral_campaign
+            columnName: banner_image_size_bytes
+        - dropColumn:
+            tableName: referral_campaign
+            columnName: banner_image_content_type
+        - dropColumn:
+            tableName: referral_campaign
+            columnName: banner_image_bytes
+        - addColumn:
+            tableName: referral_campaign
+            columns:
+              - column:
+                  name: banner_image_url
+                  type: varchar(1024)

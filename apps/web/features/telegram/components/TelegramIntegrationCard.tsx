@@ -1,9 +1,10 @@
 'use client';
 
+import type { ComponentType } from 'react';
 import { useEffect, useRef } from 'react';
 import { CheckCircle2, Copy, ExternalLink, MessageCircle, RefreshCw, Unplug } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import QRCode from 'react-qr-code';
+import QRCode, { type QRCodeProps } from 'react-qr-code';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,8 @@ import {
   useTelegramStatus,
 } from '@/features/telegram/hooks/useTelegramIntegration';
 import { cn } from '@/lib/utils';
+
+const QRCodeComponent = QRCode as unknown as ComponentType<QRCodeProps>;
 
 function formatTelegramDate(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -122,13 +125,12 @@ export function TelegramIntegrationCard() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               {pairingDeeplink ? (
                 <div className="border-border bg-background text-foreground flex size-36 shrink-0 items-center justify-center rounded-md border p-2">
-                  <QRCode
+                  <QRCodeComponent
                     aria-label={t('settings.telegramConnection.qrLabel')}
                     bgColor="transparent"
                     fgColor="currentColor"
                     size={120}
                     value={pairingDeeplink}
-                    viewBox="0 0 256 256"
                   />
                 </div>
               ) : null}

@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 131-referral-single-active-campaign
+      author: zeromail
+      comment: >
+        A referral event is app-wide. At most one campaign may be ACTIVE so public referral-code
+        acceptance and the admin dashboard never have competing live events.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >
+            Referral campaign migration halted: more than one campaign is ACTIVE. Archive or end
+            old active campaigns, then rerun.
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT CASE WHEN count(*) > 1 THEN 1 ELSE 0 END
+              FROM referral_campaign
+              WHERE status = 'ACTIVE';
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE UNIQUE INDEX uq_referral_campaign_single_active
+                ON referral_campaign (status)
+                WHERE status = 'ACTIVE';
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS uq_referral_campaign_single_active;

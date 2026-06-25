@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { CopyIcon, UserPlusIcon } from 'lucide-react';
+import { CopyIcon, Trash2Icon, UserPlusIcon } from 'lucide-react';
 import { useReducer, useState } from 'react';
 
 import { ConfirmTwiceDialog } from '@/components/ConfirmTwiceDialog';
@@ -11,12 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAdmins } from '@/features/role-grants/use-admins';
+import { useDeleteAdmin } from '@/features/role-grants/use-delete-admin';
 import { useGrantAdmin } from '@/features/role-grants/use-grant-admin';
-import { useRevokeAdmin } from '@/features/role-grants/use-revoke-admin';
 
 export const Route = createFileRoute('/_authenticated/role-grants')({
   component: RoleGrantsRoute,
 });
+
+const SYSTEM_ADMIN_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 // The grant dialog is a small workflow that opens, validates an email, fires the mutation, then
 // reveals the one-time enrollment URL — its fields are reset together, so they live in one reducer.
@@ -62,12 +64,12 @@ function grantDialogReducer(
 function RoleGrantsRoute() {
   const admins = useAdmins();
   const grantAdmin = useGrantAdmin();
-  const revokeAdmin = useRevokeAdmin();
+  const deleteAdmin = useDeleteAdmin();
   const [grantDialog, dispatchGrantDialog] = useReducer(
     grantDialogReducer,
     initialGrantDialogState,
   );
-  const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; email: string } | null>(null);
 
   return (
     <div className="space-y-6">
@@ -97,27 +99,33 @@ function RoleGrantsRoute() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(admins.data ?? []).map((adminUser) => (
-                <TableRow key={adminUser.adminUserId}>
-                  <TableCell>{adminUser.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={adminUser.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                      {adminUser.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{adminUser.lastUsedAt ?? '-'}</TableCell>
-                  <TableCell>{adminUser.hasCredential ? 'Đã đăng ký' : 'Đang chờ'}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setRevokeTarget({ id: adminUser.adminUserId, email: adminUser.email })}
-                    >
-                      Thu hồi quyền
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {(admins.data ?? []).map((adminUser) => {
+                const isSystemAdmin =
+                  adminUser.adminUserId === SYSTEM_ADMIN_USER_ID || adminUser.email === '<system>';
+                return (
+                  <TableRow key={adminUser.adminUserId}>
+                    <TableCell>{adminUser.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={adminUser.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                        {adminUser.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{adminUser.lastUsedAt ?? '-'}</TableCell>
+                    <TableCell>{adminUser.hasCredential ? 'Đã đăng ký' : 'Đang chờ'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant={isSystemAdmin ? 'secondary' : 'destructive'}
+                        size="sm"
+                        disabled={isSystemAdmin}
+                        onClick={() => setDeleteTarget({ id: adminUser.adminUserId, email: adminUser.email })}
+                      >
+                        <Trash2Icon className="size-4" />
+                        {isSystemAdmin ? 'Hệ thống' : 'Xóa'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
@@ -187,19 +195,23 @@ function RoleGrantsRoute() {
         </DialogContent>
       </Dialog>
 
-      {revokeTarget && (
+      {deleteTarget && (
         <ConfirmTwiceDialog
-          open={Boolean(revokeTarget)}
+          open={Boolean(deleteTarget)}
           onOpenChange={(open) => {
-            if (!open) setRevokeTarget(null);
+            if (!open) setDeleteTarget(null);
           }}
-          actionLabel="Thu hồi quyền admin"
-          targetLabel={revokeTarget.email}
-          consequences={['Quản trị viên này sẽ không thể đăng nhập bằng passkey nữa.', 'Lý do sẽ được lưu vào nhật ký audit.']}
-          confirmationToken={revokeTarget.email}
-          finalButtonLabel="Thu hồi quyền"
+          actionLabel="Xóa admin"
+          targetLabel={deleteTarget.email}
+          consequences={[
+            'Admin này sẽ bị xóa hẳn khỏi bảng admin_users.',
+            'Tài khoản này sẽ không thể đăng nhập bằng passkey nữa.',
+            'Audit cũ vẫn được giữ lại để truy vết thao tác quản trị.',
+          ]}
+          confirmationToken={deleteTarget.email}
+          finalButtonLabel="Xóa admin"
           onConfirm={async (reason) => {
-            await revokeAdmin.mutateAsync({ adminUserId: revokeTarget.id, reason });
+            await deleteAdmin.mutateAsync({ adminUserId: deleteTarget.id, reason });
             return { auditId: 'pending-refresh' };
           }}
         />

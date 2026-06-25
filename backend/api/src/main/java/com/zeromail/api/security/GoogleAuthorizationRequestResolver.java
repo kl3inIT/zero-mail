@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -45,12 +46,18 @@ public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRe
     private static final String RECONNECT_PARAMETER = "reconnect";
 
     private final DefaultOAuth2AuthorizationRequestResolver defaultAuthorizationRequestResolver;
+    private final ReferralAttributionTokenCodec referralAttributionTokenCodec;
 
     public GoogleAuthorizationRequestResolver(
-            ClientRegistrationRepository clientRegistrationRepository) {
+            ClientRegistrationRepository clientRegistrationRepository,
+            ReferralAttributionTokenCodec referralAttributionTokenCodec) {
         this.defaultAuthorizationRequestResolver =
                 new DefaultOAuth2AuthorizationRequestResolver(
                         clientRegistrationRepository, "/oauth2/authorization");
+        this.referralAttributionTokenCodec =
+                Objects.requireNonNull(
+                        referralAttributionTokenCodec,
+                        "referralAttributionTokenCodec must not be null");
     }
 
     @Override
@@ -71,6 +78,12 @@ public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRe
             OAuth2AuthorizationRequest authorizationRequest, HttpServletRequest servletRequest) {
         if (authorizationRequest == null) return null;
         OAuthIntentSnapshot pendingIntentSnapshot = consumePendingIntentSnapshot(servletRequest);
+        ReferralAttributionSnapshot referralAttributionSnapshot =
+                referralAttributionTokenCodec
+                        .decode(
+                                servletRequest.getParameter(
+                                        ReferralAttributionSnapshot.QUERY_PARAMETER))
+                        .orElse(null);
         var additionalParameters = new HashMap<>(authorizationRequest.getAdditionalParameters());
         additionalParameters.put("access_type", "offline");
         additionalParameters.put("include_granted_scopes", "true");
@@ -85,18 +98,28 @@ public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRe
                         .additionalParameters(Map.copyOf(additionalParameters))
                         .attributes(
                                 attributes -> {
-                                    if (pendingIntentSnapshot == null) {
-                                        return;
+                                    if (pendingIntentSnapshot != null) {
+                                        attributes.put(
+                                                OAuthIntentSnapshot.ATTRIBUTE_INTENT,
+                                                pendingIntentSnapshot.intent());
+                                        attributes.put(
+                                                OAuthIntentSnapshot.ATTRIBUTE_TARGET_MAILBOX_ID,
+                                                pendingIntentSnapshot.targetMailboxId());
+                                        attributes.put(
+                                                OAuthIntentSnapshot.ATTRIBUTE_INITIATING_TENANT_ID,
+                                                pendingIntentSnapshot.initiatingTenantId());
                                     }
-                                    attributes.put(
-                                            OAuthIntentSnapshot.ATTRIBUTE_INTENT,
-                                            pendingIntentSnapshot.intent());
-                                    attributes.put(
-                                            OAuthIntentSnapshot.ATTRIBUTE_TARGET_MAILBOX_ID,
-                                            pendingIntentSnapshot.targetMailboxId());
-                                    attributes.put(
-                                            OAuthIntentSnapshot.ATTRIBUTE_INITIATING_TENANT_ID,
-                                            pendingIntentSnapshot.initiatingTenantId());
+                                    if (referralAttributionSnapshot != null) {
+                                        attributes.put(
+                                                ReferralAttributionSnapshot.ATTRIBUTE_CODE,
+                                                referralAttributionSnapshot.code());
+                                        attributes.put(
+                                                ReferralAttributionSnapshot
+                                                        .ATTRIBUTE_ATTRIBUTED_AT_EPOCH_MILLIS,
+                                                referralAttributionSnapshot
+                                                        .attributedAt()
+                                                        .toEpochMilli());
+                                    }
                                 });
         return authorizationRequestBuilder.build();
     }

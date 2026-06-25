@@ -2,6 +2,8 @@ import {expect, type Page, test} from '@playwright/test';
 
 const tenantId = '00000000-0000-4000-8000-000000000008';
 const tenantEmail = 'founder@example.com';
+const tenantDisplayName = 'Founder Workspace';
+const ownerEmail = 'founder.owner@example.com';
 
 test.beforeEach(async ({page}) => {
     await page.route('**/api/admin/me', async (route) => {
@@ -35,20 +37,22 @@ test('operator can scan tenant operations and inspect tenant tabs', async ({page
     await expect(page.getByText('118 email')).toHaveCount(0);
     await expect(page.getByText('91 triage')).toHaveCount(0);
     await expect(page.getByText('4 / 5 rule bật')).toHaveCount(0);
-    await expect(page.getByText('Assistant action')).toBeVisible();
-    const founderRow = page.getByRole('row', {name: /founder@example.com/});
+    await expect(page.getByRole('table').getByText('Assistant action')).toBeVisible();
+    const founderRow = page.getByRole('row', {name: /Founder Workspace/});
     await expect(founderRow).toBeVisible();
+    await expect(founderRow).toContainText(tenantEmail);
+    await expect(founderRow).toContainText(ownerEmail);
     await expect(founderRow).not.toContainText('Cần xử lý');
-    await expect(founderRow).not.toContainText('00000000');
+    await expect(founderRow).not.toContainText(tenantId);
     await expect(founderRow).not.toContainText('May 20');
     await expect(founderRow).toContainText('Đã kết nối');
-    await page.getByLabel('Tìm theo email').fill('founder@example.com');
+    await page.getByLabel('Tìm tenant, owner, Gmail hoặc mã tenant').fill('founder@example.com');
     await page.getByRole('button', {name: 'Áp dụng'}).click();
     await expect.poll(() => tenantRoutes.listRequests.at(-1)?.email).toBe('founder@example.com');
-    await page.getByRole('link', {name: 'Chi tiết founder@example.com'}).click();
+    await page.getByRole('link', {name: 'Chi tiết Founder Workspace'}).click();
 
     await expect(page).toHaveURL(/\/tenants\/00000000-0000-4000-8000-000000000008\?tab=activity/);
-    await expect(page.getByRole('heading', {name: tenantEmail})).toBeVisible();
+    await expect(page.getByRole('heading', {name: tenantDisplayName})).toBeVisible();
     await expect(page.getByText('Đã kết nối Gmail')).toBeVisible();
     await expect(page.getByText('Gói: Free')).toBeVisible();
     await expect(page.getByText('PAY_AS_YOU_GO')).toHaveCount(0);
@@ -96,7 +100,7 @@ test('delete tenant dialog loads deletion preview counts before final confirmati
     await setupTenantRoutes(page);
 
     await page.goto(`/tenants/${tenantId}?tab=overview`);
-    await expect(page.getByRole('heading', {name: tenantEmail})).toBeVisible();
+    await expect(page.getByRole('heading', {name: tenantDisplayName})).toBeVisible();
     await page.getByRole('button', {name: 'Hành động'}).click();
     await page.getByRole('menuitem', {name: 'Xóa khách hàng'}).click();
 
@@ -133,8 +137,12 @@ async function setupTenantRoutes(page: Page): Promise<TenantRoutes> {
                     rows: [
                         {
                             tenantId,
+                            tenantDisplayName,
+                            ownerEmail,
                             createdAt: '2026-05-20T01:00:00Z',
                             gmailAccountEmail: tenantEmail,
+                            gmailAccountCount: 2,
+                            connectedGmailAccountCount: 2,
                             status: 'ACTIVE',
                             gmailConnectionStatus: 'CONNECTED',
                             spendBucket7d: 'MEDIUM',
@@ -161,8 +169,12 @@ async function setupTenantRoutes(page: Page): Promise<TenantRoutes> {
                         },
                         {
                             tenantId: '00000000-0000-4000-8000-000000000009',
+                            tenantDisplayName: 'Quiet Workspace',
+                            ownerEmail: null,
                             createdAt: '2026-05-19T01:00:00Z',
                             gmailAccountEmail: 'quiet@example.com',
+                            gmailAccountCount: 1,
+                            connectedGmailAccountCount: 0,
                             status: 'DISCONNECTED',
                             gmailConnectionStatus: 'DISCONNECTED',
                             spendBucket7d: 'LOW',
@@ -214,8 +226,12 @@ async function setupTenantRoutes(page: Page): Promise<TenantRoutes> {
             await route.fulfill({
                 json: {
                     tenantId,
+                    tenantDisplayName,
+                    ownerEmail,
                     createdAt: '2026-05-20T01:00:00Z',
                     gmailAccountEmail: tenantEmail,
+                    gmailAccountCount: 2,
+                    connectedGmailAccountCount: 2,
                     status: 'ACTIVE',
                     gmailConnectionStatus: 'CONNECTED',
                     telegramStatus: 'CONNECTED',

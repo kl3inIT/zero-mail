@@ -12,8 +12,10 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test")
@@ -22,6 +24,16 @@ class OnboardingStateMachineTest extends ApiPostgresTestBase {
     @Autowired TenantRepository tenants;
     @Autowired UserRepository users;
     @Autowired OnboardingController onboarding;
+    @Autowired JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void cleanRows() {
+        jdbcTemplate.execute("DELETE FROM referral_conversion");
+        jdbcTemplate.execute("DELETE FROM referral_code");
+        jdbcTemplate.execute("DELETE FROM referral_campaign");
+        jdbcTemplate.execute("DELETE FROM users");
+        jdbcTemplate.execute("DELETE FROM tenants");
+    }
 
     @Test
     void forward_transitions_allowed() {

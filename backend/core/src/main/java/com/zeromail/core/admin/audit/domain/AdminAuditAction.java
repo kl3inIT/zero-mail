@@ -8,6 +8,7 @@ public enum AdminAuditAction implements IdentifiedEnum {
     ADMIN_BOOTSTRAP_CREATED,
     ADMIN_GRANTED,
     ADMIN_REVOKED,
+    ADMIN_DELETED,
     ADMIN_ROLE_GRANTED,
     ADMIN_ROLE_REVOKED,
     ADMIN_PASSKEY_REGISTERED,

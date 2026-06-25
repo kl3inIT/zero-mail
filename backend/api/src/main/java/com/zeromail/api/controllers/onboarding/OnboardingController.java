@@ -4,6 +4,7 @@ import com.zeromail.api.dto.onboarding.SelectTemplateRequest;
 import com.zeromail.core.onboarding.usecases.OnboardingService;
 import com.zeromail.core.tenant.TenantContext;
 import jakarta.validation.Valid;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,7 +16,8 @@ public class OnboardingController {
     private final OnboardingService onboardingService;
 
     public OnboardingController(OnboardingService onboardingService) {
-        this.onboardingService = onboardingService;
+        this.onboardingService =
+                Objects.requireNonNull(onboardingService, "onboardingService must not be null");
     }
 
     @PostMapping("/api/onboarding/select-template")

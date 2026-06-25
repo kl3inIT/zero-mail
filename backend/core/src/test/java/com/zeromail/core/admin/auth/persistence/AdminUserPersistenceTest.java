@@ -9,10 +9,13 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 class AdminUserPersistenceTest extends PostgresContainerTest {
 
     @Autowired private AdminUserRepository adminUserRepository;
+
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
     void pending_admin_can_be_marked_active_with_webauthn_credential() {
@@ -74,5 +77,101 @@ class AdminUserPersistenceTest extends PostgresContainerTest {
         assertThat(updatedRows).isEqualTo(1);
         assertThat(reloadedAdminUser).isPresent();
         assertThat(reloadedAdminUser.orElseThrow().getSignatureCounter()).isEqualTo(11L);
+    }
+
+    @Test
+    void hard_delete_keeps_admin_history_without_blocking_the_admin_user_row_delete() {
+        UUID adminUserId = UUID.fromString("00000000-0000-4000-8000-000000000835");
+        AdminUserEntity activeAdminUser =
+                new AdminUserEntity(
+                        adminUserId,
+                        "delete-history-admin@example.com",
+                        "Delete History Admin",
+                        new byte[] {0x23},
+                        AdminStatus.ACTIVE);
+        adminUserRepository.saveAndFlush(activeAdminUser);
+        jdbcTemplate.update(
+                "UPDATE llm_provider_master_key SET created_by_user_id = ? WHERE provider = 'OPENAI'",
+                adminUserId);
+        jdbcTemplate.update(
+                """
+                INSERT INTO admin_read_event(
+                    id, actor_user_id, actor_email, action, target_kind, target_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                UUID.fromString("00000000-0000-4000-8000-000000000836"),
+                adminUserId,
+                "delete-history-admin@example.com",
+                "TENANT_DETAIL_VIEWED",
+                "TENANT",
+                UUID.fromString("00000000-0000-4000-8000-000000000837"));
+        jdbcTemplate.update(
+                """
+                INSERT INTO admin_audit_event(
+                    id,
+                    actor_user_id,
+                    actor_email,
+                    action,
+                    target_kind,
+                    target_id,
+                    before_state_json,
+                    after_state_json,
+                    reason,
+                    request_ip,
+                    request_id,
+                    canonical_timestamp_ms,
+                    hmac_chain_hash
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?::inet, ?, ?, ?)
+                """,
+                UUID.fromString("00000000-0000-4000-8000-000000000838"),
+                adminUserId,
+                "delete-history-admin@example.com",
+                "ADMIN_DELETED",
+                "admin_user",
+                adminUserId,
+                "{\"email\":\"delete-history-admin@example.com\"}",
+                null,
+                "hard delete test",
+                "127.0.0.1",
+                UUID.fromString("00000000-0000-4000-8000-000000000839"),
+                1L,
+                new byte[32]);
+
+        adminUserRepository.deleteById(adminUserId);
+        adminUserRepository.flush();
+
+        assertThat(adminUserRepository.findById(adminUserId)).isEmpty();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT actor_user_id FROM admin_audit_event WHERE target_id = ?",
+                                UUID.class,
+                                adminUserId))
+                .isEqualTo(adminUserId);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT actor_email FROM admin_audit_event WHERE target_id = ?",
+                                String.class,
+                                adminUserId))
+                .isEqualTo("delete-history-admin@example.com");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                """
+                                SELECT actor_user_id IS NULL
+                                FROM admin_read_event
+                                WHERE actor_email = 'delete-history-admin@example.com'
+                                """,
+                                Boolean.class))
+                .isTrue();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                """
+                                SELECT created_by_user_id IS NULL
+                                FROM llm_provider_master_key
+                                WHERE provider = 'OPENAI'
+                                """,
+                                Boolean.class))
+                .isTrue();
     }
 }

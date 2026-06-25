@@ -74,6 +74,26 @@ describe('/login RSC searchParams error rendering', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('preserves a referral token on the Google authorization link', async () => {
+    const referralToken = 'djEKWk1FOVhYS1FYMVpMOQoxNzUwNTYwMzIyMDAw.abc_DEF-123';
+
+    await renderLoginPage({ ref: referralToken });
+
+    expect(screen.getByRole('link', { name: /sign in with google/i })).toHaveAttribute(
+      'href',
+      `http://localhost:8080/oauth2/authorization/google?ref=${encodeURIComponent(referralToken)}`,
+    );
+  });
+
+  it('drops a tampered referral token from the Google authorization link', async () => {
+    await renderLoginPage({ ref: 'javascript:alert(1)' });
+
+    expect(screen.getByRole('link', { name: /sign in with google/i })).toHaveAttribute(
+      'href',
+      'http://localhost:8080/oauth2/authorization/google',
+    );
+  });
+
   it('renders destructive Alert with consent_denied i18n copy when ?error=consent_denied', async () => {
     await renderLoginPage({ error: 'consent_denied' });
     const alert = screen.getByRole('alert');

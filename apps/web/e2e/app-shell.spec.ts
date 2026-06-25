@@ -72,3 +72,49 @@ test('app shell remains mounted across client navigation and hidden onboarding r
   await expect(page.getByTestId('app-shell')).toBeVisible();
   await expect(page.getByTestId('app-sidebar')).toBeVisible();
 });
+
+test('collapsed desktop sidebar stays icon-only and stable while hovering menu items', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 820 });
+  const state = createChromeMockState();
+  await openAuthenticatedRoute(page, '/rules', state);
+
+  const sidebarRoot = page.locator('[data-slot="sidebar"][data-state]');
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'expanded');
+
+  await page.getByTestId('sidebar-collapse-toggle').click();
+  await page.mouse.move(640, 220);
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'collapsed');
+
+  await page.evaluate(() => {
+    const root = document.querySelector('[data-slot="sidebar"][data-state]');
+    const stateChanges: string[] = [];
+    const observer = new MutationObserver(() => {
+      if (root instanceof HTMLElement) {
+        stateChanges.push(root.dataset.state ?? '');
+      }
+    });
+    if (root) {
+      observer.observe(root, { attributes: true, attributeFilter: ['data-state'] });
+    }
+    Object.assign(window, { __sidebarStateChanges: stateChanges, __sidebarObserver: observer });
+  });
+
+  const rulesLink = page.getByRole('link', { name: 'Rules' }).first();
+  const collapsedRulesLinkBox = await rulesLink.boundingBox();
+  expect(collapsedRulesLinkBox).not.toBeNull();
+  if (!collapsedRulesLinkBox) return;
+
+  await page.mouse.move(
+    collapsedRulesLinkBox.x + collapsedRulesLinkBox.width / 2,
+    collapsedRulesLinkBox.y + collapsedRulesLinkBox.height / 2,
+  );
+  await page.waitForTimeout(300);
+
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'collapsed');
+  const stateChanges = await page.evaluate(
+    () => (window as unknown as { __sidebarStateChanges?: string[] }).__sidebarStateChanges ?? [],
+  );
+  expect(stateChanges).toEqual([]);
+});

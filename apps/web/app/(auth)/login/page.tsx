@@ -42,12 +42,28 @@ function isKnownError(value: unknown): value is LoginErrorCode {
   return typeof value === 'string' && (KNOWN_ERROR_CODES as readonly string[]).includes(value);
 }
 
+function isReferralTokenCandidate(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= 512 &&
+    /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)
+  );
+}
+
+function googleAuthorizationUrl(referralToken: unknown): string {
+  const authorizationUrl = new URL(getPublicApiUrl('/oauth2/authorization/google'));
+  if (isReferralTokenCandidate(referralToken)) {
+    authorizationUrl.searchParams.set('ref', referralToken);
+  }
+  return authorizationUrl.toString();
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ref?: string }>;
 }) {
-  const [{ error }, t, tLogin, tAuthError] = await Promise.all([
+  const [{ error, ref }, t, tLogin, tAuthError] = await Promise.all([
     searchParams,
     getTranslations(),
     getTranslations('auth.login'),
@@ -78,7 +94,7 @@ export default async function LoginPage({
                 </Alert>
               )}
               <a
-                href={getPublicApiUrl('/oauth2/authorization/google')}
+                href={googleAuthorizationUrl(ref)}
                 className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'zm-google-btn')}
               >
                 <GoogleG size={18} />

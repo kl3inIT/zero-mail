@@ -11,6 +11,10 @@ export const shellMessages = {
     vi: 'Phân tích',
     en: 'Analytics',
   },
+  'nav.referrals': {
+    vi: 'Sự kiện',
+    en: 'Events',
+  },
   'nav.rules': {
     vi: 'Quy tắc',
     en: 'Rules',

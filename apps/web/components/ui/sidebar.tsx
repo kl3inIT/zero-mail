@@ -40,8 +40,6 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
-  isHovered: boolean
-  setIsHovered: (isHovered: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -113,8 +111,7 @@ function SidebarProvider({
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
-  const [isHovered, setIsHovered] = React.useState(false)
-  const state = open || isHovered ? "expanded" : "collapsed"
+  const state = open ? "expanded" : "collapsed"
 
   const contextValue = React.useMemo<SidebarContextProps>(
     () => ({
@@ -125,8 +122,6 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
-      isHovered,
-      setIsHovered,
     }),
     [
       state,
@@ -136,7 +131,6 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
-      isHovered,
     ]
   )
 
@@ -181,9 +175,6 @@ function Sidebar({
     state,
     openMobile,
     setOpenMobile,
-    open,
-    setIsHovered,
-    isHovered,
   } = useSidebar()
 
   if (collapsible === "none") {
@@ -235,8 +226,6 @@ function Sidebar({
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
-      onMouseEnter={() => !open && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
@@ -247,9 +236,7 @@ function Sidebar({
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
-          // Force narrow width when hover-expanded but not officially open
-          !open && isHovered && "w-(--sidebar-width-icon)"
+            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
         )}
       />
       <div
@@ -261,8 +248,6 @@ function Sidebar({
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          // Override width on hover when not open
-          !open && isHovered && "w-(--sidebar-width) shadow-xl",
           className
         )}
         {...props}

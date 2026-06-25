@@ -1,5 +1,6 @@
 package com.zeromail.core.llm.gateway.springai;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.zeromail.core.llm.config.LlmProperties;
@@ -14,9 +15,58 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.web.client.RestClient;
 
 class SpringAiProviderChatClientFactoryTest {
+
+    @Test
+    void native_openai_uses_max_completion_tokens_not_max_tokens() {
+        // Native OpenAI reasoning models (gpt-5.x) reject `max_tokens` with a 400
+        // unsupported_parameter error and require `max_completion_tokens`. The adapter must emit
+        // the
+        // new field for the native OpenAI provider so chat does not break on those models.
+        SpringAiProviderChatClientFactory factory =
+                new SpringAiProviderChatClientFactory(llmProperties(), RestClient.builder());
+
+        OpenAiChatOptions options =
+                (OpenAiChatOptions)
+                        factory.options(
+                                        "OPENAI",
+                                        SpringAiProviderChatClientFactory.OPENAI_FORMAT,
+                                        LlmCredentialSource.PLATFORM,
+                                        "gpt-5.4-mini",
+                                        0.2,
+                                        2048,
+                                        false)
+                                .build();
+
+        assertThat(options.getMaxCompletionTokens()).isEqualTo(2048);
+        assertThat(options.getMaxTokens()).isNull();
+    }
+
+    @Test
+    void openai_compatible_gateway_keeps_legacy_max_tokens() {
+        // OpenAI-compatible gateways (9router, OpenRouter) still expect the legacy `max_tokens`
+        // field, so the provider-specific switch must NOT rewrite it for them.
+        SpringAiProviderChatClientFactory factory =
+                new SpringAiProviderChatClientFactory(llmProperties(), RestClient.builder());
+
+        OpenAiChatOptions options =
+                (OpenAiChatOptions)
+                        factory.options(
+                                        "ROUTER_9R",
+                                        SpringAiProviderChatClientFactory.OPENAI_FORMAT,
+                                        LlmCredentialSource.PLATFORM,
+                                        "cx/gpt-5.5",
+                                        0.2,
+                                        2048,
+                                        false)
+                                .build();
+
+        assertThat(options.getMaxTokens()).isEqualTo(2048);
+        assertThat(options.getMaxCompletionTokens()).isNull();
+    }
 
     @Test
     void google_format_required_tool_choice_is_route_configuration_failure_not_safety() {

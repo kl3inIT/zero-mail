@@ -38,6 +38,38 @@ const nextConfig: NextConfig = {
   // Statically type every <Link href>, router.push(), router.replace() against
   // the actual app/ route tree. Build fails on typos.
   typedRoutes: true,
+  async rewrites() {
+    // Content negotiation (Next.js "Backend for Frontend" pattern): when an agent
+    // sends `Accept: text/markdown`, route the public marketing/blog/docs URL to
+    // the `/md` handler, which returns a markdown rendition. Browsers never send
+    // that header, so they keep getting the normal HTML page. Only public paths
+    // are listed — app/authenticated routes are intentionally never negotiable.
+    const acceptsMarkdown = [
+      { type: 'header' as const, key: 'accept', value: '(.*)text/markdown(.*)' },
+    ];
+    const markdownRewrite = (source: string, destination: string) => ({
+      source,
+      destination,
+      has: acceptsMarkdown,
+    });
+    // MUST be `beforeFiles`: every source below (`/`, `/blog`, `/docs`, ...) has a
+    // real filesystem page, and the array/`afterFiles` form only applies when NO
+    // filesystem route matched — so it would never fire. `beforeFiles` runs ahead
+    // of the page lookup, letting the Accept-header match override it.
+    return {
+      beforeFiles: [
+        markdownRewrite('/', '/md'),
+        markdownRewrite('/features', '/md/features'),
+        markdownRewrite('/about', '/md/about'),
+        markdownRewrite('/privacy', '/md/privacy'),
+        markdownRewrite('/terms', '/md/terms'),
+        markdownRewrite('/blog', '/md/blog'),
+        markdownRewrite('/blog/:slug', '/md/blog/:slug'),
+        markdownRewrite('/docs', '/md/docs'),
+        markdownRewrite('/docs/:slug', '/md/docs/:slug'),
+      ],
+    };
+  },
   async headers() {
     // RFC 8288 Link headers for agent / crawler discovery. Pointing at the
     // RFC-9727 api-catalog under /.well-known/ + the public docs site.

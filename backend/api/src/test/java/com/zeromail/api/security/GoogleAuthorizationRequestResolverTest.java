@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ class GoogleAuthorizationRequestResolverTest {
     @Test
     void prompt_consent_added_when_reconnect_query_param_true() {
         ClientRegistrationRepository repo = mockGoogleRegistry();
-        var resolver = new GoogleAuthorizationRequestResolver(repo);
+        var resolver = new GoogleAuthorizationRequestResolver(repo, tokenCodec());
 
         var req = new MockHttpServletRequest();
         req.setRequestURI("/oauth2/authorization/" + GOOGLE_REGISTRATION_ID);
@@ -50,7 +51,7 @@ class GoogleAuthorizationRequestResolverTest {
     @Test
     void prompt_consent_omitted_on_first_time_login() {
         ClientRegistrationRepository repo = mockGoogleRegistry();
-        var resolver = new GoogleAuthorizationRequestResolver(repo);
+        var resolver = new GoogleAuthorizationRequestResolver(repo, tokenCodec());
 
         var req = new MockHttpServletRequest();
         req.setRequestURI("/oauth2/authorization/" + GOOGLE_REGISTRATION_ID);
@@ -70,7 +71,7 @@ class GoogleAuthorizationRequestResolverTest {
     @Test
     void access_type_offline_always_present() {
         ClientRegistrationRepository repo = mockGoogleRegistry();
-        var resolver = new GoogleAuthorizationRequestResolver(repo);
+        var resolver = new GoogleAuthorizationRequestResolver(repo, tokenCodec());
 
         var req = new MockHttpServletRequest();
         req.setRequestURI("/oauth2/authorization/" + GOOGLE_REGISTRATION_ID);
@@ -88,7 +89,7 @@ class GoogleAuthorizationRequestResolverTest {
     @Test
     void include_granted_scopes_always_true() {
         ClientRegistrationRepository repo = mockGoogleRegistry();
-        var resolver = new GoogleAuthorizationRequestResolver(repo);
+        var resolver = new GoogleAuthorizationRequestResolver(repo, tokenCodec());
 
         var req = new MockHttpServletRequest();
         req.setRequestURI("/oauth2/authorization/" + GOOGLE_REGISTRATION_ID);
@@ -101,6 +102,52 @@ class GoogleAuthorizationRequestResolverTest {
         assertThat(result.getAdditionalParameters())
                 .as("include_granted_scopes=true must always be present")
                 .containsEntry("include_granted_scopes", "true");
+    }
+
+    @Test
+    void valid_referral_token_is_carried_as_authorization_request_attributes() {
+        ClientRegistrationRepository repo = mockGoogleRegistry();
+        ReferralAttributionTokenCodec tokenCodec = tokenCodec();
+        var resolver = new GoogleAuthorizationRequestResolver(repo, tokenCodec);
+        String referralCode = "ZME9XXKQX1ZL8K";
+        Instant attributedAt = Instant.parse("2026-06-22T02:45:22Z");
+        String referralToken =
+                tokenCodec.encode(new ReferralAttributionSnapshot(referralCode, attributedAt));
+
+        var req = new MockHttpServletRequest();
+        req.setRequestURI("/oauth2/authorization/" + GOOGLE_REGISTRATION_ID);
+        req.setServletPath("/oauth2/authorization/" + GOOGLE_REGISTRATION_ID);
+        req.setMethod("GET");
+        req.setParameter(ReferralAttributionSnapshot.QUERY_PARAMETER, referralToken);
+
+        OAuth2AuthorizationRequest result = resolver.resolve(req, GOOGLE_REGISTRATION_ID);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAttributes())
+                .containsEntry(ReferralAttributionSnapshot.ATTRIBUTE_CODE, referralCode)
+                .containsEntry(
+                        ReferralAttributionSnapshot.ATTRIBUTE_ATTRIBUTED_AT_EPOCH_MILLIS,
+                        attributedAt.toEpochMilli());
+    }
+
+    @Test
+    void invalid_referral_token_is_ignored() {
+        ClientRegistrationRepository repo = mockGoogleRegistry();
+        var resolver = new GoogleAuthorizationRequestResolver(repo, tokenCodec());
+
+        var req = new MockHttpServletRequest();
+        req.setRequestURI("/oauth2/authorization/" + GOOGLE_REGISTRATION_ID);
+        req.setServletPath("/oauth2/authorization/" + GOOGLE_REGISTRATION_ID);
+        req.setMethod("GET");
+        req.setParameter(ReferralAttributionSnapshot.QUERY_PARAMETER, "not-a-valid-token");
+
+        OAuth2AuthorizationRequest result = resolver.resolve(req, GOOGLE_REGISTRATION_ID);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAttributes())
+                .doesNotContainKeys(
+                        ReferralAttributionSnapshot.ATTRIBUTE_CODE,
+                        ReferralAttributionSnapshot.ATTRIBUTE_ATTRIBUTED_AT_EPOCH_MILLIS);
     }
 
     private ClientRegistrationRepository mockGoogleRegistry() {
@@ -123,5 +170,9 @@ class GoogleAuthorizationRequestResolverTest {
         ClientRegistrationRepository repo = mock(ClientRegistrationRepository.class);
         when(repo.findByRegistrationId(eq(GOOGLE_REGISTRATION_ID))).thenReturn(registration);
         return repo;
+    }
+
+    private static ReferralAttributionTokenCodec tokenCodec() {
+        return new ReferralAttributionTokenCodec("test-referral-signing-secret");
     }
 }

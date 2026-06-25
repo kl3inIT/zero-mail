@@ -10,6 +10,7 @@ import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import com.zeromail.core.admin.tenant.usecases.TenantActivityRecorder;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.referral.usecases.ReferralCampaignService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
 import java.time.Clock;
 import java.time.Instant;
@@ -122,6 +123,7 @@ class OAuthIntentRoutingTest {
                         mock(UserRepository.class),
                         mock(GmailConnectionService.class),
                         mock(RuleTemplateMaterializationService.class),
+                        mock(ReferralCampaignService.class),
                         mock(TenantActivityRecorder.class),
                         Clock.systemUTC(),
                         new ApiProperties(null, null, null));
@@ -153,7 +155,8 @@ class OAuthIntentRoutingTest {
 
     private static OAuth2AuthorizationRequestResolver googleResolver() {
         return new GoogleAuthorizationRequestResolver(
-                new InMemoryClientRegistrationRepository(clientRegistration()));
+                new InMemoryClientRegistrationRepository(clientRegistration()),
+                new ReferralAttributionTokenCodec("test-referral-signing-secret"));
     }
 
     private static MockHttpServletRequest authorizationRequest() {

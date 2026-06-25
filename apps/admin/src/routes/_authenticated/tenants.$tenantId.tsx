@@ -361,7 +361,10 @@ function CustomerProfileHeader({
     activity?: TenantActivityResponse;
     onAction: (action: TenantDialogAction) => void;
 }) {
-    const email = overview?.gmailAccountEmail ?? tenantId;
+    const tenantTitle = overview?.tenantDisplayName ?? `Tenant #${shortTenantId(tenantId)}`;
+    const primaryGmail = overview?.gmailAccountEmail ?? 'Chưa kết nối Gmail';
+    const gmailCount = overview?.gmailAccountCount ?? 0;
+    const extraGmailCount = Math.max(0, gmailCount - 1);
     return (
         <Card className="min-w-0">
             <CardContent className="p-5">
@@ -369,13 +372,21 @@ function CustomerProfileHeader({
                     className="grid gap-5 xl:grid-cols-[minmax(330px,1.45fr)_repeat(3,minmax(150px,0.7fr))_140px] xl:items-center">
                     <div className="flex min-w-0 items-center gap-4">
                         <Avatar className="size-16" size="lg">
-                            <AvatarFallback className="text-xl">{avatarInitial(email)}</AvatarFallback>
+                            <AvatarFallback className="text-xl">{avatarInitial(tenantTitle)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 space-y-2">
-                            <h1 className="break-all text-lg font-semibold text-ink">{email}</h1>
-                            <GmailStatusBadge
-                                status={overview?.gmailConnectionStatus ?? health?.tokenRefreshStatus ?? 'DISCONNECTED'}/>
+                            <h1 className="break-words text-lg font-semibold text-ink">{tenantTitle}</h1>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <GmailStatusBadge
+                                    status={overview?.gmailConnectionStatus ?? health?.tokenRefreshStatus ?? 'DISCONNECTED'}/>
+                                <Badge variant="outline">Tenant #{shortTenantId(tenantId)}</Badge>
+                            </div>
                             <div className="space-y-1 text-sm text-muted-foreground">
+                                <div>Owner: {overview?.ownerEmail ?? 'Chưa có owner'}</div>
+                                <div>
+                                    Gmail chính: {primaryGmail}
+                                    {extraGmailCount > 0 ? ` · +${extraGmailCount} Gmail` : ''}
+                                </div>
                                 <div>Khách hàng từ: {formatDate(overview?.createdAt)}</div>
                                 <div>Gói: {formatPlanName(billing?.plan)}</div>
                             </div>
@@ -610,7 +621,8 @@ function OverviewTab({
         <div className="grid gap-4 lg:grid-cols-2">
             <InfoPanel title="Thông tin khách hàng">
                 <DetailRows>
-                    <DetailRow label="Email" value={overview.gmailAccountEmail ?? 'Chưa kết nối Gmail'}/>
+                    <DetailRow label="Tên tenant" value={overview.tenantDisplayName}/>
+                    <DetailRow label="Owner" value={overview.ownerEmail ?? 'Chưa có owner'}/>
                     <DetailRow label="Mã khách hàng" value={overview.tenantId}/>
                     <DetailRow label="Ngày tạo" value={formatDateTime(overview.createdAt)}/>
                     <DetailRow label="Trạng thái" value={<TenantStatusBadge status={overview.status}/>}/>
@@ -638,7 +650,11 @@ function EmailTab({health, overview}: { health: TenantHealthResponse; overview?:
     return (
         <InfoPanel title="Email">
             <DetailRows>
-                <DetailRow label="Tài khoản Gmail" value={overview?.gmailAccountEmail ?? 'Chưa kết nối Gmail'}/>
+                <DetailRow label="Gmail chính" value={overview?.gmailAccountEmail ?? 'Chưa kết nối Gmail'}/>
+                <DetailRow
+                    label="Gmail đã kết nối"
+                    value={`${formatInteger(overview?.connectedGmailAccountCount ?? 0)} / ${formatInteger(overview?.gmailAccountCount ?? 0)}`}
+                />
                 <DetailRow label="Trạng thái Gmail" value={<GmailStatusBadge
                     status={overview?.gmailConnectionStatus ?? health.tokenRefreshStatus}/>}/>
                 <DetailRow label="Refresh token" value={health.tokenRefreshStatus}/>
@@ -1021,6 +1037,10 @@ function telegramStatusLabel(status: string): string {
 
 function avatarInitial(value: string): string {
     return value.trim().slice(0, 1).toUpperCase() || 'K';
+}
+
+function shortTenantId(tenantId: string): string {
+    return tenantId.slice(0, 8);
 }
 
 function csvCell(value: string): string {

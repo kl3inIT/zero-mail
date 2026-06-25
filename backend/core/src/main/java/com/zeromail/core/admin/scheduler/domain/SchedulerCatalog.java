@@ -85,6 +85,14 @@ public final class SchedulerCatalog {
                             "DIGEST",
                             "Phục hồi bản ghi gửi digest bị treo."),
                     new SchedulerDescriptor(
+                            "referral-campaign-expiry",
+                            "Kết thúc sự kiện referral",
+                            "Mỗi 5 phút",
+                            "0 */5 * * * *",
+                            SchedulerProcess.WORKER,
+                            "REFERRAL",
+                            "Chuyển sự kiện referral ACTIVE đã quá thời gian kết thúc sang ENDED."),
+                    new SchedulerDescriptor(
                             "triage-event-retry",
                             "Retry triage",
                             "Mỗi 2m",
