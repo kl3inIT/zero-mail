@@ -1,6 +1,7 @@
 package com.zeromail.api.security;
 
 import com.zeromail.api.config.ApiProperties;
+import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.calendar.domain.CalendarConnectionStatus;
 import com.zeromail.core.calendar.persistence.CalendarConnectionEntity;
 import com.zeromail.core.calendar.persistence.CalendarConnectionRepository;
@@ -30,6 +31,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -74,6 +76,8 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
     private final OAuthTokenStore oAuthTokenStore;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final CalendarSnapshotIngestionService calendarSnapshotIngestionService;
+    private final UserRepository userRepository;
+    private final URI webBaseUrl;
 
     public CalendarOAuthSuccessHandler(
             OAuth2AuthorizedClientService oAuth2AuthorizedClientService,
@@ -81,6 +85,7 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
             OAuthTokenStore oAuthTokenStore,
             ApplicationEventPublisher applicationEventPublisher,
             CalendarSnapshotIngestionService calendarSnapshotIngestionService,
+            UserRepository userRepository,
             ApiProperties apiProperties) {
         this.oAuth2AuthorizedClientService =
                 Objects.requireNonNull(
@@ -94,16 +99,20 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
         this.calendarSnapshotIngestionService =
                 Objects.requireNonNull(
                         calendarSnapshotIngestionService, "calendarSnapshotIngestionService");
+        this.userRepository = Objects.requireNonNull(userRepository, "userRepository");
 
-        // Redirect target: the W3 settings page. baseUrl scheme/host already validated by
-        // GoogleOAuthSuccessHandler at boot; reuse the same ApiProperties value.
-        URI baseUrl = apiProperties.web().baseUrl();
-        String calendarSettingsUrl =
-                UriComponentsBuilder.fromUri(baseUrl)
-                        .path("/settings/calendar")
+        // Redirect target: the /integrations hub. Used as the FALLBACK default when the OAuth
+        // intent snapshot doesn't carry an active mailbox (e.g. direct grant outside the
+        // connect-intent flow). When an activeMailboxId IS resolved at request time, the redirect
+        // is overridden to /settings/mailboxes/{id}/calendar (UAT-1 surfaced that the prior W3
+        // hardcoded "/settings/calendar" target was a 404 — no such frontend route exists).
+        this.webBaseUrl = apiProperties.web().baseUrl();
+        String integrationsHubUrl =
+                UriComponentsBuilder.fromUri(this.webBaseUrl)
+                        .path("/integrations")
                         .build()
                         .toUriString();
-        setDefaultTargetUrl(calendarSettingsUrl);
+        setDefaultTargetUrl(integrationsHubUrl);
     }
 
     @Override
@@ -147,7 +156,37 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
                             null));
         }
 
-        UUID tenantId = TenantContext.currentTenantUuid();
+        // OAuth callback path /login/oauth2/code/google-calendar is NOT matched by
+        // TenantBindingFilter (scoped to /api/**), so TenantContext is unbound on this
+        // thread. Derive tenantId directly from the authenticated principal using the same
+        // UserRepository.findByGoogleSubject lookup TenantBindingFilter does — the user
+        // already has a tenant from the prior Gmail bundled-login flow.
+        //
+        // The principal is OAuth2User (NOT OidcUser) because the calendar ClientRegistration
+        // declares ONLY the 3 calendar scopes — no `openid`. Spring's userInfo response from
+        // Google's /oauth2/v3/userinfo endpoint always carries `sub` because `provider: google`
+        // inherits the userInfoUri and `include_granted_scopes=true` propagates the existing
+        // profile/email grant from the prior Gmail login.
+        OAuth2User oAuth2User =
+                Objects.requireNonNull(
+                        (OAuth2User) authenticationToken.getPrincipal(),
+                        "OAuth2 principal is required");
+        String googleSubject =
+                Objects.requireNonNull(
+                        oAuth2User.getAttribute("sub"),
+                        "Google `sub` attribute is required to resolve tenant");
+        UUID tenantId =
+                userRepository
+                        .findByGoogleSubject(googleSubject)
+                        .map(user -> user.getTenantId())
+                        .orElseThrow(
+                                () ->
+                                        new OAuth2AuthenticationException(
+                                                new OAuth2Error(
+                                                        "calendar_tenant_unbound",
+                                                        "Calendar OAuth callback could not"
+                                                                + " resolve the active tenant",
+                                                        null)));
         // The user's pre-existing OIDC session already provides their identity; the calendar
         // grant carries a separate googleEmail (multi-account from day one per D-05). Pull it
         // from the access-token's "scope" channel via the OAuth2AuthorizedClient's userinfo
@@ -158,59 +197,82 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
         String scopesGranted =
                 String.join(" ", oAuth2AuthorizedClient.getAccessToken().getScopes());
 
-        Optional<CalendarConnectionEntity> existingActive =
-                calendarConnectionRepository.findActiveByTenantIdAndGoogleEmail(
-                        tenantId, googleEmail);
-        UUID savedCalendarConnectionId;
-        try {
-            if (existingActive.isPresent()) {
-                // Re-grant of the same email — refresh the row in place so the partial-unique
-                // index never trips.
-                CalendarConnectionEntity reGranted = existingActive.get();
-                reGranted.setRefreshTokenEncrypted(
-                        oAuthTokenStore.encrypt(
-                                refreshTokenValue.getBytes(StandardCharsets.UTF_8),
-                                tenantId,
-                                RowDiscriminator.CALENDAR_CONNECTION));
-                reGranted.setScopesGranted(scopesGranted);
-                reGranted.setConnectedAt(Instant.now());
-                calendarConnectionRepository.save(reGranted);
-                savedCalendarConnectionId = reGranted.getId();
-                log.info(
-                        "event=calendar_oauth_regrant_success tenantId={} calendarConnectionId={}",
-                        tenantId,
-                        savedCalendarConnectionId);
-            } else {
-                CalendarConnectionEntity freshRow =
-                        new CalendarConnectionEntity(
-                                UUID.randomUUID(),
-                                tenantId,
-                                googleEmail,
-                                CalendarConnectionStatus.CONNECTED);
-                freshRow.setRefreshTokenEncrypted(
-                        oAuthTokenStore.encrypt(
-                                refreshTokenValue.getBytes(StandardCharsets.UTF_8),
-                                tenantId,
-                                RowDiscriminator.CALENDAR_CONNECTION));
-                freshRow.setScopesGranted(scopesGranted);
-                freshRow.setConnectedAt(Instant.now());
-                calendarConnectionRepository.save(freshRow);
-                savedCalendarConnectionId = freshRow.getId();
-                log.info(
-                        "event=calendar_oauth_connect_success tenantId={} calendarConnectionId={}",
-                        tenantId,
-                        savedCalendarConnectionId);
-            }
-        } catch (DataIntegrityViolationException constraintRace) {
-            // A concurrent flow landed the row first — surface as a friendly OAuth error so the
-            // user sees a re-grant message instead of a 500. Never log googleEmail.
-            log.warn("event=calendar_oauth_duplicate_active tenantId={}", tenantId);
-            throw new OAuth2AuthenticationException(
-                    new OAuth2Error(
-                            "calendar_connection_already_active",
-                            "Calendar connection for this account is already active",
-                            null));
-        }
+        // Bind TenantContext for the DB operations below. The OAuth callback path is NOT covered
+        // by TenantBindingFilter (scoped to /api/**), so without this binding Hibernate 7's
+        // `@TenantId` resolver — which reads from this same ScopedValue to stamp tenant_id on
+        // every INSERT/UPDATE — throws IllegalStateException. That used to surface as a wrapped
+        // DataIntegrityViolationException which the catch below mistook for a unique-index race.
+        final String googleEmailFinal = googleEmail;
+        final String scopesGrantedFinal = scopesGranted;
+        final String refreshTokenValueFinal = refreshTokenValue;
+        final UUID tenantIdFinal = tenantId;
+        UUID savedCalendarConnectionId =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () -> {
+                                    Optional<CalendarConnectionEntity> existingActive =
+                                            calendarConnectionRepository
+                                                    .findActiveByTenantIdAndGoogleEmail(
+                                                            tenantIdFinal, googleEmailFinal);
+                                    try {
+                                        if (existingActive.isPresent()) {
+                                            // Re-grant of the same email — refresh the row in
+                                            // place so the partial-unique index never trips.
+                                            CalendarConnectionEntity reGranted =
+                                                    existingActive.get();
+                                            reGranted.setRefreshTokenEncrypted(
+                                                    oAuthTokenStore.encrypt(
+                                                            refreshTokenValueFinal.getBytes(
+                                                                    StandardCharsets.UTF_8),
+                                                            tenantIdFinal,
+                                                            RowDiscriminator.CALENDAR_CONNECTION));
+                                            reGranted.setScopesGranted(scopesGrantedFinal);
+                                            reGranted.setConnectedAt(Instant.now());
+                                            calendarConnectionRepository.save(reGranted);
+                                            log.info(
+                                                    "event=calendar_oauth_regrant_success"
+                                                            + " tenantId={} calendarConnectionId={}",
+                                                    tenantIdFinal,
+                                                    reGranted.getId());
+                                            return reGranted.getId();
+                                        }
+                                        CalendarConnectionEntity freshRow =
+                                                new CalendarConnectionEntity(
+                                                        UUID.randomUUID(),
+                                                        tenantIdFinal,
+                                                        googleEmailFinal,
+                                                        CalendarConnectionStatus.CONNECTED);
+                                        freshRow.setRefreshTokenEncrypted(
+                                                oAuthTokenStore.encrypt(
+                                                        refreshTokenValueFinal.getBytes(
+                                                                StandardCharsets.UTF_8),
+                                                        tenantIdFinal,
+                                                        RowDiscriminator.CALENDAR_CONNECTION));
+                                        freshRow.setScopesGranted(scopesGrantedFinal);
+                                        freshRow.setConnectedAt(Instant.now());
+                                        calendarConnectionRepository.save(freshRow);
+                                        log.info(
+                                                "event=calendar_oauth_connect_success tenantId={}"
+                                                        + " calendarConnectionId={}",
+                                                tenantIdFinal,
+                                                freshRow.getId());
+                                        return freshRow.getId();
+                                    } catch (DataIntegrityViolationException constraintRace) {
+                                        // A concurrent flow landed the row first — surface as a
+                                        // friendly OAuth error so the user sees a re-grant message
+                                        // instead of a 500. Never log googleEmail.
+                                        log.warn(
+                                                "event=calendar_oauth_duplicate_active"
+                                                        + " tenantId={}",
+                                                tenantIdFinal);
+                                        throw new OAuth2AuthenticationException(
+                                                new OAuth2Error(
+                                                        "calendar_connection_already_active",
+                                                        "Calendar connection for this account is"
+                                                                + " already active",
+                                                        null));
+                                    }
+                                });
 
         // D-06 snapshot ingest: resolve the active mailbox from the OAuth intent (stamped at
         // /oauth2/authorization/google-calendar by W3's connect-intent endpoint) and seed
@@ -218,25 +280,39 @@ public class CalendarOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessH
         // redirect — the row save is the user's primary expected outcome (the connection card on
         // /settings/calendar shows CONNECTED) and the snapshot can be retried on the next page
         // load via a maintenance hook (W3+ scope). Per RESEARCH §Pitfall 8 a 403 from Workspace
-        // policy is already absorbed inside the service.
+        // policy is already absorbed inside the service. The snapshot service hits Calendar API
+        // + the calendars/preferences tables (multi-tenant), so it also runs under the
+        // TenantContext binding.
         UUID activeMailboxId = resolveActiveMailboxIdFromSession(request);
-        try {
-            calendarSnapshotIngestionService.ingestSnapshot(
-                    tenantId, savedCalendarConnectionId, activeMailboxId);
-        } catch (IOException snapshotFailure) {
-            log.warn(
-                    "event=calendar_snapshot_ingest_failed tenantId={} calendarConnectionId={} reason={}",
-                    tenantId,
-                    savedCalendarConnectionId,
-                    snapshotFailure.getClass().getSimpleName());
-        } catch (RuntimeException snapshotFailure) {
-            log.warn(
-                    "event=calendar_snapshot_ingest_failed tenantId={} calendarConnectionId={} reason={}",
-                    tenantId,
-                    savedCalendarConnectionId,
-                    snapshotFailure.getClass().getSimpleName());
-        }
+        final UUID savedIdFinal = savedCalendarConnectionId;
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            try {
+                                calendarSnapshotIngestionService.ingestSnapshot(
+                                        tenantIdFinal, savedIdFinal, activeMailboxId);
+                            } catch (IOException | RuntimeException snapshotFailure) {
+                                log.warn(
+                                        "event=calendar_snapshot_ingest_failed tenantId={}"
+                                                + " calendarConnectionId={} reason={}",
+                                        tenantIdFinal,
+                                        savedIdFinal,
+                                        snapshotFailure.getClass().getSimpleName());
+                            }
+                        });
 
+        // Per-request redirect target. When the OAuth intent stamped an activeMailboxId, send the
+        // user back to that mailbox's calendar settings page (the actual route W3 shipped). Without
+        // it, fall back to the /integrations hub (the default target set in the constructor).
+        if (activeMailboxId != null) {
+            String mailboxCalendarUrl =
+                    UriComponentsBuilder.fromUri(webBaseUrl)
+                            .path("/settings/mailboxes/" + activeMailboxId + "/calendar")
+                            .build()
+                            .toUriString();
+            getRedirectStrategy().sendRedirect(request, response, mailboxCalendarUrl);
+            return;
+        }
         super.onAuthenticationSuccess(request, response, authentication);
     }
 
