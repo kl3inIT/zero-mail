@@ -113,6 +113,10 @@ openApi {
                 "--zero-mail.api.gmail.pubsub.push-audience-url=https://openapi.invalid/internal/pubsub/gmail",
                 "--zero-mail.api.gmail.pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
                 "--zero-mail.api.gmail.pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs",
+                // HMAC secret for ReferralAttributionTokenCodec (>=16 bytes). Without it the
+                // codec bean fails to initialize and the spec emit aborts — the referral feature
+                // added this required property but did not seed a dummy here. Never deployed.
+                "--zero-mail.api.referral.attribution-token-signing-secret=openapi-emit-attribution-secret-0123456789",
                 "--zero-mail.llm.platform.api-key=openapi-emit",
                 "--spring.ai.google.genai.api-key=openapi-emit",
                 "--spring.ai.deepseek.api-key=openapi-emit"

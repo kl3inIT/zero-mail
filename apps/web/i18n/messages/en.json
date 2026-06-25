@@ -1429,6 +1429,20 @@
     "videoThumbnailAlt": "Zero Mail product demo video",
     "videoTitle": "Zero Mail product demo"
   },
+  "landingAbout": {
+    "heading": "About us",
+    "missionBody": "Help busy people reach inbox zero with AI that auto-triages, drafts, and cleans up the inbox — by rules written in plain Vietnamese, with full control.",
+    "missionTitle": "Mission",
+    "moreCta": "Learn more about Zero Mail",
+    "story": "Zero Mail started from a question: why is AI this smart, yet our inbox still drowns in hundreds of unread emails? As FPT students, we built Zero Mail as an EXE202 project — with the ambition to grow it into a SaaS that Vietnamese users trust.",
+    "value1": "Privacy first — your email is yours",
+    "value2": "Vietnamese-first, not an add-on",
+    "value3": "Trustworthy — never acts on your behalf without you",
+    "value4": "Transparent — you can always review what the AI did",
+    "valuesTitle": "Core values",
+    "visionBody": "To become the default AI email assistant for Vietnamese users — where anyone working in Gmail reaches inbox zero without worrying about privacy.",
+    "visionTitle": "Vision"
+  },
   "landingContact": {
     "emailLabel": "Your email",
     "emailPlaceholder": "you@example.com",
@@ -1542,6 +1556,21 @@
       "title": "Designed around how you work"
     }
   },
+  "landingPartnership": {
+    "body": "DTH Software picked Zero Mail as the email assistant for its whole team — auto-triaging, drafting, and cleaning up Gmail. Together we bring AI into real work and build a Vietnamese product ecosystem.",
+    "brandLabel": "Digital transformation · Hanoi",
+    "heading": "Partnering with DTH Software",
+    "point1": "DTH's whole team on Zero Mail",
+    "point2": "Joint communications & events",
+    "point3": "Building a Make-in-Vietnam AI ecosystem",
+    "stat1Label": "Organizations trust DTH",
+    "stat1Value": "52+",
+    "stat2Label": "Information-security certified",
+    "stat2Value": "ISO 27001",
+    "stat3Label": "Founded",
+    "stat3Value": "2019",
+    "subtitle": "In June 2026, Zero Mail entered a strategic partnership with DTH Software — bringing the AI email assistant into a real Vietnamese tech company workflow."
+  },
   "landingPricing": {
     "ctaStart": "Get started free",
     "header": {
@@ -1579,6 +1608,24 @@
       "description": "For individuals and founders reclaiming their time.",
       "title": "Starter"
     }
+  },
+  "landingReferral": {
+    "badge": "Live now",
+    "countdown": {
+      "days": "Days",
+      "hours": "Hours",
+      "minutes": "Mins",
+      "seconds": "Secs"
+    },
+    "countdownTitle": "Event ends in",
+    "cta": "Join now",
+    "defaultDescription": "For every friend who signs up through your link, you both get rewarded. Sign in to grab your personal referral link.",
+    "defaultName": "Invite friends to Zero Mail",
+    "heading": "Event in progress",
+    "leaderboardCta": "View leaderboard",
+    "noCountdown": "The event is live — join any time.",
+    "rewardChip": "Top {count} win special rewards",
+    "rewardFallback": "The more friends you invite, the bigger the reward. Sign in to get your referral link."
   },
   "landingTestimonials": {
     "header": {
