@@ -44,6 +44,23 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
     private static final String ASSISTANT_TEXT_PART_ID = "assistant-text";
 
     /**
+     * Synthetic tool-response body injected for an assistant {@code tool_call} that has no recorded
+     * TOOL message in history.
+     *
+     * <p>The OpenAI / 9router wire contract rejects any assistant message carrying {@code
+     * tool_calls} that is not followed by a tool message answering every {@code tool_call_id} — it
+     * surfaces as {@code 400 param=messages.[N].role}. Chat send/reply/forward proposals are
+     * confirmed out-of-band via the preview card and never persist a TOOL output (only read tools
+     * do via {@code persistToolOutput}); a confirmed, cancelled, or abandoned proposal therefore
+     * leaves a dangling tool_call that breaks the NEXT turn. We inject a neutral, status-only
+     * response so the replayed conversation stays well-formed without asserting the success or
+     * failure of the out-of-band action.
+     */
+    private static final String UNRECORDED_TOOL_RESPONSE_JSON =
+            "{\"status\":\"acknowledged\",\"detail\":\"action handled via the confirmation UI;"
+                    + " outcome not recorded in chat history\"}";
+
+    /**
      * Error code emitted when the upstream LLM gateway aborts the HTTP/2 stream in a way that is
      * safe to retry once at the orchestrator layer (e.g. 9router server-initiated RST_STREAM
      * surfaced through the OpenAI Java SDK as {@code OpenAIIoException} wrapping {@code
@@ -182,7 +199,50 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                                         chatMessage,
                                         streamRequest.transientToolResponseJsonByCallId()))
                 .forEach(messages::add);
-        return new Prompt(messages);
+        return new Prompt(satisfyDanglingToolCalls(messages));
+    }
+
+    /**
+     * Guarantee every assistant {@code tool_calls} entry is answered by a following tool message,
+     * per the OpenAI / 9router wire contract (see {@link #UNRECORDED_TOOL_RESPONSE_JSON}). For each
+     * assistant message that carries tool calls, the immediately-following tool messages are
+     * scanned for answered {@code tool_call_id}s; any unanswered call gets a synthetic tool
+     * response inserted right after the assistant message so the replayed history is always
+     * well-formed.
+     */
+    private List<Message> satisfyDanglingToolCalls(List<Message> messages) {
+        List<Message> repaired = new ArrayList<>(messages.size());
+        for (int index = 0; index < messages.size(); index++) {
+            Message message = messages.get(index);
+            repaired.add(message);
+            if (!(message instanceof AssistantMessage assistantMessage)
+                    || !assistantMessage.hasToolCalls()) {
+                continue;
+            }
+            java.util.Set<String> answeredToolCallIds = new java.util.HashSet<>();
+            for (int lookahead = index + 1;
+                    lookahead < messages.size()
+                            && messages.get(lookahead) instanceof ToolResponseMessage following;
+                    lookahead++) {
+                following
+                        .getResponses()
+                        .forEach(response -> answeredToolCallIds.add(response.id()));
+            }
+            List<ToolResponseMessage.ToolResponse> syntheticResponses =
+                    assistantMessage.getToolCalls().stream()
+                            .filter(toolCall -> !answeredToolCallIds.contains(toolCall.id()))
+                            .map(
+                                    toolCall ->
+                                            new ToolResponseMessage.ToolResponse(
+                                                    toolCall.id(),
+                                                    toolCall.name(),
+                                                    UNRECORDED_TOOL_RESPONSE_JSON))
+                            .toList();
+            if (!syntheticResponses.isEmpty()) {
+                repaired.add(ToolResponseMessage.builder().responses(syntheticResponses).build());
+            }
+        }
+        return repaired;
     }
 
     private Message toSpringAiMessage(

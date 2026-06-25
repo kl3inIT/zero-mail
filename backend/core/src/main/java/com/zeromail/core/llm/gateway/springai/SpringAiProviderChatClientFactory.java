@@ -149,11 +149,16 @@ public class SpringAiProviderChatClientFactory {
             Integer maxTokens,
             boolean toolChoiceRequired,
             LlmCredentialSource source) {
+        boolean nativeOpenAi = OPENAI_PROVIDER_ID.equals(providerId);
         OpenAiChatOptions.Builder chatOptionsBuilder =
-                OpenAiChatOptions.builder()
-                        .model(model)
-                        .temperature(temperature)
-                        .timeout(timeoutFor(source));
+                OpenAiChatOptions.builder().model(model).timeout(timeoutFor(source));
+        if (!nativeOpenAi) {
+            // Native OpenAI reasoning models (gpt-5.x family) only accept the default temperature
+            // (1) and reject any explicit value with a 400 unsupported_value error. OpenAI-
+            // compatible gateways (OpenRouter, 9router) honor an explicit temperature, so only they
+            // receive the requested value; native OpenAI is left at its model default.
+            chatOptionsBuilder.temperature(temperature);
+        }
         if (toolChoiceRequired) {
             chatOptionsBuilder.toolChoice(OpenAiToolChoiceOptions.required());
         }
@@ -163,7 +168,7 @@ public class SpringAiProviderChatClientFactory {
             // gateways (OpenRouter, 9router) still expect `max_tokens`, so only the native OpenAI
             // provider switches fields. `max_completion_tokens` is accepted by every current native
             // OpenAI chat model, so it is safe for non-reasoning models too.
-            if (OPENAI_PROVIDER_ID.equals(providerId)) {
+            if (nativeOpenAi) {
                 chatOptionsBuilder.maxCompletionTokens(maxTokens);
             } else {
                 chatOptionsBuilder.maxTokens(maxTokens);
