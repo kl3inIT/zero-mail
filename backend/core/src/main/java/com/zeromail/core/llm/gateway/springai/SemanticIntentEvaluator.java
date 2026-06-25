@@ -34,6 +34,9 @@ public class SemanticIntentEvaluator
         implements com.zeromail.core.llm.usecases.SemanticIntentEvaluator {
 
     private static final String OPENAI_FORMAT = "OPENAI_FORMAT";
+    private static final String OPENAI_PROVIDER_ID = "OPENAI";
+    private static final int SEMANTIC_MAX_TOKENS = 512;
+    private static final double SEMANTIC_TEMPERATURE = 0.0;
     private static final String SYSTEM_MESSAGE =
             """
             You are Zero Mail's semantic email-intent classifier.
@@ -96,7 +99,12 @@ public class SemanticIntentEvaluator
             String sanitizedMessageContent,
             List<SemanticIntentRequest> intents) {
         return evaluateWithClient(
-                platformChatClient, callSite, modelId, sanitizedMessageContent, intents);
+                platformChatClient,
+                callSite,
+                modelId,
+                sanitizedMessageContent,
+                intents,
+                openAiSemanticOptions(llmProperties.provider(), modelId));
     }
 
     @Override
@@ -115,6 +123,10 @@ public class SemanticIntentEvaluator
         byte[] plaintextKey = routeCredentials.plaintextKey();
         String plaintextApiKey = new String(plaintextKey, StandardCharsets.UTF_8);
         try {
+            // Transport-only model: api key, base URL, model and timeout. The per-call request
+            // options (temperature / token budget / response format) are supplied by
+            // openAiSemanticOptions so the native-OpenAI vs gateway parameter rules live in one
+            // place.
             OpenAiChatModel routedModel =
                     OpenAiChatModel.builder()
                             .options(
@@ -122,8 +134,6 @@ public class SemanticIntentEvaluator
                                             .apiKey(plaintextApiKey)
                                             .baseUrl(routeCredentials.baseUrl())
                                             .model(modelId)
-                                            .temperature(0.0)
-                                            .maxTokens(512)
                                             .timeout(llmProperties.readTimeout())
                                             .build())
                             .build();
@@ -132,7 +142,8 @@ public class SemanticIntentEvaluator
                     callSite,
                     modelId,
                     sanitizedMessageContent,
-                    intents);
+                    intents,
+                    openAiSemanticOptions(routeCredentials.providerId(), modelId));
         } finally {
             plaintextApiKey = null;
             Arrays.fill(plaintextKey, (byte) 0);
@@ -176,21 +187,6 @@ public class SemanticIntentEvaluator
             CallSite callSite,
             String modelId,
             String sanitizedMessageContent,
-            List<SemanticIntentRequest> intents) {
-        return evaluateWithClient(
-                chatClient,
-                callSite,
-                modelId,
-                sanitizedMessageContent,
-                intents,
-                openAiSemanticOptions(modelId));
-    }
-
-    private SemanticIntentEvaluationResult evaluateWithClient(
-            ChatClient chatClient,
-            CallSite callSite,
-            String modelId,
-            String sanitizedMessageContent,
             List<SemanticIntentRequest> intents,
             ChatOptions.Builder<?> runtimeOptions) {
         Objects.requireNonNull(callSite, "callSite");
@@ -224,12 +220,19 @@ public class SemanticIntentEvaluator
                 validateNodeMatches(requestedNodeIds, parsed.nodeMatches()), usage(response));
     }
 
-    private OpenAiChatOptions.Builder openAiSemanticOptions(String modelId) {
-        return OpenAiChatOptions.builder()
-                .model(modelId)
-                .temperature(0.0)
-                .maxTokens(512)
-                .responseFormat(responseFormat());
+    private OpenAiChatOptions.Builder openAiSemanticOptions(String providerId, String modelId) {
+        OpenAiChatOptions.Builder semanticOptions =
+                OpenAiChatOptions.builder().model(modelId).responseFormat(responseFormat());
+        if (OPENAI_PROVIDER_ID.equals(providerId)) {
+            // Native OpenAI reasoning models (gpt-5.x) reject the legacy `max_tokens` field and any
+            // non-default `temperature` (400 unsupported_value). Send `max_completion_tokens` and
+            // leave temperature at the model default. OpenAI-compatible gateways (9router,
+            // OpenRouter) keep the legacy field plus the deterministic temperature below.
+            semanticOptions.maxCompletionTokens(SEMANTIC_MAX_TOKENS);
+        } else {
+            semanticOptions.maxTokens(SEMANTIC_MAX_TOKENS).temperature(SEMANTIC_TEMPERATURE);
+        }
+        return semanticOptions;
     }
 
     private ResponseFormat responseFormat() {

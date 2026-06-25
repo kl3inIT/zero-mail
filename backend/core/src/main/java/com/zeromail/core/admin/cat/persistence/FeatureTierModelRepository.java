@@ -2,6 +2,7 @@ package com.zeromail.core.admin.cat.persistence;
 
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.domain.RoutingTier;
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -19,13 +20,26 @@ public interface FeatureTierModelRepository
     List<FeatureTierModelEntity> findByFeatureAndTierOrderByPosition(
             @Param("feature") Feature feature, @Param("tier") RoutingTier tier);
 
-    /** Every slot for one feature across all tiers, grouped first by tier then by position. */
-    @Query(
-            "select row from FeatureTierModelEntity row "
-                    + "where row.feature = :feature "
-                    + "order by row.tier, row.position")
-    List<FeatureTierModelEntity> findByFeatureOrderByTierAndPosition(
-            @Param("feature") Feature feature);
+    /** Every model slot for one feature across all tiers, unordered. Callers sort. */
+    @Query("select row from FeatureTierModelEntity row where row.feature = :feature")
+    List<FeatureTierModelEntity> findByFeature(@Param("feature") Feature feature);
+
+    /**
+     * Every slot for one feature across all tiers, grouped by tier weight (PRIMARY → FALLBACK →
+     * LAST_RESORT) then by position ascending.
+     *
+     * <p>{@code tier} is {@code @Enumerated(STRING)}; a SQL {@code order by tier} sorts enum names
+     * lexically (FALLBACK before PRIMARY), so we sort by {@link RoutingTier#weight()} in-app — see
+     * {@link FeatureDefaultProviderRepository#findByFeatureOrderByTier(Feature)}.
+     */
+    default List<FeatureTierModelEntity> findByFeatureOrderByTierAndPosition(Feature feature) {
+        return findByFeature(feature).stream()
+                .sorted(
+                        Comparator.comparingInt(
+                                        (FeatureTierModelEntity row) -> row.getTier().weight())
+                                .thenComparingInt(FeatureTierModelEntity::getPosition))
+                .toList();
+    }
 
     /**
      * Clears every slot for a tier so the service can rewrite the list atomically. Returns the row
