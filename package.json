@@ -32,13 +32,13 @@
     "*": "pnpm encoding:check"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.0",
+    "@playwright/test": "^1.61.1",
     "husky": "9.1.7",
-    "lint-staged": "17.0.7",
-    "prettier": "3.8.4",
+    "lint-staged": "17.0.8",
+    "prettier": "3.9.4",
     "prettier-plugin-tailwindcss": "0.8.0",
-    "react-doctor": "^0.5.6",
-    "turbo": "2.9.18"
+    "react-doctor": "^0.5.8",
+    "turbo": "2.10.1"
   },
   "pnpm": {
     "_comment": "Overrides + peerDependencyRules moved to pnpm-workspace.yaml in pnpm v11. This block kept for older tooling compatibility only — pnpm itself reads pnpm-workspace.yaml."
