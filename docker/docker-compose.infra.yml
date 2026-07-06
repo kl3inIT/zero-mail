@@ -50,6 +50,9 @@ services:
       - ../scripts/ops/postgres/init:/docker-entrypoint-initdb.d:ro
     networks:
       - zeromail-internal
+      # Shared DB: the northstar stack reaches this Postgres over its own
+      # internal network. Declared external below; survives recreate.
+      - northstar-internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 10s
@@ -85,6 +88,10 @@ networks:
   zeromail-proxy:
     external: true
   zeromail-internal:
+    external: true
+  # Northstar's internal network — this Postgres joins it so the northstar
+  # api/mcp containers can reach it as a shared database instance.
+  northstar-internal:
     external: true
 
 volumes:
