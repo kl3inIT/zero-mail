@@ -1,6 +1,6 @@
 plugins {
     base
-    id("com.diffplug.spotless") version "8.6.0"
+    id("com.diffplug.spotless") version "8.8.0"
     alias(libs.plugins.cyclonedxBom)
 }
 
