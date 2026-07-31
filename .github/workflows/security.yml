@@ -63,7 +63,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v4.37.3
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
@@ -74,7 +74,7 @@ jobs:
         run: ./gradlew --no-daemon classes -x test
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v4.37.3
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -127,7 +127,7 @@ jobs:
 
       - name: Upload Trivy SARIF
         if: ${{ !cancelled() }}
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v4.37.3
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
@@ -295,7 +295,7 @@ jobs:
 
       - name: Upload Trivy SARIF
         if: ${{ !cancelled() }}
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v4.37.3
         with:
           sarif_file: trivy-image-${{ matrix.component }}.sarif
           category: trivy-image-${{ matrix.component }}
