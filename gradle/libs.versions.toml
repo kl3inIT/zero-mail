@@ -7,11 +7,11 @@ springModulith = "2.1.0"
 liquibase = "5.0.3"
 archunit = "1.4.2"
 logstashLogback = "9.0"
-googleAuthLibrary = "1.48.0"
+googleAuthLibrary = "1.50.0"
 gmailApi = "v1-rev20250331-2.0.0"
 testcontainers = "1.21.3"
 springdoc = "3.0.3"
-jsoup = "1.22.2"
+jsoup = "1.23.1"
 shedlock = "7.7.0"
 jtokkit = "1.1.0"
 re2j = "1.8"
@@ -49,4 +49,4 @@ resend-java = { module = "com.resend:resend-java", version.ref = "resend" }
 [plugins]
 springBoot = { id = "org.springframework.boot", version.ref = "springBoot" }
 springDependencyManagement = { id = "io.spring.dependency-management", version = "1.1.7" }
-cyclonedxBom = { id = "org.cyclonedx.bom", version = "3.2.4" }
+cyclonedxBom = { id = "org.cyclonedx.bom", version = "3.3.0" }
