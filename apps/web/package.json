@@ -44,7 +44,7 @@
     "date-fns": "^4.4.0",
     "lucide-react": "^1.18.0",
     "motion": "^12.40.0",
-    "nanoid": "^5.1.11",
+    "nanoid": "^5.1.16",
     "next": "16.2.9",
     "next-intl": "^4.13.0",
     "next-mdx-remote": "6.0.0",
