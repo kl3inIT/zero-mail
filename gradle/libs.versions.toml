@@ -5,19 +5,19 @@ springAi = "2.0.0"
 # sync with buildSrc/src/main/kotlin/zeromail.modulith-conventions.gradle.kts.
 springModulith = "2.1.0"
 liquibase = "5.0.3"
-archunit = "1.4.2"
+archunit = "1.5.0"
 logstashLogback = "9.0"
-googleAuthLibrary = "1.48.0"
+googleAuthLibrary = "1.50.0"
 gmailApi = "v1-rev20250331-2.0.0"
 testcontainers = "1.21.3"
-springdoc = "3.0.3"
-jsoup = "1.22.2"
-shedlock = "7.7.0"
+springdoc = "3.1.0"
+jsoup = "1.23.1"
+shedlock = "7.8.0"
 jtokkit = "1.1.0"
 re2j = "1.8"
 jakartaMail = "2.0.5"
 jakartaMailApi = "2.1.5"
-resend = "4.13.0"
+resend = "4.19.0"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
@@ -49,4 +49,4 @@ resend-java = { module = "com.resend:resend-java", version.ref = "resend" }
 [plugins]
 springBoot = { id = "org.springframework.boot", version.ref = "springBoot" }
 springDependencyManagement = { id = "io.spring.dependency-management", version = "1.1.7" }
-cyclonedxBom = { id = "org.cyclonedx.bom", version = "3.2.4" }
+cyclonedxBom = { id = "org.cyclonedx.bom", version = "3.4.1" }
