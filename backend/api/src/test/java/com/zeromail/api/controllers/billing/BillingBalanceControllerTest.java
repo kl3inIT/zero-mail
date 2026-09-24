@@ -33,11 +33,16 @@ import com.zeromail.core.billing.persistence.CreditGrantEntity;
 import com.zeromail.core.billing.persistence.CreditGrantRepository;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
+import com.zeromail.core.billing.usecases.CreditGrantService;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.UUID;
 import javax.crypto.Mac;
@@ -455,6 +460,7 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
         BillingPlanEntity plusPlan = billingPlanRepository.findByCode("PLUS").orElseThrow();
         plusPlan.updateLemonSqueezyVariantId(123456L);
         billingPlanRepository.saveAndFlush(plusPlan);
+        Instant paidAt = recentPaidAt();
         String payload =
                 """
                         {
@@ -476,7 +482,7 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                               "status": "paid",
                               "total": 199000,
                               "currency": "vnd",
-                              "created_at": "2026-05-28T00:00:00.000000Z",
+                              "created_at": "%s",
                               "customer": {
                                 "email": "buyer@example.com"
                               },
@@ -488,7 +494,7 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                           }
                         }
                         """
-                        .formatted(seed.tenantId());
+                        .formatted(seed.tenantId(), paidAt);
         String providerEventId = "event-order-created-1";
 
         ResponseEntity<Void> response =
@@ -526,12 +532,10 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
         assertThat(planPeriod.getProvider()).isEqualTo("LEMON_SQUEEZY");
         assertThat(planPeriod.getProviderCheckoutId()).isEqualTo("333001");
         assertThat(planPeriod.getProviderEventId()).isEqualTo(providerEventId);
-        assertThat(planPeriod.getEffectiveAt())
-                .isEqualTo(java.time.Instant.parse("2026-05-28T00:00:00Z"));
-        assertThat(planPeriod.getExpiresAt())
-                .isEqualTo(java.time.Instant.parse("2026-06-28T00:00:00Z"));
-        assertThat(planPeriod.getPaidAt())
-                .isEqualTo(java.time.Instant.parse("2026-05-28T00:00:00Z"));
+        assertThat(planPeriod.getEffectiveAt()).isEqualTo(paidAt);
+        ZonedDateTime paidAtLocal = paidAt.atZone(CreditGrantService.PLAN_ALLOWANCE_RESET_ZONE);
+        assertThat(planPeriod.getExpiresAt()).isEqualTo(paidAtLocal.plusMonths(1).toInstant());
+        assertThat(planPeriod.getPaidAt()).isEqualTo(paidAt);
         assertThat(planPeriod.getAmountVnd()).isEqualTo(199000L);
         assertThat(planPeriod.getCurrency()).isEqualTo("VND");
         ResponseEntity<String> plansResponse =
@@ -575,12 +579,12 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                               "status": "paid",
                               "total": 199000,
                               "currency": "VND",
-                              "created_at": "2026-05-28T00:00:00.000000Z"
+                              "created_at": "%s"
                             }
                           }
                         }
                         """
-                        .formatted(seed.tenantId());
+                        .formatted(seed.tenantId(), recentPaidAt());
 
         ResponseEntity<Void> orderResponse =
                 postLemonSqueezyWebhook("event-order-created-credit-1", orderPayload);
@@ -780,12 +784,13 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                         .retrieve()
                         .body(BillingCheckoutResponse.class);
         String transferCode = checkoutResponse.bankTransferIntent().code();
+        String transactionDate = sepayTransactionDate();
         String payload =
                 """
                         {
                           "id": 990001,
                           "gateway": "MBBank",
-                          "transactionDate": "2026-06-01 10:00:00",
+                          "transactionDate": "%s",
                           "accountNumber": "123456789",
                           "code": "%s",
                           "content": "ZM %s PLUS",
@@ -797,7 +802,7 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                           "description": "Bank transfer"
                         }
                         """
-                        .formatted(transferCode, transferCode, transferCode);
+                        .formatted(transactionDate, transferCode, transferCode, transferCode);
 
         ResponseEntity<String> response = postSepayWebhook("test-sepay-key", payload);
         ResponseEntity<String> duplicateResponse = postSepayWebhook("test-sepay-key", payload);
@@ -1059,6 +1064,17 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                 .requestFactory(new SimpleClientHttpRequestFactory())
                 .baseUrl("http://localhost:" + port)
                 .build();
+    }
+
+    /** Paid a day ago so the one-month plan period is active whenever the test runs. */
+    private static Instant recentPaidAt() {
+        return Instant.now().minus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static String sepayTransactionDate() {
+        return recentPaidAt()
+                .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
     private String hmacSha256Hex(String signingSecret, String payload) {
