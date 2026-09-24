@@ -4,7 +4,6 @@
 
 When reviewing pull requests, **do not review or comment on files under**:
 
-- `.planning/**` — GSD planning artifacts (phase plans, research, specs, verification reports). These are AI-generated workflow documents, not production code. They change frequently and are not subject to code review.
 - `**/CLAUDE.md` — AI agent instructions.
 - `**/MEMORY.md` and `**/memory/**` — persistent agent memory files.
 

@@ -14,7 +14,7 @@ DB_NAME="${LOADTEST_DB_NAME:-zeromail}"
 DB_USER="${LOADTEST_DB_USER:-zeromail}"
 DB_PASSWORD="${LOADTEST_DB_PASSWORD:-zeromail}"
 RUN_LOG="${LOADTEST_RUN_LOG:-loadtest/run/run.log}"
-RESULT_FILE="${LOADTEST_RESULT_FILE:-.planning/phases/06-polish-casa-verified-launch/06-LOAD-TEST-RESULT.md}"
+RESULT_FILE="${LOADTEST_RESULT_FILE:-docs/ops/load-test-result.md}"
 LOG_BLEED_PATTERN='(^|[^[:alnum:]_])(email_body|prompt|completion|raw_html)([^[:alnum:]_]|$)'
 
 export PGPASSWORD="$DB_PASSWORD"

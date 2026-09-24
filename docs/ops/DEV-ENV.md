@@ -14,7 +14,7 @@ VPS — local code, shared data.
 ## Architecture
 
 ```
-   Your laptop                              Hostinger VPS (72.62.193.33)
+   Your laptop                              Hostinger VPS (<vps-host>)
    ─────────────                            ─────────────────────────────
    IntelliJ ZeroMailApi          ┌────────► zeromail-postgres
    IntelliJ ZeroMailWorker  ─SSH─┤           ├─ zeromail        (PROD,  role zeromail)
@@ -53,12 +53,12 @@ curl -fsSL https://get.pnpm.io/install.sh | sh -
 
 ## 2. Get SSH access to the dev DB
 
-Each dev needs their `id_ed25519.pub` added to `dat@72.62.193.33:~/.ssh/authorized_keys`.
+Each dev needs their `id_ed25519.pub` added to `<ssh-user>@<vps-host>:~/.ssh/authorized_keys`.
 
 **Operator (Dat)** — for each new team member:
 
 ```sh
-ssh dat@72.62.193.33
+ssh <ssh-user>@<vps-host>
 # paste the dev's ed25519 pubkey into ~/.ssh/authorized_keys
 echo "ssh-ed25519 AAAA... <dev-name>@<their-machine>" >> ~/.ssh/authorized_keys
 ```
@@ -66,7 +66,7 @@ echo "ssh-ed25519 AAAA... <dev-name>@<their-machine>" >> ~/.ssh/authorized_keys
 **Each dev** — verify the connection works:
 
 ```sh
-ssh -T dat@72.62.193.33
+ssh -T <ssh-user>@<vps-host>
 # Expected: PTY allocated and you land in the VPS shell.
 ```
 
@@ -78,7 +78,7 @@ the only way in is through SSH on the VPS.
 ### Background tunnel (recommended)
 
 ```sh
-ssh -fN -L 5555:zeromail-postgres:5432 dat@72.62.193.33
+ssh -fN -L 5555:zeromail-postgres:5432 <ssh-user>@<vps-host>
 ```
 
 - `-f`: background after authentication.
@@ -98,8 +98,8 @@ Add to `~/.ssh/config`:
 
 ```sshconfig
 Host zeromail-db-tunnel
-    HostName 72.62.193.33
-    User dat
+    HostName <vps-host>
+    User <ssh-user>
     LocalForward 5555 zeromail-postgres:5432
     ServerAliveInterval 30
     ExitOnForwardFailure yes
@@ -117,7 +117,7 @@ operator the first time — never commit it.
 To rotate (operator only):
 
 ```sh
-ssh dat@72.62.193.33
+ssh <ssh-user>@<vps-host>
 cd /apps/zero-mail
 NEW_PW="$(openssl rand -base64 24 | tr -d '/+=' | head -c 28)"
 docker exec -i -e PGPASSWORD=zeromail zeromail-postgres \
@@ -217,7 +217,7 @@ Or in IntelliJ Database tool:
 ### Reset to a clean state (operator)
 
 ```sh
-ssh dat@72.62.193.33
+ssh <ssh-user>@<vps-host>
 docker exec -e PGPASSWORD=zeromail zeromail-postgres \
   psql -U zeromail -d postgres -c "DROP DATABASE zeromail_dev"
 docker exec -e PGPASSWORD=zeromail zeromail-postgres \

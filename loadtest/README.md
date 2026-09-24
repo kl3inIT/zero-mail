@@ -14,7 +14,7 @@ Validate SPEC AC #2 and AC #9 with a 50-tenant Pub/Sub load harness that asserts
 
 ## Pre-tag commit step (codex HIGH-9 - committed evidence)
 
-Run the full load test locally before cutting the `v1.0.0-rc1` tag and commit the generated `.planning/phases/06-polish-casa-verified-launch/06-LOAD-TEST-RESULT.md` file to `main`. The release workflow on the tag re-runs the same sequence for record, but the committed local result is the evidence file that breaks the tag/report circular dependency.
+Run the full load test locally before cutting the `v1.0.0-rc1` tag and commit the generated `docs/ops/load-test-result.md` file to `main`. The release workflow on the tag re-runs the same sequence for record, but the committed local result is the evidence file that breaks the tag/report circular dependency.
 
 ## Run
 
@@ -71,7 +71,7 @@ mkdir -p loadtest/run && docker compose -f loadtest/compose.loadtest.yml logs --
 8. PRE-TAG ONLY (codex HIGH-9):
 
 ```bash
-git add .planning/phases/06-polish-casa-verified-launch/06-LOAD-TEST-RESULT.md && git commit -m "docs(06): commit load-test result for v1.0.0-rc1-candidate" && git push origin main
+git add docs/ops/load-test-result.md && git commit -m "docs(06): commit load-test result for v1.0.0-rc1-candidate" && git push origin main
 ```
 
 Skip step 8 when the sequence is triggered by CI on a tag commit.
@@ -88,7 +88,7 @@ docker compose -f loadtest/compose.loadtest.yml down -v
 
 ## Result file
 
-`.planning/phases/06-polish-casa-verified-launch/06-LOAD-TEST-RESULT.md` is committed evidence. `loadtest/run/*` is a local or CI runtime artifact and is gitignored.
+`docs/ops/load-test-result.md` is committed evidence. `loadtest/run/*` is a local or CI runtime artifact and is gitignored.
 
 ## Invariants asserted
 

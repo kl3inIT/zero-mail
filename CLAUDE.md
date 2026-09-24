@@ -1,5 +1,3 @@
-<!-- GSD:project-start source:PROJECT.md -->
-
 ## Project
 
 **Zero Mail (placeholder name)**
@@ -30,8 +28,6 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 ### Backend Code Style
 
 - **Enterprise readability**: Backend Java code must use explicit, domain-revealing names for fields, parameters, locals, and lambda variables. Avoid opaque abbreviations such as `req`, `res`, `repo`, `svc`, `cfg`, `ctx`, `msg`, `err`, `ex`, `e`, `conn`, `tx`, or one-letter variables. Prefer names like `request`, `response`, `userRepository`, `gmailConnectionService`, `configurationProperties`, `tenantContext`, `gmailMessage`, `authenticationException`, `connection`, and `transactionTemplate`. Exceptions are allowed only for established technical acronyms (`ID`, `DTO`, `JPA`, `OAuth2`, `OIDC`, `URL`, `URI`, `HTTP`), generated API names, or intentionally ignored lambda parameters (`_`).
-<!-- GSD:project-end -->
-
 ## Local Reference Repositories
 
 - Inbox Zero source is available next to this repo at `../inbox-zero`. Use it as a product and UX reference only; do not port its TypeScript/Node architecture into Zero Mail's Java/Spring architecture.
@@ -40,11 +36,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - Rule compiler AI boundary: do **not** use regex, accent-insensitive keyword matching, substring hacks, or post-hoc string cleanup to infer `displayName`, `matcher.intent`, `labelName`, or other user-meaning fields from natural language. The LLM compiler must extract those fields through structured output and prompt/tool-schema constraints; backend code only validates schema, safety, bounds, tenant/privacy invariants, and technical syntax such as user-authored subject regex.
 - Prompt rewrite policy: when changing any system prompt, follow outcome-first prompting. State the goal, output contract, success criteria, true safety/format constraints, clarification or stopping policy, and a few representative examples. Do not append failure-specific keyword blacklists or "do not include word X" patches unless they are hard safety invariants; fix extraction behavior with prompt/schema/evals, not backend semantic cleanup.
 
-<!-- GSD:stack-start source:research/STACK.md -->
-
 ## Technology Stack
-
-> Full tables, alternatives, version compatibility, and sources live in [`.planning/research/STACK.md`](.planning/research/STACK.md). Keep this section as the **prescriptive TL;DR** only.
 
 - **JDK 25 LTS** (GA 2025-09-16) via Gradle toolchains.
 - **Gradle 9.5.0** + **Kotlin DSL** + `libs.versions.toml` catalog, multi-project (not composite).
@@ -77,10 +69,6 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Stateless JWT user sessions** (cookie + Redis-backed Spring Session).
 - **Embedding store / vector DB in v1** (privacy constraint forbids embeddings of **user mail / attachment content / chat-extracted email body**). Embeddings of dev-authored static text (e.g., tool descriptions for a Spring AI Tool-Search-Tool index, prompt templates, doc snippets) are NOT covered by this ban — they touch no user data. If/when such a feature is adopted, the `VectorStore` bean must be scoped exclusively to static dev content and ArchUnit-guarded against ingesting tenant-derived fields.
 
-<!-- GSD:stack-end -->
-
-<!-- GSD:conventions-start source:CONVENTIONS.md -->
-
 ## Conventions
 
 > Detailed examples and anti-patterns live in [`CONVENTIONS.md`](CONVENTIONS.md). Read that file before introducing patterns in the listed areas.
@@ -98,33 +86,11 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 11. **Generated OpenAPI files are never hand-edited (MANDATORY).** `apps/web/lib/api/schema.d.ts`, `apps/admin/src/lib/api/admin-schema.d.ts`, and the cached `*-spec.json` snapshots are emitted by the per-app codegen scripts (`apps/web/scripts/generate-api.ts` via `pnpm --filter web run generate:api`; `apps/admin/scripts/generate-api.ts` via `pnpm --filter @zeromail/admin run generate-api`) that fetch `/v3/api-docs` from the running backend and pipe it through `openapi-typescript`. When a backend DTO changes (add/remove/rename field, change validation, enum tweak): boot the backend → run the regen script for the affected app → commit the regenerated files. A hand-edit gets silently overwritten on the next regen and FE/BE schemas drift until a runtime error catches it.
 12. **Frontend error handling + toasts go through QueryClient cache callbacks** — both `apps/web/lib/query-client.tsx` and `apps/admin/src/main.tsx` install `QueryCache.onError` (toast only when `query.state.data !== undefined`, per TkDodo — initial fetch failures are owned by `error.tsx` / `errorComponent`) and `MutationCache.onError/onSuccess` (opt-in via `meta.successMessage` / `meta.errorMessage`). Type the meta surface via `declare module '@tanstack/react-query' { interface Register { queryMeta: {...}; mutationMeta: {...} } }`. **New mutations: pass `meta.successMessage`/`meta.errorMessage` instead of calling `toast.success/error` in a local `onError`.** Existing mutations with local toasts still work — the global handler is opt-in, so it will not double-fire. Use `meta.silent: true` to opt a query/mutation out entirely. 401 redirect is handled at the fetch layer by an openapi-fetch `onResponse` middleware in `apps/web/lib/api/client.ts` and `apps/admin/src/lib/api/admin-client.ts`; admin client also installs an `onRequest` middleware that echoes the `XSRF-TOKEN` cookie back as `X-XSRF-TOKEN` for mutating methods (Spring Security `csrf().spa()` contract). Admin error code localization lives in `apps/admin/src/lib/api/admin-errors.ts` (static VN dict, no next-intl); web uses `apps/web/lib/api/errors.ts` with next-intl bundles. Never hardcode color hex values in primitives or feature components — consume tokens (`bg-card`, `border-border`, `text-foreground`, `bg-primary/10`, `bg-accent text-accent-foreground` etc.) so palette pivots stay in `globals.css`.
 13. **Do not invoke global UI/design skills.** UI work must follow the repository's existing screens, shadcn primitives, locked tokens, i18n rules, and Playwright/browser verification instead of any external/global UI skill.
-<!-- GSD:conventions-end -->
-
-## UI Phase Prototype Rule
-
-Whenever a UI phase runs (`/gsd-ui-phase`), in addition to `UI-SPEC.md` always produce a self-contained HTML prototype for that phase at `<phase_dir>/<padded_phase>-PROTOTYPE.html`. The prototype is a static, single-file mockup (inline CSS, CDN Tailwind/fonts allowed, no build step) that visualizes the screens/states the UI-SPEC describes — used for quick visual review before planning. It is throwaway: not production code, not wired to APIs. Keep it consistent with the locked tokens/typography/spacing in `UI-SPEC.md`.
-
 ## Testing
 
 > Detailed testing rules — what to test, what not to test, Spring Boot 4 slice ladder, Spring AI three-layer testing, and discipline — live in [`TESTING.md`](TESTING.md). Read that file before writing or reviewing tests.
 
 **TL;DR:** test invariants (privacy, tenant isolation, money, crypto, safety), not code shape (DTOs, controller wording, framework behavior). Pick the smallest Spring Boot test slice that proves the invariant. Never call a real LLM in `./gradlew test` — use mocked `ChatModel`/`LlmModelClient`; tag real-LLM evals with `@Tag("llm-eval")` and run them in a separate Gradle task.
-
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
-
-## Architecture
-
-Architecture not yet mapped. Follow existing patterns found in the codebase. Detailed research lives in [`.planning/research/ARCHITECTURE.md`](.planning/research/ARCHITECTURE.md).
-
-<!-- GSD:architecture-end -->
-
-<!-- GSD:skills-start source:skills/ -->
-
-## Project Skills
-
-No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, or `.codex/skills/` with a `SKILL.md` index file.
-
-<!-- GSD:skills-end -->
 
 ## Tooling
 
@@ -149,13 +115,3 @@ Fall back to `Read` / `Grep` / `Edit` / `Bash` when JetBrains MCP is unavailable
 - **Verify UI**: `mcp__playwright__browser_navigate`, `mcp__playwright__browser_snapshot`, `mcp__playwright__browser_click`, `mcp__playwright__browser_fill_form`, `mcp__playwright__browser_take_screenshot` — drive the running `apps/web` dev server through the golden path + edge cases.
 - **Debug**: `mcp__playwright__browser_console_messages`, `mcp__playwright__browser_network_requests`, `mcp__playwright__browser_evaluate` — when a UI change misbehaves, inspect console + network before guessing.
 - **Auth flows**: use Playwright MCP to walk the OAuth login + Gmail-connect flow end-to-end whenever auth, session, or scope handling changes.
-
-<!-- GSD:profile-start -->
-
-## Developer Profile
-
-> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-> The active profile lives in the user's global `~/.claude/CLAUDE.md` and is auto-loaded each session — keep this section as a placeholder to avoid duplication.
-
-<!-- GSD:profile-end -->

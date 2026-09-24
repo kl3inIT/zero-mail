@@ -1,9 +1,6 @@
 # CodeRabbit ignore — files/dirs CodeRabbit should NOT review.
 # Syntax follows .gitignore rules.
 
-# --- Planning artifacts (GSD workflow output, not production code) ---
-.planning/
-.planning/**
 .claude/
 .codex/
 .agents/

@@ -26,3 +26,4 @@ loadtest/run/
 var/
 .env
 jmix-scratch/
+.claude/settings.local.json

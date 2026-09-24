@@ -24,7 +24,6 @@ reviews:
       - main
 
   path_filters:
-    - "!.planning/**"
     - "!**/*.lock"
     - "!**/*.lockb"
     - "!pnpm-lock.yaml"

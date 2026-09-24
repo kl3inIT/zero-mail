@@ -7,12 +7,12 @@ last-updated: 2026-05-20
 # Zero Mail CI/CD + Ops Runbook
 
 End-to-end runbook for the GitHub Actions → GHCR → VPS deploy pipeline that
-serves the `prod` slot on the Hostinger VPS (`72.62.193.33`, 8 GB RAM).
+serves the `prod` slot on the Hostinger VPS (`<vps-host>`, 8 GB RAM).
 
 ## 1. Architecture
 
 ```
-   Devs (×3) local                            VPS (72.62.193.33, 8 GB RAM)
+   Devs (×3) local                            VPS (<vps-host>, 8 GB RAM)
    ────────────────                           ──────────────────────────────
    IntelliJ + local Redis                     zeromail-postgres
    SSH tunnel :5555 ──────────────────────► ├─ zeromail        (PROD)
@@ -97,7 +97,7 @@ gh secret list --repo kl3inIT/zero-mail --env prod
 
 | Secret | Source |
 |--------|--------|
-| `VPS_HOST` | `72.62.193.33` |
+| `VPS_HOST` | `<vps-host>` |
 | `VPS_USER` | `dat` |
 | `VPS_SSH_PORT` | `22` |
 | `VPS_SSH_KEY` | ed25519 private key (`zeromail-deploy@github-actions`); pub in `dat@VPS:~/.ssh/authorized_keys` |
@@ -160,7 +160,7 @@ Approve, deploy completes. Workflow pulls `ghcr.io/kl3init/zero-mail-*:v1.2.9`
 (immutable). For an instant on-VPS rollback before the workflow finishes:
 
 ```sh
-ssh dat@72.62.193.33
+ssh <ssh-user>@<vps-host>
 cd /apps/zero-mail
 cat .last-deploy.txt   # snapshot written by every Deploy Prod run
 ```
@@ -173,7 +173,7 @@ Already done 2026-05-20 by `scripts/ops/postgres/init/10-create-dev-db.sql`. To 
 the shared dev password:
 
 ```sh
-ssh dat@72.62.193.33
+ssh <ssh-user>@<vps-host>
 NEW_PW="$(openssl rand -base64 24 | tr -d '/+=' | head -c 28)"
 docker exec -i -e PGPASSWORD=zeromail zeromail-postgres \
   psql -U zeromail -d postgres -v ON_ERROR_STOP=1 \
@@ -187,7 +187,7 @@ echo "$NEW_PW"   # share via 1Password / pinned chat; then clear shell history
 Install once:
 
 ```sh
-ssh dat@72.62.193.33
+ssh <ssh-user>@<vps-host>
 sudo mkdir -p /etc/zeromail /var/backups/zeromail
 sudo bash -c 'openssl rand -base64 48 > /etc/zeromail/backup.passphrase'
 sudo chmod 400 /etc/zeromail/backup.passphrase
@@ -217,7 +217,7 @@ Off-host upload (optional, recommended): install rclone, configure a remote
 Recovery verification (do this monthly):
 
 ```sh
-ssh dat@72.62.193.33
+ssh <ssh-user>@<vps-host>
 LATEST=$(ls -1t /var/backups/zeromail/daily/*/zeromail-*.dump.gpg | head -1)
 gpg --batch --passphrase-file /etc/zeromail/backup.passphrase --decrypt "$LATEST" > /tmp/restore.dump
 docker exec -i -e PGPASSWORD=zeromail zeromail-postgres \
@@ -238,7 +238,7 @@ collector by restarting Postgres with `shared_preload_libraries` (configured
 in `docker-compose.yml`):
 
 ```sh
-ssh dat@72.62.193.33
+ssh <ssh-user>@<vps-host>
 cd /apps/zero-mail
 docker compose up -d postgres            # re-creates with the new command flags
 docker exec -e PGPASSWORD=zeromail zeromail-postgres \
@@ -300,12 +300,12 @@ Settings → Code security and analysis (UI only, not in YAML).
 
 | What | Where |
 |------|-------|
-| VPS shell | `ssh dat@72.62.193.33` |
+| VPS shell | `ssh <ssh-user>@<vps-host>` |
 | Prod compose | `/apps/zero-mail/docker-compose.yml` |
 | Prod env file | `/apps/zero-mail/.env` |
 | Backup dir | `/var/backups/zeromail/` |
 | Postgres logs | `docker logs zeromail-postgres` |
 | Backup log | `/var/log/zeromail-backup.log` |
-| Dev DB tunnel | `ssh -fN -L 5555:zeromail-postgres:5432 dat@72.62.193.33` |
+| Dev DB tunnel | `ssh -fN -L 5555:zeromail-postgres:5432 <ssh-user>@<vps-host>` |
 | GHCR images | https://github.com/kl3inIT?tab=packages |
 | GitHub envs | https://github.com/kl3inIT/zero-mail/settings/environments |
