@@ -174,7 +174,7 @@ jobs:
       # ever becomes a hard requirement.
 
       - name: Run OSV-Scanner
-        uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
+        uses: google/osv-scanner-action/osv-scanner-action@v2.6.0
         with:
           # OSV-Scanner v2 dropped --skip-git (it never scans history anyway).
           # `--recursive ./` walks pnpm-lock.yaml + Gradle build files in one pass.
