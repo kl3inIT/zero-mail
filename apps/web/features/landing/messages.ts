@@ -126,3 +126,21 @@ export const landingNavMessages = {
     en: 'Privacy',
   },
 } as const;
+
+/**
+ * "Backed by GenAI Fund · Open source" line under the hero CTAs and in the footer (`BackedBy`).
+ */
+export const landingBackedByMessages = {
+  'backedBy.label': {
+    vi: 'Được tài trợ bởi',
+    en: 'Backed by',
+  },
+  'backedBy.openSource': {
+    vi: 'Mã nguồn mở · MIT',
+    en: 'Open source · MIT',
+  },
+  'backedBy.openSourceAria': {
+    vi: 'Mã nguồn Zero Mail trên GitHub',
+    en: 'Zero Mail source code on GitHub',
+  },
+} as const;

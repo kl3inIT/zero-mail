@@ -486,6 +486,11 @@
       "workEmail": "Sign in with company Gmail"
     }
   },
+  "backedBy": {
+    "label": "Backed by",
+    "openSource": "Open source · MIT",
+    "openSourceAria": "Zero Mail source code on GitHub"
+  },
   "billing": {
     "balance": {
       "additionalCreditDetail": "Outside the monthly plan reset",

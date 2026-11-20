@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentUserCached } from '@/features/account/api/account-api';
+import { BackedBy } from '@/features/landing/components/BackedBy';
 import { ArrowRightIcon } from '@/features/landing/components/PrototypeIcons';
 import { HeroVideoPlayer } from '@/features/landing/components/HeroVideoPlayer';
 import { ONBOARDING_BYPASS_ROUTE, shouldShowBetaOnboarding } from '@/features/onboarding/config';
@@ -70,6 +71,7 @@ export default async function Hero() {
               {t('landing.secondaryCta')}
             </Link>
           </div>
+          <BackedBy className="mt-8 justify-center" />
         </div>
 
         <div className="relative mt-20 w-full max-w-5xl">
