@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
+import { BackedBy } from '@/features/landing/components/BackedBy';
 import ZMLogoMark from '@/features/landing/components/ZMLogoMark';
 
 export default async function Footer() {
@@ -21,6 +22,7 @@ export default async function Footer() {
               </span>
             </Link>
             <p className="text-sm leading-relaxed">{t('footer.tagline')}</p>
+            <BackedBy stacked className="mt-5" />
           </div>
           <div className="zm-footer-cols">
             <div className="zm-footer-col">

@@ -486,6 +486,11 @@
       "workEmail": "Đăng nhập bằng Gmail công ty"
     }
   },
+  "backedBy": {
+    "label": "Được tài trợ bởi",
+    "openSource": "Mã nguồn mở · MIT",
+    "openSourceAria": "Mã nguồn Zero Mail trên GitHub"
+  },
   "billing": {
     "balance": {
       "additionalCreditDetail": "Không bị reset theo gói hàng tháng",
